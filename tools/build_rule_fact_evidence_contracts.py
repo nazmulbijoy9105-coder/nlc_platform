@@ -36,6 +36,29 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
         }
         for fact in rule["seed_fact_inputs"]
     ]
+    # AGM-005's seed inputs omit the company-wide member count even though
+    # its pinned statutory-registry requirement makes that count necessary to
+    # select the applicable quorum threshold. Preserve it as an explicit draft
+    # candidate with its own source provenance; do not infer a type or mapping.
+    if rule["historical_rule_id"] == "AGM-005":
+        requirement = rule.get("statutory_requirement")
+        if not isinstance(requirement, str) or not requirement.strip():
+            raise ValueError("AGM-005 statutory requirement is required for member_count")
+        if not any(item["fact_key"] == "member_count" for item in facts):
+            facts.append(
+                {
+                    "fact_key": "member_count",
+                    "source_expression": "statutory_registry.requirement",
+                    "source_evidence": requirement,
+                    "data_type": "UNSPECIFIED",
+                    "collection_source": "UNSPECIFIED",
+                    "verification_method": "UNSPECIFIED",
+                    "temporal_basis": "UNSPECIFIED",
+                    "evidence_links": [],
+                    "mapping_status": "REQUIRES_DOMAIN_MAPPING",
+                }
+            )
+
     applicability = [
         {
             "condition_expression": source_label(condition),
