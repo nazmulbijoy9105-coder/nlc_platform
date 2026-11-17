@@ -22,7 +22,7 @@ class CompanyFactService:
         self.db = db
 
     async def _mark_company_facts_changed(self, company_id: uuid.UUID) -> None:
-        """Advance the company freshness marker whenever source facts change."""
+        """Clear cached statutory results whenever source facts change."""
         await self.db.execute(
             update(Company)
             .where(Company.id == company_id)
