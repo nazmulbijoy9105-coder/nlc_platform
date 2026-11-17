@@ -1,6 +1,7 @@
 """PostgreSQL policy and privilege checks for finding-level evidence bindings."""
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from app.models.database import set_rls_context
 
@@ -91,3 +92,17 @@ async def test_unsigned_or_unassigned_user_cannot_read_finding_bindings(db):
         result = await db.execute(text(f"SELECT count(*) FROM public.{table}"))
         assert result.scalar_one() == 0
     await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_runtime_role_cannot_update_or_delete_finding_audit_rows(db):
+    """Privilege checks apply even when the target relation currently has no rows."""
+    for table in ("compliance_finding_bindings", "compliance_finding_evidence"):
+        for statement in (
+            f"UPDATE public.{table} SET created_at = created_at WHERE false",
+            f"DELETE FROM public.{table} WHERE false",
+        ):
+            with pytest.raises(DBAPIError):
+                async with db.begin_nested():
+                    await db.execute(text("SET LOCAL ROLE nlc_app_role"))
+                    await db.execute(text(statement))
