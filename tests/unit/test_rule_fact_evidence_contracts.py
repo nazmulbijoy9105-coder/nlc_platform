@@ -72,6 +72,34 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         assert all(item["fact_keys_supported"] == [] for item in rule["evidence_items"])
 
     agm005 = next(rule for rule in report["rules"] if rule["historical_rule_id"] == "AGM-005")
+    agm005_source = source_by_id["AGM-005"]
+    agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
+
+    # Assert the complete quorum fact contract in one place. This catches a
+    # partial repair where one newly required input is added while another is
+    # accidentally dropped.
+    expected_agm005_facts = {
+        "agm_held",
+        "member_count",
+        "members_present_at_agm",
+        "quorum_required",
+        "agm_quorum_evidence_ref",
+    }
+    assert expected_agm005_facts <= agm005_fact_keys, (
+        "AGM-005 is missing required quorum facts: "
+        f"{sorted(expected_agm005_facts - agm005_fact_keys)}"
+    )
+
+    # The builder must append derived/applicability facts, never replace or
+    # discard the original seed inputs.
+    seed_fact_keys = {
+        fact.strip("'\\\\\\\"")
+        for fact in agm005_source["seed_fact_inputs"]
+    }
+    assert seed_fact_keys <= agm005_fact_keys, (
+        "AGM-005 dropped original seed facts: "
+        f"{sorted(seed_fact_keys - agm005_fact_keys)}"
+    )
     member_count = next(
         fact for fact in agm005["facts"] if fact["fact_key"] == "member_count"
     )
