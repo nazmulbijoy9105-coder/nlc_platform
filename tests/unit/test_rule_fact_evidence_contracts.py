@@ -56,7 +56,14 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         assert all(item["fact_keys_supported"] == [] for item in rule["evidence_items"])
 
     agm005 = next(rule for rule in report["rules"] if rule["historical_rule_id"] == "AGM-005")
-    assert "member_count" in {fact["fact_key"] for fact in agm005["facts"]}
+    member_count = next(
+        fact for fact in agm005["facts"] if fact["fact_key"] == "member_count"
+    )
+    assert member_count["source_expression"] == "statutory_registry.requirement"
+    assert "not more than six members" in member_count["source_evidence"]
+    assert member_count["data_type"] == "UNSPECIFIED"
+    assert member_count["mapping_status"] == "REQUIRES_DOMAIN_MAPPING"
+    assert member_count["evidence_links"] == []
     assert "agm_quorum_evidence_ref" in {fact["fact_key"] for fact in agm005["facts"]}
     assert "REQUIRES_DOMAIN_MAPPING" in {
         condition["mapping_status"] for condition in agm005["applicability_conditions"]
