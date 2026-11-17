@@ -179,3 +179,38 @@ def build_finding_binding_snapshot(
         "finding_snapshot_hash": finding_hash,
     }
     return {"binding": binding, "evidence": evidence_rows}
+
+
+async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
+    """Append binding and evidence rows in the caller's transaction; never commit.
+
+    The caller must use the normal authenticated tenant-scoped AsyncSession.
+    Database RLS and insert guards are authoritative. Historical attribution
+    cannot be set through this write path.
+    """
+    from app.models.finding_evidence import (
+        ComplianceFindingBinding,
+        ComplianceFindingEvidence,
+    )
+
+    binding_values = dict(snapshot.get("binding") or {})
+    evidence_values = list(snapshot.get("evidence") or [])
+    if binding_values.get("attribution_status") != "CURRENT_EVALUATION":
+        raise ValueError("This write path only records current evaluations; historical attribution requires separate review")
+    if not binding_values.get("company_id") or not binding_values.get("compliance_flag_id"):
+        raise ValueError("Finding binding requires a tenant and compliance flag")
+    binding = ComplianceFindingBinding(**binding_values)
+    session.add(binding)
+    await session.flush()
+    rows = [
+        ComplianceFindingEvidence(
+            binding_id=binding.id,
+            company_id=binding_values["company_id"],
+            **dict(evidence),
+        )
+        for evidence in evidence_values
+    ]
+    if rows:
+        session.add_all(rows)
+        await session.flush()
+    return binding
