@@ -393,7 +393,7 @@ async def test_nonempty_evidence_manifest_matches_database_rows_at_commit(db):
         }],
         required_fact_keys=[fact.fact_key],
     )
-    await persist_finding_binding(db, snapshot)
+    binding = await persist_finding_binding(db, snapshot)
 
     # Force deferred constraint triggers now, so a mismatch fails this test
     # rather than being hidden by the fixture's transaction rollback.
@@ -403,3 +403,124 @@ async def test_nonempty_evidence_manifest_matches_database_rows_at_commit(db):
         {"fact_id": fact.id},
     )
     assert result.scalar_one() == 1
+
+ 
+    # Exercise database-side SHA-256 checks for both evidence payload layers.
+    # The Python helper is used only to construct a valid baseline; each
+    # mutation below is submitted directly to PostgreSQL.
+    for suffix, tampered_column in (
+        ("FACT-HASH", "fact_value_canonical"),
+        ("EVIDENCE-HASH", "evidence_canonical"),
+    ):
+        tamper_fact = CompanyFact(
+            id=uuid.uuid4(),
+            company_id=company_id,
+            fact_key=f"integration_{suffix.lower()}",
+            fact_value=False,
+            trust_level="USER_ASSERTED",
+            asserted_by=user_id,
+            observed_on=today,
+            verification_status="UNVERIFIED",
+        )
+        db.add(tamper_fact)
+        await db.flush()
+        candidate = build_finding_binding_snapshot(
+            company_id=str(company_id),
+            compliance_flag_id=str(flag_id),
+            evaluation_run_id=str(run_id),
+            source_namespace=source_namespace,
+            historical_rule_id=rule_id,
+            jurisdiction="BD",
+            effective_date=today,
+            resolution=resolution,
+            finding_snapshot={"evaluation_state": "NOT_EVALUATED", "score_impact": 0},
+            evidence_facts=[{
+                "fact_id": str(tamper_fact.id),
+                "fact_key": tamper_fact.fact_key,
+                "fact_value": tamper_fact.fact_value,
+                "trust_level": tamper_fact.trust_level,
+                "verification_status": tamper_fact.verification_status,
+                "observed_on": today.isoformat(),
+                "asserted_by": str(user_id),
+            }],
+        )["evidence"][0]
+        candidate[tampered_column] += " "
+        with pytest.raises(DBAPIError):
+            async with db.begin_nested():
+                await db.execute(text("""
+                    INSERT INTO public.compliance_finding_evidence (
+                        binding_id, company_id, company_fact_id, evidence_role,
+                        fact_key, fact_value_snapshot, fact_value_canonical,
+                        evidence_canonical, fact_value_hash, trust_level,
+                        verification_status, observed_on, source_reference,
+                        document_id, document_sha256, asserted_by,
+                        authorized_uploader_id, uploaded_at, verified_by,
+                        verified_at, evidence_hash
+                    ) VALUES (
+                        :binding_id, :company_id, :company_fact_id, :evidence_role,
+                        :fact_key, :fact_value_snapshot, :fact_value_canonical,
+                        :evidence_canonical, :fact_value_hash, :trust_level,
+                        :verification_status, :observed_on, :source_reference,
+                        :document_id, :document_sha256, :asserted_by,
+                        :authorized_uploader_id, :uploaded_at, :verified_by,
+                        :verified_at, :evidence_hash
+                    )
+                """), {"binding_id": binding.id, **candidate})
+
+    # A valid child row whose digest is correct but which is absent from the
+    # immutable parent manifest must fail at the deferred manifest constraint.
+    extra_fact = CompanyFact(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        fact_key="integration_manifest_extra",
+        fact_value=False,
+        trust_level="USER_ASSERTED",
+        asserted_by=user_id,
+        observed_on=today,
+        verification_status="UNVERIFIED",
+    )
+    db.add(extra_fact)
+    await db.flush()
+    extra_evidence = build_finding_binding_snapshot(
+        company_id=str(company_id),
+        compliance_flag_id=str(flag_id),
+        evaluation_run_id=str(run_id),
+        source_namespace=source_namespace,
+        historical_rule_id=rule_id,
+        jurisdiction="BD",
+        effective_date=today,
+        resolution=resolution,
+        finding_snapshot={"evaluation_state": "NOT_EVALUATED", "score_impact": 0},
+        evidence_facts=[{
+            "fact_id": str(extra_fact.id),
+            "fact_key": extra_fact.fact_key,
+            "fact_value": extra_fact.fact_value,
+            "trust_level": extra_fact.trust_level,
+            "verification_status": extra_fact.verification_status,
+            "observed_on": today.isoformat(),
+            "asserted_by": str(user_id),
+        }],
+    )["evidence"][0]
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(text("SET CONSTRAINTS ALL DEFERRED"))
+            await db.execute(text("""
+                INSERT INTO public.compliance_finding_evidence (
+                    binding_id, company_id, company_fact_id, evidence_role,
+                    fact_key, fact_value_snapshot, fact_value_canonical,
+                    evidence_canonical, fact_value_hash, trust_level,
+                    verification_status, observed_on, source_reference,
+                    document_id, document_sha256, asserted_by,
+                    authorized_uploader_id, uploaded_at, verified_by,
+                    verified_at, evidence_hash
+                ) VALUES (
+                    :binding_id, :company_id, :company_fact_id, :evidence_role,
+                    :fact_key, :fact_value_snapshot, :fact_value_canonical,
+                    :evidence_canonical, :fact_value_hash, :trust_level,
+                    :verification_status, :observed_on, :source_reference,
+                    :document_id, :document_sha256, :asserted_by,
+                    :authorized_uploader_id, :uploaded_at, :verified_by,
+                    :verified_at, :evidence_hash
+                )
+            """), {"binding_id": binding.id, **extra_evidence})
+            await db.execute(text("SET CONSTRAINTS ALL IMMEDIATE"))
