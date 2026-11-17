@@ -25,8 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0118_legal_rule_alias_overlap_guard"
-EXPECTED_HEAD_REVISION = "0120_governed_finding_context_catalog"
+EXPECTED_HEAD_REVISION = "0121_merge_alias_and_finding_context_heads"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -986,7 +985,7 @@ async def main() -> int:
             report["error"] = (
                 "Migration 0115 preflight blocked after upgrading the isolated "
                 "branch through 0114. The 0043-0114 migrations were applied to "
-                "the rehearsal branch only; 0115–0118 were not run. Resolve the "
+                "the rehearsal branch only; 0115–0121 were not run. Resolve the "
                 "schema/fingerprint mismatch with an explicit reviewed disposition."
             )
             report["finished_at"] = datetime.now(timezone.utc).isoformat()
