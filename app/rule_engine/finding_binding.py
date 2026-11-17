@@ -5,11 +5,9 @@ compliance outcome. ATTRIBUTED is deliberately not assigned automatically.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Mapping, Sequence
 
 from app.rule_engine.canonical_identity import RuleResolution, canonical_definition_hash
@@ -22,7 +20,9 @@ def _stable_hash(value: Mapping[str, Any]) -> str:
     return canonical_definition_hash(value)
 
 
-def _normalise_fact(fact: Mapping[str, Any], *, evidence_role: str) -> dict[str, Any]:
+def _normalise_fact(
+    fact: Mapping[str, Any], *, company_id: str, evidence_role: str
+) -> dict[str, Any]:
     fact_id = str(fact.get("fact_id") or fact.get("id") or "")
     fact_key = str(fact.get("fact_key") or "")
     if not fact_id or not fact_key:
@@ -52,6 +52,7 @@ def _normalise_fact(fact: Mapping[str, Any], *, evidence_role: str) -> dict[str,
     ):
         raise ValueError("Verified evidence requires a verified document-backed source and verifier")
     snapshot = {
+        "company_id": company_id,
         "company_fact_id": fact_id,
         "evidence_role": evidence_role,
         "fact_key": fact_key,
@@ -79,6 +80,9 @@ def _evidence_status(
 ) -> str:
     if not evidence:
         return "MISSING"
+    # Without an evaluator-declared required-fact set, completeness cannot be asserted.
+    if not required_fact_keys:
+        return "PARTIAL"
     if any(item["verification_status"] in {"REJECTED", "SUPERSEDED"} for item in evidence):
         return "INVALID"
     values_by_key: dict[str, set[str]] = defaultdict(set)
@@ -120,8 +124,8 @@ def build_finding_binding_snapshot(
     """
     if not company_id or not compliance_flag_id or not source_namespace or not historical_rule_id:
         raise ValueError("Company, finding and namespaced rule identity are required")
-    if not isinstance(effective_date, date):
-        raise ValueError("effective_date must be a date")
+    if not isinstance(effective_date, date) or isinstance(effective_date, datetime):
+        raise ValueError("effective_date must be a date without a time component")
     if resolution.effective_date != effective_date:
         raise ValueError("Resolution date must equal the finding's legal effective date")
     if (
@@ -134,6 +138,7 @@ def build_finding_binding_snapshot(
     evidence_rows = [
         _normalise_fact(
             fact,
+            company_id=company_id,
             evidence_role=evidence_roles.get(str(fact.get("fact_id") or fact.get("id")), "RULE_INPUT"),
         )
         for fact in evidence_facts
