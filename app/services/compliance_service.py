@@ -1257,7 +1257,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                          AND lr.score IS NOT NULL
                          AND lr.risk_band <> 'NOT_EVALUATED'
                          AND c.last_evaluated_at = lr.calculated_at
-                             AND c.updated_at = c.last_evaluated_at
+                             AND c.updated_at <= c.last_evaluated_at
                          AND c.current_compliance_score = lr.score
                          AND c.current_risk_band = lr.risk_band
                         THEN lr.risk_band
