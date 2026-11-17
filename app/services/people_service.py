@@ -3,7 +3,7 @@ NEUM LEX COUNSEL — People Service
 app/services/people_service.py
 
 Directors, Shareholders, and Share Transfers.
-All changes trigger compliance re-evaluation via background task.
+All scoring-input changes invalidate the cached score and publish a domain event.
 AI Constitution Article 2: NID/passport data encrypted at application layer.
 """
 from __future__ import annotations
