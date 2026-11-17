@@ -111,7 +111,7 @@ def test_user_asserted_evidence_is_not_marked_complete():
         verified_by=None,
         verified_at=None,
     )
-    assert _build(facts=[fact])["binding"]["evidence_status"] == "UNVERIFIED"
+    assert _build(facts=[fact], required_fact_keys=["agm_held"])["binding"]["evidence_status"] == "UNVERIFIED"
 
 
 def test_conflicting_fact_values_are_detected():
