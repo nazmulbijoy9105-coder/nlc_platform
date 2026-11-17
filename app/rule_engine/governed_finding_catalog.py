@@ -55,9 +55,15 @@ def context_payload(context: RuleFindingContext) -> dict:
     }
 
 
-def finding_context_digest(context: RuleFindingContext) -> str:
-    """Digest all context fields; any post-review change invalidates approval."""
-    return canonical_definition_hash({"finding_context": context_payload(context)})
+def finding_context_digest(
+    context: RuleFindingContext, source_instrument: str, source_provision: str
+) -> str:
+    """Digest the context and its legal source citation as one reviewed unit."""
+    return canonical_definition_hash({
+        "finding_context": context_payload(context),
+        "source_instrument": _required_text(source_instrument, "source_instrument", 500),
+        "source_provision": _required_text(source_provision, "source_provision", 255),
+    })
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +126,7 @@ class GovernedRuleFindingContext:
         if reviewed_at < self.authored_at:
             raise ValueError("reviewed_at cannot precede authored_at")
         digest = _required_text(self.reviewed_context_sha256, "reviewed_context_sha256", 64).lower()
-        if digest != finding_context_digest(self.context):
+        if digest != finding_context_digest(self.context, self.source_instrument, self.source_provision):
             raise ValueError("Review digest does not match the exact current context")
         object.__setattr__(self, "reviewed_by", reviewer)
         object.__setattr__(self, "reviewed_at", reviewed_at)
@@ -133,7 +139,9 @@ class GovernedRuleFindingContext:
         return (
             self.review_status == "APPROVED"
             and self.reviewed_by != self.authored_by
-            and self.reviewed_context_sha256 == finding_context_digest(self.context)
+            and self.reviewed_context_sha256 == finding_context_digest(
+                self.context, self.source_instrument, self.source_provision
+            )
         )
 
 
