@@ -20,10 +20,14 @@ class RuleResolution:
     historical_rule_id: str
     effective_date: date
     canonical_rule_id: str | None = None
+    alias_id: str | None = None
     revision_id: str | None = None
     revision_number: int | None = None
     approval_state: str | None = None
     definition_hash: str | None = None
+    evaluator_name: str | None = None
+    evaluator_version: str | None = None
+    evaluator_artifact_hash: str | None = None
     detail: str = ""
 
     @property
@@ -46,15 +50,26 @@ def _as_date(value: Any) -> date | None:
     return None
 
 
-def canonical_definition_hash(definition: Mapping[str, Any]) -> str:
-    """SHA-256 of canonical UTF-8 JSON; keys/order/spacing cannot alter digest."""
-    payload = json.dumps(
+def canonical_definition_json(definition: Mapping[str, Any]) -> str:
+    """Return the canonical JSON text used as the cross-layer digest contract.
+
+    Contract v1: Python JSON scalar semantics; lexicographically sorted object
+    keys; compact separators; literal UTF-8 Unicode; no NaN or infinities.
+    Callers persist this exact text when a database must independently hash
+    the payload. PostgreSQL JSONB text output is deliberately not the contract.
+    """
+    return json.dumps(
         definition,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
         allow_nan=False,
-    ).encode("utf-8")
+    )
+
+
+def canonical_definition_hash(definition: Mapping[str, Any]) -> str:
+    """SHA-256 of the UTF-8 bytes of canonical JSON contract v1."""
+    payload = canonical_definition_json(definition).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -105,7 +120,15 @@ def resolve_rule_identity(
     for alias in matching:
         start = _as_date(alias.get("valid_from"))
         end = _as_date(alias.get("valid_to"))
-        if alias.get("valid_from") is not None and start is None:
+        # The database insert guard requires a concrete alias start date.
+        # Match that contract here; an open-ended start is not a defensible
+        # temporal mapping and must never resolve as if valid since forever.
+        if alias.get("valid_from") is None:
+            return RuleResolution(
+                status="INVALID_ALIAS_INTERVAL", **base,
+                detail="Alias valid_from is required; an undated alias cannot resolve.",
+            )
+        if start is None:
             return RuleResolution(
                 status="INVALID_ALIAS_INTERVAL", **base,
                 detail="Alias valid_from is not a valid ISO date.",
@@ -145,6 +168,11 @@ def resolve_rule_identity(
         return RuleResolution(
             status="UNRESOLVED", **base,
             detail=f"Alias resolution state is {alias_state}; RESOLVED is required.",
+        )
+    if not str(alias.get("id") or "").strip():
+        return RuleResolution(
+            status="INVALID_ALIAS_METADATA", **base,
+            detail="Resolved alias has no immutable registry row identifier.",
         )
 
     canonical_id = str(alias.get("canonical_rule_id") or "")
@@ -245,9 +273,13 @@ def resolve_rule_identity(
         status="RESOLVED",
         **base,
         canonical_rule_id=canonical_id,
+        alias_id=str(alias.get("id") or "") or None,
         revision_id=str(revision.get("id") or "") or None,
         revision_number=revision_number,
         approval_state=str(revision.get("approval_state", "REVIEW_REQUIRED")),
         definition_hash=actual_hash,
+        evaluator_name=str(revision.get("evaluator_name") or "") or None,
+        evaluator_version=str(revision.get("evaluator_version") or "") or None,
+        evaluator_artifact_hash=str(revision.get("evaluator_artifact_hash") or "") or None,
         detail="Identity and dated revision resolved. This is not legal approval or scoring authorisation.",
     )

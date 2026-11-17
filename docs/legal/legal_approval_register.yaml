@@ -1,3 +1,9 @@
+# NLC legal approval gate — pending rule-specific legal metadata
+# Product scoring remains disabled until auditable rule-level metadata is supplied.
+# No legal approval or independent review is inferred from a code change.
+jurisdiction: BD
+snapshot_date: 2026-11-11
+approval_policy: fail_closed
 # NLC independent Bangladesh-counsel verification register — snapshot 2026-11-13
 # Product-owner approvals are recorded separately in docs/product/product_rule_approval_register.yaml.
 # Only a rule-specific independent counsel disposition may change this register.
