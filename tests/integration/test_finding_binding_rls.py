@@ -153,11 +153,55 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
             async with db.begin_nested():
                 await db.execute(text(statement), {"flag_id": flag_id})
 
+    # Create a second valid flag/run pair before switching to an unassigned
+    # actor. This ensures the attempted INSERT cannot fail merely because of
+    # a missing FK parent; the expected rejection is the tenant INSERT policy.
+    denied_flag_id = uuid.uuid4()
+    denied_run_id = uuid.uuid4()
+    db.add(ComplianceFlag(
+        id=denied_flag_id, company_id=company_id, rule_id=fixture_rule_id,
+        rule_version="test", flag_code="TEST-RLS-INSERT",
+        statutory_basis="Not a statutory conclusion",
+        severity=SeverityLevel.NOT_EVALUATED, score_impact=0,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        evaluation_state="NOT_EVALUATED", flag_status=FlagStatus.ACTIVE,
+        triggered_date=date.today(),
+        description="Integration fixture only; not a legal finding.",
+    ))
+    db.add(ComplianceEvaluationRun(
+        id=denied_run_id, company_id=company_id, risk_band=RiskBand.NOT_EVALUATED,
+        calculated_at=datetime.now(timezone.utc), engine_version="test",
+        score_hash="d" * 64, evaluation_status="NOT_RELEASED",
+        trigger_source="TEST", active_flags_count=1, black_flags_count=0,
+        flags_snapshot=[], fact_provenance_snapshot=[],
+    ))
+    await db.flush()
+
     await set_rls_context(db, "00000000-0000-0000-0000-000000000001")
     result = await db.execute(text("SELECT count(*) FROM public.compliance_finding_bindings"))
     assert result.scalar_one() == 0
     result = await db.execute(text("SELECT count(*) FROM public.compliance_finding_evidence"))
     assert result.scalar_one() == 0
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(text("""
+                INSERT INTO public.compliance_finding_bindings (
+                    company_id, compliance_flag_id, evaluation_run_id,
+                    jurisdiction, source_namespace, historical_rule_id,
+                    resolution_status, attribution_status, effective_date,
+                    evidence_status, evidence_manifest_hash,
+                    finding_snapshot, finding_snapshot_hash
+                ) VALUES (
+                    :company_id, :flag_id, :run_id,
+                    'BD', 'test-fixture', 'TEST-RLS-INSERT',
+                    'UNRESOLVED', 'CURRENT_EVALUATION', CURRENT_DATE,
+                    'MISSING', :manifest_hash, '{}'::jsonb, :snapshot_hash
+                )
+            """), {
+                "company_id": company_id, "flag_id": denied_flag_id,
+                "run_id": denied_run_id, "manifest_hash": "e" * 64,
+                "snapshot_hash": "f" * 64,
+            })
     await db.rollback()
 
 
