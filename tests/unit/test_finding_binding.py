@@ -121,7 +121,7 @@ def test_conflicting_fact_values_are_detected():
 
 def test_rejected_evidence_is_invalid():
     fact = _fact(verification_status="REJECTED", verified_by=None, verified_at=None)
-    assert _build(facts=[fact])["binding"]["evidence_status"] == "INVALID"
+    assert _build(facts=[fact], required_fact_keys=["agm_held"])["binding"]["evidence_status"] == "INVALID"
 
 
 def test_resolution_key_mismatch_is_rejected():
