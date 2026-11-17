@@ -1,0 +1,4885 @@
+{
+  "manifest_version": "1.0.0",
+  "snapshot_date": "2026-11-18",
+  "jurisdiction": "BD",
+  "canonical_rule_count": 85,
+  "status_policy": "FAIL_CLOSED",
+  "scoring_release_policy": "No rule is legally verified or score-releasable by inclusion in this manifest. Independent counsel approval and separate product release approval are mandatory.",
+  "canonical_id_inventory": {
+    "path": "docs/legal/legal_approval_register.yaml",
+    "source_revision": null,
+    "source_revision_status": "UNPINNED_REQUIRES_COMMIT_SHA"
+  },
+  "rules": [
+    {
+      "rule_id": "ACC-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ACC-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ACC-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ACC-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ACC-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ACC-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-006",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-006",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AGM-007",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AGM-007",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AR-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AR-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AR-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AR-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AR-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AR-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AR-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AR-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AUD-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AUD-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AUD-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AUD-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AUD-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AUD-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AUD-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AUD-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "AUD-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "AUD-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BNK-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BNK-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BNK-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BNK-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BNK-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BNK-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BOD-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BOD-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BOD-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BOD-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BOD-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BOD-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BSEC-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BSEC-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BSEC-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BSEC-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BSEC-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BSEC-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "BSEC-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "BSEC-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "CAP-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "CAP-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "CAP-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "CAP-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "CAP-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "CAP-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "CAP-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "CAP-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "CHG-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "CHG-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DEF-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DEF-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DEF-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DEF-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-006",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-006",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-007",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-007",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-008",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-008",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "DIR-010",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "DIR-010",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ESC-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ESC-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ESC-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ESC-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ESC-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ESC-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ESC-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ESC-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "ESC-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "ESC-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "FX-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "FX-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-006",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-006",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "INC-007",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "INC-007",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "LBR-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "LBR-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "LBR-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "LBR-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "LBR-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "LBR-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "MEM-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "MEM-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "OFF-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "OFF-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "REG-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "REG-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "REG-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "REG-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "REG-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "REG-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "SH-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "SH-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "SH-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "SH-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "SH-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "SH-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "STR-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "STR-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "STR-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "STR-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "STR-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "STR-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TAX-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TAX-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TAX-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TAX-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TAX-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TAX-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TAX-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TAX-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TL-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TL-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TL-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TL-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-001",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-001",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-004",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-004",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-005",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-005",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "TR-006",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "TR-006",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "VAT-002",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "VAT-002",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    },
+    {
+      "rule_id": "VAT-003",
+      "record_status": "UNRESOLVED",
+      "identity": {
+        "canonical_rule_uuid": null,
+        "source_namespace": null,
+        "historical_rule_id": "VAT-003",
+        "alias_resolution_status": "UNRESOLVED",
+        "identity_rationale": null
+      },
+      "jurisdiction": "BD",
+      "company_scope": {
+        "entity_types": [],
+        "conditions": [],
+        "exclusions": [],
+        "status": "NOT_ASSESSED"
+      },
+      "operative_effective_date": {
+        "from": null,
+        "to": null,
+        "date_basis": null,
+        "source_ref": null,
+        "status": "UNRESOLVED"
+      },
+      "legal_instrument": {
+        "title": null,
+        "instrument_type": null,
+        "act_or_instrument_number": null,
+        "provision": null,
+        "official_source_url": null,
+        "artifact_sha256": null
+      },
+      "amendment_chain": [],
+      "required_company_facts": [],
+      "evidence_roles": [],
+      "evaluator": {
+        "engine_version": null,
+        "source_commit": null,
+        "artifact_sha256": null,
+        "emitted_rule_ids_tested": false
+      },
+      "legal_review": {
+        "status": "REVIEW_REQUIRED",
+        "reviewer_id": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "review_basis": null,
+        "reviewed_payload_sha256": null
+      },
+      "product_decision": {
+        "status": "NOT_REVIEWED",
+        "decision_owner": null,
+        "decided_at": null,
+        "decision_basis": null
+      },
+      "unresolved_questions": []
+    }
+  ],
+  "legacy_candidates": [
+    {
+      "historical_rule_id": "INC-002",
+      "source_namespace": null,
+      "disposition": "QUARANTINED_PENDING_IDENTITY_REVIEW",
+      "canonical_rule_uuid": null,
+      "notes": "Production-only legacy candidate in the 2026-11-15 reconciliation; not one of the canonical 85. Do not silently map, activate or delete."
+    }
+  ],
+  "known_identity_conflicts": [
+    {
+      "historical_rule_id": "INC-001",
+      "status": "AMBIGUOUS_PENDING_SOURCE_NAMESPACE_RECONCILIATION",
+      "details": "The 2026-11-15 reconciliation reports a section 9 production definition and a section 23 seed definition under the same historical ID. Exact source namespaces and immutable source revisions must be established before attribution.",
+      "allowed_actions": [
+        "preserve_both_source_records",
+        "quarantine_ambiguous_historical_attribution"
+      ],
+      "prohibited_actions": [
+        "merge_definitions",
+        "overwrite_history",
+        "reassign_findings_without_evidence"
+      ]
+    }
+  ]
+}
