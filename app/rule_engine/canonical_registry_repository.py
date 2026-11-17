@@ -47,7 +47,10 @@ def _row_revision(row: LegalRuleRevision) -> dict[str, Any]:
         "effective_to": row.effective_to,
         "definition_json": row.definition_json,
         "definition_hash": row.definition_hash,
-        "approval_state": row.approval_state,\n        "evaluator_name": row.evaluator_name,\n        "evaluator_version": row.evaluator_version,\n        "evaluator_artifact_hash": row.evaluator_artifact_hash,
+        "approval_state": row.approval_state,
+        "evaluator_name": row.evaluator_name,
+        "evaluator_version": row.evaluator_version,
+        "evaluator_artifact_hash": row.evaluator_artifact_hash,\n        "evaluator_name": row.evaluator_name,\n        "evaluator_version": row.evaluator_version,\n        "evaluator_artifact_hash": row.evaluator_artifact_hash,
     }
 
 
