@@ -4,6 +4,7 @@ import pytest
 
 from app.rule_engine.canonical_identity import (
     canonical_definition_hash,
+    canonical_definition_json,
     resolve_rule_identity,
 )
 
@@ -154,6 +155,23 @@ def test_definition_hash_is_key_order_independent():
     assert canonical_definition_hash({"a": 1, "b": 2}) == canonical_definition_hash(
         {"b": 2, "a": 1}
     )
+
+def test_canonical_json_contract_v1_is_exact_and_unicode_preserving():
+    value = {"z": None, "বাংলা": "আইন", "a": [True, False, 1, 1.5]}
+    assert canonical_definition_json(value) == '{"a":[true,false,1,1.5],"z":null,"বাংলা":"আইন"}'
+    assert canonical_definition_hash(value) == canonical_definition_hash(
+        {"বাংলা": "আইন", "a": [True, False, 1, 1.5], "z": None}
+    )
+
+
+@pytest.mark.parametrize("value", [
+    {"not_finite": float("nan")},
+    {"not_finite": float("inf")},
+    {"not_finite": float("-inf")},
+])
+def test_canonical_json_contract_rejects_non_finite_numbers(value):
+    with pytest.raises(ValueError):
+        canonical_definition_json(value)
 
 
 def test_invalid_alias_date_fails_closed():
