@@ -26,8 +26,8 @@ def upgrade() -> None:
                 RAISE EXCEPTION
                     '0119 requires an explicit canonical-payload backfill before existing 0118 rows can be upgraded';
             END IF;
-        END
-        $$
+        END;
+        $
     """)
     op.add_column("compliance_finding_bindings",
                   sa.Column("finding_snapshot_canonical", sa.Text(), nullable=True))
@@ -60,7 +60,7 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'Evidence manifest canonical payload or SHA-256 digest mismatch';
             END IF;
             RETURN NEW;
-        END
+        END;
         $function$
     """)
     op.execute("""
@@ -138,7 +138,7 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'Evidence manifest does not match persisted evidence rows';
             END IF;
             RETURN NULL;
-        END
+        END;
         $function$
     """)
     op.execute("""
