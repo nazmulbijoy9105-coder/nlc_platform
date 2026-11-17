@@ -47,7 +47,11 @@ def test_risk_distribution_requires_user_and_active_membership_filter():
     assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in sql
     assert "score_breakdown_snapshot ->> 'score_reconciles'" in sql
     assert "else 'not_evaluated'::risk_band" in sql
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
     assert db.params[0] == {
+        "engine_version": RULE_ENGINE_VERSION,
+        "scoring_spec_version": SCORING_SPEC_VERSION,
         "user_id": str(user_id),
         "include_assigned_staff": False,
     }
