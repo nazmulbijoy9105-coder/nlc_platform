@@ -242,6 +242,27 @@ def _charge_event_from_record(charge: CompanyCharge):
 class CompanyService(BaseService[Company]):
     model = Company
 
+    async def update_by_id(self, record_id: uuid.UUID, **kwargs) -> Company | None:
+        """Update company profile and invalidate any cached statutory score."""
+        updates = {key: value for key, value in kwargs.items() if value is not None}
+        if not updates:
+            return await self.get_by_id(record_id)
+        company = await super().update_by_id(record_id, **updates)
+        if company is None:
+            return None
+        await self.db.execute(
+            update(Company)
+            .where(Company.id == record_id)
+            .values(
+                current_compliance_score=None,
+                current_risk_band=RiskBand.NOT_EVALUATED,
+                last_evaluated_at=None,
+            )
+        )
+        await self.db.flush()
+        await self.db.refresh(company)
+        return company
+
     # ── CREATE ────────────────────────────────────────────────────
 
     async def create_company(
