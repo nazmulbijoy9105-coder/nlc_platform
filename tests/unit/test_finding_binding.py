@@ -1,4 +1,6 @@
 from datetime import date, datetime
+import hashlib
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -77,6 +79,12 @@ def test_binding_captures_exact_canonical_alias_revision_and_evaluator():
     assert binding["finding_snapshot"]["evaluation_state"] == "NOT_COMPLIANT"
     assert result["evidence"][0]["fact_value_snapshot"] is False
     assert binding["resolution_status"] == "RESOLVED"
+    assert hashlib.sha256(binding["finding_snapshot_canonical"].encode("utf-8")).hexdigest() == binding["finding_snapshot_hash"]
+    assert json.loads(binding["finding_snapshot_canonical"]) == {"finding": binding["finding_snapshot"]}
+    assert hashlib.sha256(binding["evidence_manifest_canonical"].encode("utf-8")).hexdigest() == binding["evidence_manifest_hash"]
+    for evidence in result["evidence"]:
+        assert hashlib.sha256(evidence["fact_value_canonical"].encode("utf-8")).hexdigest() == evidence["fact_value_hash"]
+        assert hashlib.sha256(evidence["evidence_canonical"].encode("utf-8")).hexdigest() == evidence["evidence_hash"]
 
 
 def test_identity_resolution_does_not_imply_legal_approval_or_attribution():
@@ -176,6 +184,16 @@ async def test_persistence_rejects_tampered_finding_payload_before_insert():
     result = _build(required_fact_keys=["agm_held"])
     result["binding"]["finding_snapshot"]["evaluation_state"] = "COMPLIANT"
     with pytest.raises(ValueError, match="Finding snapshot digest"):
+        await persist_finding_binding(session, result)
+    assert not session.add.called
+
+
+@pytest.mark.asyncio
+async def test_persistence_rejects_tampered_canonical_payload_before_insert():
+    session = MagicMock()
+    result = _build(required_fact_keys=["agm_held"])
+    result["evidence"][0]["evidence_canonical"] += " "
+    with pytest.raises(ValueError, match="Evidence canonical payload"):
         await persist_finding_binding(session, result)
     assert not session.add.called
 
