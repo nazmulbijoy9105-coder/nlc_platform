@@ -15,11 +15,18 @@ EXPECTED_BASELINE = "cefe6f169cd283d2e61071a3b7438657da04321e"
 EXPECTED_REPORT_TYPE = "AST_SOURCE_DEFINITION_RECONCILIATION_NOT_LEGAL_APPROVAL"
 
 
+def source_label(value: str) -> str:
+    """Remove only the Python quoting added by ast.unparse for string literals."""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
 def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
     facts = [
         {
-            "fact_key": fact,
-            "source_expression": fact,
+            "fact_key": source_label(fact),
+            "source_expression": source_label(fact),
             "data_type": "UNSPECIFIED",
             "collection_source": "UNSPECIFIED",
             "verification_method": "UNSPECIFIED",
@@ -31,7 +38,7 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
     ]
     applicability = [
         {
-            "condition_expression": condition,
+            "condition_expression": source_label(condition),
             "fact_key": None,
             "evaluation_semantics": "UNSPECIFIED",
             "exception_effect": "UNSPECIFIED",
