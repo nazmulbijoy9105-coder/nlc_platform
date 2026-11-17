@@ -116,7 +116,7 @@ def test_user_asserted_evidence_is_not_marked_complete():
 
 def test_conflicting_fact_values_are_detected():
     second = _fact(fact_id="fact-2", fact_value=True)
-    assert _build(facts=[_fact(), second])["binding"]["evidence_status"] == "CONFLICT"
+    assert _build(facts=[_fact(), second], required_fact_keys=["agm_held"])["binding"]["evidence_status"] == "CONFLICT"
 
 
 def test_rejected_evidence_is_invalid():
