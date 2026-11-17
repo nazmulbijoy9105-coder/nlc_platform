@@ -456,6 +456,18 @@ def _company_evaluation_status(company, evaluation_run) -> str:
     return "NOT_EVALUATED"
 
 
+def _evaluation_run_response_status(company, evaluation_run) -> str | None:
+    """Expose release/currentness state, never raw COMPLETED as a released score."""
+    if evaluation_run is None:
+        return None
+    if not _legal_score_is_released():
+        return "NOT_RELEASED"
+    run_status = str(getattr(evaluation_run, "evaluation_status", "") or "")
+    if run_status == "COMPLETED" and not _evaluation_run_is_current(company, evaluation_run):
+        return "STALE"
+    return run_status or "NOT_EVALUATED"
+
+
 def _company_to_response(
     company,
     *,
@@ -564,6 +576,68 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
         )
         for c in companies
     ]
+
+
+@router.post(
+    "",
+    response_model=CompanyResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Create company",
+)
+async def create_company(
+    body: CompanyCreateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Create a company through the staff-controlled onboarding workflow."""
+    if body.assigned_staff_id is not None:
+        assigned_staff = await db.get(User, body.assigned_staff_id)
+        if assigned_staff is None or assigned_staff.role not in (
+            UserRole.ADMIN_STAFF,
+            UserRole.LEGAL_STAFF,
+            UserRole.SUPER_ADMIN,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="assigned_staff_id must identify an active staff account.",
+            )
+        if not assigned_staff.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="assigned_staff_id must identify an active staff account.",
+            )
+
+    service = CompanyService(db, actor_id=current_user.id)
+    try:
+        company = await service.create_company(
+            registration_number=body.registration_number,
+            company_name=body.company_name,
+            company_type=body.company_type,
+            incorporation_date=body.incorporation_date,
+            financial_year_end=body.financial_year_end,
+            registered_address=body.registered_address,
+            assigned_staff_id=body.assigned_staff_id,
+            created_by=current_user.id,
+            is_manufacturing=body.is_manufacturing,
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A company with this registration number already exists.",
+        ) from exc
+
+    await ActivityService(db).log(
+        action="COMPANY_CREATED",
+        resource_type="company",
+        resource_id=str(company.id),
+        description=f"Created company: {company.company_name}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
+    return _company_to_response(company)
 
 
 @router.get("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get company")
@@ -731,7 +805,7 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
         evaluation_triggered=True,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else result.get("evaluation_run_id"),
         evaluation_hash=evaluation_run.score_hash if evaluation_run else result.get("evaluation_hash"),
-        evaluation_run_status=evaluation_run.evaluation_status if evaluation_run else result.get("evaluation_run_status"),
+        evaluation_run_status=_evaluation_run_response_status(company, evaluation_run) or result.get("evaluation_run_status"),
         evaluation_status=evaluation_status,
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else result.get("evaluation_calculated_at"),
         engine_version=evaluation_run.engine_version if evaluation_run else result.get("engine_version"),
@@ -774,7 +848,7 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else None,
         evaluation_hash=evaluation_run.score_hash if evaluation_run else None,
-        evaluation_run_status=(evaluation_run.evaluation_status if evaluation_run else None),
+        evaluation_run_status=_evaluation_run_response_status(company, evaluation_run),
         evaluation_status=evaluation_status,
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else None,
         engine_version=evaluation_run.engine_version if evaluation_run else None,
