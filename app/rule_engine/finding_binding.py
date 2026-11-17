@@ -5,6 +5,7 @@ compliance outcome. ATTRIBUTED is deliberately not assigned automatically.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import uuid
 from collections import defaultdict
@@ -75,7 +76,7 @@ def _normalise_fact(
         raise ValueError("Evidence requires asserted_by and observed_on")
     snapshot["evidence_canonical"] = canonical_definition_json(snapshot)
     snapshot["fact_value_canonical"] = canonical_definition_json({"value": snapshot["fact_value_snapshot"]})
-    snapshot["evidence_hash"] = _stable_hash(snapshot)
+    snapshot["evidence_hash"] = hashlib.sha256(snapshot["evidence_canonical"].encode("utf-8")).hexdigest()
     return snapshot
 
 
@@ -229,11 +230,13 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
             raise ValueError("Every evidence item must be a mapping")
         evidence_copy = dict(evidence)
         stored_evidence_hash = evidence_copy.pop("evidence_hash", None)
-        if evidence.get("evidence_canonical") != canonical_definition_json(evidence_copy):
+        evidence_canonical = evidence_copy.pop("evidence_canonical", None)
+        evidence_copy.pop("fact_value_canonical", None)
+        if evidence_canonical != canonical_definition_json(evidence_copy):
             raise ValueError("Evidence canonical payload does not match its fields")
         if evidence.get("fact_value_canonical") != canonical_definition_json({"value": evidence.get("fact_value_snapshot")}):
             raise ValueError("Company fact canonical payload does not match its snapshot")
-        if stored_evidence_hash != _stable_hash(evidence_copy):
+        if stored_evidence_hash != hashlib.sha256(str(evidence_canonical).encode("utf-8")).hexdigest():
             raise ValueError("Evidence snapshot digest does not match its payload")
         if evidence.get("fact_value_hash") != _stable_hash({"value": evidence.get("fact_value_snapshot")}):
             raise ValueError("Company fact value digest does not match its snapshot")
