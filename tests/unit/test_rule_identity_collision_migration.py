@@ -80,3 +80,30 @@ def test_archive_rls_is_applied_after_archive_and_quarantine_writes():
     assert 'f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY"' in source
     assert "payload_sha256" in source
     assert "ON CONFLICT (legacy_identity_key) DO NOTHING" not in source
+
+
+def test_canonical_alias_registry_rejects_overlapping_resolved_mappings():
+    migration_path = (
+        ROOT / "alembic" / "versions" / "0116_canonical_rule_identity_registry.py"
+    )
+    source = migration_path.read_text(encoding="utf-8")
+
+    for marker in (
+        "prevent_legal_rule_alias_overlap",
+        "trg_legal_rule_alias_no_overlap",
+        "NEW.resolution_status <> 'RESOLVED'",
+        "existing.resolution_status = 'RESOLVED'",
+        "existing.source_namespace = NEW.source_namespace",
+        "existing.historical_rule_id = NEW.historical_rule_id",
+        "daterange(",
+        "hashtextextended(",
+        "pg_advisory_xact_lock(",
+        "USING ERRCODE = '23P01'",
+        "REVOKE ALL ON FUNCTION public.prevent_legal_rule_alias_overlap()",
+    ):
+        assert marker in source
+
+    # Unresolved/ambiguous records remain representable; only a second
+    # overlapping RESOLVED claim is rejected by the database trigger.
+    assert "NEW.resolution_status <> 'RESOLVED'" in source
+    assert "existing.resolution_status = 'RESOLVED'" in source
