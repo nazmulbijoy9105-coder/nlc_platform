@@ -179,7 +179,13 @@ async def test_released_legal_staff_kpis_include_assignment_and_membership_scope
     assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in db.calls[0][0]
     assert "score_breakdown_snapshot ->> 'score_reconciles'" in db.calls[0][0]
     assert "ELSE 'NOT_EVALUATED'::risk_band" in db.calls[0][0]
-    assert db.calls[0][1] == {"uid": str(user_id)}
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    assert db.calls[0][1] == {
+        "uid": str(user_id),
+        "engine_version": RULE_ENGINE_VERSION,
+        "scoring_spec_version": SCORING_SPEC_VERSION,
+    }
 
 
 
