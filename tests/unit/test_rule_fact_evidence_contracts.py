@@ -55,6 +55,27 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         assert all(item["verification_method"] == "UNSPECIFIED" for item in rule["evidence_items"])
         assert all(item["fact_keys_supported"] == [] for item in rule["evidence_items"])
 
+    source_rules_by_id = {
+        rule["historical_rule_id"]: rule
+        for rule in json.loads(source_report.read_text(encoding="utf-8"))["rules"]
+    }
+    for rule in report["rules"]:
+        actual_fact_keys = {fact["fact_key"] for fact in rule["facts"]}
+        required_applicability_facts = {
+            condition[1:-1]
+            if len(condition) >= 2
+            and condition[0] == condition[-1]
+            and condition[0] in {"'", '"'}
+            else condition
+            for condition in source_rules_by_id[rule["historical_rule_id"]][
+                "applicability_contract"
+            ]["required_conditions"]
+        }
+        assert required_applicability_facts <= actual_fact_keys, (
+            f"{rule['historical_rule_id']} missing applicability facts: "
+            f"{sorted(required_applicability_facts - actual_fact_keys)}"
+        )
+
     agm005 = next(rule for rule in report["rules"] if rule["historical_rule_id"] == "AGM-005")
     source_rules = json.loads(source_report.read_text(encoding="utf-8"))["rules"]
     agm005_source = next(
