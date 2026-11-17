@@ -1,0 +1,4061 @@
+{
+  "schema_version": "1.0.0",
+  "observation_status": "SOURCE_PRESENCE_ONLY_NOT_IDENTITY_OR_LEGAL_PROVENANCE",
+  "repository": "nazmulbijoy9105-coder/nlc_platform",
+  "repository_commit": "cefe6f169cd283d2e61071a3b7438657da04321e",
+  "generated_at": "2026-11-18",
+  "source_artifacts": [
+    {
+      "key": "statutory_registry",
+      "path": "canonical_architecture/statutory_rules.py",
+      "method": "mapping_key",
+      "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "AR-001",
+        "AR-002",
+        "AR-003",
+        "AR-004",
+        "AUD-001",
+        "AUD-002",
+        "AUD-003",
+        "AUD-004",
+        "AUD-005",
+        "BNK-001",
+        "BNK-002",
+        "BNK-003",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "BSEC-001",
+        "BSEC-002",
+        "BSEC-003",
+        "BSEC-004",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-006",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "ESC-003",
+        "ESC-004",
+        "ESC-005",
+        "FX-001",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-005",
+        "INC-006",
+        "INC-007",
+        "LBR-001",
+        "LBR-002",
+        "LBR-003",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "SH-001",
+        "SH-002",
+        "SH-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TAX-001",
+        "TAX-002",
+        "TAX-003",
+        "TAX-004",
+        "TL-001",
+        "TL-002",
+        "TR-001",
+        "TR-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "VAT-002",
+        "VAT-003"
+      ]
+    },
+    {
+      "key": "seed_catalogue",
+      "path": "scripts/seed_rules.py",
+      "method": "seed_rule_id",
+      "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "AR-001",
+        "AR-002",
+        "AR-003",
+        "AR-004",
+        "AUD-001",
+        "AUD-002",
+        "AUD-003",
+        "AUD-004",
+        "AUD-005",
+        "BNK-001",
+        "BNK-002",
+        "BNK-003",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "BSEC-001",
+        "BSEC-002",
+        "BSEC-003",
+        "BSEC-004",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-006",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "ESC-003",
+        "ESC-004",
+        "ESC-005",
+        "FX-001",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-005",
+        "INC-006",
+        "INC-007",
+        "LBR-001",
+        "LBR-002",
+        "LBR-003",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "SH-001",
+        "SH-002",
+        "SH-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TAX-001",
+        "TAX-002",
+        "TAX-003",
+        "TAX-004",
+        "TL-001",
+        "TL-002",
+        "TR-001",
+        "TR-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "VAT-002",
+        "VAT-003"
+      ]
+    },
+    {
+      "key": "runtime_engine",
+      "path": "app/rule_engine/engine.py",
+      "method": "token_scan",
+      "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "AR-001",
+        "AR-002",
+        "AR-003",
+        "AR-004",
+        "AUD-001",
+        "AUD-002",
+        "AUD-003",
+        "AUD-004",
+        "AUD-005",
+        "BNK-001",
+        "BNK-002",
+        "BNK-003",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "BSEC-001",
+        "BSEC-002",
+        "BSEC-003",
+        "BSEC-004",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-006",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "ESC-003",
+        "ESC-004",
+        "ESC-005",
+        "FX-001",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-005",
+        "INC-006",
+        "INC-007",
+        "LBR-001",
+        "LBR-002",
+        "LBR-003",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "SH-001",
+        "SH-002",
+        "SH-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TAX-001",
+        "TAX-002",
+        "TAX-003",
+        "TAX-004",
+        "TL-001",
+        "TL-002",
+        "TR-001",
+        "TR-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "VAT-002",
+        "VAT-003"
+      ]
+    },
+    {
+      "key": "evidence_contract",
+      "path": "canonical_architecture/evidence_model.py",
+      "method": "mapping_key",
+      "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-007",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TR-001"
+      ]
+    },
+    {
+      "key": "applicability_contract",
+      "path": "canonical_architecture/applicability_model.py",
+      "method": "mapping_key",
+      "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-007",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TR-001"
+      ]
+    },
+    {
+      "key": "legal_reconciliation",
+      "path": "canonical_architecture/legal_reconciliation.py",
+      "method": "mapping_key",
+      "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "AR-001",
+        "AR-002",
+        "AR-003",
+        "AR-004",
+        "AUD-001",
+        "AUD-002",
+        "AUD-003",
+        "AUD-004",
+        "AUD-005",
+        "BNK-001",
+        "BNK-002",
+        "BNK-003",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "BSEC-001",
+        "BSEC-002",
+        "BSEC-003",
+        "BSEC-004",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-006",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "ESC-003",
+        "ESC-004",
+        "ESC-005",
+        "FX-001",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-005",
+        "INC-006",
+        "INC-007",
+        "LBR-001",
+        "LBR-002",
+        "LBR-003",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "SH-001",
+        "SH-002",
+        "SH-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TAX-001",
+        "TAX-002",
+        "TAX-003",
+        "TAX-004",
+        "TL-001",
+        "TL-002",
+        "TR-001",
+        "TR-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "VAT-002",
+        "VAT-003"
+      ]
+    },
+    {
+      "key": "rescue_registry",
+      "path": "canonical_architecture/statutory_rescue.py",
+      "method": "mapping_key",
+      "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+      "observed_rule_ids": [
+        "ACC-001",
+        "ACC-002",
+        "ACC-003",
+        "AGM-001",
+        "AGM-002",
+        "AGM-003",
+        "AGM-004",
+        "AGM-005",
+        "AGM-006",
+        "AGM-007",
+        "AR-001",
+        "AR-002",
+        "AR-003",
+        "AR-004",
+        "AUD-001",
+        "AUD-002",
+        "AUD-003",
+        "AUD-004",
+        "AUD-005",
+        "BNK-001",
+        "BNK-002",
+        "BNK-003",
+        "BOD-001",
+        "BOD-002",
+        "BOD-003",
+        "BSEC-001",
+        "BSEC-002",
+        "BSEC-003",
+        "BSEC-004",
+        "CAP-001",
+        "CAP-002",
+        "CAP-003",
+        "CAP-004",
+        "CHG-001",
+        "DEF-001",
+        "DEF-002",
+        "DIR-001",
+        "DIR-002",
+        "DIR-003",
+        "DIR-004",
+        "DIR-005",
+        "DIR-006",
+        "DIR-007",
+        "DIR-008",
+        "DIR-010",
+        "ESC-001",
+        "ESC-002",
+        "ESC-003",
+        "ESC-004",
+        "ESC-005",
+        "FX-001",
+        "INC-001",
+        "INC-003",
+        "INC-004",
+        "INC-005",
+        "INC-006",
+        "INC-007",
+        "LBR-001",
+        "LBR-002",
+        "LBR-003",
+        "MEM-001",
+        "OFF-001",
+        "REG-001",
+        "REG-002",
+        "REG-003",
+        "SH-001",
+        "SH-002",
+        "SH-003",
+        "STR-001",
+        "STR-002",
+        "STR-003",
+        "TAX-001",
+        "TAX-002",
+        "TAX-003",
+        "TAX-004",
+        "TL-001",
+        "TL-002",
+        "TR-001",
+        "TR-002",
+        "TR-003",
+        "TR-004",
+        "TR-005",
+        "TR-006",
+        "VAT-002",
+        "VAT-003"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "historical_rule_id": "ACC-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ACC-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ACC-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-006",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AGM-007",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AR-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AR-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AR-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AR-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AUD-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AUD-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AUD-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AUD-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "AUD-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BNK-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BNK-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BNK-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BOD-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BOD-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BOD-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BSEC-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BSEC-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BSEC-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "BSEC-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "CAP-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "CAP-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "CAP-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "CAP-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "CHG-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DEF-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DEF-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-006",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-007",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-008",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "DIR-010",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ESC-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ESC-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ESC-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ESC-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "ESC-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "FX-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-006",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "INC-007",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "LBR-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "LBR-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "LBR-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "MEM-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "OFF-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "REG-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "REG-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "REG-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "SH-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "SH-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "SH-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "STR-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "STR-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "STR-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TAX-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TAX-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TAX-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TAX-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TL-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TL-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-001",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "evidence_contract",
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "applicability_contract",
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-004",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-005",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "TR-006",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "VAT-002",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    },
+    {
+      "historical_rule_id": "VAT-003",
+      "observations": [
+        {
+          "artifact_key": "statutory_registry",
+          "path": "canonical_architecture/statutory_rules.py",
+          "blob_sha": "f811bb2242ba25867aedea3769444eda425e0e49",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "seed_catalogue",
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
+          "observation_method": "seed_rule_id"
+        },
+        {
+          "artifact_key": "runtime_engine",
+          "path": "app/rule_engine/engine.py",
+          "blob_sha": "52a2a5d76e31429da5144e61b6b92db30b9161c4",
+          "observation_method": "token_scan"
+        },
+        {
+          "artifact_key": "legal_reconciliation",
+          "path": "canonical_architecture/legal_reconciliation.py",
+          "blob_sha": "f4049349a64480a8cf332f3f9f00f5e8035d028c",
+          "observation_method": "mapping_key"
+        },
+        {
+          "artifact_key": "rescue_registry",
+          "path": "canonical_architecture/statutory_rescue.py",
+          "blob_sha": "95375dfdafab04c08a29c5a16d91491487876c2d",
+          "observation_method": "mapping_key"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "A textual or mapping-key occurrence does not prove that the artifact originated the historical ID.",
+    "The same rule ID may describe different legal propositions in different source namespaces; INC-001 is a known collision.",
+    "The current repository commit is an observation baseline, not proof of the historical first-introduction commit.",
+    "No canonical UUID, alias resolution, operative date, legal instrument, amendment chain, company scope, evidence sufficiency, counsel approval, or scoring approval is inferred."
+  ]
+}
