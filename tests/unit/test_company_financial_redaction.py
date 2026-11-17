@@ -6,6 +6,57 @@ from app.api.companies import _company_to_response
 from app.models.enums import RevenueTier
 
 
+def _valid_evaluation_run(company, *, score, risk_band, calculated_at):
+    from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+    from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    outcomes = [{
+        "rule_id": "AGM-001",
+        "assessment_source": "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+        "findings": [],
+    }]
+    flags_snapshot = []
+    fact_provenance_snapshot = []
+    score_breakdown_snapshot = {
+        "scoring_spec_version": SCORING_SPEC_VERSION,
+        "score_reconciles": True,
+        "final_score": score,
+    }
+    rule_outcomes_hash = hash_rule_outcomes_snapshot(outcomes)
+    score_hash = calculate_evaluation_score_hash(
+        previous_hash=None,
+        company_id=company.id,
+        score=score,
+        risk_band=risk_band,
+        calculated_at=calculated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        trigger_source="TEST",
+        flags_snapshot=flags_snapshot,
+        fact_provenance_snapshot=fact_provenance_snapshot,
+        score_breakdown_snapshot=score_breakdown_snapshot,
+        rule_outcomes_hash=rule_outcomes_hash,
+        rule_outcomes_snapshot=outcomes,
+    )
+    return SimpleNamespace(
+        company_id=company.id,
+        evaluation_status="COMPLETED",
+        score=score,
+        risk_band=risk_band,
+        calculated_at=calculated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        trigger_source="TEST",
+        previous_hash=None,
+        score_hash=score_hash,
+        flags_snapshot=flags_snapshot,
+        fact_provenance_snapshot=fact_provenance_snapshot,
+        score_breakdown_snapshot=score_breakdown_snapshot,
+        rule_outcomes_snapshot=outcomes,
+        rule_outcomes_hash=rule_outcomes_hash,
+        rule_catalogue_count=1,
+    )
+
+
 def _company():
     return SimpleNamespace(
         id=uuid.uuid4(),
@@ -91,7 +142,6 @@ def test_company_response_marks_cached_score_stale_after_profile_change(monkeypa
 
     from app.api import companies as companies_api
     from app.models.enums import RiskBand
-    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     monkeypatch.setattr(companies_api, "_legal_score_is_released", lambda: True)
     company = _company()
@@ -100,17 +150,8 @@ def test_company_response_marks_cached_score_stale_after_profile_change(monkeypa
     company.current_compliance_score = 20
     company.last_evaluated_at = evaluated_at
     company.updated_at = evaluated_at + timedelta(seconds=1)
-    completed_run = SimpleNamespace(
-        evaluation_status="COMPLETED",
-        score=20,
-        risk_band=RiskBand.RED,
-        calculated_at=evaluated_at,
-        engine_version=RULE_ENGINE_VERSION,
-        score_breakdown_snapshot={
-            "scoring_spec_version": SCORING_SPEC_VERSION,
-            "score_reconciles": True,
-            "final_score": 20,
-        },
+    completed_run = _valid_evaluation_run(
+        company, score=20, risk_band=RiskBand.RED, calculated_at=evaluated_at
     )
 
     response = _company_to_response(company, evaluation_run=completed_run)
@@ -133,17 +174,8 @@ def test_company_response_releases_only_matching_completed_evaluation(monkeypatc
     company.current_compliance_score = 85
     company.last_evaluated_at = now
     company.updated_at = now
-    completed_run = SimpleNamespace(
-        evaluation_status="COMPLETED",
-        score=85,
-        risk_band=RiskBand.GREEN,
-        calculated_at=now,
-        engine_version=RULE_ENGINE_VERSION,
-        score_breakdown_snapshot={
-            "scoring_spec_version": SCORING_SPEC_VERSION,
-            "score_reconciles": True,
-            "final_score": 85,
-        },
+    completed_run = _valid_evaluation_run(
+        company, score=85, risk_band=RiskBand.GREEN, calculated_at=now
     )
 
     response = _company_to_response(company, evaluation_run=completed_run)
