@@ -57,6 +57,7 @@ def _normalise_fact(
         "company_fact_id": fact_id,
         "evidence_role": evidence_role,
         "fact_key": fact_key,
+        "fact_value_snapshot": fact.get("fact_value", fact.get("value")),
         "fact_value_hash": value_hash,
         "trust_level": trust,
         "verification_status": verification,
@@ -181,6 +182,7 @@ def build_finding_binding_snapshot(
         "evaluator_artifact_hash": resolution.evaluator_artifact_hash if resolved else None,
         "evidence_status": evidence_status,
         "evidence_manifest_hash": evidence_manifest_hash,
+        "finding_snapshot": dict(finding_snapshot),
         "finding_snapshot_hash": finding_hash,
     }
     return {"binding": binding, "evidence": evidence_rows}
@@ -204,17 +206,47 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
         raise ValueError("This write path only records current evaluations; historical attribution requires separate review")
     if not binding_values.get("company_id") or not binding_values.get("compliance_flag_id"):
         raise ValueError("Finding binding requires a tenant and compliance flag")
+    def _uuid_fields(values: dict[str, Any], fields: Sequence[str]) -> None:
+        for field in fields:
+            value = values.get(field)
+            if value is not None and not isinstance(value, uuid.UUID):
+                values[field] = uuid.UUID(str(value))
+
+    def _date_value(value: Any, field: str) -> date:
+        if isinstance(value, datetime):
+            raise ValueError(f"{field} must be a date, not a datetime")
+        if isinstance(value, date):
+            return value
+        try:
+            return date.fromisoformat(str(value))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{field} must be an ISO-8601 date") from exc
+
+    def _datetime_value(value: Any, field: str) -> datetime | None:
+        if value is None:
+            return None
+        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError(f"{field} must include a timezone offset")
+        return parsed
+
     binding_values.setdefault("id", uuid.uuid4())
+    _uuid_fields(binding_values, ("id", "company_id", "compliance_flag_id", "evaluation_run_id",
+                                  "attribution_reviewed_by", "canonical_rule_id", "alias_id", "revision_id"))
+    _date_value(binding_values.get("effective_date"), "effective_date")
+    binding_values["effective_date"] = _date_value(binding_values.get("effective_date"), "effective_date")
     binding = ComplianceFindingBinding(**binding_values)
     session.add(binding)
     await session.flush()
-    rows = [
-        ComplianceFindingEvidence(
-            binding_id=binding.id,
-            **dict(evidence),
-        )
-        for evidence in evidence_values
-    ]
+    rows = []
+    for evidence in evidence_values:
+        values = dict(evidence)
+        _uuid_fields(values, ("company_id", "company_fact_id", "document_id", "asserted_by",
+                              "authorized_uploader_id", "verified_by"))
+        values["observed_on"] = _date_value(values.get("observed_on"), "observed_on")
+        for field in ("uploaded_at", "verified_at"):
+            values[field] = _datetime_value(values.get(field), field)
+        rows.append(ComplianceFindingEvidence(binding_id=binding.id, **values))
     if rows:
         session.add_all(rows)
         await session.flush()
