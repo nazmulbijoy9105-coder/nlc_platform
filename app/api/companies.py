@@ -495,14 +495,17 @@ def _company_to_response(
         red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if score_is_current else 0),
         yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if score_is_current else 0),
         is_manufacturing=getattr(company, "is_manufacturing", None),
-        tax_return_filed_for_current_fy=getattr(company, "tax_return_filed_for_current_fy", None),
-        advance_tax_q1_paid=getattr(company, "advance_tax_q1_paid", None),
-        advance_tax_q2_paid=getattr(company, "advance_tax_q2_paid", None),
-        advance_tax_q3_paid=getattr(company, "advance_tax_q3_paid", None),
-        advance_tax_q4_paid=getattr(company, "advance_tax_q4_paid", None),
+        tax_return_filed_for_current_fy=(
+            getattr(company, "tax_return_filed_for_current_fy", None)
+            if can_view_financials else None
+        ),
+        advance_tax_q1_paid=getattr(company, "advance_tax_q1_paid", None) if can_view_financials else None,
+        advance_tax_q2_paid=getattr(company, "advance_tax_q2_paid", None) if can_view_financials else None,
+        advance_tax_q3_paid=getattr(company, "advance_tax_q3_paid", None) if can_view_financials else None,
+        advance_tax_q4_paid=getattr(company, "advance_tax_q4_paid", None) if can_view_financials else None,
         any_director_disqualified=getattr(company, "any_director_disqualified", None),
-        penalty_notices_received=getattr(company, "penalty_notices_received", None),
-        penalty_notices_resolved=getattr(company, "penalty_notices_resolved", None),
+        penalty_notices_received=getattr(company, "penalty_notices_received", None) if can_view_financials else None,
+        penalty_notices_resolved=getattr(company, "penalty_notices_resolved", None) if can_view_financials else None,
     )
 
 
@@ -536,8 +539,15 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
     financial_ids = await _financial_access_ids(
         db, current_user, [company.id for company in companies]
     )
+    latest_runs = await ComplianceService(db).get_latest_evaluation_runs(
+        [company.id for company in companies]
+    )
     return [
-        _company_to_response(c, can_view_financials=c.id in financial_ids)
+        _company_to_response(
+            c,
+            can_view_financials=c.id in financial_ids,
+            evaluation_run=latest_runs.get(c.id),
+        )
         for c in companies
     ]
 
@@ -549,9 +559,11 @@ async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_cu
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
     financial_ids = await _financial_access_ids(db, current_user, [company.id])
+    evaluation_run = await ComplianceService(db).get_latest_evaluation_run(company_id)
     return _company_to_response(
         company,
         can_view_financials=company.id in financial_ids,
+        evaluation_run=evaluation_run,
     )
 
 
@@ -703,10 +715,13 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         if evaluation_run and isinstance(evaluation_run.score_breakdown_snapshot, dict)
         else {}
     )
-    risk_band = getattr(company.current_risk_band, "value", company.current_risk_band)
-    if not _legal_score_is_released():
-        risk_band = "NOT_EVALUATED"
-    current_score = None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED") else company.current_compliance_score
+    score_is_current = _evaluation_run_is_current(company, evaluation_run)
+    evaluation_status = _company_evaluation_status(company, evaluation_run)
+    risk_band = (
+        getattr(company.current_risk_band, "value", company.current_risk_band)
+        if score_is_current else "NOT_EVALUATED"
+    )
+    current_score = company.current_compliance_score if score_is_current else None
     return ComplianceSummaryResponse(
         company_id=str(company_id),
         company_name=company.company_name,
@@ -715,17 +730,14 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         risk_band=risk_band,
         active_flags=flag_summary.get("total_active", 0),
         pending_review_flags=flag_summary.get("pending_review", 0),
-        black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0,
-        red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0,
-        yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0,
+        black_flags=flag_summary.get("black", 0) if score_is_current else 0,
+        red_flags=flag_summary.get("red", 0) if score_is_current else 0,
+        yellow_flags=flag_summary.get("yellow", 0) if score_is_current else 0,
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else None,
         evaluation_hash=evaluation_run.score_hash if evaluation_run else None,
-        evaluation_run_status=(
-            "NOT_RELEASED"
-            if not _legal_score_is_released()
-            else (evaluation_run.evaluation_status if evaluation_run else None)
-        ),
+        evaluation_run_status=(evaluation_run.evaluation_status if evaluation_run else None),
+        evaluation_status=evaluation_status,
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else None,
         engine_version=evaluation_run.engine_version if evaluation_run else None,
         ilrmf_version=score_snapshot.get("ilrmf_version"),
