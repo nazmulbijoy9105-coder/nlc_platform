@@ -36,6 +36,10 @@ def test_ast_rule_source_reconciliation_is_complete_and_fail_closed(tmp_path: Pa
         assert rule["historical_origin"] == "NOT_ESTABLISHED"
         assert rule["legal_review_status"] == "REVIEW_REQUIRED"
         assert rule["product_decision_status"] == "NOT_REVIEWED"
+        assert rule["evidence_contract"]["status"] in {"MAPPED", "MISSING"}
+        assert rule["applicability_contract"]["status"] in {"MAPPED", "MISSING"}
+        assert isinstance(rule["seed_fact_inputs"], list)
+        assert isinstance(rule["fact_evidence_gaps"], list)
         assert all(
             len(candidate["definition_sha256"]) == 64
             and len(candidate["blob_sha"]) == 40
@@ -47,6 +51,8 @@ def test_ast_rule_source_reconciliation_is_complete_and_fail_closed(tmp_path: Pa
     assert "statutory_registry" in {
         candidate["artifact"] for candidate in inc001["source_candidates"]
     }
+    assert inc001["evidence_contract"]["status"] in {"MAPPED", "MISSING"}
+    assert inc001["applicability_contract"]["status"] in {"MAPPED", "MISSING"}
 
     assert all(
         rule["seed_vs_statutory_basis"] != "EXACT_TEXT_MATCH"
