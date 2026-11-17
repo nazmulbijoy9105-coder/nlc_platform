@@ -1108,7 +1108,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
-        from app.rule_engine.engine import legal_score_is_released
+        from app.rule_engine.engine import (
+            RULE_ENGINE_VERSION,
+            SCORING_SPEC_VERSION,
+            legal_score_is_released,
+        )
         history = []
         for row in rows:
             stored_band = getattr(row.risk_band, "value", row.risk_band)
@@ -1248,7 +1252,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             """
             WITH latest_run AS (
                 SELECT DISTINCT ON (company_id)
-                    company_id, evaluation_status, score, risk_band, calculated_at
+                    company_id, evaluation_status, score, risk_band, calculated_at,
+                    engine_version, score_breakdown_snapshot
                 FROM compliance_evaluation_runs
                 ORDER BY company_id, calculated_at DESC, id DESC
             ),
@@ -1259,6 +1264,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         WHEN lr.evaluation_status = 'COMPLETED'
                          AND lr.score IS NOT NULL
                          AND lr.risk_band <> 'NOT_EVALUATED'
+                         AND lr.engine_version = :engine_version
+                         AND lr.score_breakdown_snapshot ->> 'scoring_spec_version' = :scoring_spec_version
+                         AND lr.score_breakdown_snapshot ->> 'score_reconciles' = 'true'
+                         AND lr.score_breakdown_snapshot ->> 'final_score' = lr.score::text
                          AND c.last_evaluated_at = lr.calculated_at
                              AND c.updated_at <= c.last_evaluated_at
                          AND c.current_compliance_score = lr.score
@@ -1283,7 +1292,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
             FROM current_company_state
             """
         )
-        result = await self.db.execute(query, params)
+        released_params = {
+            **params,
+            "engine_version": RULE_ENGINE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+        }
+        result = await self.db.execute(query, released_params)
         row = result.mappings().one_or_none()
         result_dict = dict(row) if row else {}
         result_dict.update({
