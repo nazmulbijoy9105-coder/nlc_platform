@@ -672,7 +672,8 @@ def build_compliance_report_html(
     score_is_current = (
         _legal_score_is_released()
         and getattr(company, "last_evaluated_at", None) is not None
-        and getattr(company, "updated_at", None) <= company.last_evaluated_at
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at <= company.last_evaluated_at
     )
     if not score_is_current:
         flags = ()
