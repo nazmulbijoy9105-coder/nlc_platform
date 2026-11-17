@@ -77,6 +77,16 @@ def function_index(tree: ast.Module) -> dict[str, ast.AST]:
     }
 
 
+def tuple_items(node: ast.AST | None) -> list[str]:
+    if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+        return [ast.unparse(item) for item in node.elts]
+    return []
+
+
+def call_arguments(node: ast.AST | None) -> list[ast.AST]:
+    return list(node.args) if isinstance(node, ast.Call) else []
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path)
@@ -149,6 +159,27 @@ def main() -> None:
                 "definition_sha256": digest(node),
             })
         seed_basis = literal_string(seed_fields.get("statutory_basis", ast.Constant(None)))
+        seed_data_points: list[str] = []
+        if isinstance(condition, ast.Dict):
+            for key, value in zip(condition.keys, condition.values):
+                if literal_string(key) == "data_points":
+                    seed_data_points = tuple_items(value)
+                    break
+        evidence_args = call_arguments(evidence.get(rule_id))
+        applicability_args = call_arguments(applicability.get(rule_id))
+        evidence_contract = {
+            "status": "MAPPED" if len(evidence_args) >= 5 else "MISSING",
+            "primary_evidence": tuple_items(evidence_args[1]) if len(evidence_args) >= 2 else [],
+            "non_compliance_evidence": tuple_items(evidence_args[2]) if len(evidence_args) >= 3 else [],
+            "evidentiary_standard": literal_string(evidence_args[3]) if len(evidence_args) >= 4 else None,
+            "source_section_label": literal_string(evidence_args[4]) if len(evidence_args) >= 5 else None,
+        }
+        applicability_contract = {
+            "status": "MAPPED" if len(applicability_args) >= 5 else "MISSING",
+            "company_types": tuple_items(applicability_args[1]) if len(applicability_args) >= 2 else [],
+            "required_conditions": tuple_items(applicability_args[2]) if len(applicability_args) >= 3 else [],
+            "exception_inputs": tuple_items(applicability_args[3]) if len(applicability_args) >= 4 else [],
+        }
         statutory_node = statutory.get(rule_id)
         statutory_fields = {}
         if isinstance(statutory_node, ast.Dict):
@@ -173,6 +204,17 @@ def main() -> None:
             "historical_origin": "NOT_ESTABLISHED",
             "seed_check_function": check_fn,
             "runtime_evaluator_status": "FOUND" if evaluator is not None else "NOT_FOUND_OR_NOT_MODULE_LEVEL",
+            "seed_fact_inputs": seed_data_points,
+            "evidence_contract": evidence_contract,
+            "applicability_contract": applicability_contract,
+            "fact_evidence_gaps": [
+                gap for gap, condition in (
+                    ("SEED_DATA_POINTS_MISSING", not seed_data_points),
+                    ("EVIDENCE_MAPPING_MISSING", evidence_contract["status"] == "MISSING"),
+                    ("APPLICABILITY_MAPPING_MISSING", applicability_contract["status"] == "MISSING"),
+                    ("RUNTIME_EVALUATOR_NOT_FOUND", evaluator is None),
+                ) if condition
+            ],
             "seed_vs_statutory_basis": basis_comparison,
             "source_candidates": candidates,
             "missing_artifacts": [key for key, node in observed.items() if node is None],
