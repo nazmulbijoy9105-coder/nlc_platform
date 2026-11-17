@@ -41,18 +41,29 @@ async def test_alias_registry_is_forced_rls_and_has_overlap_guard(db):
     assert "daterange(" in trigger_row[2]
     assert "pg_advisory_xact_lock(" in trigger_row[2]
 
+    # 0117 intentionally grants the application role SELECT only; signed
+    # RLS context controls which registry rows it can read. The audit role
+    # must have no table access, and the application role must never write.
     for role in ("nlc_app_role", "nlc_ci_audit_role"):
         privileges = await db.execute(
             text(
-                "SELECT has_table_privilege(:role, "
-                "'public.legal_rule_aliases', 'SELECT') "
-                "OR has_table_privilege(:role, "
-                "'public.legal_rule_aliases', 'INSERT') "
-                "OR has_table_privilege(:role, "
-                "'public.legal_rule_aliases', 'UPDATE') "
-                "OR has_table_privilege(:role, "
+                "SELECT "
+                "has_table_privilege(:role, "
+                "'public.legal_rule_aliases', 'SELECT'), "
+                "has_table_privilege(:role, "
+                "'public.legal_rule_aliases', 'INSERT'), "
+                "has_table_privilege(:role, "
+                "'public.legal_rule_aliases', 'UPDATE'), "
+                "has_table_privilege(:role, "
                 "'public.legal_rule_aliases', 'DELETE')"
             ),
             {"role": role},
         )
-        assert privileges.scalar_one() is False
+        can_select, can_insert, can_update, can_delete = privileges.one()
+        if role == "nlc_app_role":
+            assert can_select is True
+            assert (can_insert, can_update, can_delete) == (False, False, False)
+        else:
+            assert (can_select, can_insert, can_update, can_delete) == (
+                False, False, False, False
+            )
