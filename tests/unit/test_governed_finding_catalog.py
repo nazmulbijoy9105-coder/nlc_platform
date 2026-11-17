@@ -57,7 +57,7 @@ def _approved(context=None, **changes):
         "reviewed_by": REVIEWER,
         "reviewed_at": REVIEWED_AT,
         "review_basis": "Independent counsel review record REF-001",
-        "reviewed_context_sha256": finding_context_digest(selected),
+        "reviewed_context_sha256": finding_context_digest(selected, "Companies Act 1994", "Section 81"),
     }
     values.update(changes)
     return GovernedRuleFindingContext(**values)
@@ -71,7 +71,7 @@ def test_review_required_context_is_not_usable():
 def test_approved_context_requires_independent_reviewer_and_exact_digest():
     entry = _approved()
     assert entry.is_usable_for_binding is True
-    assert entry.reviewed_context_sha256 == finding_context_digest(entry.context)
+    assert entry.reviewed_context_sha256 == finding_context_digest(entry.context, entry.source_instrument, entry.source_provision)
 
 
 def test_author_cannot_approve_own_context():
@@ -153,7 +153,7 @@ def test_context_mutation_after_approval_changes_digest_and_is_detected():
     approved = _approved(original)
     changed = _context(effective_date=date(2026, 2, 1))
     with pytest.raises(ValueError, match="digest"):
-        _approved(changed, reviewed_context_sha256=approved.reviewed_context_sha256)
+        _approved(changed, reviewed_context_sha256=approved.reviewed_context_sha256, source_provision="Section 82")
 
 
 def test_actor_ids_are_canonical_uuids():
