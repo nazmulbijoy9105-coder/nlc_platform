@@ -88,7 +88,14 @@ def main() -> None:
     evidence = keyed_dict(assignment(trees["evidence_contract"], "EVIDENCE_REGISTRY"))
     applicability = keyed_dict(assignment(trees["applicability_contract"], "APPLICABILITY_REGISTRY"))
     reconciliation = keyed_dict(assignment(trees["legal_reconciliation"], "LEGAL_RECONCILIATION"))
-    rescue = keyed_dict(assignment(trees["rescue_registry"], "RESCUE_REGISTRY"))
+    rescue: dict[str, ast.AST] = {}
+    rescue_nodes = assignment(trees["rescue_registry"], "_RESCUES")
+    if isinstance(rescue_nodes, (ast.Tuple, ast.List)):
+        for item in rescue_nodes.elts:
+            if isinstance(item, ast.Call) and len(item.args) >= 2:
+                triggered_by = literal_string(item.args[1])
+                if triggered_by:
+                    rescue[triggered_by] = item
     engine_functions = function_index(trees["runtime_engine"])
 
     expected_ids = sorted(seed)
@@ -191,7 +198,7 @@ def main() -> None:
             "INC-001 remains ambiguous because the seed/engine Section 23 proposition conflicts with the separately observed production Section 9 catalogue proposition.",
         ],
     }
-    rendered = json.dumps(result, ensure_ascii=False, indent=2) + "\\n"
+    rendered = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
