@@ -156,10 +156,20 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
     # Create a second valid flag/run pair before switching to an unassigned
     # actor. This ensures the attempted INSERT cannot fail merely because of
     # a missing FK parent; the expected rejection is the tenant INSERT policy.
+    denied_company_id = uuid.uuid4()
     denied_flag_id = uuid.uuid4()
     denied_run_id = uuid.uuid4()
+    db.add(Company(
+        id=denied_company_id,
+        registration_number=f"RLS-DENIED-{denied_company_id.hex[:16]}",
+        company_name="RLS denied-insert fixture company",
+        company_type=CompanyType.PRIVATE_LIMITED,
+        incorporation_date=date(2020, 1, 1),
+        financial_year_end=date(2025, 12, 31),
+    ))
+    await db.flush()
     db.add(ComplianceFlag(
-        id=denied_flag_id, company_id=company_id, rule_id=fixture_rule_id,
+        id=denied_flag_id, company_id=denied_company_id, rule_id=fixture_rule_id,
         rule_version="test", flag_code="TEST-RLS-INSERT",
         statutory_basis="Not a statutory conclusion",
         severity=SeverityLevel.NOT_EVALUATED, score_impact=0,
@@ -169,7 +179,7 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
         description="Integration fixture only; not a legal finding.",
     ))
     db.add(ComplianceEvaluationRun(
-        id=denied_run_id, company_id=company_id, risk_band=RiskBand.NOT_EVALUATED,
+        id=denied_run_id, company_id=denied_company_id, risk_band=RiskBand.NOT_EVALUATED,
         calculated_at=datetime.now(timezone.utc), engine_version="test",
         score_hash="d" * 64, evaluation_status="NOT_RELEASED",
         trigger_source="TEST", active_flags_count=1, black_flags_count=0,
@@ -198,7 +208,7 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
                     'MISSING', :manifest_hash, '{}'::jsonb, :snapshot_hash
                 )
             """), {
-                "company_id": company_id, "flag_id": denied_flag_id,
+                "company_id": denied_company_id, "flag_id": denied_flag_id,
                 "run_id": denied_run_id, "manifest_hash": "e" * 64,
                 "snapshot_hash": "f" * 64,
             })
