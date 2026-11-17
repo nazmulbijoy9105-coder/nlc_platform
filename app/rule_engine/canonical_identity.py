@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Mapping, Sequence
 
 
@@ -33,6 +33,8 @@ class RuleResolution:
 
 def _as_date(value: Any) -> date | None:
     if value is None:
+        return None
+    if isinstance(value, datetime):
         return None
     if isinstance(value, date):
         return value
@@ -77,6 +79,11 @@ def resolve_rule_identity(
         historical_rule_id=historical_rule_id,
         effective_date=effective_date,
     )
+    if not isinstance(effective_date, date) or isinstance(effective_date, datetime):
+        return RuleResolution(
+            status="INVALID_EFFECTIVE_DATE", **base,
+            detail="effective_date must be a date without a time component.",
+        )
     if not source_namespace or not historical_rule_id:
         return RuleResolution(
             status="INVALID_LOOKUP_KEY", **base,
@@ -219,12 +226,27 @@ def resolve_rule_identity(
             detail="Revision definition does not match its stored SHA-256 digest.",
         )
 
+    try:
+        revision_number = int(revision["revision_number"])
+    except (KeyError, TypeError, ValueError):
+        return RuleResolution(
+            status="INVALID_REVISION_METADATA", **base,
+            canonical_rule_id=canonical_id,
+            detail="Revision number is missing or invalid.",
+        )
+    if revision_number < 1:
+        return RuleResolution(
+            status="INVALID_REVISION_METADATA", **base,
+            canonical_rule_id=canonical_id,
+            detail="Revision number must be positive.",
+        )
+
     return RuleResolution(
         status="RESOLVED",
         **base,
         canonical_rule_id=canonical_id,
         revision_id=str(revision.get("id") or "") or None,
-        revision_number=int(revision["revision_number"]),
+        revision_number=revision_number,
         approval_state=str(revision.get("approval_state", "REVIEW_REQUIRED")),
         definition_hash=actual_hash,
         detail="Identity and dated revision resolved. This is not legal approval or scoring authorisation.",
