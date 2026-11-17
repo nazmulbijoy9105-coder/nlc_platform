@@ -7,7 +7,7 @@ interpretation, or activate statutory scoring.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from types import MappingProxyType
 from typing import Mapping, Sequence
 from uuid import UUID
