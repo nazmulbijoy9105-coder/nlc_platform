@@ -825,13 +825,13 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # COM-007: bind report to evidence snapshot + engine version
+        # COM-007: bind report to the latest evaluation run, not merely the
+        # older run whose timestamp still matches the cached company score.
+        # A newer PENDING/FAILED/NOT_RELEASED run invalidates the old band.
         score_snapshot = await self.db.execute(
             select(ComplianceEvaluationRun)
-            .where(
-                ComplianceEvaluationRun.company_id == company.id,
-                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
-            )
+            .where(ComplianceEvaluationRun.company_id == company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc())
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
