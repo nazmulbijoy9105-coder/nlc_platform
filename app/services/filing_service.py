@@ -6,7 +6,7 @@ Implements _create_agm, _update_agm, _get_agm_response stubs
 and equivalent functions for Audit and AnnualReturn.
 
 These three tables feed directly into the rule engine evaluation.
-Every create/update triggers a score re-evaluation via background task.
+Every scoring-input create/update invalidates the cached score and publishes its domain event.
 """
 from __future__ import annotations
 
