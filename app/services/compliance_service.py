@@ -970,6 +970,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .order_by(
                 ComplianceEvaluationRun.company_id,
                 ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
             )
         )
         return {
