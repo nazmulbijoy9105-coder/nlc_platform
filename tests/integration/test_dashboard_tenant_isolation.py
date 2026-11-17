@@ -290,7 +290,7 @@ async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
 ):
     """A later company/fact update invalidates a formerly completed cached band."""
     import uuid
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
 
     import app.rule_engine.engine as engine_module
     from app.models.compliance import ComplianceEvaluationRun
