@@ -371,7 +371,7 @@ async def test_company_fact_assertion_clears_cached_statutory_score(
         company_id=db_company.id,
         fact_key="company_name",
         fact_value="New asserted company name",
-        asserted_by=db_client_user.id,
+        actor_id=db_client_user.id,
         observed_on=date.today(),
     )
     await db.refresh(db_company)
