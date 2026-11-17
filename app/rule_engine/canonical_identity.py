@@ -226,14 +226,14 @@ def resolve_rule_identity(
             detail="Revision definition does not match its stored SHA-256 digest.",
         )
 
-    try:
-        revision_number = int(revision["revision_number"])
-    except (KeyError, TypeError, ValueError):
+    raw_revision_number = revision.get("revision_number")
+    if isinstance(raw_revision_number, bool) or not isinstance(raw_revision_number, int):
         return RuleResolution(
             status="INVALID_REVISION_METADATA", **base,
             canonical_rule_id=canonical_id,
-            detail="Revision number is missing or invalid.",
+            detail="Revision number must be an integer; coercion is not permitted.",
         )
+    revision_number = raw_revision_number
     if revision_number < 1:
         return RuleResolution(
             status="INVALID_REVISION_METADATA", **base,
