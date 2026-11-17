@@ -48,7 +48,7 @@ def _registry_rows():
         approval_state="REVIEW_REQUIRED",
         evaluator_name="agm_evaluator",
         evaluator_version="2.1.0",
-        evaluator_artifact_hash="a" * 64,\n        evaluator_name="agm_evaluator",\n        evaluator_version="2.1.0",\n        evaluator_artifact_hash="a" * 64,
+        evaluator_artifact_hash="a" * 64,
     )
     return alias, identity, revision
 
