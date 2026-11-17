@@ -678,7 +678,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         previous_result = await self.db.execute(
             select(ComplianceEvaluationRun.score_hash)
             .where(ComplianceEvaluationRun.company_id == company_id)
-            .order_by(ComplianceEvaluationRun.calculated_at.desc())
+            .order_by(
+                ComplianceEvaluationRun.calculated_at.desc(),
+                ComplianceEvaluationRun.id.desc(),
+            )
             .limit(1)
         )
         previous_hash = previous_result.scalar_one_or_none()
