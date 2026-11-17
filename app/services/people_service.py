@@ -17,6 +17,7 @@ from app.models.enums import DirectorStatus, TransferStatus
 from app.models.people import Director, Shareholder, ShareTransfer
 from app.services.base import BaseService
 from app.services.domain_events import DomainEventType, publish_domain_event
+from app.services.score_invalidation import invalidate_company_score
 
 if TYPE_CHECKING:
     import uuid
@@ -74,6 +75,7 @@ class DirectorService(BaseService[Director]):
             is_chairman=is_chairman,
         )
         await self.db.flush()
+        await invalidate_company_score(self.db, company_id)
         await publish_domain_event(
             self.db, company_id=company_id,
             event_type=DomainEventType.DIRECTOR_CHANGED,
@@ -121,6 +123,7 @@ class DirectorService(BaseService[Director]):
             departed_still_liable=still_liable,
         )
         await self.db.flush()
+        await invalidate_company_score(self.db, updated.company_id)
         await publish_domain_event(
             self.db, company_id=updated.company_id,
             event_type=DomainEventType.DIRECTOR_CHANGED,
@@ -217,6 +220,7 @@ class ShareholderService(BaseService[Shareholder]):
             rjsc_filing_date=rjsc_filing_date,
         )
         await self.db.flush()
+        await invalidate_company_score(self.db, company_id)
         await publish_domain_event(
             self.db, company_id=company_id,
             event_type=DomainEventType.SHAREHOLDER_CHANGED,
@@ -255,6 +259,7 @@ class ShareholderService(BaseService[Shareholder]):
             percentage_holding=percentage,
         )
         await self.db.flush()
+        await invalidate_company_score(self.db, updated.company_id)
         await publish_domain_event(
             self.db, company_id=updated.company_id,
             event_type=DomainEventType.SHAREHOLDER_CHANGED,
@@ -346,6 +351,7 @@ class ShareTransferService(BaseService[ShareTransfer]):
             irregularity_notes="\n".join(irregularities) if irregularities else None,
         )
         await self.db.flush()
+        await invalidate_company_score(self.db, company_id)
         await publish_domain_event(
             self.db, company_id=company_id,
             event_type=DomainEventType.SHARE_TRANSFER_CHANGED,
