@@ -206,6 +206,23 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
         raise ValueError("This write path only records current evaluations; historical attribution requires separate review")
     if not binding_values.get("company_id") or not binding_values.get("compliance_flag_id"):
         raise ValueError("Finding binding requires a tenant and compliance flag")
+    finding_payload = binding_values.get("finding_snapshot")
+    if not isinstance(finding_payload, Mapping):
+        raise ValueError("Finding binding requires the replayable finding snapshot")
+    if binding_values.get("finding_snapshot_hash") != _stable_hash({"finding": finding_payload}):
+        raise ValueError("Finding snapshot digest does not match its payload")
+    evidence_manifest = {"evidence": evidence_values}
+    if binding_values.get("evidence_manifest_hash") != _stable_hash(evidence_manifest):
+        raise ValueError("Evidence manifest digest does not match its payload")
+    for evidence in evidence_values:
+        if not isinstance(evidence, Mapping):
+            raise ValueError("Every evidence item must be a mapping")
+        evidence_copy = dict(evidence)
+        stored_evidence_hash = evidence_copy.pop("evidence_hash", None)
+        if stored_evidence_hash != _stable_hash(evidence_copy):
+            raise ValueError("Evidence snapshot digest does not match its payload")
+        if evidence.get("fact_value_hash") != _stable_hash({"value": evidence.get("fact_value_snapshot")}):
+            raise ValueError("Company fact value digest does not match its snapshot")
     def _uuid_fields(values: dict[str, Any], fields: Sequence[str]) -> None:
         for field in fields:
             value = values.get(field)
