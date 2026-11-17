@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0117_canonical_registry_runtime_read"
+EXPECTED_HEAD_REVISION = "0118_canonical_finding_evidence_binding"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
