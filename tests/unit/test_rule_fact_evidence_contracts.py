@@ -56,6 +56,42 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         assert all(item["fact_keys_supported"] == [] for item in rule["evidence_items"])
 
     agm005 = next(rule for rule in report["rules"] if rule["historical_rule_id"] == "AGM-005")
+    source_rules = json.loads(source_report.read_text(encoding="utf-8"))["rules"]
+    agm005_source = next(
+        rule for rule in source_rules if rule["historical_rule_id"] == "AGM-005"
+    )
+    agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
+
+    expected_agm005_facts = {
+        "agm_held",
+        "member_count",
+        "members_present_at_agm",
+        "quorum_required",
+        "agm_quorum_evidence_ref",
+    }
+    assert expected_agm005_facts <= agm005_fact_keys, (
+        "AGM-005 is missing required quorum facts: "
+        f"{sorted(expected_agm005_facts - agm005_fact_keys)}"
+    )
+
+    seed_fact_keys = {
+        fact[1:-1]
+        if len(fact) >= 2 and fact[0] == fact[-1] and fact[0] in {"'", '"'}
+        else fact
+        for fact in agm005_source["seed_fact_inputs"]
+    }
+    assert seed_fact_keys <= agm005_fact_keys, (
+        "AGM-005 dropped original seed facts: "
+        f"{sorted(seed_fact_keys - agm005_fact_keys)}"
+    )
+    assert any(
+        fact["fact_key"] == "member_count"
+        and "not more than six members" in fact["source_expression"]
+        and fact["data_type"] == "UNSPECIFIED"
+        and fact["evidence_links"] == []
+        and fact["mapping_status"] == "REQUIRES_DOMAIN_MAPPING"
+        for fact in agm005["facts"]
+    )
     assert "member_count" in {fact["fact_key"] for fact in agm005["facts"]}
     assert "agm_quorum_evidence_ref" in {fact["fact_key"] for fact in agm005["facts"]}
     assert "REQUIRES_DOMAIN_MAPPING" in {
