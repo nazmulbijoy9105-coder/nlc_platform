@@ -21,6 +21,24 @@ async def test_finding_binding_tables_are_forced_tenant_scoped_append_only(db):
         )
         assert flags.one() == (True, True)
 
+        triggers = await db.execute(
+            text(
+                "SELECT tgname FROM pg_trigger t "
+                "JOIN pg_class c ON c.oid=t.tgrelid "
+                "JOIN pg_namespace n ON n.oid=c.relnamespace "
+                "WHERE n.nspname='public' AND c.relname=:table AND NOT t.tgisinternal"
+            ),
+            {"table": table},
+        )
+        trigger_names = {row[0] for row in triggers.fetchall()}
+        assert f"trg_{table}_append_only" in trigger_names
+        expected_guard = (
+            "trg_finding_binding_insert_guard"
+            if table == "compliance_finding_bindings"
+            else "trg_finding_evidence_insert_guard"
+        )
+        assert expected_guard in trigger_names
+
         policies = await db.execute(
             text(
                 "SELECT policyname, cmd, qual, with_check FROM pg_policies "
