@@ -1211,20 +1211,41 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         query = text(
             """
+            WITH latest_run AS (
+                SELECT DISTINCT ON (company_id)
+                    company_id, evaluation_status, score, risk_band, calculated_at
+                FROM compliance_evaluation_runs
+                ORDER BY company_id, calculated_at DESC
+            ),
+            current_company_state AS (
+                SELECT
+                    c.id,
+                    CASE
+                        WHEN lr.evaluation_status = 'COMPLETED'
+                         AND lr.score IS NOT NULL
+                         AND lr.risk_band <> 'NOT_EVALUATED'
+                         AND c.last_evaluated_at = lr.calculated_at
+                         AND c.current_compliance_score = lr.score
+                         AND c.current_risk_band = lr.risk_band
+                        THEN lr.risk_band
+                        ELSE 'NOT_EVALUATED'::risk_band
+                    END AS risk_band
+                FROM companies AS c
+                LEFT JOIN latest_run AS lr ON lr.company_id = c.id
+                WHERE c.is_active IS TRUE
+                """
+            + scope
+            + """
+            )
             SELECT
                 COUNT(*) AS total_companies,
-                COUNT(*) FILTER (WHERE c.current_risk_band = 'GREEN') AS green_count,
-                COUNT(*) FILTER (WHERE c.current_risk_band = 'YELLOW') AS yellow_count,
-                COUNT(*) FILTER (WHERE c.current_risk_band IN ('RED', 'BLACK')) AS red_black_count,
-                COUNT(*) FILTER (
-                    WHERE c.current_risk_band = 'NOT_EVALUATED'
-                       OR c.current_risk_band IS NULL
-                ) AS not_evaluated_count,
+                COUNT(*) FILTER (WHERE risk_band = 'GREEN') AS green_count,
+                COUNT(*) FILTER (WHERE risk_band = 'YELLOW') AS yellow_count,
+                COUNT(*) FILTER (WHERE risk_band IN ('RED', 'BLACK')) AS red_black_count,
+                COUNT(*) FILTER (WHERE risk_band = 'NOT_EVALUATED') AS not_evaluated_count,
                 0 AS upcoming_deadlines
-            FROM companies AS c
-            WHERE c.is_active IS TRUE
+            FROM current_company_state
             """
-            + scope
         )
         result = await self.db.execute(query, params)
         row = result.mappings().one_or_none()
