@@ -98,6 +98,20 @@ async def test_finding_binding_tables_are_forced_tenant_scoped_append_only(db):
 
 
 @pytest.mark.asyncio
+async def test_database_manifest_verifier_reconstructs_exact_python_evidence_shape(db):
+    """The deferred DB comparison must include every key in the Python manifest row."""
+    result = await db.execute(text(
+        "SELECT pg_get_functiondef("
+        "'public.nlc_verify_finding_manifest_children()'::regprocedure)"
+    ))
+    definition = result.scalar_one()
+    assert "e.evidence_canonical::jsonb" in definition
+    assert "'evidence_canonical'" in definition
+    assert "'fact_value_canonical'" in definition
+    assert "'evidence_hash'" in definition
+
+
+@pytest.mark.asyncio
 async def test_unassigned_user_cannot_read_existing_finding_binding(db):
     """Exercise tenant RLS against a real row, not an empty relation."""
     company_id = uuid.uuid4()
