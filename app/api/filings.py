@@ -47,6 +47,7 @@ from app.models.user import User
 from app.rule_engine.engine import LEGAL_SCORE_RELEASED
 from app.services.compliance_calendar import LEGAL_CALENDAR_RELEASED
 from app.services.domain_events import DomainEventType, publish_domain_event
+from app.services.score_invalidation import invalidate_company_score
 from app.services.filing_service import (
     AGMService,
     AnnualReturnService,
@@ -777,6 +778,7 @@ async def verify_annual_return_filing_status(
             else 0
         )
     await db.flush()
+    await invalidate_company_score(db, annual_return.company_id)
     await ActivityService(db).log(
         action="ANNUAL_RETURN_FILING_STATUS_VERIFIED",
         company_id=annual_return.company_id,
@@ -1113,6 +1115,7 @@ async def create_share_compliance_event(
     )
     db.add(event)
     await db.flush()
+    await invalidate_company_score(db, event.company_id)
     await db.refresh(event)
     return _share_event_response(event)
 
@@ -1199,6 +1202,7 @@ async def verify_share_compliance_event(
     for key, value in updates.items():
         setattr(event, key, value)
     await db.flush()
+    await invalidate_company_score(db, event.company_id)
     await publish_domain_event(
         db, company_id=event.company_id,
         event_type=DomainEventType.EVIDENCE_VERIFICATION_COMPLETED,
@@ -1249,6 +1253,7 @@ async def verify_agm_cycle_status(
     agm.agm_held_verified_at = datetime.now(UTC)
     agm.agm_held_verified_by = current_user.id
     await db.flush()
+    await invalidate_company_score(db, agm.company_id)
     await db.refresh(agm)
     return _agm_to_response(agm)
 
@@ -1279,6 +1284,7 @@ async def verify_agm_member_register(
     agm.member_register_verified_by = current_user.id
     agm.entitled_members_count = body.entitled_members_count
     await db.flush()
+    await invalidate_company_score(db, agm.company_id)
     await db.refresh(agm)
     return {
         "agm_id": str(agm.id),
@@ -1346,6 +1352,7 @@ async def create_agm_notice_evidence(
     )
     db.add(row)
     await db.flush()
+    await invalidate_company_score(db, row.company_id)
     await db.refresh(row)
     return {
         "notice_evidence_id": str(row.id),
@@ -1413,6 +1420,7 @@ async def verify_agm_notice_evidence(
         row.omission_verified_at = now
         row.omission_verified_by = current_user.id
     await db.flush()
+    await invalidate_company_score(db, row.company_id)
     await db.refresh(row)
     return {
         "notice_evidence_id": str(row.id),
