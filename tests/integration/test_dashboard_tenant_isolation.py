@@ -11,7 +11,28 @@ from app.services.company_service import CompanyService
 async def test_risk_distribution_aggregates_only_the_authenticated_users_membership(
     db, db_company, db_other_company, db_client_user
 ):
-    """A real client with one membership must not see the second tenant's band."""
+    """A real client sees only its membership and only a current completed band."""
+    import uuid
+    from datetime import datetime, timezone
+
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+
+    await set_admin_context(db)
+    evaluated_at = datetime.now(timezone.utc)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = evaluated_at
+    db_company.updated_at = evaluated_at
+    db.add(ComplianceEvaluationRun(
+        id=uuid.uuid4(), company_id=db_company.id, score=85,
+        risk_band=RiskBand.GREEN, calculated_at=evaluated_at,
+        engine_version="test", score_hash="d" * 64,
+        evaluation_status="COMPLETED", trigger_source="TEST",
+        active_flags_count=0, black_flags_count=0,
+        flags_snapshot=[], fact_provenance_snapshot=[],
+    ))
+    await db.flush()
     await set_rls_context(db, str(db_client_user.id))
 
     rows = await CompanyService(db).get_risk_distribution(db_client_user.id)
