@@ -20,6 +20,7 @@ from app.models.company import Company
 from app.models.filings import AGM, AnnualReturn, Audit
 from app.models.infrastructure import StatutoryRegister
 from app.services.base import BaseService
+from app.services.score_invalidation import invalidate_company_score
 
 if TYPE_CHECKING:
     import uuid
@@ -116,6 +117,7 @@ class AGMService(BaseService[AGM]):
             is_default=is_default,
             delay_days=delay_days,
         )
+        await invalidate_company_score(self.db, company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -253,6 +255,7 @@ class AGMService(BaseService[AGM]):
             delay_days=delay_days,
         )
         if updated_agm is not None:
+            await invalidate_company_score(self.db, updated_agm.company_id)
             from app.services.domain_events import DomainEventType, publish_domain_event
             await publish_domain_event(
                 self.db, company_id=updated_agm.company_id,
@@ -330,7 +333,7 @@ class AuditService(BaseService[Audit]):
             # Calculate delay relative to FY end (approximate)
             pass  # Will be calculated by rule engine from AGM date
 
-        return await self.create(
+        audit = await self.create(
             company_id=company_id,
             financial_year=financial_year,
             auditor_name=auditor_name,
@@ -347,6 +350,8 @@ class AuditService(BaseService[Audit]):
             report_qualified=report_qualified,
             qualification_notes=qualification_notes,
         )
+        await invalidate_company_score(self.db, company_id)
+        return audit
 
     async def get_for_company(
         self,
@@ -384,7 +389,7 @@ class AuditService(BaseService[Audit]):
         audit = await self.get_by_id(audit_id)
         if not audit:
             return None
-        return await self.update_instance(
+        updated = await self.update_instance(
             audit,
             audit_complete=True,
             audit_signed_date=signed_date,
@@ -395,6 +400,9 @@ class AuditService(BaseService[Audit]):
             report_qualified=report_qualified,
             qualification_notes=qualification_notes,
         )
+        if updated is not None:
+            await invalidate_company_score(self.db, updated.company_id)
+        return updated
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -450,6 +458,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             filing_fee_paid_bdt=filing_fee_paid_bdt,
             late_fee_paid_bdt=late_fee_paid_bdt,
         )
+        await invalidate_company_score(self.db, company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -533,6 +542,7 @@ class AnnualReturnService(BaseService[AnnualReturn]):
             filing_status_verified_by=None,
         )
         if updated_return is not None:
+            await invalidate_company_score(self.db, updated_return.company_id)
             from app.services.domain_events import DomainEventType, publish_domain_event
             await publish_domain_event(
                 self.db, company_id=updated_return.company_id,
@@ -567,7 +577,7 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         location: str | None = None,
         notes: str | None = None,
     ) -> StatutoryRegister:
-        return await self.create(
+        entry = await self.create(
             company_id=company_id,
             register_type=register_type,
             is_maintained=is_maintained,
@@ -575,6 +585,8 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
             location=location,
             notes=notes,
         )
+        await invalidate_company_score(self.db, company_id)
+        return entry
 
     async def get_for_company(self, company_id: uuid.UUID) -> list[StatutoryRegister]:
         result = await self.db.execute(
@@ -607,4 +619,7 @@ class StatutoryRegisterService(BaseService[StatutoryRegister]):
         if notes is not None:
             updates["notes"] = notes  # type: ignore
 
-        return await self.update_instance(entry, **updates)
+        updated = await self.update_instance(entry, **updates)
+        if updated is not None:
+            await invalidate_company_score(self.db, updated.company_id)
+        return updated
