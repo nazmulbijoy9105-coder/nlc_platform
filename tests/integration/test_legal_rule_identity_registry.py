@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import date
 
 import pytest
 from sqlalchemy import text
@@ -87,7 +88,7 @@ async def _insert_alias_identity(db) -> str:
 
 async def _insert_alias(
     db, *, canonical_id: str, historical_id: str,
-    status: str, valid_from: str, valid_to: str | None,
+    status: str, valid_from: date, valid_to: date | None,
 ) -> None:
     await db.execute(
         text(
@@ -114,14 +115,14 @@ async def test_alias_overlap_guard_rejects_overlapping_resolved_intervals(db):
     historical_id = f"overlap-{uuid.uuid4()}"
     await _insert_alias(
         db, canonical_id=canonical_id, historical_id=historical_id,
-        status="RESOLVED", valid_from="2020-01-01", valid_to="2022-01-01",
+        status="RESOLVED", valid_from=date(2020, 1, 1), valid_to=date(2022, 1, 1),
     )
 
     with pytest.raises(DBAPIError) as exc_info:
         async with db.begin_nested():
             await _insert_alias(
                 db, canonical_id=canonical_id, historical_id=historical_id,
-                status="RESOLVED", valid_from="2021-01-01", valid_to="2023-01-01",
+                status="RESOLVED", valid_from=date(2021, 1, 1), valid_to=date(2023, 1, 1),
             )
 
     assert getattr(exc_info.value.orig, "sqlstate", None) == "23P01"
@@ -136,12 +137,12 @@ async def test_alias_overlap_guard_allows_adjacent_and_unresolved_intervals(db):
     historical_id = f"adjacent-{uuid.uuid4()}"
     await _insert_alias(
         db, canonical_id=first_canonical_id, historical_id=historical_id,
-        status="RESOLVED", valid_from="2020-01-01", valid_to="2021-01-01",
+        status="RESOLVED", valid_from=date(2020, 1, 1), valid_to=date(2021, 1, 1),
     )
     # Half-open intervals [2020, 2021) and [2021, 2022) do not overlap.
     await _insert_alias(
         db, canonical_id=second_canonical_id, historical_id=historical_id,
-        status="RESOLVED", valid_from="2021-01-01", valid_to="2022-01-01",
+        status="RESOLVED", valid_from=date(2021, 1, 1), valid_to=date(2022, 1, 1),
     )
     # Non-resolved candidates remain representable even when their dates
     # overlap a resolved mapping; they are not active resolution claims.
