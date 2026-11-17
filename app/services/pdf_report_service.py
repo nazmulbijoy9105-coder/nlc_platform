@@ -890,7 +890,7 @@ class PDFReportService:
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
-            or getattr(company, "updated_at", None) != company.last_evaluated_at
+            or getattr(company, "updated_at", None) > company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,
