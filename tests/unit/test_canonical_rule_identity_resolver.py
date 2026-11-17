@@ -198,3 +198,10 @@ def test_revision_number_rejects_coercible_non_integer_values(invalid_number):
     invalid = dict(REVISION_ROW, revision_number=invalid_number)
     result = resolve(revisions=[invalid])
     assert result.status == "INVALID_REVISION_METADATA"
+
+
+def test_resolved_alias_without_registry_row_id_is_rejected():
+    alias = dict(ALIAS_ROW)
+    alias.pop("id")
+    result = resolve(aliases=[alias])
+    assert result.status == "INVALID_ALIAS_METADATA"
