@@ -24,6 +24,7 @@ DEFINITION = {"provision": "Companies Act 1994, s. 81", "obligation": "hold_agm"
 
 def _registry_rows():
     alias = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000003",
         source_namespace=NS,
         historical_rule_id=LEGACY,
         canonical_rule_id=CANONICAL,
@@ -45,6 +46,9 @@ def _registry_rows():
         definition_json=DEFINITION,
         definition_hash=canonical_definition_hash(DEFINITION),
         approval_state="REVIEW_REQUIRED",
+        evaluator_name="agm_evaluator",
+        evaluator_version="2.1.0",
+        evaluator_artifact_hash="a" * 64,
     )
     return alias, identity, revision
 
@@ -76,6 +80,10 @@ async def test_registry_adapter_composes_database_rows_with_deterministic_resolv
     assert result.status == "RESOLVED"
     assert result.canonical_rule_id == CANONICAL
     assert result.revision_id == REVISION
+    assert result.alias_id == "00000000-0000-0000-0000-000000000003"
+    assert result.evaluator_name == "agm_evaluator"
+    assert result.evaluator_version == "2.1.0"
+    assert result.evaluator_artifact_hash == "a" * 64
     assert result.approval_state == "REVIEW_REQUIRED"
     assert session.execute.await_count == 3
     assert not session.commit.called

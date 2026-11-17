@@ -4,6 +4,7 @@ import pytest
 
 from app.rule_engine.canonical_identity import (
     canonical_definition_hash,
+    canonical_definition_json,
     resolve_rule_identity,
 )
 
@@ -24,6 +25,7 @@ REVISION_ROW = {
     "approval_state": "REVIEW_REQUIRED",
 }
 ALIAS_ROW = {
+    "id": "00000000-0000-0000-0000-000000000003",
     "source_namespace": NS,
     "historical_rule_id": LEGACY,
     "canonical_rule_id": CANONICAL,
@@ -154,9 +156,31 @@ def test_definition_hash_is_key_order_independent():
         {"b": 2, "a": 1}
     )
 
+def test_canonical_json_contract_v1_is_exact_and_unicode_preserving():
+    value = {"z": None, "বাংলা": "আইন", "a": [True, False, 1, 1.5]}
+    assert canonical_definition_json(value) == '{"a":[true,false,1,1.5],"z":null,"বাংলা":"আইন"}'
+    assert canonical_definition_hash(value) == canonical_definition_hash(
+        {"বাংলা": "আইন", "a": [True, False, 1, 1.5], "z": None}
+    )
+
+
+@pytest.mark.parametrize("value", [
+    {"not_finite": float("nan")},
+    {"not_finite": float("inf")},
+    {"not_finite": float("-inf")},
+])
+def test_canonical_json_contract_rejects_non_finite_numbers(value):
+    with pytest.raises(ValueError):
+        canonical_definition_json(value)
+
 
 def test_invalid_alias_date_fails_closed():
     result = resolve(aliases=[dict(ALIAS_ROW, valid_from="not-a-date")])
+    assert result.status == "INVALID_ALIAS_INTERVAL"
+
+
+def test_missing_alias_start_date_fails_closed():
+    result = resolve(aliases=[dict(ALIAS_ROW, valid_from=None)])
     assert result.status == "INVALID_ALIAS_INTERVAL"
 
 
@@ -197,3 +221,10 @@ def test_revision_number_rejects_coercible_non_integer_values(invalid_number):
     invalid = dict(REVISION_ROW, revision_number=invalid_number)
     result = resolve(revisions=[invalid])
     assert result.status == "INVALID_REVISION_METADATA"
+
+
+def test_resolved_alias_without_registry_row_id_is_rejected():
+    alias = dict(ALIAS_ROW)
+    alias.pop("id")
+    result = resolve(aliases=[alias])
+    assert result.status == "INVALID_ALIAS_METADATA"

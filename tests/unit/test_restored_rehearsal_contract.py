@@ -94,6 +94,19 @@ def test_0115_identity_preflight_runs_after_upgrade_to_0114_and_before_head():
     assert upgrade_0114 < identity_preflight < upgrade_head
 
 
+def test_rehearsal_requires_finding_binding_schema_and_forced_rls_audit():
+    assert POST_MIGRATION_REQUIRED_COLUMNS["compliance_finding_bindings"] >= {
+        "company_id", "compliance_flag_id", "evaluation_run_id",
+        "canonical_rule_id", "revision_id", "finding_snapshot_hash",
+        "finding_snapshot_canonical", "evidence_manifest_canonical",
+    }
+    assert POST_MIGRATION_REQUIRED_COLUMNS["compliance_finding_evidence"] >= {
+        "company_id", "company_fact_id", "fact_value_snapshot",
+        "document_sha256", "evidence_hash",
+        "fact_value_canonical", "evidence_canonical",
+    }
+
+
 def test_rehearsal_rejects_any_membership_involving_app_or_audit_roles():
     assert EXPECTED_PROVIDER_MEMBERSHIPS == set()
 

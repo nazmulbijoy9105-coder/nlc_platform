@@ -3,9 +3,8 @@
 The adapter never creates sessions, changes roles, commits, or grants access.
 Callers must pass an application session already established by the normal
 authentication/RLS dependency. Database grants and RLS remain authoritative.
-The current registry migration intentionally grants runtime roles no SELECT;
-until a separately reviewed policy/grant migration is applied, access fails
-closed as REGISTRY_UNAVAILABLE.
+Migration 0117 grants SELECT only to authenticated signed runtime
+principals under RLS; all writes remain denied.
 """
 from __future__ import annotations
 
@@ -29,6 +28,7 @@ def _row_identity(row: LegalRuleIdentity) -> dict[str, Any]:
 
 def _row_alias(row: LegalRuleAlias) -> dict[str, Any]:
     return {
+        "id": str(row.id),
         "source_namespace": row.source_namespace,
         "historical_rule_id": row.historical_rule_id,
         "canonical_rule_id": str(row.canonical_rule_id),
@@ -48,6 +48,9 @@ def _row_revision(row: LegalRuleRevision) -> dict[str, Any]:
         "definition_json": row.definition_json,
         "definition_hash": row.definition_hash,
         "approval_state": row.approval_state,
+        "evaluator_name": row.evaluator_name,
+        "evaluator_version": row.evaluator_version,
+        "evaluator_artifact_hash": row.evaluator_artifact_hash,
     }
 
 
