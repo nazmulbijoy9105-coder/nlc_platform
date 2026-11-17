@@ -383,7 +383,7 @@ async def test_company_fact_assertion_clears_cached_statutory_score(
 
 @pytest.mark.asyncio
 async def test_director_change_invalidates_cached_statutory_score(db, db_company):
-    from datetime import datetime, timezone
+    from datetime import date, datetime, timezone
 
     from app.models.enums import RiskBand
     from app.services.people_service import DirectorService
@@ -408,7 +408,7 @@ async def test_director_change_invalidates_cached_statutory_score(db, db_company
 
 @pytest.mark.asyncio
 async def test_agm_change_invalidates_cached_statutory_score(db, db_company):
-    from datetime import datetime, timezone
+    from datetime import date, datetime, timezone
 
     from app.models.enums import RiskBand
     from app.services.filing_service import AGMService
