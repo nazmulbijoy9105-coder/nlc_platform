@@ -30,9 +30,11 @@ def test_manifest_is_fail_closed_and_does_not_invent_legal_approval() -> None:
 
     assert manifest["jurisdiction"] == "BD"
     assert manifest["status_policy"] == "FAIL_CLOSED"
-    assert manifest["canonical_id_inventory"]["source_revision"] is None
+    assert manifest["canonical_id_inventory"]["source_revision"] == (
+        "cefe6f169cd283d2e61071a3b7438657da04321e"
+    )
     assert manifest["canonical_id_inventory"]["source_revision_status"] == (
-        "UNPINNED_REQUIRES_COMMIT_SHA"
+        "PINNED"
     )
 
     for rule in manifest["rules"]:
