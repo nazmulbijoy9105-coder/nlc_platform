@@ -71,7 +71,10 @@ def _validation(run: ComplianceEvaluationRun, company: Company) -> dict[str, Any
         problems.append("COMPANY_RISK_BAND_MISMATCH")
     if company.last_evaluated_at != run.calculated_at:
         problems.append("LATEST_EVALUATION_TIMESTAMP_MISMATCH")
-    if getattr(company, "updated_at", None) > company.last_evaluated_at:
+    if (
+        getattr(company, "updated_at", None) is None
+        or company.updated_at > company.last_evaluated_at
+    ):
         problems.append("COMPANY_DATA_CHANGED_AFTER_EVALUATION")
     return {
         "valid": not problems,
