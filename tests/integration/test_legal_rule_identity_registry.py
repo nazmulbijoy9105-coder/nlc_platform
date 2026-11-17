@@ -148,11 +148,11 @@ async def test_alias_overlap_guard_allows_adjacent_and_unresolved_intervals(db):
     # overlap a resolved mapping; they are not active resolution claims.
     await _insert_alias(
         db, canonical_id=ambiguous_canonical_id, historical_id=historical_id,
-        status="AMBIGUOUS", valid_from="2020-06-01", valid_to="2020-07-01",
+        status="AMBIGUOUS", valid_from=date(2020, 6, 1), valid_to=date(2020, 7, 1),
     )
     await _insert_alias(
         db, canonical_id=unresolved_canonical_id, historical_id=historical_id,
-        status="UNRESOLVED", valid_from="2020-06-01", valid_to="2020-07-01",
+        status="UNRESOLVED", valid_from=date(2020, 6, 1), valid_to=date(2020, 7, 1),
     )
 
 
@@ -181,7 +181,7 @@ async def test_alias_overlap_guard_serializes_concurrent_resolved_inserts(test_e
     try:
         await _insert_alias(
             first, canonical_id=canonical_ids[0], historical_id=historical_id,
-            status="RESOLVED", valid_from="2020-01-01", valid_to="2022-01-01",
+            status="RESOLVED", valid_from=date(2020, 1, 1), valid_to=date(2022, 1, 1),
         )
         second_pid = (await second.execute(text("SELECT pg_backend_pid()"))).scalar_one()
 
@@ -189,7 +189,7 @@ async def test_alias_overlap_guard_serializes_concurrent_resolved_inserts(test_e
             second_started.set()
             await _insert_alias(
                 second, canonical_id=canonical_ids[1], historical_id=historical_id,
-                status="RESOLVED", valid_from="2021-01-01", valid_to="2023-01-01",
+                status="RESOLVED", valid_from=date(2021, 1, 1), valid_to=date(2023, 1, 1),
             )
 
         competing = asyncio.create_task(competing_insert())
