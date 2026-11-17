@@ -205,3 +205,101 @@ async def test_admin_dashboard_deadlines_and_risk_cover_the_authorized_portfolio
         db_company.id,
         db_other_company.id,
     }
+
+
+@pytest.mark.asyncio
+async def test_dashboard_aggregates_withhold_pending_cached_black_band(
+    db, db_company, db_other_company, monkeypatch
+):
+    """A pending latest run must not inherit the company's cached BLACK band."""
+    import uuid
+    from datetime import datetime, timezone
+
+    import app.rule_engine.engine as engine_module
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+    from app.services.compliance_service import ComplianceService
+
+    await set_admin_context(db)
+    now = datetime.now(timezone.utc)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = now
+    db_company.updated_at = now
+    db_other_company.current_compliance_score = 10
+    db_other_company.current_risk_band = RiskBand.BLACK
+    db_other_company.last_evaluated_at = now
+    db_other_company.updated_at = now
+
+    db.add_all([
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(), company_id=db_company.id, score=85,
+            risk_band=RiskBand.GREEN, calculated_at=now, engine_version="test",
+            score_hash="a" * 64, evaluation_status="COMPLETED",
+            trigger_source="TEST", active_flags_count=0, black_flags_count=0,
+            flags_snapshot=[], fact_provenance_snapshot=[],
+        ),
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(), company_id=db_other_company.id, score=None,
+            risk_band=RiskBand.NOT_EVALUATED, calculated_at=now, engine_version="test",
+            score_hash="b" * 64, evaluation_status="PENDING",
+            trigger_source="TEST", active_flags_count=0, black_flags_count=0,
+            flags_snapshot=[], fact_provenance_snapshot=[],
+        ),
+    ])
+    await db.flush()
+    await set_admin_context(db)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    risk_rows = await CompanyService(db).get_risk_distribution(include_all_companies=True)
+    by_band = {str(row["risk_band"]): int(row["company_count"]) for row in risk_rows}
+    assert by_band.get("GREEN") == 1
+    assert by_band.get("BLACK", 0) == 0
+    assert by_band.get("NOT_EVALUATED") == 1
+
+    kpis = await ComplianceService(db).get_dashboard_kpis()
+    assert kpis["green_count"] == 1
+    assert kpis["red_black_count"] == 0
+    assert kpis["not_evaluated_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
+    db, db_company, db_other_company, monkeypatch
+):
+    """A later company/fact update invalidates a formerly completed cached band."""
+    import uuid
+    from datetime import datetime, timedelta, timezone
+
+    import app.rule_engine.engine as engine_module
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+    from app.services.compliance_service import ComplianceService
+
+    await set_admin_context(db)
+    evaluated_at = datetime.now(timezone.utc)
+    db_company.current_compliance_score = 20
+    db_company.current_risk_band = RiskBand.RED
+    db_company.last_evaluated_at = evaluated_at
+    db_company.updated_at = evaluated_at + timedelta(seconds=1)
+
+    db.add(ComplianceEvaluationRun(
+        id=uuid.uuid4(), company_id=db_company.id, score=20,
+        risk_band=RiskBand.RED, calculated_at=evaluated_at, engine_version="test",
+        score_hash="c" * 64, evaluation_status="COMPLETED",
+        trigger_source="TEST", active_flags_count=1, black_flags_count=0,
+        flags_snapshot=[], fact_provenance_snapshot=[],
+    ))
+    await db.flush()
+    await set_admin_context(db)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    risk_rows = await CompanyService(db).get_risk_distribution(include_all_companies=True)
+    by_band = {str(row["risk_band"]): int(row["company_count"]) for row in risk_rows}
+    assert by_band.get("RED", 0) == 0
+    assert by_band.get("BLACK", 0) == 0
+    assert by_band.get("NOT_EVALUATED", 0) >= 1
+
+    kpis = await ComplianceService(db).get_dashboard_kpis()
+    assert kpis["red_black_count"] == 0
+    assert kpis["not_evaluated_count"] >= 1
