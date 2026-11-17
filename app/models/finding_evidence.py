@@ -8,7 +8,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    JSONB,
     ForeignKey,
     Integer,
     String,
@@ -16,7 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
