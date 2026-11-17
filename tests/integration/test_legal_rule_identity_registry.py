@@ -1,8 +1,11 @@
 """Database-level invariants for the canonical legal-rule identity registry."""
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 pytestmark = [pytest.mark.integration]
 
@@ -67,3 +70,78 @@ async def test_alias_registry_is_forced_rls_and_has_overlap_guard(db):
             assert (can_select, can_insert, can_update, can_delete) == (
                 False, False, False, False
             )
+
+
+
+async def _insert_alias_identity(db) -> str:
+    result = await db.execute(
+        text(
+            "INSERT INTO public.legal_rule_identities "
+            "(jurisdiction, creation_basis) "
+            "VALUES ('BD', 'integration-test fixture') RETURNING id"
+        )
+    )
+    return str(result.scalar_one())
+
+
+async def _insert_alias(
+    db, *, canonical_id: str, historical_id: str,
+    status: str, valid_from: str, valid_to: str | None,
+) -> None:
+    await db.execute(
+        text(
+            "INSERT INTO public.legal_rule_aliases "
+            "(canonical_rule_id, source_namespace, historical_rule_id, "
+            "resolution_status, valid_from, valid_to) "
+            "VALUES (CAST(:canonical_id AS uuid), 'integration-test', "
+            ":historical_id, :status, CAST(:valid_from AS date), "
+            "CAST(:valid_to AS date))"
+        ),
+        {
+            "canonical_id": canonical_id,
+            "historical_id": historical_id,
+            "status": status,
+            "valid_from": valid_from,
+            "valid_to": valid_to,
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_alias_overlap_guard_rejects_overlapping_resolved_intervals(db):
+    canonical_id = await _insert_alias_identity(db)
+    historical_id = f"overlap-{uuid.uuid4()}"
+    await _insert_alias(
+        db, canonical_id=canonical_id, historical_id=historical_id,
+        status="RESOLVED", valid_from="2020-01-01", valid_to="2022-01-01",
+    )
+
+    with pytest.raises(DBAPIError) as exc_info:
+        async with db.begin_nested():
+            await _insert_alias(
+                db, canonical_id=canonical_id, historical_id=historical_id,
+                status="RESOLVED", valid_from="2021-01-01", valid_to="2023-01-01",
+            )
+
+    assert getattr(exc_info.value.orig, "sqlstate", None) == "23P01"
+
+
+@pytest.mark.asyncio
+async def test_alias_overlap_guard_allows_adjacent_and_unresolved_intervals(db):
+    canonical_id = await _insert_alias_identity(db)
+    historical_id = f"adjacent-{uuid.uuid4()}"
+    await _insert_alias(
+        db, canonical_id=canonical_id, historical_id=historical_id,
+        status="RESOLVED", valid_from="2020-01-01", valid_to="2021-01-01",
+    )
+    # Half-open intervals [2020, 2021) and [2021, 2022) do not overlap.
+    await _insert_alias(
+        db, canonical_id=canonical_id, historical_id=historical_id,
+        status="RESOLVED", valid_from="2021-01-01", valid_to="2022-01-01",
+    )
+    # Non-resolved candidates remain representable even when their dates
+    # overlap a resolved mapping; they are not active resolution claims.
+    await _insert_alias(
+        db, canonical_id=canonical_id, historical_id=historical_id,
+        status="AMBIGUOUS", valid_from="2020-06-01", valid_to="2020-07-01",
+    )
