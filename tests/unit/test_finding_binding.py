@@ -56,6 +56,7 @@ def _build(resolution=None, facts=None, **overrides):
         "evaluation_run_id": "run-1",
         "source_namespace": "engine-build:abc",
         "historical_rule_id": "AGM-001",
+        "jurisdiction": "BD",
         "effective_date": date(2026, 1, 1),
         "resolution": resolution or _resolution(),
         "finding_snapshot": {"evaluation_state": "NOT_COMPLIANT", "score_impact": 0},
