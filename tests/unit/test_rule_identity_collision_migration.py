@@ -84,11 +84,13 @@ def test_archive_rls_is_applied_after_archive_and_quarantine_writes():
 
 def test_canonical_alias_registry_rejects_overlapping_resolved_mappings():
     migration_path = (
-        ROOT / "alembic" / "versions" / "0116_canonical_rule_identity_registry.py"
+        ROOT / "alembic" / "versions" / "0118_legal_rule_alias_overlap_guard.py"
     )
     source = migration_path.read_text(encoding="utf-8")
 
     for marker in (
+        'revision = "0118_legal_rule_alias_overlap_guard"',
+        'down_revision = "0117_canonical_registry_runtime_read"',
         "prevent_legal_rule_alias_overlap",
         "trg_legal_rule_alias_no_overlap",
         "NEW.resolution_status <> 'RESOLVED'",
