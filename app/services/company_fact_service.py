@@ -14,6 +14,7 @@ from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.services.score_invalidation import invalidate_company_score
 
 
 class CompanyFactService:
@@ -95,7 +96,6 @@ class CompanyFactService:
         await self.db.flush()
         await self._mark_company_facts_changed(company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
-from app.services.score_invalidation import invalidate_company_score
         await publish_domain_event(
             self.db, company_id=company_id,
             event_type=DomainEventType.COMPANY_FACT_ASSERTED,
