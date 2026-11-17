@@ -23,6 +23,7 @@ from app.models.charges import CompanyCharge
 from app.models.enums import CompanyStatus, CompanyType, LifecycleStage, RevenueTier, RiskBand
 from app.models.people import Director, Shareholder
 from app.services.base import BaseService
+from app.services.score_invalidation import invalidate_company_score
 
 
 def _agm_profile_evidence(latest_agm) -> dict:
@@ -250,15 +251,7 @@ class CompanyService(BaseService[Company]):
         company = await super().update_by_id(record_id, **updates)
         if company is None:
             return None
-        await self.db.execute(
-            update(Company)
-            .where(Company.id == record_id)
-            .values(
-                current_compliance_score=None,
-                current_risk_band=RiskBand.NOT_EVALUATED,
-                last_evaluated_at=None,
-            )
-        )
+        await invalidate_company_score(self.db, record_id)
         await self.db.flush()
         await self.db.refresh(company)
         return company
