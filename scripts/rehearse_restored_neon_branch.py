@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0118_canonical_finding_evidence_binding"
+EXPECTED_HEAD_REVISION = "0119_finding_payload_digest_verification"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -90,12 +90,14 @@ POST_MIGRATION_REQUIRED_COLUMNS = {
         "alias_id", "revision_id", "effective_date", "revision_number",
         "definition_hash", "evaluator_name", "evaluator_version",
         "evaluator_artifact_hash", "evidence_status",
-        "evidence_manifest_hash", "finding_snapshot", "finding_snapshot_hash",
+        "evidence_manifest_hash", "finding_snapshot", "finding_snapshot_canonical",
+        "evidence_manifest_canonical", "finding_snapshot_hash",
         "created_at",
     },
     "compliance_finding_evidence": {
         "id", "binding_id", "company_id", "company_fact_id", "evidence_role",
-        "fact_key", "fact_value_snapshot", "fact_value_hash", "trust_level",
+        "fact_key", "fact_value_snapshot", "fact_value_canonical",
+        "evidence_canonical", "fact_value_hash", "trust_level",
         "verification_status", "observed_on", "source_reference", "document_id",
         "document_sha256", "asserted_by", "authorized_uploader_id", "uploaded_at",
         "verified_by", "verified_at", "captured_at", "evidence_hash",
