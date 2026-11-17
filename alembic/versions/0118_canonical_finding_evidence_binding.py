@@ -97,7 +97,20 @@ def upgrade() -> None:
             "evaluator_artifact_hash IS NULL OR evaluator_artifact_hash ~ '^[0-9a-f]{64}$'",
             name="ck_finding_binding_evaluator_hash"),
         sa.CheckConstraint(
-            "attribution_evidence_hash IS NULL OR attribution_evidence_hash ~ '^[0-9a-f]{64}
+            "attribution_evidence_hash IS NULL OR attribution_evidence_hash ~ '^[0-9a-f]{64}$'",
+            name="ck_finding_binding_attribution_evidence_hash"),
+        sa.CheckConstraint(
+            "(attribution_status = 'ATTRIBUTED' AND attribution_basis IS NOT NULL "
+            "AND btrim(attribution_basis) <> '' AND attribution_evidence_hash IS NOT NULL "
+            "AND attribution_reviewed_by IS NOT NULL AND attribution_reviewed_at IS NOT NULL) "
+            "OR (attribution_status <> 'ATTRIBUTED' AND attribution_basis IS NULL "
+            "AND attribution_evidence_hash IS NULL AND attribution_reviewed_by IS NULL "
+            "AND attribution_reviewed_at IS NULL)",
+            name="ck_finding_binding_attribution_review_gate"),
+        sa.CheckConstraint(
+            "attribution_status <> 'ATTRIBUTED' OR "
+            "(resolution_status = 'RESOLVED' AND evidence_status = 'COMPLETE')",
+            name="ck_finding_binding_attribution_requires_identity_evidence"),
     )
     op.create_index(
         "ix_finding_binding_company_created",
