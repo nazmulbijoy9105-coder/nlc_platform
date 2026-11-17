@@ -125,7 +125,7 @@ def build_finding_binding_snapshot(
     Resolution is only identity/version selection. The output never authorises
     legal approval, historical attribution, compliance, or score release.
     """
-    if not company_id or not compliance_flag_id or not source_namespace or not historical_rule_id or not jurisdiction:
+    if not company_id or not compliance_flag_id or not evaluation_run_id or not source_namespace or not historical_rule_id or not jurisdiction:
         raise ValueError("Company, finding, jurisdiction and namespaced rule identity are required")
     if not isinstance(effective_date, date) or isinstance(effective_date, datetime):
         raise ValueError("effective_date must be a date without a time component")
@@ -233,7 +233,6 @@ async def persist_finding_binding(session: Any, snapshot: Mapping[str, Any]):
     binding_values.setdefault("id", uuid.uuid4())
     _uuid_fields(binding_values, ("id", "company_id", "compliance_flag_id", "evaluation_run_id",
                                   "attribution_reviewed_by", "canonical_rule_id", "alias_id", "revision_id"))
-    _date_value(binding_values.get("effective_date"), "effective_date")
     binding_values["effective_date"] = _date_value(binding_values.get("effective_date"), "effective_date")
     binding = ComplianceFindingBinding(**binding_values)
     session.add(binding)
