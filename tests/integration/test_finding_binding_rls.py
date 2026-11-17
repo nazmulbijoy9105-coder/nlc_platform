@@ -11,6 +11,7 @@ from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag
 from app.models.database import set_rls_context
 from app.models.enums import CompanyType, RevenueTier, RiskBand, SeverityLevel, FlagStatus
 from app.models.finding_evidence import ComplianceFindingBinding
+from app.rule_engine.canonical_identity import canonical_definition_json, canonical_definition_hash
 
 pytestmark = pytest.mark.integration
 
@@ -46,6 +47,10 @@ async def test_finding_binding_tables_are_forced_tenant_scoped_append_only(db):
             else "trg_finding_evidence_insert_guard"
         )
         assert expected_guard in trigger_names
+        if table == "compliance_finding_bindings":
+            assert "trg_finding_binding_payload_digest" in trigger_names
+        else:
+            assert "trg_finding_evidence_payload_digest" in trigger_names
 
         policies = await db.execute(
             text(
@@ -131,14 +136,20 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
         flags_snapshot=[], fact_provenance_snapshot=[],
     ))
     await db.flush()
+    finding_payload = {"finding": {}}
+    manifest_payload = {"evidence": []}
+    finding_canonical = canonical_definition_json(finding_payload)
+    manifest_canonical = canonical_definition_json(manifest_payload)
     db.add(ComplianceFindingBinding(
         company_id=company_id, compliance_flag_id=flag_id,
         evaluation_run_id=run_id, jurisdiction="BD",
         source_namespace="test-fixture", historical_rule_id=fixture_rule_id,
         resolution_status="UNRESOLVED", attribution_status="CURRENT_EVALUATION",
         effective_date=date.today(), evidence_status="MISSING",
-        evidence_manifest_hash="b" * 64, finding_snapshot={},
-        finding_snapshot_hash="c" * 64,
+        evidence_manifest_hash=canonical_definition_hash(manifest_payload),
+        evidence_manifest_canonical=manifest_canonical,
+        finding_snapshot={}, finding_snapshot_canonical=finding_canonical,
+        finding_snapshot_hash=canonical_definition_hash(finding_payload),
     ))
     await db.flush()
 
@@ -199,18 +210,22 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
                     company_id, compliance_flag_id, evaluation_run_id,
                     jurisdiction, source_namespace, historical_rule_id,
                     resolution_status, attribution_status, effective_date,
-                    evidence_status, evidence_manifest_hash,
-                    finding_snapshot, finding_snapshot_hash
+                    evidence_status, evidence_manifest_hash, evidence_manifest_canonical,
+                    finding_snapshot, finding_snapshot_canonical, finding_snapshot_hash
                 ) VALUES (
                     :company_id, :flag_id, :run_id,
                     'BD', 'test-fixture', 'TEST-RLS-INSERT',
                     'UNRESOLVED', 'CURRENT_EVALUATION', CURRENT_DATE,
-                    'MISSING', :manifest_hash, '{}'::jsonb, :snapshot_hash
+                    'MISSING', :manifest_hash, :manifest_canonical,
+                    '{}'::jsonb, :finding_canonical, :snapshot_hash
                 )
             """), {
                 "company_id": denied_company_id, "flag_id": denied_flag_id,
-                "run_id": denied_run_id, "manifest_hash": "e" * 64,
-                "snapshot_hash": "f" * 64,
+                "run_id": denied_run_id,
+                "manifest_hash": canonical_definition_hash(manifest_payload),
+                "manifest_canonical": manifest_canonical,
+                "finding_canonical": finding_canonical,
+                "snapshot_hash": canonical_definition_hash(finding_payload),
             })
     await db.rollback()
 
