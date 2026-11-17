@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
 from app.models.documents import Document
+from app.models.enums import RiskBand
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 
 
@@ -25,7 +26,12 @@ class CompanyFactService:
         await self.db.execute(
             update(Company)
             .where(Company.id == company_id)
-            .values(updated_at=datetime.now(timezone.utc))
+            .values(
+                updated_at=datetime.now(timezone.utc),
+                current_compliance_score=None,
+                current_risk_band=RiskBand.NOT_EVALUATED,
+                last_evaluated_at=None,
+            )
         )
 
     @staticmethod
