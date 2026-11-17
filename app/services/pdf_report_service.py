@@ -28,6 +28,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    RULE_ENGINE_VERSION,
     SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
@@ -844,7 +845,7 @@ class PDFReportService:
         if (
             getattr(snapshot, "evaluation_status", None) != "COMPLETED"
             or not getattr(snapshot, "score_hash", None)
-            or not getattr(snapshot, "engine_version", None)
+            or getattr(snapshot, "engine_version", None) != RULE_ENGINE_VERSION
             or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
         ):
             raise HTTPException(
