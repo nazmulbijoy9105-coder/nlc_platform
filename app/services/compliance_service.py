@@ -1104,11 +1104,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         history = []
         for row in rows:
             stored_band = getattr(row.risk_band, "value", row.risk_band)
-            released = legal_score_is_released() and stored_band != "NOT_EVALUATED"
+            run_status = str(getattr(row, "evaluation_status", "NOT_RELEASED") or "NOT_RELEASED")
+            released = (
+                legal_score_is_released()
+                and run_status == "COMPLETED"
+                and stored_band != "NOT_EVALUATED"
+                and row.score is not None
+            )
             history.append({
                 "month": row.snapshot_month.isoformat(),
                 "score": row.score if released else None,
                 "risk_band": row.risk_band if released else "NOT_EVALUATED",
+                "evaluation_status": run_status,
                 "agm_score": row.agm_score if released else None,
                 "audit_score": row.audit_score if released else None,
                 "return_score": row.return_score if released else None,
