@@ -560,10 +560,6 @@ BLACK_OVERRIDE_RULES: set[str] = set()
 # Product scoring eligibility is controlled separately by PRODUCT_SCORING_RULE_IDS
 # and LEGAL_SCORE_RELEASED. That product configuration is not legal approval.
 #
-# VERIFIED_RULE_IDS is a legal-evidence inventory, not a product feature flag.
-# No rule is marked verified until its rule-specific legal metadata and
-# supporting approval record are present and auditable.
-VERIFIED_RULE_IDS: frozenset[str] = frozenset()
 # VERIFIED_RULE_IDS is the independent Bangladesh-counsel verification allowlist.
 # Product-owner approval is a separate release control and cannot populate this set.
 # Company-specific applicability, fact provenance and evidence sufficiency remain separate gates.
@@ -756,7 +752,6 @@ SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
 
 # Product owner-controlled release switch. This enables deterministic product
 # scoring; it is not a legal-verification or certification claim.
-LEGAL_SCORE_RELEASED: bool = False
 LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}
 
 
