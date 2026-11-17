@@ -49,6 +49,8 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
 
     from datetime import datetime, timezone
 
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
     company = _company(88, "GREEN")
     evaluated_at = datetime.now(timezone.utc)
     company.last_evaluated_at = evaluated_at
@@ -58,6 +60,12 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
         score=88,
         risk_band="GREEN",
         calculated_at=evaluated_at,
+        engine_version=RULE_ENGINE_VERSION,
+        score_breakdown_snapshot={
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 88,
+        },
     )
     response = _company_to_response(company, evaluation_run=evaluation_run)
 
