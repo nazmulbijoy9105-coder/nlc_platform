@@ -610,6 +610,7 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
 def test_html_builder_withholds_score_when_company_data_changed_after_evaluation(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     stale_company = SimpleNamespace(
         **{
