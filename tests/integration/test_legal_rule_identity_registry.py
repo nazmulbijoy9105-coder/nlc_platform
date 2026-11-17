@@ -1,6 +1,7 @@
 """Database-level invariants for the canonical legal-rule identity registry."""
 from __future__ import annotations
 
+import asyncio
 import uuid
 
 import pytest
@@ -145,3 +146,59 @@ async def test_alias_overlap_guard_allows_adjacent_and_unresolved_intervals(db):
         db, canonical_id=canonical_id, historical_id=historical_id,
         status="AMBIGUOUS", valid_from="2020-06-01", valid_to="2020-07-01",
     )
+
+
+
+@pytest.mark.asyncio
+async def test_alias_overlap_guard_serializes_concurrent_resolved_inserts(test_engine):
+    historical_id = f"concurrent-{uuid.uuid4()}"
+    async with test_engine.begin() as setup:
+        ids = await setup.execute(
+            text(
+                "INSERT INTO public.legal_rule_identities "
+                "(jurisdiction, creation_basis) VALUES "
+                "('BD', 'concurrency-test fixture'), "
+                "('BD', 'concurrency-test fixture') RETURNING id"
+            )
+        )
+        canonical_ids = [str(value) for value in ids.scalars().all()]
+    assert len(canonical_ids) == 2
+
+    first = await test_engine.connect()
+    second = await test_engine.connect()
+    first_tx = await first.begin()
+    second_tx = await second.begin()
+    second_started = asyncio.Event()
+
+    try:
+        await _insert_alias(
+            first, canonical_id=canonical_ids[0], historical_id=historical_id,
+            status="RESOLVED", valid_from="2020-01-01", valid_to="2022-01-01",
+        )
+
+        async def competing_insert():
+            second_started.set()
+            await _insert_alias(
+                second, canonical_id=canonical_ids[1], historical_id=historical_id,
+                status="RESOLVED", valid_from="2021-01-01", valid_to="2023-01-01",
+            )
+
+        competing = asyncio.create_task(competing_insert())
+        await second_started.wait()
+        await first_tx.commit()
+
+        with pytest.raises(DBAPIError) as exc_info:
+            await competing
+        sqlstate = (
+            getattr(exc_info.value.orig, "sqlstate", None)
+            or getattr(exc_info.value.orig, "pgcode", None)
+        )
+        assert sqlstate == "23P01"
+        await second_tx.rollback()
+    finally:
+        if first_tx.is_active:
+            await first_tx.rollback()
+        if second_tx.is_active:
+            await second_tx.rollback()
+        await first.close()
+        await second.close()
