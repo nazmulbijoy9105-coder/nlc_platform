@@ -111,15 +111,13 @@ def upgrade() -> None:
                OR (NEW.evidence_canonical::jsonb ->> 'authorized_uploader_id')
                    IS DISTINCT FROM NEW.authorized_uploader_id::text
                OR (NEW.evidence_canonical::jsonb ->> 'uploaded_at')
-                   IS DISTINCT FROM CASE WHEN NEW.uploaded_at IS NULL THEN NULL
-                       ELSE to_char(NEW.uploaded_at AT TIME ZONE 'UTC',
-                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"') END
+                   IS DISTINCT FROM to_char(NEW.uploaded_at AT TIME ZONE 'UTC',
+                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"')
                OR (NEW.evidence_canonical::jsonb ->> 'verified_by')
                    IS DISTINCT FROM NEW.verified_by::text
                OR (NEW.evidence_canonical::jsonb ->> 'verified_at')
-                   IS DISTINCT FROM CASE WHEN NEW.verified_at IS NULL THEN NULL
-                       ELSE to_char(NEW.verified_at AT TIME ZONE 'UTC',
-                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"') END THEN
+                   IS DISTINCT FROM to_char(NEW.verified_at AT TIME ZONE 'UTC',
+                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"') THEN
                 RAISE EXCEPTION 'Evidence canonical payload or SHA-256 digest mismatch';
             END IF;
             RETURN NEW;
