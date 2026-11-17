@@ -516,7 +516,7 @@ class CompanyService(BaseService[Company]):
                     SELECT DISTINCT ON (company_id)
                         company_id, evaluation_status, score, risk_band, calculated_at
                     FROM compliance_evaluation_runs
-                    ORDER BY company_id, calculated_at DESC
+                    ORDER BY company_id, calculated_at DESC, id DESC
                 ),
                 current_company_state AS (
                     SELECT
