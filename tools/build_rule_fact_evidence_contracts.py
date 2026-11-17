@@ -36,6 +36,50 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
         }
         for fact in rule["seed_fact_inputs"]
     ]
+    # Preserve the seed facts and append missing inputs exposed by the
+    # applicability contract. These remain unmapped draft fields.
+    applicability_fact_keys = [
+        source_label(condition)
+        for condition in rule["applicability_contract"]["required_conditions"]
+    ]
+    existing_fact_keys = {item["fact_key"] for item in facts}
+    for fact_key in applicability_fact_keys:
+        if fact_key not in existing_fact_keys:
+            facts.append(
+                {
+                    "fact_key": fact_key,
+                    "source_expression": fact_key,
+                    "data_type": "UNSPECIFIED",
+                    "collection_source": "UNSPECIFIED",
+                    "verification_method": "UNSPECIFIED",
+                    "temporal_basis": "UNSPECIFIED",
+                    "evidence_links": [],
+                    "mapping_status": "REQUIRES_DOMAIN_MAPPING",
+                }
+            )
+            existing_fact_keys.add(fact_key)
+
+    # AGM-005's statutory registry requirement explicitly distinguishes the
+    # two-member and three-member default quorum thresholds. Capture member
+    # count as a required draft input; do not infer type, evidence or meaning.
+    if rule["historical_rule_id"] == "AGM-005":
+        requirement = rule.get("statutory_requirement")
+        if not isinstance(requirement, str) or not requirement.strip():
+            raise ValueError("AGM-005 statutory requirement is missing")
+        if "member_count" not in existing_fact_keys:
+            facts.append(
+                {
+                    "fact_key": "member_count",
+                    "source_expression": requirement,
+                    "data_type": "UNSPECIFIED",
+                    "collection_source": "UNSPECIFIED",
+                    "verification_method": "UNSPECIFIED",
+                    "temporal_basis": "UNSPECIFIED",
+                    "evidence_links": [],
+                    "mapping_status": "REQUIRES_DOMAIN_MAPPING",
+                }
+            )
+
     applicability = [
         {
             "condition_expression": source_label(condition),
