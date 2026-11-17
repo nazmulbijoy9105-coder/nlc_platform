@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0119_finding_payload_digest_verification"
+EXPECTED_HEAD_REVISION = "0120_governed_finding_context_catalog"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -93,6 +93,16 @@ POST_MIGRATION_REQUIRED_COLUMNS = {
         "evidence_manifest_hash", "finding_snapshot", "finding_snapshot_canonical",
         "evidence_manifest_canonical", "finding_snapshot_hash",
         "created_at",
+    },
+    "legal_rule_finding_contexts": {
+        "id", "historical_rule_id", "catalog_version", "source_namespace",
+        "jurisdiction", "source_instrument", "source_provision", "effective_date",
+        "effective_date_basis", "effective_date_source_ref", "context_snapshot",
+        "context_canonical", "context_sha256", "authored_by", "authored_at",
+    },
+    "legal_rule_finding_context_reviews": {
+        "id", "context_id", "review_status", "reviewed_context_sha256",
+        "review_basis", "reviewed_by", "reviewed_at",
     },
     "compliance_finding_evidence": {
         "id", "binding_id", "company_id", "company_fact_id", "evidence_role",
