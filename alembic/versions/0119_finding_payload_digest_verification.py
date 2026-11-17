@@ -87,7 +87,39 @@ def upgrade() -> None:
                OR (NEW.evidence_canonical::jsonb ->> 'fact_key')
                    IS DISTINCT FROM NEW.fact_key
                OR (NEW.evidence_canonical::jsonb ->> 'company_fact_id')
-                   IS DISTINCT FROM NEW.company_fact_id::text THEN
+                   IS DISTINCT FROM NEW.company_fact_id::text
+               OR (NEW.evidence_canonical::jsonb ->> 'company_id')
+                   IS DISTINCT FROM NEW.company_id::text
+               OR (NEW.evidence_canonical::jsonb ->> 'evidence_role')
+                   IS DISTINCT FROM NEW.evidence_role
+               OR (NEW.evidence_canonical::jsonb ->> 'fact_value_hash')
+                   IS DISTINCT FROM NEW.fact_value_hash
+               OR (NEW.evidence_canonical::jsonb ->> 'trust_level')
+                   IS DISTINCT FROM NEW.trust_level
+               OR (NEW.evidence_canonical::jsonb ->> 'verification_status')
+                   IS DISTINCT FROM NEW.verification_status
+               OR (NEW.evidence_canonical::jsonb ->> 'observed_on')
+                   IS DISTINCT FROM NEW.observed_on::text
+               OR (NEW.evidence_canonical::jsonb ->> 'source_reference')
+                   IS DISTINCT FROM NEW.source_reference
+               OR (NEW.evidence_canonical::jsonb ->> 'document_id')
+                   IS DISTINCT FROM NEW.document_id::text
+               OR (NEW.evidence_canonical::jsonb ->> 'document_sha256')
+                   IS DISTINCT FROM NEW.document_sha256
+               OR (NEW.evidence_canonical::jsonb ->> 'asserted_by')
+                   IS DISTINCT FROM NEW.asserted_by::text
+               OR (NEW.evidence_canonical::jsonb ->> 'authorized_uploader_id')
+                   IS DISTINCT FROM NEW.authorized_uploader_id::text
+               OR (NEW.evidence_canonical::jsonb ->> 'uploaded_at')
+                   IS DISTINCT FROM CASE WHEN NEW.uploaded_at IS NULL THEN NULL
+                       ELSE to_char(NEW.uploaded_at AT TIME ZONE 'UTC',
+                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"') END
+               OR (NEW.evidence_canonical::jsonb ->> 'verified_by')
+                   IS DISTINCT FROM NEW.verified_by::text
+               OR (NEW.evidence_canonical::jsonb ->> 'verified_at')
+                   IS DISTINCT FROM CASE WHEN NEW.verified_at IS NULL THEN NULL
+                       ELSE to_char(NEW.verified_at AT TIME ZONE 'UTC',
+                           'YYYY-MM-DD"T"HH24:MI:SS.US"+00:00"') END THEN
                 RAISE EXCEPTION 'Evidence canonical payload or SHA-256 digest mismatch';
             END IF;
             RETURN NEW;
