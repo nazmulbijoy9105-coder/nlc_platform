@@ -193,7 +193,7 @@ The consolidated branch now contains the legacy collision-preservation layer fol
 - `app/models/rules.py`: ORM models mirror the migration constraints and use `lazy="raise"` for new identity relationships.
 - `scripts/audit_orm_relationship_loading.py`: read-only mapper relationship/loading inventory.
 - `scripts/audit_rule_historical_attribution.py`: read-only reference inventory; excludes the current catalogue and quarantine archive from candidate finding-reference counts. Every match remains UNATTRIBUTED.
-- `scripts/rehearse_restored_neon_branch.py`: final expected migration head is `0116_canonical_rule_identity_registry`.
+- `scripts/rehearse_restored_neon_branch.py`: final expected migration head is `0117_canonical_registry_runtime_read` after the signed read-only registry-access migration.
 - Outcome derivation keeps lifecycle separate from compliance. A positive COMPLIANT outcome requires explicit engine COMPLIANT + PASS, applicable context, and the independent counsel-verification allowlist. Product scoring eligibility is not a substitute for counsel approval.
 
 The migrations create **zero canonical identity, alias, or revision rows**. They do not reassign any historical finding. The 0115 quarantine is a proposed migration effect, not a production action; it has not been run against Render or production Neon.
@@ -324,3 +324,8 @@ This is a schema observation, not a migration rehearsal. No Alembic command or D
 ### 9.9 Database-level effective-date overlap guard
 
 Migration 0116 now installs `trg_legal_rule_revision_no_overlap` on `legal_rule_revisions`. Before each insert it takes a transaction-scoped advisory lock keyed by canonical identity, then rejects any overlapping PostgreSQL `daterange` using half-open `[)` intervals; NULL `effective_to` is treated as an unbounded upper endpoint. This prevents two concurrent writers from both inserting overlapping revisions for the same canonical identity. The trigger function is not directly executable by PUBLIC, the runtime role, or the audit role. Unit-level structural coverage has been added; the fresh PostgreSQL migration/integration run remains the required database execution proof.
+
+
+### 9.10 Signed read-only canonical registry access — PR #349
+
+Migration `0117_canonical_registry_runtime_read` proposes the first runtime read contract for the three canonical registry tables. It preserves ENABLE + FORCE RLS, grants `SELECT` only to `nlc_app_role`, and requires a valid signed user principal or the trusted `ADMIN`/`CATALOG` service principal. It does not grant write access or access to `nlc_ci_audit_role` or PUBLIC. No canonical identities, aliases, or revisions are seeded. The migration and PostgreSQL privilege/policy tests are under CI review in PR #349; it has not been applied to production or the restored Neon branch.
