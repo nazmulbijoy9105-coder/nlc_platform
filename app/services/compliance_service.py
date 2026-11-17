@@ -953,6 +953,26 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         return result.scalar_one_or_none()
 
+    async def get_latest_evaluation_runs(
+        self, company_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, ComplianceEvaluationRun]:
+        """Return one latest immutable evaluation run per requested company."""
+        if not company_ids:
+            return {}
+        result = await self.db.execute(
+            select(ComplianceEvaluationRun)
+            .where(ComplianceEvaluationRun.company_id.in_(company_ids))
+            .distinct(ComplianceEvaluationRun.company_id)
+            .order_by(
+                ComplianceEvaluationRun.company_id,
+                ComplianceEvaluationRun.calculated_at.desc(),
+            )
+        )
+        return {
+            row.company_id: row
+            for row in result.scalars().all()
+        }
+
     async def get_active_flags(self, company_id: uuid.UUID) -> list[ComplianceFlag]:
         """Return all ACTIVE compliance flags for a company."""
         result = await self.db.execute(
