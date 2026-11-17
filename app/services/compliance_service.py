@@ -1162,7 +1162,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         or an active company_user_access membership. Keep this scope identical
         in evidence-review and released-risk modes.
         """
-        from app.rule_engine.engine import legal_score_is_released
+        from app.rule_engine.engine import (
+            RULE_ENGINE_VERSION,
+            SCORING_SPEC_VERSION,
+            legal_score_is_released,
+        )
 
         scope = ""
         params = {}
