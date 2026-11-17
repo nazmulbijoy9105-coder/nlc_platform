@@ -868,6 +868,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "current_risk_band":        risk_band,
             "rescue_required":          rescue_required,
             "last_evaluated_at":        now,
+            # Keep the profile freshness marker exactly aligned with this run.
+            # Any later company-profile update advances updated_at and makes
+            # the cached score fail closed until a new evaluation completes.
+            "updated_at":               now,
         }
         if rescue_required:
             company_svc_update["rescue_triggered_at"] = now
