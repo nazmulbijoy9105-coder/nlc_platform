@@ -30,19 +30,19 @@ def _resolution(status="RESOLVED"):
 
 def _fact(**overrides):
     row = {
-        "fact_id": "fact-1",
+        "fact_id": "00000000-0000-0000-0000-000000000101",
         "fact_key": "agm_held",
         "fact_value": False,
         "trust_level": "AUTHORIZED_DOCUMENT_BACKED",
         "verification_status": "VERIFIED",
         "observed_on": "2025-12-31",
         "source_reference": "document:doc-1",
-        "document_id": "doc-1",
+        "document_id": "00000000-0000-0000-0000-000000000201",
         "document_sha256": "c" * 64,
-        "asserted_by": "user-1",
-        "authorized_uploader_id": "user-1",
+        "asserted_by": "00000000-0000-0000-0000-000000000301",
+        "authorized_uploader_id": "00000000-0000-0000-0000-000000000301",
         "uploaded_at": "2025-12-30T10:00:00+00:00",
-        "verified_by": "reviewer-1",
+        "verified_by": "00000000-0000-0000-0000-000000000302",
         "verified_at": "2025-12-31T10:00:00+00:00",
     }
     row.update(overrides)
@@ -73,6 +73,9 @@ def test_binding_captures_exact_canonical_alias_revision_and_evaluator():
     assert binding["alias_id"] == "00000000-0000-0000-0000-000000000002"
     assert binding["revision_id"] == "00000000-0000-0000-0000-000000000003"
     assert binding["evaluator_artifact_hash"] == "b" * 64
+    assert binding["jurisdiction"] == "BD"
+    assert binding["finding_snapshot"]["evaluation_state"] == "NOT_COMPLIANT"
+    assert result["evidence"][0]["fact_value_snapshot"] is False
     assert binding["resolution_status"] == "RESOLVED"
 
 
