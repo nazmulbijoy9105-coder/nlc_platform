@@ -99,7 +99,9 @@ def upgrade() -> None:
                OR NEW.context_snapshot ->> 'jurisdiction' IS DISTINCT FROM NEW.jurisdiction
                OR NEW.context_snapshot ->> 'effective_date' IS DISTINCT FROM NEW.effective_date::text
                OR NEW.context_snapshot ->> 'effective_date_basis' IS DISTINCT FROM NEW.effective_date_basis
-               OR NEW.context_snapshot ->> 'effective_date_source_ref' IS DISTINCT FROM NEW.effective_date_source_ref THEN
+               OR NEW.context_snapshot ->> 'effective_date_source_ref' IS DISTINCT FROM NEW.effective_date_source_ref
+               OR NEW.context_snapshot ->> 'source_instrument' IS DISTINCT FROM NEW.source_instrument
+               OR NEW.context_snapshot ->> 'source_provision' IS DISTINCT FROM NEW.source_provision THEN
                 RAISE EXCEPTION 'Legal finding context payload, metadata or digest mismatch';
             END IF;
             RETURN NEW;
