@@ -24,7 +24,39 @@ EXPECTED_PROJECT_ID = "rapid-bonus-26545234"
 EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
-EXPECTED_HEAD_REVISION = "0114_annual_return_filing_status_provenance"
+EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
+EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
+EXPECTED_LEGACY_RULE_FINGERPRINTS = {
+    "INC-001": (
+        (
+            "Certificate of Incorporation Not Obtained",
+            "Section 9, Companies Act 1994 (Bangladesh)",
+            "certificate_obtained == False",
+        ),
+        (
+            "Memorandum and Articles Not Filed",
+            "Section 23, Companies Act 1994 (Bangladesh)",
+            "moa_aoa_filed == False",
+        ),
+    ),
+    "INC-002": (
+        (
+            "Memorandum and Articles Not Filed",
+            "Section 11, Companies Act 1994 (Bangladesh)",
+            "moa_filed == False OR aoa_filed == False",
+        ),
+        (
+            "Form III Not Filed",
+            "Section 23, Companies Act 1994 (Bangladesh)",
+            "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28",
+        ),
+    ),
+}
+LEGACY_RULE_REQUIRED_COLUMNS = {
+    "rule_id", "rule_name", "statutory_basis", "rule_condition",
+    "default_severity", "score_impact", "is_black_override", "is_active",
+    "verification_status", "verification_notes", "updated_at",
+}
 PRE_0042_REQUIRED_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
@@ -60,10 +92,10 @@ EVIDENCE_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
 )
-EXPECTED_PROVIDER_MEMBERSHIPS = {
-    ("neondb_owner", "nlc_app_role", "cloud_admin", True, False, False),
-    ("neondb_owner", "nlc_ci_audit_role", "cloud_admin", True, False, False),
-}
+# The release runbook requires no membership rows involving either
+# restricted application/audit role. Neon owner -> migration-owner is a
+# separate controlled migration membership and is intentionally not in this set.
+EXPECTED_PROVIDER_MEMBERSHIPS: set[tuple[str, str, str, bool, bool, bool]] = set()
 REPORT_PATH = Path("artifacts/neon-restored-branch-rehearsal.json")
 
 
@@ -163,6 +195,58 @@ async def _preflight_pre_0042_tables(
     return {
         "missing_tables": sorted(missing_tables),
         "missing_columns_by_table": schema_mismatches,
+    }
+
+
+async def _preflight_legacy_rule_identities(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Check 0115's exact schema and row fingerprints before any Alembic DDL."""
+    column_rows = await conn.fetch(
+        """
+        SELECT column_name
+          FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'legal_rules'
+        """
+    )
+    actual_columns = {row["column_name"] for row in column_rows}
+    missing_columns = sorted(LEGACY_RULE_REQUIRED_COLUMNS - actual_columns)
+    if missing_columns:
+        return {
+            "table_exists": bool(column_rows),
+            "missing_columns": missing_columns,
+            "fingerprint_mismatches": [],
+            "status": "BLOCKED_SCHEMA_DRIFT",
+        }
+
+    rows = await conn.fetch(
+        """
+        SELECT rule_id, rule_name, statutory_basis,
+               rule_condition ->> 'trigger' AS trigger
+          FROM public.legal_rules
+         WHERE rule_id = ANY($1::text[])
+         ORDER BY rule_id
+        """,
+        list(EXPECTED_LEGACY_RULE_FINGERPRINTS),
+    )
+    actual = {row["rule_id"]: row for row in rows}
+    mismatches = []
+    for rule_id, expected in EXPECTED_LEGACY_RULE_FINGERPRINTS.items():
+        row = actual.get(rule_id)
+        observed = None if row is None else (
+            row["rule_name"], row["statutory_basis"], row["trigger"]
+        )
+        if observed not in expected:
+            mismatches.append({
+                "rule_id": rule_id,
+                "accepted_quarantine_fingerprints": [list(item) for item in expected],
+                "observed_fingerprint": list(observed) if observed else None,
+            })
+    return {
+        "table_exists": bool(column_rows),
+        "missing_columns": [],
+        "fingerprint_mismatches": mismatches,
+        "status": "PASS" if not mismatches else "BLOCKED_LEGACY_IDENTITY_DRIFT",
     }
 
 
@@ -268,6 +352,80 @@ async def _table_row_counts(conn: asyncpg.Connection) -> dict[str, int]:
             await conn.fetchval(f"SELECT count(*) FROM public.{quoted}")
         )
     return counts
+
+
+async def _preflight_restricted_role_security(
+    conn: asyncpg.Connection,
+) -> dict[str, Any]:
+    """Block before DDL if app/audit roles or their memberships are unsafe."""
+    role_rows = await conn.fetch(
+        """
+        SELECT rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
+               rolinherit, rolreplication, rolbypassrls
+        FROM pg_roles
+        WHERE rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+        ORDER BY rolname
+        """
+    )
+    roles = [dict(row) for row in role_rows]
+    if {row["rolname"] for row in roles} != {
+        "nlc_app_role",
+        "nlc_ci_audit_role",
+    }:
+        return {
+            "status": "BLOCKED_ROLE_SECURITY",
+            "roles": roles,
+            "reason": "One or more restricted NLC runtime roles are missing.",
+        }
+
+    unsafe_roles = [
+        role["rolname"]
+        for role in roles
+        if (
+            not role["rolcanlogin"]
+            or role["rolsuper"]
+            or role["rolcreatedb"]
+            or role["rolcreaterole"]
+            or role["rolinherit"]
+            or role["rolreplication"]
+            or role["rolbypassrls"]
+        )
+    ]
+    membership_rows = await conn.fetch(
+        """
+        SELECT member_role.rolname AS member_role,
+               granted_role.rolname AS granted_role,
+               grantor_role.rolname AS grantor_role,
+               membership.admin_option,
+               membership.inherit_option,
+               membership.set_option
+        FROM pg_auth_members membership
+        JOIN pg_roles granted_role ON granted_role.oid = membership.roleid
+        JOIN pg_roles member_role ON member_role.oid = membership.member
+        JOIN pg_roles grantor_role ON grantor_role.oid = membership.grantor
+        WHERE member_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+           OR granted_role.rolname IN ('nlc_app_role', 'nlc_ci_audit_role')
+        ORDER BY 1, 2, 3
+        """
+    )
+    memberships = [dict(row) for row in membership_rows]
+    if unsafe_roles or memberships:
+        return {
+            "status": "BLOCKED_ROLE_SECURITY",
+            "roles": roles,
+            "unsafe_roles": unsafe_roles,
+            "restricted_memberships": memberships,
+            "reason": (
+                "Restricted roles must be NOINHERIT and have no membership "
+                "rows involving nlc_app_role or nlc_ci_audit_role before "
+                "the isolated migration rehearsal."
+            ),
+        }
+    return {
+        "status": "PASS",
+        "roles": roles,
+        "restricted_memberships": [],
+    }
 
 
 async def _security_audit(conn: asyncpg.Connection) -> dict[str, Any]:
@@ -741,6 +899,28 @@ async def main() -> int:
                 )
                 return 2
 
+            role_preflight = await _preflight_restricted_role_security(conn)
+            report["pre_migration_role_security_preflight"] = role_preflight
+            if role_preflight["status"] != "PASS":
+                report["status"] = role_preflight["status"]
+                report["migration_applied"] = False
+                report["error"] = (
+                    "Migration rehearsal blocked before Alembic: restricted "
+                    "application/audit roles or memberships are not hardened. "
+                    "No migration command was run; complete the reviewed DBA "
+                    "role-hardening procedure and repeat the read-only preflight."
+                )
+                report["finished_at"] = datetime.now(timezone.utc).isoformat()
+                REPORT_PATH.write_text(
+                    json.dumps(report, indent=2, default=str) + "\n"
+                )
+                print(
+                    "BLOCKED_ROLE_SECURITY: no Alembic command was run; "
+                    f"role preflight: {role_preflight!r}",
+                    file=sys.stderr,
+                )
+                return 2
+
             before_counts = await _table_row_counts(conn)
             report["before_table_row_counts"] = before_counts
         finally:
@@ -750,7 +930,47 @@ async def main() -> int:
         env["ENVIRONMENT"] = "production"
         env["MIGRATION_DATABASE_URL"] = raw_url
         env["DATABASE_URL"] = raw_url
-        report["alembic_upgrade_output"] = _run_command(
+        report["upgrade_to_0114_output"] = _run_command(
+            ["alembic", "upgrade", EXPECTED_PRE_IDENTITY_REVISION], env
+        )
+        report["migration_applied_through_0114"] = True
+
+        conn = await _connect(raw_url, assume_migration_owner=True)
+        try:
+            pre_identity = await _identity(conn)
+            report["pre_identity_upgrade_identity"] = pre_identity
+            if pre_identity["alembic_versions"] != [EXPECTED_PRE_IDENTITY_REVISION]:
+                raise RuntimeError(
+                    "Expected the isolated branch to stop at "
+                    f"{EXPECTED_PRE_IDENTITY_REVISION}; observed "
+                    f"{pre_identity['alembic_versions']!r}."
+                )
+            legacy_preflight = await _preflight_legacy_rule_identities(conn)
+            report["legacy_rule_identity_preflight"] = legacy_preflight
+        finally:
+            await conn.close()
+
+        if legacy_preflight["status"] != "PASS":
+            report["status"] = legacy_preflight["status"]
+            report["migration_applied"] = False
+            report["error"] = (
+                "Migration 0115 preflight blocked after upgrading the isolated "
+                "branch through 0114. The 0043-0114 migrations were applied to "
+                "the rehearsal branch only; 0115/0116 were not run. Resolve the "
+                "schema/fingerprint mismatch with an explicit reviewed disposition."
+            )
+            report["finished_at"] = datetime.now(timezone.utc).isoformat()
+            REPORT_PATH.write_text(
+                json.dumps(report, indent=2, default=str) + "\n"
+            )
+            print(
+                f"{legacy_preflight['status']}: branch stopped at 0114; "
+                f"0115/0116 not applied: {legacy_preflight!r}",
+                file=sys.stderr,
+            )
+            return 2
+
+        report["upgrade_to_head_output"] = _run_command(
             ["alembic", "upgrade", "head"], env
         )
         report["migration_applied"] = True
