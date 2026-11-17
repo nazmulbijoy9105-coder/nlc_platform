@@ -54,7 +54,7 @@ def upgrade() -> None:
                    IS DISTINCT FROM NEW.finding_snapshot THEN
                 RAISE EXCEPTION 'Finding snapshot canonical payload or SHA-256 digest mismatch';
             END IF;
-            IF encode(public.digest(convert_to(NEW.evidence_manifest_canonical, 'UTF8'), 'sha256'), 'hex')
+            IF encode(digest(convert_to(NEW.evidence_manifest_canonical, 'UTF8'), 'sha256'), 'hex')
                    IS DISTINCT FROM NEW.evidence_manifest_hash
                OR jsonb_typeof(NEW.evidence_manifest_canonical::jsonb -> 'evidence') IS DISTINCT FROM 'array' THEN
                 RAISE EXCEPTION 'Evidence manifest canonical payload or SHA-256 digest mismatch';
@@ -71,7 +71,7 @@ def upgrade() -> None:
     op.execute("""
         CREATE FUNCTION public.nlc_verify_finding_evidence_payloads()
         RETURNS trigger LANGUAGE plpgsql
-        SET search_path = pg_catalog, public
+        SET search_path = pg_catalog, public, extensions
         AS $function$
         BEGIN
             IF encode(public.digest(convert_to(NEW.fact_value_canonical, 'UTF8'), 'sha256'), 'hex')
@@ -91,7 +91,7 @@ def upgrade() -> None:
                 RAISE EXCEPTION 'Evidence canonical payload or SHA-256 digest mismatch';
             END IF;
             RETURN NEW;
-        END
+        END;
         $function$
     """)
     op.execute("""
