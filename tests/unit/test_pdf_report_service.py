@@ -35,6 +35,7 @@ COMPANY = SimpleNamespace(
     current_compliance_score=85,
     current_risk_band="GREEN",
     last_evaluated_at=datetime(2026, 10, 20, 1, 0),
+    updated_at=datetime(2026, 10, 20, 1, 0),
 )
 FLAGS = [
     SimpleNamespace(
@@ -604,3 +605,21 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
 
     assert exc.value.status_code == 409
     assert "SCORE_HASH_MISMATCH" in exc.value.detail
+
+
+def test_html_builder_withholds_score_when_company_data_changed_after_evaluation(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    stale_company = SimpleNamespace(
+        **{
+            **COMPANY.__dict__,
+            "updated_at": datetime(2026, 10, 20, 1, 0, 1),
+        }
+    )
+
+    page = build_compliance_report_html(stale_company, FLAGS, WHEN)
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM overdue" not in page
