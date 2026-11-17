@@ -153,6 +153,31 @@ async def test_unassigned_user_cannot_read_existing_finding_binding(db):
     ))
     await db.flush()
 
+    # A syntactically valid but deliberately incorrect digest must be rejected
+    # by PostgreSQL itself, not merely by the Python persistence helper.
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(text("""
+                INSERT INTO public.compliance_finding_bindings (
+                    company_id, compliance_flag_id, evaluation_run_id,
+                    jurisdiction, source_namespace, historical_rule_id,
+                    resolution_status, attribution_status, effective_date,
+                    evidence_status, evidence_manifest_hash, evidence_manifest_canonical,
+                    finding_snapshot, finding_snapshot_canonical, finding_snapshot_hash
+                ) VALUES (
+                    :company_id, :flag_id, :run_id, 'BD', 'test-fixture',
+                    'TEST-TAMPER', 'UNRESOLVED', 'CURRENT_EVALUATION', CURRENT_DATE,
+                    'MISSING', :manifest_hash, :manifest_canonical,
+                    '{}'::jsonb, :finding_canonical, :bad_hash
+                )
+            """), {
+                "company_id": company_id, "flag_id": flag_id, "run_id": run_id,
+                "manifest_hash": canonical_definition_hash(manifest_payload),
+                "manifest_canonical": manifest_canonical,
+                "finding_canonical": finding_canonical,
+                "bad_hash": "0" * 64,
+            })
+
     # Exercise the append-only triggers against an existing row using the
     # privileged integration connection; runtime-role privilege checks alone
     # do not prove that the database triggers themselves reject mutation.
