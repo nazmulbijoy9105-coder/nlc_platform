@@ -93,6 +93,20 @@ async def test_repository_rejects_cross_jurisdiction_identity():
 
 
 @pytest.mark.asyncio
+async def test_repository_treats_rls_hidden_identity_as_registry_unavailable():
+    alias, _, _ = _models()
+    session = _session_with_results([alias], [], [])
+
+    result = await resolve_from_registry(
+        session, source_namespace=NS, historical_rule_id=LEGACY,
+        effective_date=date(2026, 1, 1), jurisdiction="BD",
+    )
+
+    assert result.status == "REGISTRY_UNAVAILABLE"
+    assert session.execute.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_repository_fails_closed_on_database_permission_error():
     session = MagicMock()
     session.execute = AsyncMock(
