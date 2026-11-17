@@ -424,6 +424,8 @@ def _evaluation_run_is_current(company, evaluation_run) -> bool:
         and run_band != "NOT_EVALUATED"
         and company.last_evaluated_at is not None
         and company.last_evaluated_at == evaluation_run.calculated_at
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at == company.last_evaluated_at
         and company.current_compliance_score == evaluation_run.score
         and company_band == run_band
     )
