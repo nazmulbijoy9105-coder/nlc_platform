@@ -131,6 +131,7 @@ def _portfolio_fixture(company_count=23, rule_count=85):
             current_compliance_score=77,
             current_risk_band="GREEN",
             last_evaluated_at=calculated_at,
+            updated_at=calculated_at,
         )
         runs.append(run)
         companies[company_id] = company
