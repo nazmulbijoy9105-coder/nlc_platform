@@ -525,6 +525,8 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
         registration_number="P-1",
         current_compliance_score=90,
         current_risk_band="GREEN",
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
     page = build_compliance_report_html(
