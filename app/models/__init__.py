@@ -34,6 +34,7 @@ from .company_fact import CompanyFact
 from .domain_event import DomainEventConsumption, DomainEventOutbox
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
+from .finding_evidence import ComplianceFindingBinding, ComplianceFindingEvidence
 from .compliance import (
     ComplianceEvent,
     ComplianceEvaluationRun,
@@ -158,7 +159,9 @@ __all__ = [
     "SubscriptionPlanPrice",
     "ComplexityLevel",
     "ComplianceCalendarEvent",
-    "ComplianceEvent",\n    "ComplianceFindingBinding",\n    "ComplianceFindingEvidence",
+    "ComplianceEvent",
+    "ComplianceFindingBinding",
+    "ComplianceFindingEvidence",
     "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
