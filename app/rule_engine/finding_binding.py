@@ -111,6 +111,7 @@ def build_finding_binding_snapshot(
     evaluation_run_id: str | None,
     source_namespace: str,
     historical_rule_id: str,
+    jurisdiction: str,
     effective_date: date,
     resolution: RuleResolution,
     finding_snapshot: Mapping[str, Any],
@@ -123,8 +124,8 @@ def build_finding_binding_snapshot(
     Resolution is only identity/version selection. The output never authorises
     legal approval, historical attribution, compliance, or score release.
     """
-    if not company_id or not compliance_flag_id or not source_namespace or not historical_rule_id:
-        raise ValueError("Company, finding and namespaced rule identity are required")
+    if not company_id or not compliance_flag_id or not source_namespace or not historical_rule_id or not jurisdiction:
+        raise ValueError("Company, finding, jurisdiction and namespaced rule identity are required")
     if not isinstance(effective_date, date) or isinstance(effective_date, datetime):
         raise ValueError("effective_date must be a date without a time component")
     if resolution.effective_date != effective_date:
@@ -166,6 +167,7 @@ def build_finding_binding_snapshot(
         "evaluation_run_id": evaluation_run_id,
         "source_namespace": source_namespace,
         "historical_rule_id": historical_rule_id,
+        "jurisdiction": jurisdiction,
         "resolution_status": resolution.status,
         "attribution_status": "CURRENT_EVALUATION",
         "canonical_rule_id": resolution.canonical_rule_id if resolved else None,
