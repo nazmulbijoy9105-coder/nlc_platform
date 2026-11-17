@@ -1108,11 +1108,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             .limit(months)
         )
         rows = result.scalars().all()
-        from app.rule_engine.engine import (
-            RULE_ENGINE_VERSION,
-            SCORING_SPEC_VERSION,
-            legal_score_is_released,
-        )
+        from app.rule_engine.engine import legal_score_is_released
         history = []
         for row in rows:
             stored_band = getattr(row.risk_band, "value", row.risk_band)
