@@ -18,6 +18,7 @@ DEFINITION = {"provision": "Companies Act 1994, s. 81", "obligation": "hold_agm"
 
 def _models():
     alias = SimpleNamespace(
+        id="00000000-0000-0000-0000-000000000003",
         source_namespace=NS, historical_rule_id=LEGACY,
         canonical_rule_id=CANONICAL, resolution_status="RESOLVED",
         valid_from=date(2020, 1, 1), valid_to=None,
