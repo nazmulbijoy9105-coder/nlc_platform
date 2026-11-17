@@ -150,6 +150,8 @@ def build_finding_binding_snapshot(
     finding_hash = _stable_hash({"finding": finding_snapshot})
 
     resolved = resolution.status == "RESOLVED"
+    if resolution.evaluator_artifact_hash and not _SHA256.fullmatch(resolution.evaluator_artifact_hash):
+        raise ValueError("Evaluator artifact hash must be a lowercase SHA-256 digest")
     if resolved and not (
         resolution.canonical_rule_id and resolution.alias_id and resolution.revision_id
         and resolution.revision_number and _SHA256.fullmatch(resolution.definition_hash or "")
