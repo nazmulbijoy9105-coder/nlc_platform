@@ -39,6 +39,11 @@ def test_risk_distribution_requires_user_and_active_membership_filter():
     assert "company_user_access" in sql
     assert "cua.user_id = :user_id" in sql
     assert "cua.is_active is true" in sql
+    assert "latest_run" in sql
+    assert "from compliance_evaluation_runs" in sql
+    assert "lr.evaluation_status = 'completed'" in sql
+    assert "c.updated_at = c.last_evaluated_at" in sql
+    assert "else 'not_evaluated'::risk_band" in sql
     assert db.params[0] == {
         "user_id": str(user_id),
         "include_assigned_staff": False,
