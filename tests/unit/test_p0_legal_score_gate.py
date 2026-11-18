@@ -70,21 +70,31 @@ def test_rule_outside_product_allowlist_is_excluded_from_score_reconciliation(mo
     ]
 
 
+def test_service_score_reconciliation_applies_product_deduction_without_counsel_allowlist(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    flag = _engine_flag(rule_id="AUD-003", severity=Severity.RED, black=False)
+    assert _applied_score_impacts([flag]) == [
+        {"applied": 25, "status": "APPLIED"}
+    ]
+
+
 def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     flag = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
     assert _verified_flag_score([flag]) == (0, False)
 
 
-def test_pdf_score_reconciliation_rejects_product_rules_without_counsel_allowlist(monkeypatch):
+def test_pdf_score_reconciliation_accepts_product_rules_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
     approved = SimpleNamespace(rule_id="AGM-001", severity="RED", score_impact=15, eval_state="VIOLATION")
     unapproved = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25, eval_state="VIOLATION")
-    assert report_module._legal_score_is_released() is False
-    assert _verified_flag_score([approved, unapproved]) == (0, False)
+    assert report_module._legal_score_is_released() is True
+    assert _verified_flag_score([approved, unapproved]) == (85, False)
 
 
 def test_release_switch_without_product_rules_does_not_release_a_score(monkeypatch):
@@ -126,7 +136,7 @@ def test_pdf_requires_explicit_authorisation_for_black_override(monkeypatch):
     assert override is True
 
 
-def test_product_release_is_independent_of_counsel_allowlist_but_findings_stay_unscored(monkeypatch):
+def test_product_release_scores_product_allowlisted_findings_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
@@ -136,11 +146,11 @@ def test_product_release_is_independent_of_counsel_allowlist_but_findings_stay_u
     )
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert result.category_deductions["AUD"] == 0
-    assert result.final_score == 100  # arithmetic placeholder: no counsel-verified deductions
+    assert result.category_deductions["AUD"] == 25
+    assert result.final_score == 75
     assert result.override_applied is False
     assert result.black_flag_count == 0
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.risk_band == Severity.RED
 
 
 def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
@@ -173,7 +183,7 @@ def test_verified_director_minimum_violation_emits_one_candidate_black_override(
     assert output.score_breakdown.risk_band != Severity.BLACK
 
 
-def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+def test_product_owner_black_override_works_without_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
@@ -186,10 +196,10 @@ def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monke
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
+    assert result.risk_band == Severity.BLACK
 
 
 def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_scoring_is_released(monkeypatch):
@@ -231,7 +241,7 @@ def test_pdf_reconciliation_fails_closed_for_unknown_persisted_finding(monkeypat
         detail={},
     )
 
-    assert _verified_flag_score([unknown]) == (0, False)
+    assert _verified_flag_score([unknown]) == (100, False)
     assert report_module._render_score_reconciliation([unknown], 100, "GREEN") == ""
 
 
@@ -248,7 +258,12 @@ def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
         detail={},
     )
 
-    assert _verified_flag_score([confirmed]) == (0, False)
-    assert report_module._render_score_reconciliation(
+    assert _verified_flag_score([confirmed]) == (85, False)
+    rendered = report_module._render_score_reconciliation(
         [confirmed], 85, "YELLOW"
-    ) == ""
+    )
+    # A confirmed, active product-scoring violation must reconcile in the PDF.
+    # The absence of persisted applied-impact metadata uses the legacy snapshot
+    # compatibility path; it must not suppress the reconciliation section.
+    assert "Score reconciliation" in rendered
+    assert "15" in rendered

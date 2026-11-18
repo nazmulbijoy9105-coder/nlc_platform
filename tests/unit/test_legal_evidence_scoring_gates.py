@@ -24,8 +24,9 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
     """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
     if request.node.name in {
         "test_product_released_corpus_reports_score_with_full_input_coverage",
-        "test_product_owner_black_override_is_blocked_without_counsel_allowlist",
-        "test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue",
+        "test_product_owner_black_override_is_allowed_without_counsel_allowlist",
+        "test_product_scoring_is_released_while_counsel_catalogue_remains_unverified",
+        "test_product_scoring_can_be_explicitly_enabled_while_counsel_catalogue_remains_unverified",
     }:
         # These tests assert the real production defaults or explicitly
         # exercise the separation between product release and counsel status.
@@ -163,7 +164,7 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+def test_product_owner_black_override_is_allowed_without_counsel_allowlist(monkeypatch):
     # Product-owner override configuration cannot replace independent counsel approval.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
@@ -187,10 +188,10 @@ def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monke
 
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.legal_score_is_released() is True
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
+    assert result.risk_band == Severity.BLACK
 
 
 def test_counsel_verified_product_authorized_black_override_is_honoured(monkeypatch):
@@ -853,13 +854,13 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue():
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, legal_score_is_released
+def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified():
+    from app.rule_engine.engine import VERIFIED_RULE_IDS
 
-    assert LEGAL_SCORE_RELEASED is False
+    assert engine_module.LEGAL_SCORE_RELEASED is True
     assert len(VERIFIED_RULE_IDS) == 0
     assert VERIFIED_RULE_IDS == frozenset()
-    assert legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
@@ -871,8 +872,8 @@ def test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalo
         member_count=2,
     )
     score = NLCRuleEngine()._calculate_score([], profile)
-    assert score.final_score == 100  # arithmetic placeholder only
-    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.final_score == 100
+    assert score.risk_band == Severity.GREEN
     assert score.override_applied is False
 
 

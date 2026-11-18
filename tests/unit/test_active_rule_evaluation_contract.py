@@ -20,13 +20,19 @@ ACTIVE_EVALUATION_RULE_IDS = {
 }
 
 
-def test_requested_rules_remain_product_scoring_enabled():
-    assert LEGAL_SCORE_RELEASED is False  # statutory scoring remains paused pending complete independent legal verification
-def test_requested_rules_remain_product_enabled_but_statutory_release_is_paused():
+def test_product_scoring_release_defaults_enabled_for_product_allowlist():
+    assert LEGAL_SCORE_RELEASED is True
+    assert legal_score_is_released() is True
+
+
+def test_product_allowlist_is_separate_from_counsel_verification(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
-    assert LEGAL_SCORE_RELEASED is False
+    assert LEGAL_SCORE_RELEASED is True
     assert VERIFIED_RULE_IDS == frozenset()
-    assert legal_score_is_released() is False
+    assert legal_score_is_released() is True
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
 
 
 def test_legacy_rule_ids_are_preserved():

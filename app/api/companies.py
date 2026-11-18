@@ -32,6 +32,7 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
@@ -42,12 +43,8 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Expose a statutory score only after the full catalogue is counsel-verified."""
-    return (
-        LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+    """Return product scoring availability, not independent legal approval."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
 
@@ -323,8 +320,16 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
+    evaluation_state = getattr(flag, "evaluation_state", "UNKNOWN")
+    evaluation_state = getattr(evaluation_state, "value", evaluation_state)
+    flag_status = getattr(flag, "flag_status", None)
+    flag_status = getattr(flag_status, "value", flag_status)
     score_eligible = (
-        _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+        _legal_score_is_released()
+        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
+        and evaluation_state == "VIOLATION"
+        and flag_status == "ACTIVE"
+        and getattr(flag, "resolved_date", None) is None
     )
     legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
@@ -335,17 +340,16 @@ def _flag_to_response(flag) -> FlagResponse:
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
             if legally_verified
             else (
-                "Pending independent counsel review: candidate signal only. "
-                "No breach, liability, penalty or compliance status is determined."
+                "Candidate product-risk signal — pending independent counsel review: "
+                + (getattr(flag, "description", flag.flag_code) or flag.flag_code)
             )
         ),
-        severity=str(severity) if legally_verified else "NOT_EVALUATED",
+        severity=str(severity) if score_eligible else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
         legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
         is_black_override=(
-            legally_verified
-            and score_eligible
+            score_eligible
             and bool(getattr(flag, "is_black_override", False))
             and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),

@@ -89,7 +89,7 @@ def test_unknown_never_enters_scoring_even_if_impact_was_supplied(monkeypatch):
     assert NLCRuleEngine(today=TODAY)._eligible_scoring_flags([unknown]) == []
 
 
-def test_product_allowlist_cannot_score_rule_without_rule_specific_counsel_approval(monkeypatch):
+def test_product_allowlist_scores_confirmed_finding_without_counsel_approval(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
@@ -97,14 +97,15 @@ def test_product_allowlist_cannot_score_rule_without_rule_specific_counsel_appro
     flag = _finding(rule_id="AUD-001")
     engine = NLCRuleEngine(today=TODAY)
 
-    assert engine._eligible_scoring_flags([flag]) == []
-    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 0
+    assert engine._eligible_scoring_flags([flag]) == [flag]
+    assert engine._category_deductions(engine._eligible_scoring_flags([flag]))["AUD"] == 10
 
     score = engine._calculate_score([flag], CompanyProfile(
         company_id="fixture-score", company_name="Score Fixture Ltd."
     ))
-    assert score.category_deductions["AGM"] == 0
-    assert score.final_score == 100
+    assert score.category_deductions["AUD"] == 10
+    assert score.final_score == 90
+    assert score.risk_band == Severity.RED
 
 
 def test_product_allowlisted_rule_can_score_in_controlled_release_fixture(monkeypatch):
@@ -150,11 +151,28 @@ def test_identical_evidence_and_release_versions_produce_identical_score_hashes(
     assert first.category_deductions == second.category_deductions
 
 
-def test_default_runtime_product_release_is_fail_closed():
+def test_default_runtime_product_release_is_enabled_without_counsel_certification():
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
-    assert engine_module.LEGAL_SCORE_RELEASED is False
-    assert engine_module.legal_score_is_released() is False
+    assert engine_module.LEGAL_SCORE_RELEASED is True
+    assert engine_module.legal_score_is_released() is True
 
+
+
+def test_explicit_product_release_pause_still_withholds_score(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    flag = _finding()
+    engine = NLCRuleEngine(today=TODAY)
+    assert engine._eligible_scoring_flags([flag]) == []
+    result = engine._calculate_score(
+        [flag],
+        CompanyProfile(company_id="paused-score", company_name="Paused Score Ltd."),
+    )
+    assert result.category_deductions["AGM"] == 0
+    assert result.final_score == 100  # internal arithmetic placeholder only
+    assert result.risk_band == Severity.NOT_EVALUATED
+    assert engine_module.legal_score_is_released() is False
 
 
 def test_product_release_uses_product_allowlist_not_counsel_allowlist(monkeypatch):

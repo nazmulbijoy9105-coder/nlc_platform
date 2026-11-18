@@ -89,7 +89,6 @@ def _applied_score_impacts(flags) -> list[dict]:
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
         PRODUCT_SCORING_RULE_IDS,
         SCORE_DEDUCTION_RULE_IDS,
-        VERIFIED_RULE_IDS,
         RuleState,
         legal_score_is_released,
     )
@@ -112,17 +111,15 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not PRODUCT_SCORING_RULE_IDS:
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
-        if (
-            flag.rule_id not in PRODUCT_SCORING_RULE_IDS
-            or flag.rule_id not in SCORE_DEDUCTION_RULE_IDS
-        ):
+        # Match NLCRuleEngine._eligible_scoring_flags exactly. The engine's
+        # deterministic deduction catalogue is SCORE_DEDUCTION_RULE_IDS;
+        # PRODUCT_SCORING_RULE_IDS controls public catalogue visibility, not
+        # whether an already-scored finding is allocated in the audit ledger.
+        if flag.rule_id not in SCORE_DEDUCTION_RULE_IDS:
             results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
         if not legal_score_is_released():
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-            continue
-        if flag.rule_id not in VERIFIED_RULE_IDS:
-            results[index] = {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
             continue
         severity_value = getattr(
             getattr(flag, "severity", None),
@@ -373,8 +370,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "RELEASED" if score_is_released
                 else "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
             ),
-            # Unapproved rule triggers are retained only in the internal
-            # audit store. They are not exposed as customer-facing flags.
+            # Product-allowlisted findings are exposed as internal product-risk
+            # signals. Counsel approval remains a separate field/status and is
+            # never implied by product scoring release.
             "flags": [
                 {
                     "rule_id": f.rule_id,

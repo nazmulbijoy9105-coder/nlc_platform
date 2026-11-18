@@ -53,11 +53,12 @@ class TestFullUserJourney:
     async def test_black_rules(self, api_client, super_admin_headers):
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
-        # No BLACK override is legally active until the independent counsel
-        # allowlist is populated and the full catalogue release gate is open.
+        # Product-owner BLACK override authorization is separate from counsel
+        # verification. The API exposes the authorized product override while
+        # withholding unverified default legal severity metadata.
         rules = r.json()
         blacks = {x["rule_id"] for x in rules if x.get("is_black_override")}
-        assert blacks == set()
+        assert blacks == {"INC-003"}
         assert all(isinstance(x["product_scoring_enabled"], bool) for x in rules)
         assert all(x["default_severity"] is None for x in rules)
         assert all(x["score_impact"] == 0 for x in rules)
