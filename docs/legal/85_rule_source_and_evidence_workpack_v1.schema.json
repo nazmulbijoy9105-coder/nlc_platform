@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/nlc/85_rule_source_and_evidence_workpack_v1.schema.json",
   "title": "NLC 85-rule statutory source and evidence workpack",
   "type": "object",
   "required": [
