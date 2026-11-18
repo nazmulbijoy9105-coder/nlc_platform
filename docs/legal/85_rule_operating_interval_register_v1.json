@@ -1795,9 +1795,8 @@
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
       "missing_provision_candidate": false,
       "unresolved_items": [
-        "PROVISION GAP: recorded basis says BSEC Corporate Governance Code 2023, paragraph 8, but the exact current operative paragraph/instrument and the specific quarterly-reporting obligation have not been authenticated. Do not infer a Code condition number from the title or amendment candidate.",
+        "SOURCE IDENTITY CONFLICT: the recorded catalogue claim cites BSEC Corporate Governance Code 2023 paragraph 8, while the current quarterly-report provision candidate is the separate BSEC 20-Jun-2018 Financial Reporting and Disclosure Notification, Condition 4(1)–(3). Preserve both claims; independent review must decide the canonical rule identity and applicability.",
         "Recorded source conflict: seed/catalogue cites Corporate Governance Code 2023 paragraph 8, while the exact quarterly-report provision located is the separate BSEC 20-Jun-2018 Financial Reporting and Disclosure Notification, Condition 4(1)–(3). Preserve both provenance claims and resolve the canonical rule identity through review.",
-        "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
@@ -3267,8 +3266,7 @@
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
       "missing_provision_candidate": false,
       "unresolved_items": [
-        "PROVISION GAP: BIDA's 2023 resource index is only a discovery lead. The exact guideline PDF/version, issuing authority, clause, commencement/effective date, scope and superseding instruments are not pinned.",
-        "Exact statutory provision / paragraph / schedule not identified in current workpack.",
+        "VERSION GAP: a signed BIDA Procedure 2023 copy dated 21-May-2023 is located, but Bangladesh Bank FEID Circular Letter 06/2023 confirms an updated 29-May-2023 version whose original BIDA PDF was not retrieved. Do not treat the 21-May copy as definitive or assign a final operative interval until the updated version is authenticated.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
