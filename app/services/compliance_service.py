@@ -366,7 +366,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "risk_band_semantics": "NLC_INTERNAL_RISK_CLASSIFICATION_NOT_LEGAL_LIABILITY",
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "legal_evaluation_status": (
-                "PRODUCT_SCORE_RELEASED" if score_is_released
+                "RELEASED" if score_is_released
                 else "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
             ),
             # Product-allowlisted findings are exposed as internal product-risk
