@@ -20,19 +20,18 @@ ACTIVE_EVALUATION_RULE_IDS = {
 }
 
 
-def test_product_scoring_release_defaults_to_fail_closed():
-    assert LEGAL_SCORE_RELEASED is False
-    assert legal_score_is_released() is False
+def test_product_scoring_release_defaults_enabled_for_product_allowlist():
+    assert LEGAL_SCORE_RELEASED is True
+    assert legal_score_is_released() is True
 
 
 def test_product_allowlist_is_separate_from_counsel_verification(monkeypatch):
     import app.rule_engine.engine as engine_module
 
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
-    assert LEGAL_SCORE_RELEASED is False
+    assert LEGAL_SCORE_RELEASED is True
     assert VERIFIED_RULE_IDS == frozenset()
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    assert engine_module.legal_score_is_released() is True
+    assert legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
 
 

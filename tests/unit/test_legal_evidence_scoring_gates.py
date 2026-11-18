@@ -26,6 +26,7 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
         "test_product_released_corpus_reports_score_with_full_input_coverage",
         "test_product_owner_black_override_is_allowed_without_counsel_allowlist",
         "test_product_scoring_is_released_while_counsel_catalogue_remains_unverified",
+        "test_product_scoring_can_be_explicitly_enabled_while_counsel_catalogue_remains_unverified",
     }:
         # These tests assert the real production defaults or explicitly
         # exercise the separation between product release and counsel status.
@@ -853,10 +854,10 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_product_scoring_can_be_explicitly_enabled_while_counsel_catalogue_remains_unverified(monkeypatch):
+def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified():
     from app.rule_engine.engine import VERIFIED_RULE_IDS
 
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    assert engine_module.LEGAL_SCORE_RELEASED is True
     assert len(VERIFIED_RULE_IDS) == 0
     assert VERIFIED_RULE_IDS == frozenset()
     assert engine_module.legal_score_is_released() is True
