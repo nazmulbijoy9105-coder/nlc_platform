@@ -76,6 +76,34 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
         for fact in agm005["applicability"]["required_facts"]
     )
 
+
+    # The formerly generic evidence placeholders now have rule-specific candidate contracts.
+    unresolved = [
+        (rule["rule_id"], fact["fact_key"])
+        for rule in data["rules"]
+        for fact in rule["applicability"]["required_facts"]
+        if fact["mapping_status"] == "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL"
+    ]
+    assert unresolved == []
+    resolved_fact_keys = {
+        (rule["rule_id"], fact["fact_key"])
+        for rule in data["rules"]
+        for fact in rule["applicability"]["required_facts"]
+    }
+    assert ("AGM-003", "short_notice_consent_evidence_ref") in resolved_fact_keys
+    assert ("AUD-001", "first_auditor_appointed") in resolved_fact_keys
+    assert ("BOD-002", "board_meeting_notice_given") in resolved_fact_keys
+    assert ("CAP-002", "registrar_extension_evidence_ref") in resolved_fact_keys
+    assert ("DIR-001", "appointment_delay_days") in resolved_fact_keys
+    assert ("TAX-002", "annual_turnover_bdt") in resolved_fact_keys
+    assert ("TR-003", "aoa_transfer_restriction") in resolved_fact_keys
+    assert all(
+        fact["candidate_evidence_contract"]["evidence_type"]
+        != "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED"
+        for rule in data["rules"]
+        for fact in rule["applicability"]["required_facts"]
+    )
+
     # No workpack entry can silently become a legal or product approval.
     assert data["coverage"]["independently_verified_issuers"] == 0
     assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
@@ -85,5 +113,5 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["coverage"]["fact_inventory_rules"] == 85
     assert data["coverage"]["rules_with_candidate_evidence_roles"] == 85
     assert data["coverage"]["fact_records_with_candidate_evidence_contract"] == 292
-    assert data["coverage"]["fact_records_unresolved_evidence_type"] == 21
+    assert data["coverage"]["fact_records_unresolved_evidence_type"] == 0
     assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
