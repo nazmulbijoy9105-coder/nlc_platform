@@ -111,10 +111,11 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not PRODUCT_SCORING_RULE_IDS:
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
-        if (
-            flag.rule_id not in PRODUCT_SCORING_RULE_IDS
-            or flag.rule_id not in SCORE_DEDUCTION_RULE_IDS
-        ):
+        # Match NLCRuleEngine._eligible_scoring_flags exactly. The engine's
+        # deterministic deduction catalogue is SCORE_DEDUCTION_RULE_IDS;
+        # PRODUCT_SCORING_RULE_IDS controls public catalogue visibility, not
+        # whether an already-scored finding is allocated in the audit ledger.
+        if flag.rule_id not in SCORE_DEDUCTION_RULE_IDS:
             results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
             continue
         if not legal_score_is_released():
