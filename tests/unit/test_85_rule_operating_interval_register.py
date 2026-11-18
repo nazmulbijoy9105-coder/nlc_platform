@@ -13,6 +13,18 @@ def load_register() -> dict:
     return json.loads(REGISTER.read_text(encoding="utf-8"))
 
 
+def test_coverage_counts_reconcile_to_register_contents() -> None:
+    payload = load_register()
+    coverage = payload["coverage"]
+    rules = payload["rules"]
+    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 26
+    assert coverage["amendment_candidate_entries"] == sum(len(r["amendment_candidates"]) for r in rules) == 75
+    assert coverage["rules_with_amendment_candidates"] == sum(bool(r["amendment_candidates"]) for r in rules) == 29
+    assert coverage["rules_without_amendment_candidates"] == sum(not r["amendment_candidates"] for r in rules) == 56
+    assert coverage["rules_with_provision_candidates"] == 84
+    assert coverage["rules_missing_provision_candidates"] == 1
+
+
 def test_register_contains_exactly_85_unique_rules() -> None:
     payload = load_register()
     rules = payload["rules"]
