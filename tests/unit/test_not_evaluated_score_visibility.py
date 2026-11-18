@@ -233,6 +233,7 @@ def test_released_flag_reports_rule_specific_counsel_verification(monkeypatch):
         flag_code="AGM-001",
         severity="RED",
         score_impact=15,
+        evaluation_state="VIOLATION",
         flag_status="ACTIVE",
         triggered_date=date(2026, 10, 1),
         resolved_date=None,
