@@ -158,6 +158,23 @@ def test_default_runtime_product_release_is_enabled_without_counsel_certificatio
 
 
 
+def test_explicit_product_release_pause_still_withholds_score(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    flag = _finding()
+    engine = NLCRuleEngine(today=TODAY)
+    assert engine._eligible_scoring_flags([flag]) == []
+    result = engine._calculate_score(
+        [flag],
+        CompanyProfile(company_id="paused-score", company_name="Paused Score Ltd."),
+    )
+    assert result.category_deductions["AGM"] == 0
+    assert result.final_score == 100  # internal arithmetic placeholder only
+    assert result.risk_band == Severity.NOT_EVALUATED
+    assert engine_module.legal_score_is_released() is False
+
+
 def test_product_release_uses_product_allowlist_not_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
