@@ -684,7 +684,11 @@
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Twenty-four Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication."
+    "note": "Twenty-four Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication.",
+    "located_primary_record_anchors": 24,
+    "amendment_candidate_entries": 73,
+    "rules_with_amendment_candidates": 28,
+    "rules_without_amendment_candidates": 57
   },
   "rules": [
     {
