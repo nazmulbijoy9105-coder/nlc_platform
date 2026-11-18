@@ -319,8 +319,16 @@ class MessageResponse(BaseModel):
 
 
 def _flag_to_response(flag) -> FlagResponse:
+    evaluation_state = getattr(flag, "evaluation_state", "UNKNOWN")
+    evaluation_state = getattr(evaluation_state, "value", evaluation_state)
+    flag_status = getattr(flag, "flag_status", None)
+    flag_status = getattr(flag_status, "value", flag_status)
     score_eligible = (
-        _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+        _legal_score_is_released()
+        and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+        and evaluation_state == "VIOLATION"
+        and flag_status == "ACTIVE"
+        and getattr(flag, "resolved_date", None) is None
     )
     legally_verified = flag.rule_id in VERIFIED_RULE_IDS
     severity = getattr(flag.severity, "value", flag.severity)
