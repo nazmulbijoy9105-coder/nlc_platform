@@ -110,6 +110,38 @@
         "PDF OCR is not a substitute for checking the Bangla Gazette page image."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_ACT_16_2015_FINANCIAL_REPORTING",
+      "instrument": "Financial Reporting Act, 2015 (Act No. 16 of 2015)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2015-09-09",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2015-09-01",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/14042_23447.pdf",
+      "official_consolidated_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1169.html",
+      "record_evidence": [
+        "DPP September 2015 extraordinary-gazette index lists Act No. 16 of 2015 on 9-Sep-2015, National Parliament, pages 7029–7059.",
+        "DPP-hosted Gazette PDF header identifies Bangladesh Gazette Extraordinary, National Parliament, date 9-Sep-2015 and Act No. 16.",
+        "Gazette section 1(2) states immediate commencement.",
+        "Gazette section 62(a) inserts Companies Act 1994 s.185(2A) and (2B); section 62(b) inserts s.190(1A); section 62(c) inserts s.212(5); section 62(d) inserts s.220(4).",
+        "The amendment to Companies Act s.190(1A) is limited to a company qualifying as a public interest entity under Financial Reporting Act 2015 s.2(8); it requires financial statements to follow FRC standards under s.40."
+      ],
+      "commencement_clause": "Section 1(2): immediately effective",
+      "effective_from": "2015-09-09",
+      "effective_to": null,
+      "affected_parent_provisions": [
+        185,
+        190,
+        212,
+        220
+      ],
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; RELEVANT_TEXT_LOCATED",
+      "limitations": [
+        "The Gazette PDF is the primary record; the DPP index and PDF metadata are matched. A SHA-256 of downloaded original bytes and a manual visual check of the relevant Bangla page images still need to be recorded.",
+        "Rule-level applicability depends on the public-interest-entity definition in s.2(8), including entity categories and any Council-prescribed thresholds; do not apply to every private company by default."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -141,7 +173,7 @@
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Counts describe this research register snapshot. Three Companies Act-related Government Press records are indexed and matched to official Gazette artifacts below, but this is not counted as independent issuer authentication or complete legal-text authentication."
+    "note": "Four Government Press primary-record anchors have been indexed and matched to Gazette artifacts (Companies Act commencement SRO 321-Law/1994; Companies Amendment Acts 7/2020 and 24/2020; Financial Reporting Act 2015). This is not independent counsel authentication or complete rule-specific legal-text authentication."
   },
   "rules": [
     {
@@ -191,7 +223,26 @@
         "commencement_date": "1994-12-01",
         "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
       },
-      "amendment_candidates": [],
+      "amendment_candidates": [
+        {
+          "instrument_title": "Financial Reporting Act, 2015 (Act No. 16 of 2015)",
+          "instrument_type": "ACT",
+          "publication_date": "2015-09-09",
+          "claimed_effective_from": "2015-09-09",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Financial Reporting Act 2015 s.62(b) inserts Companies Act 1994 s.190(1A). It applies to a company that is a public interest entity under F.R. Act s.2(8), requiring financial statements to follow FRC standards under s.40. The parent Act s.1(2) says immediately effective. Do not generalise to all private companies.",
+          "amended_provisions": [
+            190
+          ],
+          "amendment_clause_reference": "Financial Reporting Act 2015 s.62(b)",
+          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1169.html",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/2015-09-01",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/14042_23447.pdf",
+          "primary_record_id": "BD_ACT_16_2015_FINANCIAL_REPORTING",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; SECTION_62_TEXT_LOCATED",
+          "rule_effect_status": "REQUIRES_PUBLIC_INTEREST_ENTITY_SCOPE_TEST_AND_COUNSEL_APPROVAL"
+        }
+      ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
       "operative_interval": {
         "from": null,
