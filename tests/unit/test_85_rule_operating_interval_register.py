@@ -53,7 +53,7 @@ def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
             assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
             assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
         else:
-            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd", "dpp.gov.bd"}
+            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd", "dpp.gov.bd", "www.dpp.gov.bd"}
             assert anchor["issuer_official_url"].startswith("https://" + anchor["official_issuer_host"] + "/")
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
