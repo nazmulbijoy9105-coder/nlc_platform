@@ -38,8 +38,8 @@ def test_missing_provision_candidates_are_explicit() -> None:
     payload = load_register()
     missing = [r["rule_id"] for r in payload["rules"] if r["missing_provision_candidate"]]
     assert len(missing) == payload["coverage"]["rules_missing_provision_candidates"]
-    assert len(missing) == 3
-    assert set(missing) == {"FX-001", "INC-006", "TR-002"}
+    assert len(missing) == 2
+    assert set(missing) == {"FX-001", "TR-002"}
     for rule in payload["rules"]:
         assert rule["missing_provision_candidate"] is (len(rule["candidate_provisions"]) == 0)
 
@@ -47,18 +47,30 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026", "BD_VAT_AMENDMENT_ACT_77_2026", "BD_FINANCE_ACT_96_2026", "BD_VAT_AMENDMENT_ORDINANCE_38_2026", "BD_BSEC_FINANCIAL_REPORTING_NOTIFICATION_2018"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026", "BD_VAT_AMENDMENT_ACT_77_2026", "BD_FINANCE_ACT_96_2026", "BD_VAT_AMENDMENT_ORDINANCE_38_2026", "BD_BSEC_FINANCIAL_REPORTING_NOTIFICATION_2018", "BD_BIDA_GUIDELINE_2023_21_MAY_COPY", "BD_BB_FEID_CIRCULAR_LETTER_06_2023"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         if anchor.get("gazette_index_url"):
             assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
             assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
         else:
-            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd", "www.bb.org.bd", "dpp.gov.bd", "www.dpp.gov.bd"}
+            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd", "www.bb.org.bd", "dpp.gov.bd", "www.dpp.gov.bd", "scs.ssd.gov.bd"}
             assert anchor["issuer_official_url"].startswith("https://" + anchor["official_issuer_host"] + "/")
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_bida_usd_50000_requirement_is_conditional_and_version_sensitive() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "INC-006")
+    assert len(rule["candidate_provisions"]) == 3
+    assert rule["rule_claim_assessment"]["status"] == "CONDITIONAL_ADMINISTRATIVE_APPLICATION_REQUIREMENT; NOT_GENERAL_COMPANY_STATUTORY_MINIMUM"
+    assert "not a universal minimum capital rule" in rule["rule_claim_assessment"]["assessment"]
+    update = [e for e in rule["amendment_candidates"] if "29-May-2023" in e["instrument_title"]]
+    assert len(update) == 1
+    assert update[0]["claimed_effective_from"] is None
+    assert update[0]["source_claim_status"] == "UPDATED_VERSION_REFERENCE_CONFIRMED_BY_BB; ORIGINAL_BIDA_PDF_NOT_RETRIEVED"
 
 
 def test_bsec_quarterly_reporting_uses_financial_reporting_condition_4_not_cgc_condition_8() -> None:
