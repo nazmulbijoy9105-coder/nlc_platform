@@ -117,14 +117,12 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         f"{sorted(expected_agm005_facts - agm005_fact_keys)}"
     )
 
+    # The builder must append derived/applicability facts, never replace or
+    # discard the original seed inputs.
     seed_fact_keys = {
         fact[1:-1]
         if len(fact) >= 2 and fact[0] == fact[-1] and fact[0] in {"'", '"'}
         else fact
-    # The builder must append derived/applicability facts, never replace or
-    # discard the original seed inputs.
-    seed_fact_keys = {
-        fact.strip("'\\\\\\\"")
         for fact in agm005_source["seed_fact_inputs"]
     }
     assert seed_fact_keys <= agm005_fact_keys, (
@@ -133,7 +131,7 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
     )
     assert any(
         fact["fact_key"] == "member_count"
-        and "not more than six members" in fact["source_expression"]
+        and "not more than six members" in fact["source_evidence"]
         and fact["data_type"] == "UNSPECIFIED"
         and fact["evidence_links"] == []
         and fact["mapping_status"] == "REQUIRES_DOMAIN_MAPPING"
