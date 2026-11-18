@@ -55,7 +55,7 @@ def test_aud003_incomplete_audit_at_agm_remains_lawyer_review_not_red_finding():
     )
     finding = _one_flag(output, "AUD-003")
     assert finding.severity is Severity.NOT_EVALUATED
-    assert finding.state is RuleState.UNKNOWN
+    assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
     assert finding.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert finding.eval_state == "UNKNOWN"
     assert finding.score_impact == 0
