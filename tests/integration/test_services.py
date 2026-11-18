@@ -885,7 +885,7 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
     assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
 
 
-def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_approval(monkeypatch):
+def test_score_allocation_applies_product_allowlisted_rule_without_counsel_approval(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
