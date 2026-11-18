@@ -255,7 +255,8 @@ def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("NO-SUCH-RULE")])
 
-def test_default_paused_release_keeps_rescue_plan_in_review_only_state():
+def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     assert engine_module.legal_score_is_released() is False
     finding = _flag("AGM-001")
     steps = _seq([finding])
