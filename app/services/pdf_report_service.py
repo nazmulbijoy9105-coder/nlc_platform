@@ -315,12 +315,8 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine gate: every catalogue rule needs counsel approval."""
-    return (
-        LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+    """Mirror the product-owner scoring switch; legal review is disclosed separately."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 
 def _is_active_confirmed_violation(flag: Any) -> bool:
