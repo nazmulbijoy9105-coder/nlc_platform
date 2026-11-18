@@ -25,7 +25,18 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
         assert rule["statutory_chain"]["operative_interval"]["status"] == (
             "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
         )
-        assert rule["evidence_contract"]["evidence_roles"] is not None
+        assert rule["seed_rule_claim"]["seed_fact_inputs"]
+        assert rule["evidence_contract"]["evidence_roles"]
+        assert rule["evidence_contract"]["evidence_role_status"] == (
+            "CANDIDATE_EVIDENCE_ROLES_PRESENT_ISSUER_VERIFICATION_REQUIRED"
+        )
+        assert rule["applicability"]["required_facts"]
+        assert all(
+            fact["candidate_evidence_contract"]
+            and fact["candidate_evidence_contract"]["collection_procedure"]
+            and fact["candidate_evidence_contract"]["verification_standard"]
+            for fact in rule["applicability"]["required_facts"]
+        )
         assert rule["release"]["legal_review"] == "REVIEW_REQUIRED"
         assert rule["release"]["product_decision"] == "NOT_REVIEWED"
         assert rule["release"]["score_eligible"] is False
@@ -52,3 +63,8 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["coverage"]["independently_verified_issuers"] == 0
     assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
     assert data["coverage"]["approved_rules"] == 0
+    assert data["coverage"]["seed_rule_claims"] == 85
+    assert data["coverage"]["seed_fact_candidate_rules"] == 85
+    assert data["coverage"]["fact_inventory_rules"] == 85
+    assert data["coverage"]["rules_with_candidate_evidence_roles"] == 85
+    assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
