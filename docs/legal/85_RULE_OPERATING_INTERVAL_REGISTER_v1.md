@@ -59,6 +59,16 @@ The official Bangladesh Bank sources now pinned include:
 
 The 2026 circular is a material current-law event for INC-005's account evidence chain. It does not automatically repeal every separate share-issuance reporting requirement in GFET Chapter 9. The register flags the need to reconcile the new Appendix-5 certificate with FEID Circulars 1/2025 and 3/2025 and to distinguish account-operation duties from share-issue reporting.
 
+## Local-government trade-licence source chain
+
+Primary Gazette records now pinned:
+- City Corporation Model Tax Schedule 2016, SRO 13-Law/2016, DPP 31-Jan-2016, pages 965–996. Clause 1(2) applies to all City Corporations; clause 10(3) permits annual trade-licence fees to be collected together for up to five years. No universal 31-March renewal date appears in the schedule reviewed.
+- Paurashava Model Tax Schedule 2014, SRO 246-Law/2014, DPP 23-Oct-2014, pages 19127–19162. Clause 1(2) applies by class to all Paurashavas; clause 6 sets annual business/profession taxes; clause 26 imposes a 5% surcharge if renewal has not occurred by 30 September and a separate 10% annual surcharge on arrears. That date is a surcharge trigger, not proof of licence expiry.
+- SRO 200-Law/2017, effective 1-Jul-2017, amends only the 2016 schedule's holding-tax exemption clause 3(3), not the trade-licence provisions.
+- Local Government (Paurashava) Amendment Act 2026 (Act 60) and City Corporation Amendment Act 2026 (Act 61), both effective immediately on 10-Apr-2026. Act 60 changes definitions/repeals s.20A; Act 61 adds e-rickshaw-specific licence/registration rules in Third Schedule item 19.2 and Fifth Schedule item 60A. Neither is treated as a general company trade-licence renewal amendment.
+
+**Rule correction:** the workpack's generic “renew by 31 March annually” claim is unsupported as a universal rule. For a City Corporation, the 2016 schedule allows up to five years' advance fee collection and does not set a universal renewal date. For a Paurashava, clause 26 uses 30 September for a surcharge trigger, not necessarily the licence expiry date. The actual licence and current local authority order must control.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
