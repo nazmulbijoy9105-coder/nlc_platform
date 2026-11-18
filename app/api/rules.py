@@ -128,11 +128,7 @@ class MessageResponse(BaseModel):
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
-    product_scoring_enabled = (
-        legal_score_is_released()
-        and scoring_catalogue_member
-        and legally_verified
-    )
+    product_scoring_enabled = legal_score_is_released() and scoring_catalogue_member
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
@@ -162,7 +158,6 @@ def _rule_to_response(rule) -> RuleResponse:
         # This field describes product policy, not independent legal verification.
         is_black_override=(
             product_scoring_enabled
-            and legally_verified
             and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
@@ -277,7 +272,6 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
-        and rule.rule_id in VERIFIED_RULE_IDS
         and legal_score_is_released()
     ]
 
