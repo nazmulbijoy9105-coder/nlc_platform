@@ -1,4 +1,4 @@
-"""API surface must not expose stored scores while legal release is paused."""
+"""API exposes product scores while keeping counsel-review status separate."""
 from __future__ import annotations
 
 from datetime import date
@@ -93,10 +93,10 @@ def test_not_evaluated_company_does_not_expose_placeholder_score():
     assert response.compliance_score is None
 
 
-def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
+def test_released_company_score_does_not_require_full_counsel_allowlist(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
-    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
 
     from datetime import datetime, timezone
 
@@ -114,7 +114,7 @@ def test_released_company_score_requires_full_counsel_allowlist(monkeypatch):
     assert response.evaluation_status == "EVALUATED"
 
 
-def test_unverified_product_flag_is_hidden_until_full_counsel_release(monkeypatch):
+def test_unverified_product_flag_exposes_product_score_and_counsel_status(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
@@ -134,10 +134,11 @@ def test_unverified_product_flag_is_hidden_until_full_counsel_release(monkeypatc
 
     response = _flag_to_response(flag)
 
-    assert response.severity == "NOT_EVALUATED"
-    assert response.score_impact == 0
+    assert response.severity == "RED"
+    assert response.score_impact == 15
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert "No breach" in response.rule_name
+    assert "Candidate product-risk signal" in response.rule_name
+    assert "pending independent counsel review" in response.rule_name
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
@@ -175,7 +176,7 @@ def test_release_switch_without_product_scoring_rules_hides_company_score(monkey
     assert response.violation_count == 0
 
 
-def test_product_switch_cannot_publish_score_without_counsel_status(monkeypatch):
+def test_product_switch_can_publish_score_without_counsel_status(monkeypatch):
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
