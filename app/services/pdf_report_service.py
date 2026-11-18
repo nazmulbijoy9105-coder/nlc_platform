@@ -666,8 +666,15 @@ def build_compliance_report_html(
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
     review_flags = []
+    current_band = getattr(
+        getattr(company, "current_risk_band", None),
+        "value",
+        getattr(company, "current_risk_band", None),
+    )
     score_is_current = (
         _legal_score_is_released()
+        and getattr(company, "current_compliance_score", None) is not None
+        and current_band not in (None, "NOT_EVALUATED")
         and getattr(company, "last_evaluated_at", None) is not None
         and getattr(company, "updated_at", None) is not None
         and company.updated_at <= company.last_evaluated_at
