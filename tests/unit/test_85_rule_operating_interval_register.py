@@ -38,8 +38,8 @@ def test_missing_provision_candidates_are_explicit() -> None:
     payload = load_register()
     missing = [r["rule_id"] for r in payload["rules"] if r["missing_provision_candidate"]]
     assert len(missing) == payload["coverage"]["rules_missing_provision_candidates"]
-    assert len(missing) == 4
-    assert set(missing) == {"BSEC-001", "FX-001", "INC-006", "TR-002"}
+    assert len(missing) == 3
+    assert set(missing) == {"FX-001", "INC-006", "TR-002"}
     for rule in payload["rules"]:
         assert rule["missing_provision_candidate"] is (len(rule["candidate_provisions"]) == 0)
 
@@ -47,7 +47,7 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026", "BD_VAT_AMENDMENT_ACT_77_2026", "BD_FINANCE_ACT_96_2026", "BD_VAT_AMENDMENT_ORDINANCE_38_2026"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026", "BD_VAT_AMENDMENT_ACT_77_2026", "BD_FINANCE_ACT_96_2026", "BD_VAT_AMENDMENT_ORDINANCE_38_2026", "BD_BSEC_FINANCIAL_REPORTING_NOTIFICATION_2018"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         if anchor.get("gazette_index_url"):
@@ -59,6 +59,18 @@ def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_bsec_quarterly_reporting_uses_financial_reporting_condition_4_not_cgc_condition_8() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "BSEC-001")
+    assert rule["candidate_provisions"] == ["BSEC Notification No. BSEC/CMRRCD/2006-158/208/Admin/81 dated 20 June 2018, Conditions 4(1)–(3)"]
+    event = rule["amendment_candidates"][0]
+    assert event["primary_record_id"] == "BD_BSEC_FINANCIAL_REPORTING_NOTIFICATION_2018"
+    assert event["claimed_effective_from"] is None
+    assert "45 days" in event["commencement_or_effect_note"]
+    assert "one month" in event["commencement_or_effect_note"]
+    assert rule["rule_claim_assessment"]["non_binding_policy_watch"]["status"] == "PUBLIC_ANNOUNCEMENT_ONLY_NOT_LEGAL_AMENDMENT"
 
 
 def test_vat_section_64_chain_rejects_universal_annual_return_claim() -> None:
