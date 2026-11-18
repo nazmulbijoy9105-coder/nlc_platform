@@ -39,7 +39,7 @@
     },
     "evidence_integrity": "Preserve original bytes, compute SHA-256 locally, record retrieval time and custodian, retain page-level references, and record discrepancies. Never populate artifact_sha256 from a URL or guessed value."
   },
-  "verified_primary_record_anchors": [
+  "located_primary_record_anchors": [
     {
       "source_id": "BD_DPP_SRO_321_LAW_1994",
       "instrument": "SRO No. 321-Law/1994",
