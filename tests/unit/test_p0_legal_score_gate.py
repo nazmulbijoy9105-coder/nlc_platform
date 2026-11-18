@@ -259,6 +259,12 @@ def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
     )
 
     assert _verified_flag_score([confirmed]) == (85, False)
-    assert report_module._render_score_reconciliation(
+    rendered = report_module._render_score_reconciliation(
         [confirmed], 85, "YELLOW"
-    ) == ""
+    )
+    # A confirmed, active product-scoring violation must reconcile in the PDF.
+    # The absence of persisted applied-impact metadata uses the legacy snapshot
+    # compatibility path; it must not suppress the reconciliation section.
+    assert "Score reconciliation" in rendered
+    assert "AGM" in rendered
+    assert "15" in rendered
