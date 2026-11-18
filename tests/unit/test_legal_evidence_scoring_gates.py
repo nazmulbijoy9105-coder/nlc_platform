@@ -853,13 +853,13 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified():
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, legal_score_is_released
+def test_product_scoring_can_be_explicitly_enabled_while_counsel_catalogue_remains_unverified(monkeypatch):
+    from app.rule_engine.engine import VERIFIED_RULE_IDS
 
-    assert LEGAL_SCORE_RELEASED is True
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     assert len(VERIFIED_RULE_IDS) == 0
     assert VERIFIED_RULE_IDS == frozenset()
-    assert legal_score_is_released() is True
+    assert engine_module.legal_score_is_released() is True
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
