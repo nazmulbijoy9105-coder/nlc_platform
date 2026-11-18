@@ -17,7 +17,7 @@ The file is an evidence-intake and reconciliation workpack, not a machine-genera
 
 ## Primary Companies Act instruments now pinned
 
-The Companies Act family has 64 rules in this catalogue. The following official sources have been located and linked in the workpack:
+The Companies Act family has 66 rules in this catalogue when AR-002 and AR-003 are resolved to the Companies Act source family through their current canonical source claims; their recorded catalogue bases omit the Act title. The following official sources have been located and linked in the workpack:
 
 1. **Companies Act, 1994 (Act XVIII of 1994).** Official consolidated Bangla text: https://bdlaws.minlaw.gov.bd/act-print-788.html. Section 1 records commencement on 1 December 1994 by SRO No. 321-Law/1994 dated 10 November 1994. The original SRO Gazette artifact is pinned at https://www.dpp.gov.bd/upload_file/gazettes/321-Law-1994.pdf.
 2. **Companies (Amendment) Act, 2020 (Act No. 7 of 2020).** Official text: https://bdlaws.minlaw.gov.bd/act-print-1308.html. Section 1(2) says immediately effective; publication date 25 February 2020. Gazette copy: https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf. It amended, among other things, s.85(2)(ch) by removing the common-seal wording. That is not the amendment which changed the 21-day meeting notice.
