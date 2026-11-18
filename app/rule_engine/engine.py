@@ -4020,9 +4020,14 @@ class NLCRuleEngine:
             ):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
             elif step is not None and not legal_score_is_released():
-                # Deterministic candidate steps remain visible for professional
-                # review, but a disabled product score release can never activate them.
+                # Candidate steps remain visible for professional review, but a
+                # disabled product score release can never activate them.
                 disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
+            elif step is not None and flag.rule_id not in VERIFIED_RULE_IDS:
+                # Product scoring and independent legal approval are separate.
+                # Unverified rules may contribute to the product indicator, but
+                # must not activate statutory rescue actions before counsel review.
+                disposition, reason = "REVIEW_REQUIRED", "COUNSEL_APPROVAL_REQUIRED"
             elif step is None and flag.rule_id != "TAX-004":
                 disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
