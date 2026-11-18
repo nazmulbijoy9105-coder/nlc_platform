@@ -1153,7 +1153,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "85(1)(a)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -1442,7 +1452,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "85(1)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788/section-print-32909.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -2995,7 +3015,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "210(6)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788/section-print-33854.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4246,7 +4276,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "95",
+          "url": "https://bdlaws.minlaw.gov.bd/act-788/act-part-print-355.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4403,7 +4443,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "89",
+          "url": "https://bdlaws.minlaw.gov.bd/act-788/section-32913.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5314,7 +5364,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "53",
+          "url": "https://bdlaws.minlaw.gov.bd/act-part-print-354.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5576,7 +5636,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "159(1)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -6203,7 +6273,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "172(1) read with 159 and 171",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -15039,7 +15119,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "38(7)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-788/section-32862.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
@@ -15472,7 +15562,17 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "official_provision_source": {
+          "provision": "38(7)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-788/section-32862.html",
+          "status": "OFFICIAL_BDLAWS_PROVISION_PAGE_LOCATED_TEXT_REQUIRES_LEGAL_REVIEW"
+        },
+        "base_commencement_candidate": {
+          "from": "1994-12-01",
+          "basis": "SRO No. 321-Law/1994 commencement noted in official Act section 1",
+          "status": "COMMENCEMENT_DATE_LOCATED_FULL_RULE_INTERVAL_NOT_ESTABLISHED"
+        }
       },
       "applicability": {
         "company_type_candidates": [],
