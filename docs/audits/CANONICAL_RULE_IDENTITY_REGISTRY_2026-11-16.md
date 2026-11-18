@@ -1,0 +1,331 @@
+# Canonical Rule Identity Registry — Architecture Decision and Migration Gate
+
+**Date:** 16 November 2026  
+**Repository baseline:** `e9f04947af8c26b1b87e82c9953f041c20b03e88` (merge of PR #341)  
+**Branch:** `feat/canonical-rule-identity-registry-2026-11-16`  
+**Status:** Architecture approved for implementation planning; data migration NOT approved or performed.  
+**Scope:** Identity only. This document does not approve legal propositions, evaluator behavior, scoring, or production data changes.
+
+## 1. Decision
+
+Every legally distinct compliance obligation must receive its own permanent canonical identity. Existing textual rule IDs remain preserved as historical aliases; they are not renamed, deleted, recycled, or silently reassigned.
+
+Use an opaque UUID as the immutable machine identity. A human-readable label may be added for display, but must not encode a statutory section or other mutable legal proposition. Legal sources, provisions, effective periods, evaluator versions, and rule revisions are separate records linked to the identity.
+
+Canonical identity is not the same as:
+- a rule's current display name;
+- a statutory citation or section number;
+- a particular legal revision;
+- an evaluator implementation or Python function;
+- a product scoring approval; or
+- independent counsel verification.
+
+One identity represents one legally distinct obligation. A statutory amendment may create a new revision of that obligation; a genuinely distinct duty receives a different identity. A split or merger requires an explicit, approved, append-only identity decision.
+
+## 2. Evidence inspected
+
+The following repository artifacts were inspected at the baseline above:
+
+- `app/models/rules.py`: `LegalRule.rule_id` is unique text; `LegalRuleVersion.rule_id` references it. Existing `LegalRuleVersion` snapshots are not an immutable, effective-dated legal-rule revision model.
+- `app/models/compliance.py`: `ComplianceFlag.rule_id` is stored as text alongside `rule_version`, statutory basis and finding detail. The ORM model does not itself provide a canonical identity FK.
+- `app/models/legal_provenance.py`: source mappings, deadline definitions and release events reference `legal_rules.rule_id`.
+- `app/models/rescue_audit_log.py` and migration history: rescue audit records also retain textual rule IDs.
+- `scripts/seed_rules.py`: 85 unique seed rule IDs.
+- `tools/audit_rule_parity.py`: compares engine, seed, database and API rule identifiers and selected metadata fields.
+- `docs/audits/ILRMF_85_RULE_MASTER_RECONCILIATION_2026-11-15.md`: reports 85 seed IDs, 86 database inventory rows, 85 canonical seed IDs present, and one extra database-only `INC-002`.
+- `docs/release/PRODUCTION_RULE_METADATA_AUDIT_2026-11-12.md` and its CSV artifacts: 269 active metadata mismatches across 85 IDs, plus the historical identity difference; the separate disposition file is not a canonical identity approval.
+- `docs/legal/legal_approval_register.yaml`: all 85 entries remain `REVIEW_REQUIRED`; independent counsel approval is not established.
+
+A read-only Neon audit transaction was run on project `rapid-bonus-26545234`, branch `br-purple-fog-aodj8s04`, database `neondb`, as `nlc_ci_audit_role`. The transaction explicitly set `READ ONLY`. The role has SELECT access to the audit inventory view, not to `public.compliance_flags`; therefore historical finding-level attribution was not inspected and must not be inferred.
+
+## 3. Confirmed identity collision and unresolved legacy ID
+
+### 3.1 `INC-001` is a direct semantic collision
+
+The inspected seed definition describes:
+
+- Seed/engine ID: `INC-001`
+- Name: “MoA/AoA Registration Status Requires Verification”
+- Cited provision: Companies Act 1994, section 23.
+
+The inspected production audit inventory row describes:
+
+- Database ID: `INC-001`
+- Name: “Certificate of Incorporation Not Obtained”
+- Cited provision: Companies Act 1994, section 9.
+
+These are not established as equivalent obligations. They must not share one canonical identity merely because the same text identifier was used. The database catalogue row and the seed/engine proposition require separate candidate canonical identities, subject to source and evaluator review.
+
+**Critical historical constraint:** existing findings may store only `rule_id = 'INC-001'`. The available read-only audit role cannot inspect those rows or prove whether each finding originated from the seed/engine proposition or the database catalogue definition. Therefore, no historical `INC-001` finding may be automatically assigned to either candidate identity. Keep its raw historical ID and mark canonical resolution `AMBIGUOUS` until finding-level evidence uniquely resolves it.
+
+### 3.2 Database-only `INC-002`
+
+The production inventory contains an additional row:
+
+- ID: `INC-002`
+- Name: “Memorandum and Articles Not Filed”
+- Cited provision: Companies Act 1994, section 11
+- Inventory state observed: active; verification status `ACTIVE`.
+
+This ID is absent from the 85-rule seed. Its active database status is not proof of independent counsel approval. Treat it as a separate unresolved legacy obligation candidate; do not merge it with section 9 or section 23 obligations, and do not silently include it in the 85-rule catalogue. Its legal proposition, scope, effective history, and historical references require separate review.
+
+### 3.3 Remaining 84 seed IDs
+
+The reconciliation audit reports broad field-level differences between seed and production metadata. Text differences are not proof of identity collisions, and exact ID matches are not proof of legal equivalence. Until rule-by-rule semantic review is complete, preserve each source definition and classify identity equivalence as `UNRESOLVED`; do not bulk-merge or bulk-rekey.
+
+## 4. Target data model
+
+Implement these additive, append-only identity structures in a later migration:
+
+### `legal_rule_identities`
+
+- `id UUID PRIMARY KEY`: permanent canonical identity.
+- `jurisdiction`: e.g. `BD`.
+- `obligation_key`: optional stable human-readable label, unique and immutable once published.
+- `identity_status`: `ACTIVE`, `RETIRED`, `QUARANTINED`.
+- `created_at`, `created_by`, `creation_basis`.
+
+Do not derive the UUID from a section number, rule name, seed order, or mutable definition.
+
+### `legal_rule_aliases`
+
+- `id UUID PRIMARY KEY`.
+- `canonical_rule_id UUID REFERENCES legal_rule_identities(id)`.
+- `source_namespace`: e.g. `engine-v2.2`, `seed-commit:<sha>`, `production-catalogue:<snapshot>`, or a named import/source system.
+- `historical_rule_id`: exact original string, preserved byte-for-byte after agreed normalization policy.
+- `valid_from`, `valid_to`: optional temporal scope of that alias mapping.
+- `resolution_status`: `RESOLVED`, `AMBIGUOUS`, `UNRESOLVED`, `RETIRED`.
+- `mapping_basis`, `evidence_ref`, `evidence_hash`.
+- `approved_by`, `approved_at`.
+
+An alias is unique within its source namespace and applicable validity interval. A single historical text ID may map to different canonical identities in different source namespaces or time intervals. Ambiguous mappings must remain ambiguous; never choose the first row returned.
+
+### `legal_rule_revisions`
+
+- `id UUID PRIMARY KEY`.
+- `canonical_rule_id UUID REFERENCES legal_rule_identities(id)`.
+- `revision_number`, `effective_from`, `effective_to`.
+- `legal_source_revision_id` and exact provision mapping.
+- `definition_json` and immutable definition hash.
+- `evaluator_name`, `evaluator_version`, evaluator artifact/commit hash.
+- `approval_state`, `approval_evidence`, `created_at`.
+
+Use a database exclusion constraint or a serialized insert trigger to prevent overlapping effective intervals for the same identity and revision-selection scope, while supporting legally valid concurrent jurisdiction/company-class scopes where needed. Revision immutability must be enforced at the database boundary.
+
+### Historical finding resolution
+
+Do not overwrite `compliance_flags.rule_id`. Add a nullable canonical FK only after the identity registry exists, or use a separate append-only `finding_rule_identity_resolutions` table containing:
+
+- finding ID and original `rule_id`;
+- canonical identity, if resolved;
+- source namespace / evaluator build / rule revision context;
+- resolution state and rationale;
+- evidence hash and reviewer approval;
+- timestamp and superseding resolution reference.
+
+Only uniquely supported mappings may be backfilled. An unresolved or ambiguous historical finding remains queryable with its raw ID and must not be silently included in canonical aggregates.
+
+## 5. Alias resolution contract
+
+Resolution input must include more than a bare string whenever collision is possible:
+
+`(source_namespace, historical_rule_id, effective_date, source/evaluator context)`
+
+Resolver outcomes:
+
+- `RESOLVED`: exactly one approved identity matches the full context.
+- `AMBIGUOUS`: more than one candidate remains.
+- `UNRESOLVED`: no approved mapping exists.
+- `RETIRED`: alias is known but no longer valid for new use.
+
+No fallback to name similarity, section similarity, insertion order, current active status, or a “closest” ID. An `AMBIGUOUS` or `UNRESOLVED` result must block canonical scoring attribution and remain visible for human review.
+
+## 6. Migration sequence — no production write authorized
+
+1. **Complete inventory:** read-only enumerate every rule-ID occurrence and FK/dependency across all schemas, findings, evaluation runs, evidence, rescue logs, versions, release events, source mappings, deadlines, APIs, PDFs, exports, caches and archived snapshots.
+2. **Preserve evidence:** export immutable, hashed snapshots with exact environment, database branch, query, role and timestamp. Obtain authorized finding-level access through a dedicated read-only audit projection; do not broaden the current audit role casually.
+3. **Build collision matrix:** classify each source namespace + historical ID as same obligation, distinct obligation, temporal successor, split, merge, or unresolved. Include counts of historical findings per candidate.
+4. **Approve identity decisions:** product-owner approval for product identity; independent Bangladesh counsel approval for legal equivalence/proposition. These are separate approvals.
+5. **Add identity tables:** additive migration only; no rename, deletion, alias overwrite, score change or rule-definition update.
+6. **Link catalogue and revisions:** create identities and revisions from approved manifests; preserve original catalogue row IDs and snapshots.
+7. **Dual-write / dual-read:** engine and API emit canonical identity plus original historical ID; legacy consumers continue to receive the original field during compatibility period.
+8. **Resolve historical findings:** backfill only uniquely proven records; quarantine ambiguous records without changing their historical content.
+9. **Prove parity and replay:** compare counts, FK coverage, alias uniqueness, identity resolution, score outputs and historical replay before/after.
+10. **Release:** only after exact-head CI, migration restore rehearsal, application compatibility, tenant RLS, audit-role checks and rollback evidence pass.
+
+## 7. Required tests and release gates
+
+- Every legally distinct obligation has exactly one canonical UUID.
+- No canonical identity is assigned to two distinct obligations.
+- Aliases are preserved and namespace-scoped; ambiguous duplicates are representable but cannot resolve silently.
+- No alias can be reused for a different obligation without a superseding, audited decision.
+- Existing historical `rule_id`, finding IDs, timestamps, evidence snapshots, scores and hashes remain unchanged.
+- All FK dependencies and non-FK textual references are inventoried.
+- Historical replay reproduces prior outputs using the original evaluator/revision context; unresolved historical identity does not fabricate a replay.
+- Effective-date selection is deterministic and rejects overlapping or missing revision intervals.
+- Tenant RLS and least-privilege audit projections prevent cross-tenant exposure.
+- No identity migration changes legal verification status, product scoring approval, scoring configuration or statutory conclusions.
+- Production parity is measured against the exact target branch and database; CI-only success is insufficient.
+
+## 8. Current disposition
+
+| Item | Finding | Disposition |
+|---|---|---|
+| 85 seed IDs | Unique textual IDs | Candidate inventory only; identity assignment requires proposition-level review |
+| Production `INC-001` | Section 9 certificate obligation | Distinct candidate from seed `INC-001`; historical mapping ambiguous |
+| Seed/engine `INC-001` | Section 23 MoA/AoA registration verification | Distinct candidate; historical mapping ambiguous |
+| Production `INC-002` | Section 11 MoA/AoA filing obligation | Extra legacy candidate; legal status unresolved |
+| Other 84 seed IDs | Metadata divergence exists | Do not infer identity merges from text diffs |
+| Historical finding attribution | Finding table not accessible to audit role | BLOCKED pending authorized read-only finding inventory |
+| Immutable effective-dated revision model | Not established in inspected ORM | Required separate implementation |
+| Legal approval | All 85 entries `REVIEW_REQUIRED` in inspected register | No counsel sign-off claimed |
+
+**Decision:** proceed with the identity registry design and collision inventory. Do not execute a data migration, alter production rows, change evaluator IDs, or promote legal/scoring status until the finding-level inventory and rule-by-rule identity decisions are approved.
+
+
+## 9. Engineering implementation added to PR #344
+
+The consolidated branch now contains the legacy collision-preservation layer followed by the canonical registry foundation:
+
+- `0115_rule_identity_collision_reconciliation`: archives the exact legacy INC-001/INC-002 row payloads, preserves the textual IDs and all existing FK references, and quarantines those legacy rows from scoring. It accepts the observed Section 9 INC-001 and Section 11 INC-002 legacy tuples solely for quarantine, plus the distinct post-0030 Section 23 variants for databases that actually contain them. Unknown identity tuples abort. This quarantine acceptance does not establish legal equivalence, canonical identity, counsel approval, or historical attribution.
+- `0116_canonical_rule_identity_registry`: creates empty `legal_rule_identities`, `legal_rule_aliases`, and `legal_rule_revisions` tables with UUID identities, FK restrictions, uniqueness/validity checks, lookup indexes, and database UPDATE/DELETE rejection.
+- Both migrations enable and FORCE RLS on their new public tables, revoke all privileges from PUBLIC, `nlc_app_role`, and `nlc_ci_audit_role`, and do not grant runtime access. The archive and canonical registry remain inaccessible until an explicit least-privilege access contract is approved.
+- `app/models/rules.py`: ORM models mirror the migration constraints and use `lazy="raise"` for new identity relationships.
+- `scripts/audit_orm_relationship_loading.py`: read-only mapper relationship/loading inventory.
+- `scripts/audit_rule_historical_attribution.py`: read-only reference inventory; excludes the current catalogue and quarantine archive from candidate finding-reference counts. Every match remains UNATTRIBUTED.
+- `scripts/rehearse_restored_neon_branch.py`: final expected migration head is `0117_canonical_registry_runtime_read` after the signed read-only registry-access migration.
+- Outcome derivation keeps lifecycle separate from compliance. A positive COMPLIANT outcome requires explicit engine COMPLIANT + PASS, applicable context, and the independent counsel-verification allowlist. Product scoring eligibility is not a substitute for counsel approval.
+
+The migrations create **zero canonical identity, alias, or revision rows**. They do not reassign any historical finding. The 0115 quarantine is a proposed migration effect, not a production action; it has not been run against Render or production Neon.
+
+### 9.1 Known implementation limitations — must be resolved before production use
+
+1. The canonical registry is not yet wired into a deterministic runtime alias resolver, API, evaluator, evidence ledger, or historical replay.
+2. No identity lifecycle/supersession event model exists yet. Initial identity, alias and revision rows are immutable; retirement/correction must be represented by append-only events before lifecycle operations are enabled.
+3. Migration 0116 now adds a PostgreSQL BEFORE INSERT guard that serializes writes per canonical identity and rejects overlapping half-open effective intervals (including unbounded end dates). The fresh-database 0042→head migration and integration run must pass before this database guard is considered verified.
+4. No runtime or audit-role grants are provided. This is intentional, not a completed tenant-facing access design; a reviewed least-privilege policy and tenant isolation tests are still required.
+5. The ORM relationship inventory is not proof that all service callsites are optimized. Query-callsite review and endpoint query-count tests remain outstanding.
+6. Historical finding-level attribution remains blocked until an authorized read-only finding inventory can be obtained. No rule-ID-only match may be treated as attribution.
+7. The consolidated CI run and isolated PostgreSQL restore rehearsal from 0042 through 0116 must pass before merge consideration. CI success alone does not prove production schema parity or legal correctness.
+8. All 85 rules remain `REVIEW_REQUIRED` in the legal approval register; legacy INC-002 is quarantined, not canonically approved or scored.
+
+**Status:** consolidated schema and quarantine proposal under CI validation; not a production-ready identity resolver, not an approved legal catalogue, and not authorization to execute a production migration.
+
+
+### 9.2 Restored Neon rehearsal preflight — identity drift pending post-0114 check (16 November 2026)
+
+Read-only inspection of isolated restored branch `br-little-cake-aovrrz0y` in project `rapid-bonus-26545234` confirmed its Alembic revision is exactly `0042_dedup_key`. No migration command was run and no database writes were made.
+
+At revision 0042, the restored `public.legal_rules` schema does not yet contain `verification_status` or `verification_notes`. This is **not by itself a confirmed 0115 schema defect**, because revisions 0043–0114 may add those fields. The rehearsal has therefore been staged: it first upgrades the isolated branch to `0114_annual_return_filing_status_provenance`, then checks the exact 0115 schema and identity fingerprints, and only runs the remaining migrations if that preflight passes.
+
+The row identity fields observed on the 0042 restore branch are:
+
+| ID | Restored row | 0115 currently expects |
+|---|---|---|
+| INC-001 | Certificate of Incorporation Not Obtained; Companies Act 1994 s9; trigger `certificate_obtained == False` | MoA/AoA not filed; s23; trigger `moa_aoa_filed == False` |
+| INC-002 | Memorandum and Articles Not Filed; Companies Act 1994 s11; trigger `moa_filed == False OR aoa_filed == False` | Form III Not Filed; s23; Form III trigger |
+
+The current production branch also has those s9/s11 identity fields. A read-only full-row SHA-256 snapshot returned:
+- INC-001: `ace6b7d2ee5cc7c338f3b26094f3dde6a8eaf33fdd9fde4f825cac493d88106f`
+- INC-002: `694b7a040b85f4ab4b94a0808d37dc0fb03b72dda792eb8cf546e3b77dcc6ff9`
+
+These hashes describe the observed production rows at the time of inspection, not legal approval or historical attribution. They are not yet accepted migration fingerprints. The 0115 preflight deliberately blocks if the post-0114 row schema or exact rule identity fields do not match its reviewed contract. Do not widen the fingerprint list until the snapshot is independently reviewed and the intended quarantine disposition is explicitly approved.
+
+### 9.3 Restored-branch role contract
+
+The restored 0042 branch currently reports `rolinherit=true` for `nlc_app_role` and `nlc_ci_audit_role`, while the current production branch reports both as `NOINHERIT`. The migration-owner topology is present on the restore branch: `nlc_migration_owner` is NOLOGIN/BYPASSRLS and `nlc_migration_user` has a non-admin, non-inheriting SET ROLE membership. This controlled migration membership is separate from app/audit memberships.
+
+Both the restored and current production branches still show `neondb_owner` as a member of `nlc_app_role` and `nlc_ci_audit_role`, with `ADMIN OPTION=true`, `INHERIT OPTION=false`, and `SET OPTION=false`. The current production roles themselves are `NOINHERIT`; the restored branch roles are still `INHERIT`. The DBA remediation runbook requires no membership rows involving either restricted app/audit role. The rehearsal now expects an empty membership set for those roles and will block until the authorised DBA revokes the memberships and sets both roles to `NOINHERIT`. Do not remove the separate `nlc_migration_user` → `nlc_migration_owner` SET ROLE membership.
+
+
+### 9.4 Read-only production tenant-security spot checks (16 November 2026)
+
+Read-only checks against the current production Neon branch `br-purple-fog-aodj8s04` returned:
+
+- Every public base table except `alembic_version` has both RLS enabled and FORCE RLS; the query for gaps returned zero rows.
+- The `nlc_app_role` has only one table DELETE grant, on `webhook_endpoints`; no TRUNCATE, REFERENCES or TRIGGER grants were found.
+- An unsigned ADMIN spoof using a zero signature returned `nlc_current_user_principal() = NULL` and zero visible company/user rows when connected directly as `nlc_app_role`.
+- `nlc_ci_audit_role` cannot SELECT `public.compliance_flags`, but can SELECT `audit.legal_rule_registry_inventory`.
+
+These are positive spot checks, not a complete tenant-isolation certification. In particular, no valid signed-user cross-tenant denial matrix has been executed here, and finding-level historical attribution remains blocked by the audit role's lack of access to compliance finding records.
+
+The production role attributes are NOINHERIT, but `neondb_owner` still has membership rows in `nlc_app_role` and `nlc_ci_audit_role` with ADMIN OPTION. The DBA runbook requires those memberships to be revoked. Therefore the production tenant-security gate remains PARTIAL, not PASS.
+
+
+### 9.5 Production migration-head and restore snapshot comparison (16 November 2026)
+
+A fresh read-only comparison of the two Neon branches confirms that they are at different schema revisions:
+
+| Branch | Branch ID | Alembic revision |
+|---|---|---|
+| Isolated restore | `br-little-cake-aovrrz0y` | `0042_dedup_key` |
+| Current production | `br-purple-fog-aodj8s04` | `0112_runtime_acl_and_alembic_rls` |
+
+Production is therefore two revisions behind the code's `0114` pre-identity migration point. Revisions `0113_score_history_append_only` and `0114_annual_return_filing_status_provenance` are not yet recorded as applied in production. The 0114 migration adds authenticated annual-return filing-status provenance; the 0113 migration makes score history append-only. Do not infer their schema effects from CI alone.
+
+A second full-row hash comparison confirms that the two branches' legacy rows are not byte-for-byte equivalent, even though their identity-defining fields (name, statutory basis, trigger) currently match each other:
+
+| ID | Restore at 0042 | Production at 0112 |
+|---|---|---|
+| INC-001 | `2220b12a61131f99bbe03ce67b2beae0a65bfa9dae45c1c7a4057eefe4fb3282` | `ace6b7d2ee5cc7c338f3b26094f3dde6a8eaf33fdd9fde4f825cac493d88106f` |
+| INC-002 | `7678569897dcf2ca37071234d4316b109367efa16ad179e3c8ae72355e8c31e6` | `694b7a040b85f4ab4b94a0808d37dc0fb03b72dda792eb8cf546e3b77dcc6ff9` |
+
+The current identity preflight checks the post-0114 schema and the legal identity fields, not equality of every mutable operational column. The full-row hash difference must be reconciled as a separate data-preservation question before any migration is approved. Do not replace either branch's data or accept the production hash as a migration fingerprint without comparing the full JSON payloads and reviewing the differing fields.
+
+**Release consequence:** there are now two separate rehearsal tasks: (1) upgrade the isolated 0042 restore branch through 0114 and stop at the 0115 identity preflight; (2) separately verify production's 0112→0114 deployment path under the CI-gated migration process. Neither has been executed by this read-only inspection.
+
+
+### 9.6 Field-level legacy row differences (read-only comparison)
+
+The full JSON payloads for the two branches were compared field by field. For both IDs, the identity-defining fields (name, statutory basis, and trigger) match between the 0042 restore and 0112 production snapshots, but the operational/evaluation metadata does not:
+
+| Field | Restore INC-001 / INC-002 | Production INC-001 / INC-002 |
+|---|---|---|
+| `default_severity` | RED / RED | NOT_EVALUATED / NOT_EVALUATED |
+| `score_impact` | 15 / 25 | 0 / 0 |
+| `rule_version` | 2.0 / 2.0 | 2.1 / 2.1 |
+| `verification_status` | column absent at 0042 | PENDING / ACTIVE |
+| `verification_notes` | column absent at 0042 | NULL / owner note records counsel gate and no fabricated version history |
+| `updated_at` | 2026-09-30 / 2026-07-10 | 2026-11-09 / 2026-11-14 |
+
+Production also has `verified_at` and `verified_by` fields, currently NULL; these columns are absent from the 0042 snapshot. The restore and production rows therefore represent different points in the operational history, not interchangeable snapshots.
+
+This comparison sharpens the release risk:
+- The restored 0042 rows still carry RED severity and nonzero score impacts.
+- Production currently has NOT_EVALUATED severity and zero score impact for both rows.
+- Production INC-002 has `verification_status='ACTIVE'`, but its verification note explicitly says independent Bangladesh counsel approval is not recorded and statutory scoring remains blocked by the counsel gate. ACTIVE is not approval.
+- The migration must preserve each branch's exact historical row payload before any quarantine operation; it must not overwrite a newer production state with the older restored state.
+
+The 0115 preflight must therefore be reviewed against the post-0114 restored branch payload, and production deployment must be evaluated separately against the live 0112 payload. No automatic copying, overwrite, or promotion is justified by matching name/basis/trigger alone.
+
+
+### 9.7 Corrected 0115 disposition: observed legacy definitions are quarantine candidates, not unresolved migration fingerprints
+
+The migration and rehearsal preflight now explicitly recognise the currently observed legacy identity tuples for quarantine:
+- INC-001: “Certificate of Incorporation Not Obtained”, Section 9, trigger `certificate_obtained == False`.
+- INC-002: “Memorandum and Articles Not Filed”, Section 11, trigger `moa_filed == False OR aoa_filed == False`.
+
+The historical post-0030 Section 23 variants remain separately accepted only as legacy quarantine fingerprints for databases that actually contain those definitions. The migration does not map either set to a canonical seed identity, approve the legal proposition, reactivate either rule, or attribute historical findings. Unknown tuples still abort before quarantine.
+
+The archive captures the full current row payload and SHA-256 before changing the legacy row to inactive / NOT_EVALUATED / zero score impact. This preserves the differing restore-versus-production operational metadata in each database's own archive. The restore preflight now tests both acceptance of the observed Section 9/11 tuples for quarantine and rejection of an unrecognised identity tuple.
+
+This is an engineering disposition to preserve and isolate known legacy rows. It is not a Bangladesh counsel determination that either statutory proposition is correct. The migration has not been run on either branch; production remains at 0112 and the restore branch remains at 0042.
+
+
+### 9.8 Fresh restore-schema preflight observation
+
+A read-only schema inspection on 16 November confirms the restored 0042 branch contains all three tables required by the rehearsal's pre-0042 gate: `webhook_endpoints`, `webhook_deliveries`, and `rescue_audit_log`. Their required 0037/0038 columns are present. `webhook_deliveries.updated_at` is absent at 0042, as expected by the rehearsal contract for the later 0044 migration to add it.
+
+The restored 0042 `annual_returns` table does not yet contain the filing-status provenance columns introduced by 0114. The restored 0042 `legal_rules` table also lacks `verification_status` and `verification_notes`; the rehearsal intentionally checks these only after upgrading the isolated branch through 0114. Current production at 0112 already has the latter two legal-rule columns and webhook-delivery `updated_at`, but does not yet have the 0114 annual-return provenance columns.
+
+This is a schema observation, not a migration rehearsal. No Alembic command or DDL was executed. The staged preflight remains necessary to prove that the historical 0043–0114 chain actually reaches the expected schema without data loss.
+
+
+### 9.9 Database-level effective-date overlap guard
+
+Migration 0116 now installs `trg_legal_rule_revision_no_overlap` on `legal_rule_revisions`. Before each insert it takes a transaction-scoped advisory lock keyed by canonical identity, then rejects any overlapping PostgreSQL `daterange` using half-open `[)` intervals; NULL `effective_to` is treated as an unbounded upper endpoint. This prevents two concurrent writers from both inserting overlapping revisions for the same canonical identity. The trigger function is not directly executable by PUBLIC, the runtime role, or the audit role. Unit-level structural coverage has been added; the fresh PostgreSQL migration/integration run remains the required database execution proof.
+
+
+### 9.10 Signed read-only canonical registry access — PR #349
+
+Migration `0117_canonical_registry_runtime_read` proposes the first runtime read contract for the three canonical registry tables. It preserves ENABLE + FORCE RLS, grants `SELECT` only to `nlc_app_role`, and requires a valid signed user principal or the trusted `ADMIN`/`CATALOG` service principal. It does not grant write access or access to `nlc_ci_audit_role` or PUBLIC. No canonical identities, aliases, or revisions are seeded. The migration and PostgreSQL privilege/policy tests are under CI review in PR #349; it has not been applied to production or the restored Neon branch.

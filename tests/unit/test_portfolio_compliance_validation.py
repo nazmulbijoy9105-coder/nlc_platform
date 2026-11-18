@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -64,6 +64,7 @@ def _records():
         current_compliance_score=82,
         current_risk_band="YELLOW",
         last_evaluated_at=calculated_at,
+        updated_at=calculated_at,
     )
     return run, company
 
@@ -206,3 +207,14 @@ def test_portfolio_validation_withholds_pdf_for_malformed_rule_findings():
     assert result["valid"] is False
     assert result["pdf_eligible"] is False
     assert "RULE_OUTCOME_FINDINGS_MALFORMED" in result["problems"]
+
+
+def test_portfolio_validation_withholds_pdf_when_company_data_changed_after_run():
+    run, company = _records()
+    company.updated_at = run.calculated_at + timedelta(seconds=1)
+
+    result = _validation(run, company)
+
+    assert result["valid"] is False
+    assert result["pdf_eligible"] is False
+    assert "COMPANY_DATA_CHANGED_AFTER_EVALUATION" in result["problems"]

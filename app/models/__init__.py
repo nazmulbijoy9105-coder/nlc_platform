@@ -34,6 +34,11 @@ from .company_fact import CompanyFact
 from .domain_event import DomainEventConsumption, DomainEventOutbox
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
+from .finding_evidence import ComplianceFindingBinding, ComplianceFindingEvidence
+from .governed_finding_context import (
+    LegalRuleFindingContext,
+    LegalRuleFindingContextReview,
+)
 from .compliance import (
     ComplianceEvent,
     ComplianceEvaluationRun,
@@ -107,7 +112,13 @@ from .rescue_audit_log import RescueAuditLog
 from .rjsc_forms import RJSCFormFiling
 
 # ── Rules (Legal Rules + Version History) ────────────────────────────
-from .rules import LegalRule, LegalRuleVersion
+from .rules import (
+    LegalRule,
+    LegalRuleAlias,
+    LegalRuleIdentity,
+    LegalRuleRevision,
+    LegalRuleVersion,
+)
 from .legal_provenance import (
     LegalDeadlineDefinition,
     LegalRuleReleaseEvent,
@@ -153,6 +164,10 @@ __all__ = [
     "ComplexityLevel",
     "ComplianceCalendarEvent",
     "ComplianceEvent",
+    "ComplianceFindingBinding",
+    "ComplianceFindingEvidence",
+    "LegalRuleFindingContext",
+    "LegalRuleFindingContextReview",
     "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
@@ -172,6 +187,9 @@ __all__ = [
     "LegalRuleSourceMapping",
     "LegalSource",
     "LegalRule",
+    "LegalRuleAlias",
+    "LegalRuleIdentity",
+    "LegalRuleRevision",
     "LegalRuleVersion",
     "LifecycleStage",
     "Notification",

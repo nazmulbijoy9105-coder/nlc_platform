@@ -39,7 +39,19 @@ def test_risk_distribution_requires_user_and_active_membership_filter():
     assert "company_user_access" in sql
     assert "cua.user_id = :user_id" in sql
     assert "cua.is_active is true" in sql
+    assert "latest_run" in sql
+    assert "from compliance_evaluation_runs" in sql
+    assert "lr.evaluation_status = 'completed'" in sql
+    assert "c.updated_at <= c.last_evaluated_at" in sql
+    assert "lr.engine_version = :engine_version" in sql
+    assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in sql
+    assert "score_breakdown_snapshot ->> 'score_reconciles'" in sql
+    assert "else 'not_evaluated'::risk_band" in sql
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
     assert db.params[0] == {
+        "engine_version": RULE_ENGINE_VERSION,
+        "scoring_spec_version": SCORING_SPEC_VERSION,
         "user_id": str(user_id),
         "include_assigned_staff": False,
     }

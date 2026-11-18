@@ -11,7 +11,34 @@ from app.services.company_service import CompanyService
 async def test_risk_distribution_aggregates_only_the_authenticated_users_membership(
     db, db_company, db_other_company, db_client_user
 ):
-    """A real client with one membership must not see the second tenant's band."""
+    """A real client sees only its membership and only a current completed band."""
+    import uuid
+    from datetime import datetime, timezone
+
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    await set_admin_context(db)
+    evaluated_at = datetime.now(timezone.utc)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = evaluated_at
+    db_company.updated_at = evaluated_at
+    db.add(ComplianceEvaluationRun(
+        id=uuid.uuid4(), company_id=db_company.id, score=85,
+        risk_band=RiskBand.GREEN, calculated_at=evaluated_at,
+        engine_version=RULE_ENGINE_VERSION, score_hash="d" * 64,
+        evaluation_status="COMPLETED", trigger_source="TEST",
+        active_flags_count=0, black_flags_count=0,
+        score_breakdown_snapshot={
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "score_reconciles": True,
+            "final_score": 85,
+        },
+        flags_snapshot=[], fact_provenance_snapshot=[],
+    ))
+    await db.flush()
     await set_rls_context(db, str(db_client_user.id))
 
     rows = await CompanyService(db).get_risk_distribution(db_client_user.id)
@@ -205,3 +232,224 @@ async def test_admin_dashboard_deadlines_and_risk_cover_the_authorized_portfolio
         db_company.id,
         db_other_company.id,
     }
+
+
+@pytest.mark.asyncio
+async def test_dashboard_aggregates_withhold_pending_cached_black_band(
+    db, db_company, db_other_company, monkeypatch
+):
+    """A pending latest run must not inherit the company's cached BLACK band."""
+    import uuid
+    from datetime import datetime, timezone
+
+    from sqlalchemy import text
+
+    import app.rule_engine.engine as engine_module
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+    from app.services.compliance_service import ComplianceService
+
+    await set_admin_context(db)
+    now = datetime.now(timezone.utc)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = now
+    db_company.updated_at = now
+    db_other_company.current_compliance_score = 10
+    db_other_company.current_risk_band = RiskBand.BLACK
+    db_other_company.last_evaluated_at = now
+    db_other_company.updated_at = now
+
+    db.add_all([
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(), company_id=db_company.id, score=85,
+            risk_band=RiskBand.GREEN, calculated_at=now, engine_version=RULE_ENGINE_VERSION,
+            score_hash="a" * 64, evaluation_status="COMPLETED",
+            trigger_source="TEST", active_flags_count=0, black_flags_count=0,
+            score_breakdown_snapshot={"scoring_spec_version": SCORING_SPEC_VERSION, "score_reconciles": True, "final_score": 85},
+            flags_snapshot=[], fact_provenance_snapshot=[],
+        ),
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(), company_id=db_other_company.id, score=None,
+            risk_band=RiskBand.NOT_EVALUATED, calculated_at=now, engine_version=RULE_ENGINE_VERSION,
+            score_hash="b" * 64, evaluation_status="PENDING",
+            trigger_source="TEST", active_flags_count=0, black_flags_count=0,
+            flags_snapshot=[], fact_provenance_snapshot=[],
+        ),
+    ])
+    await db.flush()
+    await set_admin_context(db)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    # This is a portfolio-wide aggregate. The shared CI database can contain
+    # other active companies from independently committed setup data, so derive
+    # the expected denominator from the same authorised admin portfolio rather
+    # than assuming these two fixtures are the only active rows.
+    portfolio_result = await db.execute(
+        text("SELECT COUNT(*) FROM companies WHERE is_active IS TRUE")
+    )
+    expected_portfolio_count = int(portfolio_result.scalar_one())
+
+    risk_rows = await CompanyService(db).get_risk_distribution(include_all_companies=True)
+    by_band = {str(row["risk_band"]): int(row["company_count"]) for row in risk_rows}
+    assert by_band.get("GREEN") == 1
+    assert by_band.get("BLACK", 0) == 0
+    assert by_band.get("NOT_EVALUATED") == expected_portfolio_count - 1
+    assert sum(by_band.values()) == expected_portfolio_count
+
+    kpis = await ComplianceService(db).get_dashboard_kpis()
+    assert kpis["total_companies"] == expected_portfolio_count
+    assert kpis["green_count"] == 1
+    assert kpis["red_black_count"] == 0
+    assert kpis["not_evaluated_count"] == expected_portfolio_count - 1
+
+
+@pytest.mark.asyncio
+async def test_dashboard_aggregates_withhold_completed_but_stale_profile_band(
+    db, db_company, db_other_company, monkeypatch
+):
+    """A later company/fact update invalidates a formerly completed cached band."""
+    import uuid
+    from datetime import datetime, timezone
+
+    import app.rule_engine.engine as engine_module
+    from app.models.compliance import ComplianceEvaluationRun
+    from app.models.enums import RiskBand
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+    from app.services.compliance_service import ComplianceService
+
+    await set_admin_context(db)
+    # The run is deliberately older than the row's transaction timestamp.
+    # The companies.updated_at trigger uses transaction_timestamp(), so this
+    # simulates a later profile change without fighting the database trigger.
+    evaluated_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    db_company.current_compliance_score = 20
+    db_company.current_risk_band = RiskBand.RED
+    db_company.last_evaluated_at = evaluated_at
+
+    db.add(ComplianceEvaluationRun(
+        id=uuid.uuid4(), company_id=db_company.id, score=20,
+        risk_band=RiskBand.RED, calculated_at=evaluated_at, engine_version=RULE_ENGINE_VERSION,
+        score_hash="c" * 64, evaluation_status="COMPLETED",
+        trigger_source="TEST", active_flags_count=1, black_flags_count=0,
+        score_breakdown_snapshot={"scoring_spec_version": SCORING_SPEC_VERSION, "score_reconciles": True, "final_score": 20},
+        flags_snapshot=[], fact_provenance_snapshot=[],
+    ))
+    await db.flush()
+    await set_admin_context(db)
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+
+    risk_rows = await CompanyService(db).get_risk_distribution(include_all_companies=True)
+    by_band = {str(row["risk_band"]): int(row["company_count"]) for row in risk_rows}
+    assert by_band.get("RED", 0) == 0
+    assert by_band.get("BLACK", 0) == 0
+    assert by_band.get("NOT_EVALUATED", 0) >= 1
+
+    kpis = await ComplianceService(db).get_dashboard_kpis()
+    assert kpis["red_black_count"] == 0
+    assert kpis["not_evaluated_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_company_profile_update_clears_cached_statutory_score(db, db_company):
+    from datetime import datetime, timezone
+
+    from app.models.enums import RiskBand
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    updated = await CompanyService(db).update_by_id(
+        db_company.id,
+        company_name="Updated Test Company Ltd",
+    )
+
+    assert updated is not None
+    assert updated.current_compliance_score is None
+    assert updated.current_risk_band == RiskBand.NOT_EVALUATED
+    assert updated.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_company_fact_assertion_clears_cached_statutory_score(
+    db, db_company, db_client_user
+):
+    from datetime import date, datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.company_fact_service import CompanyFactService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+    await set_rls_context(db, str(db_client_user.id))
+
+    await CompanyFactService(db).assert_fact(
+        company_id=db_company.id,
+        fact_key="registered_office_address",
+        fact_value="New asserted company name",
+        actor_id=db_client_user.id,
+        observed_on=date.today(),
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_director_change_invalidates_cached_statutory_score(db, db_company):
+    from datetime import date, datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.people_service import DirectorService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    await DirectorService(db).appoint_director(
+        db_company.id,
+        full_name="Integration Director",
+        appointment_date=date(2024, 1, 1),
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None
+
+
+@pytest.mark.asyncio
+async def test_agm_change_invalidates_cached_statutory_score(db, db_company):
+    from datetime import date, datetime, timezone
+
+    from app.models.enums import RiskBand
+    from app.services.filing_service import AGMService
+
+    await set_admin_context(db)
+    db_company.current_compliance_score = 85
+    db_company.current_risk_band = RiskBand.GREEN
+    db_company.last_evaluated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    await AGMService(db).create_agm(
+        company_id=db_company.id,
+        financial_year=2025,
+        agm_held=False,
+        created_by=None,
+    )
+    await db.refresh(db_company)
+
+    assert db_company.current_compliance_score is None
+    assert db_company.current_risk_band == RiskBand.NOT_EVALUATED
+    assert db_company.last_evaluated_at is None

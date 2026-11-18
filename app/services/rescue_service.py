@@ -37,7 +37,11 @@ logger = logging.getLogger("nlc.rescue")
 
 def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
     """Reject rescue work not traceable to released, evidenced rule findings."""
-    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
+    from app.rule_engine.engine import (
+        PRODUCT_SCORING_RULE_IDS,
+        VERIFIED_RULE_IDS,
+        legal_score_is_released,
+    )
 
     if not legal_score_is_released():
         raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
@@ -114,6 +118,14 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if len(step_rules) != len(related):
             raise ValueError("Rescue action contains duplicate rule references.")
         for rule_id in step_rules:
+            if (
+                rule_id in PRODUCT_SCORING_RULE_IDS
+                and rule_id not in VERIFIED_RULE_IDS
+            ):
+                raise PermissionError(
+                    "Rescue generation is disabled until each referenced rule "
+                    "has counsel approval."
+                )
             if len(flags_by_rule.get(rule_id, [])) != 1 or rule_id not in eligible:
                 raise PermissionError(
                     "Rescue action references a rule without one unique, released, "

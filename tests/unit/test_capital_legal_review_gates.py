@@ -13,7 +13,8 @@ def test_paid_up_authorized_capital_mismatch_is_not_automatic_black():
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "INC-004")
-    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.eval_state == "UNKNOWN"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.score_impact == 0
@@ -26,7 +27,8 @@ def test_pending_capital_reduction_is_not_automatic_black():
         today=date(2026, 11, 4),
     )
     flag = _flag(result, "CAP-003")
-    assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert flag.eval_state == "UNKNOWN"
     assert flag.severity == Severity.NOT_EVALUATED
     assert flag.score_impact == 0

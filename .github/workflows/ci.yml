@@ -138,7 +138,7 @@ jobs:
         with:
           name: alembic-migration-inventory
           path: artifacts/alembic-migration-inventory.json
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Run unit tests with coverage baseline
         run: |

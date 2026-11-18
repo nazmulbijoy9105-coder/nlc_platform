@@ -114,6 +114,7 @@ def test_latest_evaluation_run_lookup_is_company_scoped_and_ordered():
             compiled = str(statement)
             assert "compliance_evaluation_runs.company_id" in compiled
             assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in compiled
+            assert "compliance_evaluation_runs.id DESC" in compiled
             assert "LIMIT" in compiled
             return Result()
 

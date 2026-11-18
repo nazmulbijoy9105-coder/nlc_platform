@@ -63,6 +63,8 @@ class RuleUpdateRequest(BaseModel):
     default_severity: SeverityLevel | None = None
     score_impact: int | None = Field(None, ge=0, le=50)
     is_active: bool | None = None
+    # Optimistic concurrency: the caller must edit the version it actually read.
+    expected_version: str = Field(min_length=1, max_length=20)
     # Required for audit trail
     change_reason: str = Field(
         min_length=10,
@@ -160,6 +162,8 @@ def _rule_to_response(rule) -> RuleResponse:
         # This field describes product policy, not independent legal verification.
         is_black_override=(
             legally_verified
+            product_scoring_enabled
+            and legally_verified
             and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
@@ -274,6 +278,8 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
+        and rule.rule_id in VERIFIED_RULE_IDS
+        and legal_score_is_released()
     ]
 
 
@@ -332,7 +338,9 @@ async def update_rule(
         raise HTTPException(status_code=404, detail=f"Rule '{rule_id}' not found.")
 
     # Validate BLACK override rules cannot have severity changed to non-BLACK
-    update_data = body.model_dump(exclude={"change_reason"}, exclude_none=True)
+    update_data = body.model_dump(
+        exclude={"change_reason", "expected_version"}, exclude_none=True
+    )
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update.")
 
@@ -348,12 +356,18 @@ async def update_rule(
                 ),
             )
 
-    updated_rule = await svc.update_rule(
-        rule_id=rule_id,
-        **update_data,
-        change_reason=body.change_reason,
-        changed_by=current_user.id,
-    )
+    try:
+        updated_rule = await svc.update_rule(
+            rule_id=rule_id,
+            **update_data,
+            change_reason=body.change_reason,
+            changed_by=current_user.id,
+            expected_version=body.expected_version,
+        )
+    except ValueError as exc:
+        # Stale version or malformed version string: caller must reload and
+        # explicitly reconcile; never silently overwrite a concurrent edit.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     await activity.log(
         action="LEGAL_RULE_UPDATED",
@@ -375,7 +389,13 @@ async def update_rule(
         fields=list(update_data.keys()),
         change_reason=body.change_reason,
     )
-    return _rule_to_response(updated_rule)
+
+    # UPDATE/flush may leave server-generated timestamp columns expired.
+    # Explicitly refresh while the AsyncSession is active so response
+    # serialization cannot trigger an implicit async lazy load (MissingGreenlet).
+    await db.refresh(updated_rule)
+    response = _rule_to_response(updated_rule)
+    return response
 
 
 # ---------------------------------------------------------------------------

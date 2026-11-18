@@ -28,6 +28,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    RULE_ENGINE_VERSION,
     SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
@@ -669,7 +670,13 @@ def build_compliance_report_html(
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
     review_flags = []
-    if not _legal_score_is_released():
+    score_is_current = (
+        _legal_score_is_released()
+        and getattr(company, "last_evaluated_at", None) is not None
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at <= company.last_evaluated_at
+    )
+    if not score_is_current:
         flags = ()
         rescue_plan = None
         score = 0
@@ -820,13 +827,13 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # COM-007: bind report to evidence snapshot + engine version
+        # COM-007: bind report to the latest evaluation run, not merely the
+        # older run whose timestamp still matches the cached company score.
+        # A newer PENDING/FAILED/NOT_RELEASED run invalidates the old band.
         score_snapshot = await self.db.execute(
             select(ComplianceEvaluationRun)
-            .where(
-                ComplianceEvaluationRun.company_id == company.id,
-                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
-            )
+            .where(ComplianceEvaluationRun.company_id == company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc(), ComplianceEvaluationRun.id.desc())
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
@@ -838,7 +845,7 @@ class PDFReportService:
         if (
             getattr(snapshot, "evaluation_status", None) != "COMPLETED"
             or not getattr(snapshot, "score_hash", None)
-            or not getattr(snapshot, "engine_version", None)
+            or getattr(snapshot, "engine_version", None) != RULE_ENGINE_VERSION
             or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
         ):
             raise HTTPException(
@@ -885,6 +892,8 @@ class PDFReportService:
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
+            or getattr(company, "updated_at", None) is None
+            or company.updated_at > company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,
