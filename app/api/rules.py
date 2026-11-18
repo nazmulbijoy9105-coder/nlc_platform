@@ -128,7 +128,10 @@ class MessageResponse(BaseModel):
 def _rule_to_response(rule) -> RuleResponse:
     scoring_catalogue_member = rule.rule_id in PRODUCT_SCORING_RULE_IDS
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
-    product_scoring_enabled = legal_score_is_released() and scoring_catalogue_member
+    product_scoring_enabled = (
+        legal_score_is_released()
+        and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+    )
     return RuleResponse(
         rule_id=rule.rule_id,
         rule_name=rule.rule_name,
@@ -150,7 +153,7 @@ def _rule_to_response(rule) -> RuleResponse:
         product_scoring_enabled=product_scoring_enabled,
         score_impact=(
             rule.score_impact
-            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            if product_scoring_enabled
             else 0
         ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
