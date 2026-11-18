@@ -1333,16 +1333,15 @@ class TestRules:
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
-                # SH-002 is part of the 85-rule product-approved scoring
-                # catalogue. The deployment release switch is currently
-                # paused, so the API must preserve its canonical statutory
-                # basis while reporting product_scoring_enabled=False.
+                # SH-002 is owner-approved and score-eligible under the
+                # same evidence/state controls. Counsel verification remains
+                # independently pending and does not disable product scoring.
                 assert item["statutory_basis"] == (
                     "Section 158, Companies Act 1994 (Bangladesh)"
                 )
                 assert "Section 158" in item["description"]
                 assert item["default_severity"] is None
-                assert item["product_scoring_enabled"] is False
+                assert item["product_scoring_enabled"] is True
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
 
