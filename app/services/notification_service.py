@@ -136,10 +136,14 @@ class NotificationService(BaseService[Notification]):
         Generate notifications for new RED/BLACK compliance flags.
         _process_flag_notifications stub implementation.
         """
-        # A provisional RED/BLACK engine label is not an authorised legal
-        # alert. Do not notify customers until product scoring is released and the
-        # rule is in the product scoring allowlist with a confirmed violation.
-        from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, RuleState, legal_score_is_released
+        # A product-risk score is not authority to send a statutory/legal
+        # alert. Require both product release and independent counsel approval.
+        from app.rule_engine.engine import (
+            PRODUCT_SCORING_RULE_IDS,
+            VERIFIED_RULE_IDS,
+            RuleState,
+            legal_score_is_released,
+        )
 
         if not legal_score_is_released():
             return
@@ -147,7 +151,11 @@ class NotificationService(BaseService[Notification]):
         for flag in flags:
             severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", ""))
             rule_id = getattr(flag, "rule_id", "")
-            if severity not in ("RED", "BLACK") or rule_id not in PRODUCT_SCORING_RULE_IDS:
+            if (
+                severity not in ("RED", "BLACK")
+                or rule_id not in PRODUCT_SCORING_RULE_IDS
+                or rule_id not in VERIFIED_RULE_IDS
+            ):
                 continue
             if (
                 getattr(flag, "state", None) != RuleState.NON_COMPLIANT
@@ -361,9 +369,11 @@ class NotificationService(BaseService[Notification]):
             ),
         )
         if legal_score_is_released():
+            from app.rule_engine.engine import VERIFIED_RULE_IDS
+            eligible_rule_ids = PRODUCT_SCORING_RULE_IDS & VERIFIED_RULE_IDS
             eligible_rule = and_(
                 rule_id_type,
-                Notification.notification_type.in_(PRODUCT_SCORING_RULE_IDS),
+                Notification.notification_type.in_(eligible_rule_ids),
             )
             filters.append(or_(eligible_rule, eligible_operational))
         else:
