@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/nlc/85_rule_source_and_evidence_workpack_v1.schema.json",
+  "title": "NLC 85-rule statutory source and evidence workpack",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "jurisdiction",
+    "generated_from",
+    "rule_count",
+    "release_effect",
+    "coverage",
+    "parent_instruments",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "jurisdiction": {
+      "const": "BD"
+    },
+    "rule_count": {
+      "const": 85
+    },
+    "release_effect": {
+      "const": "NONE"
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "rules",
+        "companies_act_rules",
+        "evidence_mappings",
+        "applicability_mappings",
+        "independently_verified_issuers",
+        "complete_fact_to_evidence_mappings",
+        "approved_rules"
+      ],
+      "properties": {
+        "rules": {
+          "const": 85
+        },
+        "independently_verified_issuers": {
+          "const": 0
+        },
+        "complete_fact_to_evidence_mappings": {
+          "const": 0
+        },
+        "approved_rules": {
+          "const": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "parent_instruments": {
+      "type": "array",
+      "minItems": 3
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 85,
+      "maxItems": 85,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": [
+        "rule_id",
+        "rule_name",
+        "recorded_statutory_basis",
+        "statutory_chain",
+        "applicability",
+        "evidence_contract",
+        "release"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recorded_statutory_basis": {
+          "type": "string"
+        },
+        "statutory_chain": {
+          "type": "object",
+          "required": [
+            "primary_instrument",
+            "provision_candidates",
+            "amendment_events",
+            "amendment_completeness",
+            "operative_interval",
+            "identity_status"
+          ]
+        },
+        "applicability": {
+          "type": "object",
+          "required": [
+            "required_facts",
+            "exception_facts",
+            "status"
+          ]
+        },
+        "evidence_contract": {
+          "type": "object",
+          "required": [
+            "positive_evidence_candidates",
+            "negative_evidence_candidates",
+            "evidence_roles",
+            "fact_to_evidence_mapping_status",
+            "collection_and_verification_status"
+          ]
+        },
+        "release": {
+          "type": "object",
+          "required": [
+            "legal_review",
+            "product_decision",
+            "score_eligible"
+          ],
+          "properties": {
+            "score_eligible": {
+              "const": false
+            },
+            "legal_review": {
+              "const": "REVIEW_REQUIRED"
+            },
+            "product_decision": {
+              "const": "NOT_REVIEWED"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
