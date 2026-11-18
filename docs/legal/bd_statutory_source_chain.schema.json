@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nlc-platform.invalid/schemas/bd-statutory-source-chain.schema.json",
+  "title": "NLC Bangladesh statutory source-chain intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_date",
+    "jurisdiction",
+    "record_type",
+    "canonical_rule_count",
+    "source_policy",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "snapshot_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "jurisdiction": {
+      "const": "BD"
+    },
+    "record_type": {
+      "const": "BANGLADESH_STATUTORY_SOURCE_CHAIN_INTAKE_NOT_LEGAL_VERIFICATION"
+    },
+    "canonical_rule_count": {
+      "const": 85
+    },
+    "source_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_language",
+        "source_hierarchy",
+        "date_policy",
+        "amendment_policy",
+        "status_policy"
+      ],
+      "properties": {
+        "primary_language": {
+          "const": "BANGLA"
+        },
+        "source_hierarchy": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "enum": [
+              "AUTHENTIC_BANGLA_ACT_OR_ORDINANCE",
+              "BANGLADESH_GAZETTE",
+              "OFFICIAL_COMMENCEMENT_OR_AMENDMENT_NOTIFICATION",
+              "OFFICIAL_CONSOLIDATED_TEXT_AS_CROSS_CHECK_ONLY",
+              "ENGLISH_TRANSLATION_AS_RESEARCH_AID_ONLY"
+            ]
+          }
+        },
+        "date_policy": {
+          "type": "string",
+          "minLength": 20
+        },
+        "amendment_policy": {
+          "type": "string",
+          "minLength": 20
+        },
+        "status_policy": {
+          "const": "FAIL_CLOSED"
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 85,
+      "maxItems": 85,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "$defs": {
+    "instrument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ref",
+        "instrument_type",
+        "title",
+        "instrument_number",
+        "provision",
+        "authentic_language",
+        "publisher",
+        "official_url",
+        "gazette_number",
+        "gazette_part",
+        "gazette_page",
+        "assent_date",
+        "publication_date",
+        "commencement_date",
+        "retrieved_at",
+        "artifact_sha256",
+        "authenticity_status",
+        "notes"
+      ],
+      "properties": {
+        "source_ref": {
+          "type": "string",
+          "pattern": "^SRC-[A-Z0-9-]+$"
+        },
+        "instrument_type": {
+          "enum": [
+            "ACT",
+            "ORDINANCE",
+            "AMENDMENT_ACT",
+            "GAZETTE_NOTIFICATION",
+            "COMMENCEMENT_NOTIFICATION",
+            "REPEAL_INSTRUMENT",
+            "OFFICIAL_CONSOLIDATED_TEXT",
+            "ENGLISH_TRANSLATION",
+            "OTHER_OFFICIAL"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authentic_language": {
+          "enum": [
+            "BANGLA",
+            "ENGLISH",
+            "OTHER",
+            "UNKNOWN"
+          ]
+        },
+        "publisher": {
+          "type": "string",
+          "minLength": 1
+        },
+        "official_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "gazette_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gazette_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gazette_page": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assent_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "publication_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "commencement_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "retrieved_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "artifact_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "authenticity_status": {
+          "enum": [
+            "UNVERIFIED",
+            "OFFICIAL_SOURCE_LOCATED",
+            "ARTIFACT_HASHED",
+            "AUTHENTICITY_VERIFIED",
+            "DISPUTED",
+            "NOT_PRIMARY"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "amendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "event_type",
+        "instrument_source_ref",
+        "affected_provision",
+        "publication_date",
+        "commencement_date",
+        "effect_summary",
+        "saving_or_transition_provision",
+        "operative_effect_status"
+      ],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_type": {
+          "enum": [
+            "AMENDMENT",
+            "SUBSTITUTION",
+            "INSERTION",
+            "OMISSION",
+            "REPEAL",
+            "COMMENCEMENT",
+            "SAVING",
+            "TRANSITIONAL",
+            "RENUMBERING",
+            "CONSOLIDATION_NOTE"
+          ]
+        },
+        "instrument_source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_provision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publication_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "commencement_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "effect_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "saving_or_transition_provision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operative_effect_status": {
+          "enum": [
+            "UNRESOLVED",
+            "VERIFIED",
+            "DISPUTED",
+            "NOT_APPLICABLE"
+          ]
+        }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "period_id",
+        "effective_from",
+        "effective_to",
+        "legal_text_source_ref",
+        "commencement_source_ref",
+        "basis",
+        "status"
+      ],
+      "properties": {
+        "period_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effective_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "legal_text_source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commencement_source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "basis": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "UNRESOLVED",
+            "VERIFIED",
+            "DISPUTED"
+          ]
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "source_chain_status",
+        "legal_proposition",
+        "jurisdiction",
+        "instrument_refs",
+        "amendment_events",
+        "operative_periods",
+        "unresolved_questions",
+        "legal_review_status",
+        "source_review_status"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,5}-[0-9]{3}$"
+        },
+        "source_chain_status": {
+          "enum": [
+            "UNRESOLVED",
+            "SOURCE_LOCATED",
+            "CHAIN_PARTIALLY_RECONCILED",
+            "READY_FOR_COUNSEL_REVIEW",
+            "VERIFIED",
+            "DISPUTED",
+            "QUARANTINED"
+          ]
+        },
+        "legal_proposition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jurisdiction": {
+          "const": "BD"
+        },
+        "instrument_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/instrument"
+          }
+        },
+        "amendment_events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/amendment"
+          }
+        },
+        "operative_periods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/period"
+          }
+        },
+        "unresolved_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "legal_review_status": {
+          "enum": [
+            "REVIEW_REQUIRED",
+            "IN_REVIEW",
+            "APPROVED",
+            "REJECTED",
+            "DISPUTED"
+          ]
+        },
+        "source_review_status": {
+          "enum": [
+            "NOT_STARTED",
+            "IN_PROGRESS",
+            "SOURCE_EVIDENCE_CAPTURED",
+            "INDEPENDENTLY_REPRODUCED",
+            "DISPUTED"
+          ]
+        }
+      }
+    }
+  }
+}

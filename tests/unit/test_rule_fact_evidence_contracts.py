@@ -71,7 +71,34 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         assert all(item["verification_method"] == "UNSPECIFIED" for item in rule["evidence_items"])
         assert all(item["fact_keys_supported"] == [] for item in rule["evidence_items"])
 
+    source_rules_by_id = {
+        rule["historical_rule_id"]: rule
+        for rule in json.loads(source_report.read_text(encoding="utf-8"))["rules"]
+    }
+    for rule in report["rules"]:
+        actual_fact_keys = {fact["fact_key"] for fact in rule["facts"]}
+        required_applicability_facts = {
+            condition[1:-1]
+            if len(condition) >= 2
+            and condition[0] == condition[-1]
+            and condition[0] in {"'", '"'}
+            else condition
+            for condition in source_rules_by_id[rule["historical_rule_id"]][
+                "applicability_contract"
+            ]["required_conditions"]
+        }
+        assert required_applicability_facts <= actual_fact_keys, (
+            f"{rule['historical_rule_id']} missing applicability facts: "
+            f"{sorted(required_applicability_facts - actual_fact_keys)}"
+        )
+
     agm005 = next(rule for rule in report["rules"] if rule["historical_rule_id"] == "AGM-005")
+    source_rules = json.loads(source_report.read_text(encoding="utf-8"))["rules"]
+    agm005_source = next(
+        rule for rule in source_rules if rule["historical_rule_id"] == "AGM-005"
+    )
+    agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
+
     agm005_source = source_by_id["AGM-005"]
     agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
 
@@ -93,13 +120,24 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
     # The builder must append derived/applicability facts, never replace or
     # discard the original seed inputs.
     seed_fact_keys = {
-        fact.strip("'\\\\\\\"")
+        fact[1:-1]
+        if len(fact) >= 2 and fact[0] == fact[-1] and fact[0] in {"'", '"'}
+        else fact
         for fact in agm005_source["seed_fact_inputs"]
     }
     assert seed_fact_keys <= agm005_fact_keys, (
         "AGM-005 dropped original seed facts: "
         f"{sorted(seed_fact_keys - agm005_fact_keys)}"
     )
+    assert any(
+        fact["fact_key"] == "member_count"
+        and "not more than six members" in fact["source_evidence"]
+        and fact["data_type"] == "UNSPECIFIED"
+        and fact["evidence_links"] == []
+        and fact["mapping_status"] == "REQUIRES_DOMAIN_MAPPING"
+        for fact in agm005["facts"]
+    )
+    assert "member_count" in {fact["fact_key"] for fact in agm005["facts"]}
     member_count = next(
         fact for fact in agm005["facts"] if fact["fact_key"] == "member_count"
     )
