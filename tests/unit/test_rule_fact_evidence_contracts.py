@@ -99,6 +99,12 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
     )
     agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
 
+    agm005_source = source_by_id["AGM-005"]
+    agm005_fact_keys = {fact["fact_key"] for fact in agm005["facts"]}
+
+    # Assert the complete quorum fact contract in one place. This catches a
+    # partial repair where one newly required input is added while another is
+    # accidentally dropped.
     expected_agm005_facts = {
         "agm_held",
         "member_count",
@@ -115,6 +121,10 @@ def test_85_rule_fact_evidence_contracts_are_complete_and_fail_closed(tmp_path: 
         fact[1:-1]
         if len(fact) >= 2 and fact[0] == fact[-1] and fact[0] in {"'", '"'}
         else fact
+    # The builder must append derived/applicability facts, never replace or
+    # discard the original seed inputs.
+    seed_fact_keys = {
+        fact.strip("'\\\\\\\"")
         for fact in agm005_source["seed_fact_inputs"]
     }
     assert seed_fact_keys <= agm005_fact_keys, (
