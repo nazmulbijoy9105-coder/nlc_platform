@@ -210,9 +210,14 @@ class TestComplianceService:
         assert isinstance(kpis, dict)
 
     @pytest.mark.asyncio
-    async def test_evaluate_company_full_pipeline(self, db, db_company):
+    async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
+        import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService
+
+        # This fixture explicitly exercises the paused-product-release contract.
+        # Do not depend on the production default, which is now owner-enabled.
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
 
         # Use the production result contract so added scoring fields fail
         # immediately at fixture construction instead of deep in persistence.
@@ -283,8 +288,8 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # Findings are evaluated and persisted, but statutory scores are not
-        # published until both product release and independent legal review exist.
+        # Findings are evaluated and persisted, but the explicit product
+        # release pause withholds the score; counsel review is tracked separately.
         assert result["score"] is None
         assert result["risk_band"] == "NOT_EVALUATED"
         assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
