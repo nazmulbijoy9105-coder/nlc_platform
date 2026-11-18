@@ -56,6 +56,17 @@ def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
         assert anchor["artifact_sha256"] is None
 
 
+def test_2005_companies_amendment_is_only_an_unresolved_lead() -> None:
+    payload = load_register()
+    candidates = payload["unresolved_instrument_candidates"]
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate["publication_date"] is None
+    assert candidate["commencement_date"] is None
+    assert candidate["primary_gazette_status"] == "NOT_LOCATED"
+    assert candidate["status"].startswith("SECONDARY_CONSOLIDATED_FOOTNOTE_ONLY")
+
+
 def test_companies_act_2020_amendments_are_not_conflated() -> None:
     payload = load_register()
     by_id = {r["rule_id"]: r for r in payload["rules"]}
