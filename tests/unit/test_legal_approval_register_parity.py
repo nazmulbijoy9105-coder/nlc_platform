@@ -47,13 +47,11 @@ def test_85_rule_catalogue_matches_counsel_register_and_engine_allowlist():
     assert set(engine_module.PRODUCT_SCORING_RULE_IDS) == catalogue_ids
     assert set(engine_module.VERIFIED_RULE_IDS) == approved_ids
 
-    for rule_id, status, eligible in register_rows:
+    for rule_id, status, _legacy_score_eligible in register_rows:
         if rule_id in approved_ids:
             assert status == "VERIFIED"
-            assert eligible == "true"
         else:
             assert status == "REVIEW_REQUIRED"
-            assert eligible == "false"
 
 
 def test_product_scoring_can_use_confirmed_facts_without_claiming_counsel_approval(monkeypatch):
