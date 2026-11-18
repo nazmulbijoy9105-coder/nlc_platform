@@ -9,24 +9,24 @@ This register normalises all 85 canonical rule candidates, their recorded provis
 
 It deliberately does **not** claim that all 85 histories are complete. At this snapshot:
 - 85/85 amendment histories remain open and non-exhaustive.
-- 83/85 rules have at least one provision candidate; 2/85 do not (FX-001 and TR-002).
+- 84/85 rules have at least one provision candidate; 1/85 does not (FX-001).
 - 0/85 rule-specific operative intervals are legally resolved.
-- 0/24 located issuer/document anchors have independent counsel authentication recorded.
+- 0/26 located issuer/document anchors have independent counsel authentication recorded.
 - 0 artifact SHA-256 values have been captured from downloaded original bytes.
 - 0 rules have counsel approval.
 
 ## Provision-level gaps that remain open
 
-The 85-rule inventory currently has 83 provision candidates and two explicit gaps. These are deliberately not filled with guessed section numbers:
+The 85-rule inventory currently has 84 provision candidates and one explicit gap. These are deliberately not filled with guessed section numbers:
 
 | Rule | Recorded source claim | What is still missing |
 |---|---|---|
 | BSEC-001 | Catalogue says BSEC Corporate Governance Code 2023, paragraph 8 | A quarterly-report provision candidate is now identified in BSEC's separate 20-Jun-2018 Financial Reporting and Disclosure Notification, Condition 4(1)–(3). Resolve the source-identity conflict; do not silently rewrite the historical claim. |
 | FX-001 | Foreign Exchange Regulation Act 1947 | Exact FERA enabling section and current GFET chapter/paragraph/circular clause for the actual rule proposition. |
 | INC-006 | BIDA 2023 foreign commercial office/work-permit procedure | A signed 21-May-2023 copy and paragraphs 6.5.2.3 / Appendix 9 are located; Bangladesh Bank confirms an updated 29-May-2023 version whose original PDF remains unretrieved. Authenticate the final version and scope. |
-| TR-002 | Stamp Act 1899 | Exact Schedule I article, instrument category, rate, territorial amendment and execution-date version. |
+| TR-002 | Stamp Act 1899, Schedule I | Articles 61(a), 5(b)(ii) and historical 62(a) are now mapped with 2012/2022 Finance Act events. Remaining work is transaction-specific instrument classification, consideration, execution date, listed-company exemption and territorial/current-law review. |
 
-The register contains 73 amendment/related-instrument candidate entries across 28 rules; 57 rules have no amendment candidate entry in this snapshot. These are research candidates, not exhaustive amendment histories. All 85 histories remain OPEN_NOT_EXHAUSTIVE. No missing section, date or rate is to be inferred merely to make the register appear complete.
+The register contains 75 amendment/related-instrument candidate entries across 29 rules; 56 rules have no amendment candidate entry in this snapshot. These are research candidates, not exhaustive amendment histories. All 85 histories remain OPEN_NOT_EXHAUSTIVE. No missing section, date or rate is to be inferred merely to make the register appear complete.
 
 ## Primary-record anchors located
 
