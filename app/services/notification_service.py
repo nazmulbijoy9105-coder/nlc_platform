@@ -157,10 +157,11 @@ class NotificationService(BaseService[Notification]):
                 or rule_id not in VERIFIED_RULE_IDS
             ):
                 continue
-            if (
-                getattr(flag, "state", None) != RuleState.NON_COMPLIANT
-                or getattr(flag, "eval_state", "VIOLATION") == "UNKNOWN"
-            ):
+            state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
+            eval_state = getattr(flag, "eval_state", "UNKNOWN")
+            if state not in (RuleState.NON_COMPLIANT.value, RuleState.VERIFIED_ABSENT.value):
+                continue
+            if eval_state != "VIOLATION":
                 continue
 
             title = f"{'🔴' if severity == 'RED' else '⚫'} Compliance Alert: {getattr(flag, 'rule_id', '')}"
