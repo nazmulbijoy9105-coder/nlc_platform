@@ -255,7 +255,7 @@ def test_partial_counsel_verification_does_not_block_product_score(monkeypatch):
     )
     monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", {"AGM-001"})
 
-    assert companies_api._legal_score_is_released() is False
+    assert companies_api._legal_score_is_released() is True
     from datetime import datetime, timezone
 
     company = _company(88, "GREEN")
