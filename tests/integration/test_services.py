@@ -1276,7 +1276,9 @@ async def test_black_override_api_uses_product_authorization_not_counsel_gate(mo
     assert len(result) == 1
     assert result[0].rule_id == "INC-003"
     assert result[0].is_black_override is True
-    assert result[0].default_severity == "RED"
+    # The product override is authorized, but legal severity remains withheld
+    # until independent counsel verification is recorded.
+    assert result[0].default_severity is None
     assert result[0].score_impact == 20
     assert result[0].verification_status == "PENDING"
 
