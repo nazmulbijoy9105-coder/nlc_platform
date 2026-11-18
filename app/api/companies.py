@@ -32,6 +32,7 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
@@ -325,7 +326,7 @@ def _flag_to_response(flag) -> FlagResponse:
     flag_status = getattr(flag_status, "value", flag_status)
     score_eligible = (
         _legal_score_is_released()
-        and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
         and evaluation_state == "VIOLATION"
         and flag_status == "ACTIVE"
         and getattr(flag, "resolved_date", None) is None
