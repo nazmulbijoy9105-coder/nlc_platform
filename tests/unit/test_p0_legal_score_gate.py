@@ -186,10 +186,10 @@ def test_product_owner_black_override_works_without_counsel_allowlist(monkeypatc
     assert engine_module.legal_score_is_released() is True
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.AUTHORIZED_BLACK_OVERRIDE_RULE_IDS == frozenset({"INC-003"})
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
+    assert result.risk_band == Severity.BLACK
 
 
 def test_pdf_html_is_unsigned_and_discloses_counsel_review_even_when_product_scoring_is_released(monkeypatch):
