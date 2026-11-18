@@ -34,7 +34,15 @@
         "applicability_mappings",
         "independently_verified_issuers",
         "complete_fact_to_evidence_mappings",
-        "approved_rules"
+        "approved_rules",
+        "seed_rule_claims",
+        "seed_fact_candidate_rules",
+        "seed_fact_candidates",
+        "fact_inventory_rules",
+        "rule_specific_evidence_role_mappings",
+        "fact_records_with_candidate_evidence_contract",
+        "fact_records_unresolved_evidence_type",
+        "rules_with_candidate_evidence_roles"
       ],
       "properties": {
         "rules": {
@@ -48,6 +56,17 @@
         },
         "approved_rules": {
           "const": 0
+        },
+        "candidate_evidence_role_rules": {
+          "const": 85
+        },
+        "fact_records_with_candidate_evidence_contract": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fact_records_unresolved_evidence_type": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "additionalProperties": true
