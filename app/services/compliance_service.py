@@ -366,11 +366,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "risk_band_semantics": "NLC_INTERNAL_RISK_CLASSIFICATION_NOT_LEGAL_LIABILITY",
             "exposure_band": output.score_breakdown.exposure_band if score_is_released else None,
             "legal_evaluation_status": (
-                "RELEASED" if score_is_released
+                "PRODUCT_SCORE_RELEASED" if score_is_released
                 else "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
             ),
-            # Unapproved rule triggers are retained only in the internal
-            # audit store. They are not exposed as customer-facing flags.
+            # Product-allowlisted findings are exposed as internal product-risk
+            # signals. Counsel approval remains a separate field/status and is
+            # never implied by product scoring release.
             "flags": [
                 {
                     "rule_id": f.rule_id,
