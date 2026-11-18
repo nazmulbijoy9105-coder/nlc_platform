@@ -46,7 +46,7 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
@@ -67,6 +67,22 @@ def test_companies_act_2020_amendments_are_not_conflated() -> None:
     assert act7[0]["claimed_effective_from"] == "2020-02-25"
     assert act24[0]["claimed_effective_from"] == "2020-11-26"
     assert 85 in act24[0]["amended_provisions"]
+
+
+def test_financial_reporting_act_2015_is_scoped_to_public_interest_entities() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "ACC-002")
+    events = [
+        event for event in rule["amendment_candidates"]
+        if event["primary_record_id"] == "BD_ACT_16_2015_FINANCIAL_REPORTING"
+    ]
+    assert len(events) == 1
+    event = events[0]
+    assert event["amendment_clause_reference"] == "Financial Reporting Act 2015 s.62(b)"
+    assert event["amended_provisions"] == [190]
+    assert event["claimed_effective_from"] == "2015-09-09"
+    assert "public interest entity" in event["commencement_or_effect_note"]
+    assert event["rule_effect_status"] == "REQUIRES_PUBLIC_INTEREST_ENTITY_SCOPE_TEST_AND_COUNSEL_APPROVAL"
 
 
 def test_all_non_null_candidate_dates_are_iso_calendar_dates() -> None:
