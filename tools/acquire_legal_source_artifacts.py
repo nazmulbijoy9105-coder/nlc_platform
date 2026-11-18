@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -61,6 +60,9 @@ def fetch(url: str, destination: Path) -> dict:
     started = datetime.now(timezone.utc).isoformat()
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+            final_host = (urlparse(response.geturl()).hostname or "").lower()
+            if final_host not in ALLOWED_HOSTS:
+                return {"url": url, "status": "REJECTED_REDIRECT", "final_url": response.geturl()}
             content_type = response.headers.get("Content-Type", "")
             length_header = response.headers.get("Content-Length")
             if length_header and int(length_header) > MAX_BYTES:
