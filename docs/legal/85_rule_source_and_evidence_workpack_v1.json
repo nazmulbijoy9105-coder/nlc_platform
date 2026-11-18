@@ -34,7 +34,9 @@
       "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
       "publication_date": "1994-09-12",
       "commencement_date": "1994-12-01",
-      "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
+      "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/extraordinary_gazettes_monthly/1994-11-03",
+      "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/321-Law-1994.pdf"
     },
     {
       "title": "Companies (Amendment) Act, 2020 (Act No. 7 of 2020)",
@@ -57,7 +59,8 @@
       ],
       "url": "https://bdlaws.minlaw.gov.bd/act-print-1308.html",
       "gazette": "https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf",
-      "note": "Section 1(2) says immediately effective. For s.85, section 8 specifically removes seal wording in s.85(2)(ch); do not treat this as amendment to notice/quorum rules."
+      "note": "Section 1(2) says immediately effective. For s.85, section 8 specifically removes seal wording in s.85(2)(ch); do not treat this as amendment to notice/quorum rules.",
+      "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/5741_78027.pdf"
     },
     {
       "title": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
@@ -78,7 +81,8 @@
       "gazette": null,
       "note": "Section 1(2) says immediately effective. Section 4 inserts s.38(3A); section 5 amends s.85(1) notice requirements and adds clauses; Gazette PDF locator still open.",
       "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/37932",
-      "gazette_listing_evidence": "Government Press Extraordinary Gazette of 26 November 2020, pages 12417–12427, lists Act No. 24 of 2020; the BDLaws consolidated amendment page independently records publication and immediate commencement."
+      "gazette_listing_evidence": "Government Press Extraordinary Gazette of 26 November 2020, pages 12417–12427, lists Act No. 24 of 2020; the BDLaws consolidated amendment page independently records publication and immediate commencement.",
+      "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/37932_40268.pdf"
     }
   ],
   "rules": [
@@ -764,48 +768,93 @@
         "required_facts": [
           {
             "fact_key": "company_type",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "RJSC certificate of incorporation and current certified company profile; Articles of Association and amendments.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_held_this_cycle",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Signed AGM minutes and contemporaneous minute book entry; meeting notice and service record.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "member_count",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Register of members as at the AGM record date, reconciled to share allotments/transfers and latest RJSC annual return; the register is company-maintained and must not be replaced by a generic member count field.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "members_present_at_agm",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Original attendance register signed by members/proxies and signed AGM minutes; verify proxy authority and member entitlement.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_attendance_verified",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Original attendance register plus identity/authority checks and reconciliation to register of members.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_attendance_evidence_ref",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Immutable evidence reference to the attendance register, with hash, custodian and collection timestamp.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_quorum_basis_verified",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Articles in force on the meeting date, including amendments/special resolutions, plus Companies Act s.85(2)(b) default where Articles do not displace it.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_quorum_evidence_ref",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Version-pinned Articles and member register plus signed attendance register and minutes; preserve all source references.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           },
           {
             "fact_key": "agm_quorum_required",
-            "evidence_links": [],
-            "mapping_status": "UNMAPPED_REQUIRES_EXPLICIT_RULE_LINK"
+            "evidence_links": [
+              {
+                "description": "Derive only after verifying company type, member count and Articles effective on meeting date; record the exact clause/default and reviewer.",
+                "status": "CANDIDATE_LINK_NOT_VERIFIED"
+              }
+            ],
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
           }
         ],
         "exception_facts": [],
@@ -845,8 +894,9 @@
             "verification_standard": "Issuer-origin authentication; match entity and period; verify effective date and current status; retain original, SHA-256, collection time, collector, chain of custody and contradictions."
           }
         ],
-        "fact_to_evidence_mapping_status": "INCOMPLETE_REQUIRES_RULE_SPECIFIC_LINKS",
-        "collection_and_verification_status": "PROTOCOL_DRAFT_NOT_INDEPENDENTLY_VERIFIED"
+        "fact_to_evidence_mapping_status": "PARTIAL_RULE_SPECIFIC_CANDIDATE_LINKS_NOT_VERIFIED",
+        "collection_and_verification_status": "PROTOCOL_DRAFT_NOT_INDEPENDENTLY_VERIFIED",
+        "rule_specific_note": "AGM-005 historical seed basis says s.89, while current canonical registry says s.85(2)(b). The conflict is preserved. Official Companies (Second Amendment) Act 2020 s.5 amended s.85(1) notice clauses; this does not itself establish quorum rule interpretation. Quorum candidate is s.85(2)(b), read with the Articles; counsel must validate."
       },
       "release": {
         "legal_review": "REVIEW_REQUIRED",
