@@ -66,7 +66,7 @@ def test_fx_profile_boolean_does_not_establish_a_foreign_exchange_violation():
     finding = _one_flag(output, "FX-001")
     assert finding.flag_code == "FOREIGN_EXCHANGE_TRANSACTION_REQUIRES_LEGAL_REVIEW"
     assert finding.severity is Severity.NOT_EVALUATED
-    assert finding.state is RuleState.UNKNOWN
+    assert finding.state is RuleState.REQUIRES_LAWYER_JUDGMENT
     assert finding.detail["candidate_state"] == RuleState.REQUIRES_LAWYER_JUDGMENT.value
     assert finding.eval_state == "UNKNOWN"
     assert finding.score_impact == 0
