@@ -1,7 +1,8 @@
 # 85-rule provision-level amendment and operative-interval register
 
 **Snapshot:** 2026-11-18  
-**Status:** fail-closed research register; not a legal opinion or score-release approval.
+**Status:** fail-closed research register; not a legal opinion or score-release approval.  
+**Located source anchors:** 26 Government Press/official-issuer records; 75 rule-level amendment-candidate entries.
 
 ## What this register establishes
 
