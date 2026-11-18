@@ -21,12 +21,22 @@
   "scope": "Research/evidence workpack. Official Companies Act source and identified amendment instruments are attached where applicable; all other exact source chains and all issuer/fact mappings remain visibly unresolved.",
   "coverage": {
     "rules": 85,
-    "companies_act_rules": 64,
+    "companies_act_rules": 66,
     "evidence_mappings": 43,
     "applicability_mappings": 41,
     "independently_verified_issuers": 0,
     "complete_fact_to_evidence_mappings": 0,
-    "approved_rules": 0
+    "approved_rules": 0,
+    "additional_source_families_pinned": [
+      "BSEC Code 2018 and 2023/2024 amendment sources",
+      "FERA 1947 and Bangladesh Bank GFET source",
+      "Income Tax Act 2023 and Finance Act 2026",
+      "VAT & SD Act 2012 and 2026 amendments",
+      "Bangladesh Labour Act 2006 and 2025/2026 amendments",
+      "Local Government City Corporation/Paurashava Acts",
+      "Stamp Act 1899",
+      "BIDA guideline resource index"
+    ]
   },
   "parent_instruments": [
     {
@@ -1148,11 +1158,12 @@
       "recorded_statutory_basis": "Section 36 and Schedule X (annual-return duty); Section 346 is a separate Registrar strike-off process",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Section 36 and Schedule X (annual-return duty); Section 346 is a separate Registrar strike-off process",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Companies Act, 1994 (Act XVIII of 1994)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/321-Law-1994.pdf",
+          "publication_date": "1994-09-12",
+          "commencement_date": "1994-12-01",
+          "status": "OFFICIAL_PARENT_ACT_AND_COMMENCEMENT_SRO_LOCATED"
         },
         "provision_candidates": [
           "36",
@@ -1166,7 +1177,63 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Companies (Amendment) Act, 2020 (Act No. 7 of 2020)",
+            "date": "2020-02-25",
+            "sections": [
+              2,
+              24,
+              31,
+              46,
+              78,
+              79,
+              85,
+              128,
+              129,
+              208,
+              225,
+              262,
+              347,
+              363
+            ],
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1308.html",
+            "gazette": "https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf",
+            "note": "Section 1(2) says immediately effective. For s.85, section 8 specifically removes seal wording in s.85(2)(ch); do not treat this as amendment to notice/quorum rules.",
+            "gazette_artifact_url": "https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf",
+            "publication_date": "2020-02-25",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "date": "2020-11-26",
+            "sections": [
+              2,
+              11,
+              38,
+              85,
+              255,
+              262,
+              327,
+              392,
+              400,
+              401
+            ],
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "gazette": null,
+            "note": "Section 1(2) says immediately effective. Section 4 inserts s.38(3A); section 5 amends s.85(1) notice requirements and adds clauses; Gazette PDF locator still open.",
+            "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/37932",
+            "gazette_listing_evidence": "Government Press Extraordinary Gazette of 26 November 2020, pages 12417–12427, lists Act No. 24 of 2020; the BDLaws consolidated amendment page independently records publication and immediate commencement.",
+            "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/37932_40268.pdf",
+            "publication_date": "2020-11-26",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -1203,11 +1270,12 @@
       "recorded_statutory_basis": "Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and notice steps",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and notice steps",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Companies Act, 1994 (Act XVIII of 1994)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/321-Law-1994.pdf",
+          "publication_date": "1994-09-12",
+          "commencement_date": "1994-12-01",
+          "status": "OFFICIAL_PARENT_ACT_AND_COMMENCEMENT_SRO_LOCATED"
         },
         "provision_candidates": [
           "36",
@@ -1221,7 +1289,63 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Companies (Amendment) Act, 2020 (Act No. 7 of 2020)",
+            "date": "2020-02-25",
+            "sections": [
+              2,
+              24,
+              31,
+              46,
+              78,
+              79,
+              85,
+              128,
+              129,
+              208,
+              225,
+              262,
+              347,
+              363
+            ],
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1308.html",
+            "gazette": "https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf",
+            "note": "Section 1(2) says immediately effective. For s.85, section 8 specifically removes seal wording in s.85(2)(ch); do not treat this as amendment to notice/quorum rules.",
+            "gazette_artifact_url": "https://bdlaws.minlaw.gov.bd/upload/act/2020-10-28-11-09-18-Act-No-7-of-2020.pdf",
+            "publication_date": "2020-02-25",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "date": "2020-11-26",
+            "sections": [
+              2,
+              11,
+              38,
+              85,
+              255,
+              262,
+              327,
+              392,
+              400,
+              401
+            ],
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "gazette": null,
+            "note": "Section 1(2) says immediately effective. Section 4 inserts s.38(3A); section 5 amends s.85(1) notice requirements and adds clauses; Gazette PDF locator still open.",
+            "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/37932",
+            "gazette_listing_evidence": "Government Press Extraordinary Gazette of 26 November 2020, pages 12417–12427, lists Act No. 24 of 2020; the BDLaws consolidated amendment page independently records publication and immediate commencement.",
+            "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/37932_40268.pdf",
+            "publication_date": "2020-11-26",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -2008,11 +2132,14 @@
       "recorded_statutory_basis": "BSEC Corporate Governance Code 2023, Para 8",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "BSEC Corporate Governance Code 2023, Para 8",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "BSEC Corporate Governance Code 2018",
+          "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "gazette": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "date": "2018-06-10",
+          "publication_date": "2018-06-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -2023,7 +2150,30 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "gazette": "https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf",
+            "date": "2023-11-20",
+            "publication_date": "2023-11-20",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180",
+            "date": "2024-04-29",
+            "publication_date": "2024-04-29",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Recorded 'Corporate Governance Code 2023, Para 8' and canonical 'financial-reporting instrument' conflict; exact quarterly report duty, instrument, clause, listed-issuer scope and due date remain unresolved."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -2060,11 +2210,14 @@
       "recorded_statutory_basis": "BSEC Corporate Governance Code 2023, Para 5",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "BSEC Corporate Governance Code 2023, Para 5",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "BSEC Corporate Governance Code 2018",
+          "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "gazette": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "date": "2018-06-10",
+          "publication_date": "2018-06-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -2075,7 +2228,30 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "gazette": "https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf",
+            "date": "2023-11-20",
+            "publication_date": "2023-11-20",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180",
+            "date": "2024-04-29",
+            "publication_date": "2024-04-29",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Confirm issuer listing status and exact condition/clause; Code scope is not universal for ordinary private companies."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -2112,11 +2288,14 @@
       "recorded_statutory_basis": "BSEC Corporate Governance Code 2023, Para 5",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "BSEC Corporate Governance Code 2023, Para 5",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "BSEC Corporate Governance Code 2018",
+          "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "gazette": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "date": "2018-06-10",
+          "publication_date": "2018-06-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -2127,7 +2306,30 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "gazette": "https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf",
+            "date": "2023-11-20",
+            "publication_date": "2023-11-20",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180",
+            "date": "2024-04-29",
+            "publication_date": "2024-04-29",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Confirm issuer listing status and exact condition/clause; Code scope is not universal for ordinary private companies."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -2164,11 +2366,14 @@
       "recorded_statutory_basis": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "BSEC Corporate Governance Code 2018",
+          "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "gazette": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+          "date": "2018-06-10",
+          "publication_date": "2018-06-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -2179,7 +2384,30 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "gazette": "https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf",
+            "date": "2023-11-20",
+            "publication_date": "2023-11-20",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180",
+            "date": "2024-04-29",
+            "publication_date": "2024-04-29",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Critical source conflict: rule title says Audit Committee Not Established and current canonical source claim points to BSEC Corporate Governance Code, while recorded statutory_basis says Foreign Exchange Regulation Act 1947. Preserve both; do not score or resolve without counsel."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4021,11 +4249,13 @@
       "recorded_statutory_basis": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Foreign Exchange Regulation Act, 1947 (Act VII of 1947)",
+          "url": "https://old.bdlaws.minlaw.gov.bd/upload/bdcodeact/2023-12-11-15-13-10-234.-FOREIGN-EXCHANGE-REGULATION-ACT-1947.pdf",
+          "date": "1947-03-11",
+          "publication_date": "1947-03-11",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -4036,7 +4266,44 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
+            "url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
+            "date": "2018-03-04",
+            "publication_date": "2018-03-04",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Bank Foreign Investment and Financing Portal — FDI / share issue and transfer guidance",
+            "url": "https://www.bb.org.bd/feidportal/fdi.php",
+            "publication_date": null,
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Bank FEID Circular No. 01, 27 January 2025",
+            "url": "https://www.bb.org.bd/mediaroom/circulars/feid/jan272025feid01e.pdf",
+            "date": "2025-01-27",
+            "publication_date": "2025-01-27",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Bank FEID Circular No. 03, 30 September 2025",
+            "url": "https://www.bb.org.bd/mediaroom/circulars/feid/sep302025feid03e.pdf",
+            "date": "2025-09-30",
+            "publication_date": "2025-09-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4340,11 +4607,13 @@
       "recorded_statutory_basis": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
+          "url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
+          "date": "2018-03-04",
+          "publication_date": "2018-03-04",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -4355,7 +4624,35 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Bangladesh Bank Foreign Investment and Financing Portal — FDI / share issue and transfer guidance",
+            "url": "https://www.bb.org.bd/feidportal/fdi.php",
+            "publication_date": null,
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Bank FEID Circular No. 01, 27 January 2025",
+            "url": "https://www.bb.org.bd/mediaroom/circulars/feid/jan272025feid01e.pdf",
+            "date": "2025-01-27",
+            "publication_date": "2025-01-27",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Bank FEID Circular No. 03, 30 September 2025",
+            "url": "https://www.bb.org.bd/mediaroom/circulars/feid/sep302025feid03e.pdf",
+            "date": "2025-09-30",
+            "publication_date": "2025-09-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4392,11 +4689,14 @@
       "recorded_statutory_basis": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "BIDA Guidelines for foreign commercial offices and work permits (2023)",
+          "url": "https://www.bida.gov.bd/resources",
+          "date": "2023",
+          "note": "Official resource index identifies the guideline; exact downloadable instrument/version and Gazette locator still need pinning.",
+          "publication_date": "2023",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -4407,7 +4707,8 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "additional_scope_note": "BIDA official resource index lists the 2023 guideline, but exact document bytes, version, clauses, issue date and amendment/withdrawal history have not yet been pinned."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4535,11 +4836,13 @@
       "recorded_statutory_basis": "Labour Act 2006 (Bangladesh), Section 35",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Labour Act 2006 (Bangladesh), Section 35",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+          "date": "2006-10-11",
+          "publication_date": "2006-10-11",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "35",
@@ -4556,7 +4859,29 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Bangladesh Labour (Amendment) Ordinance, 2025 (Ordinance No. 65 of 2025)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1578.html",
+            "date": "2025-11-17",
+            "note": "Official consolidated page states this Ordinance was repealed by the Bangladesh Labour (Amendment) Act, 2026.",
+            "publication_date": "2025-11-17",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "date": "2026-04-10",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Current canonical registry points to s.326(1)(b) and Labour Rules 2015 rr.354-355, while the catalogue basis says s.35. This is a material citation conflict. The 2026 amendment Act must be checked clause-by-clause; do not assume all licence duties apply to every factory."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4593,11 +4918,13 @@
       "recorded_statutory_basis": "Labour Act 2006 (Bangladesh), Section 35",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Labour Act 2006 (Bangladesh), Section 35",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+          "date": "2006-10-11",
+          "publication_date": "2006-10-11",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "35",
@@ -4614,7 +4941,29 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Bangladesh Labour (Amendment) Ordinance, 2025 (Ordinance No. 65 of 2025)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1578.html",
+            "date": "2025-11-17",
+            "note": "Official consolidated page states this Ordinance was repealed by the Bangladesh Labour (Amendment) Act, 2026.",
+            "publication_date": "2025-11-17",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "date": "2026-04-10",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Current canonical registry points to s.326(1)(b) and Labour Rules 2015 rr.354-355, while the catalogue basis says s.35. This is a material citation conflict. The 2026 amendment Act must be checked clause-by-clause; do not assume all licence duties apply to every factory."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4651,11 +5000,13 @@
       "recorded_statutory_basis": "Labour Act 2006 (Bangladesh), Section 209",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Labour Act 2006 (Bangladesh), Section 209",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+          "date": "2006-10-11",
+          "publication_date": "2006-10-11",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "209"
@@ -4668,7 +5019,28 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Bangladesh Labour (Amendment) Ordinance, 2025 (Ordinance No. 65 of 2025)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1578.html",
+            "date": "2025-11-17",
+            "note": "Official consolidated page states this Ordinance was repealed by the Bangladesh Labour (Amendment) Act, 2026.",
+            "publication_date": "2025-11-17",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "date": "2026-04-10",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5600,11 +5972,14 @@
       "recorded_statutory_basis": "Income Tax Act 2023 (Bangladesh)",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Income Tax Act 2023 (Bangladesh)",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+          "date": "2023-06-22",
+          "authenticEnglish": "https://bdlaws.minlaw.gov.bd/upload/act/2026-01-18-15-24-07-123.-Income-tax-Act%2C-2023.pdf",
+          "publication_date": "2023-06-22",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "166",
@@ -5619,7 +5994,19 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Canonical candidate is ss.166, 261 and 264; exact TIN duty, liable entity and evidence must be verified. NBR authentic English text is a translation aid; Bangla Act controls."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5656,11 +6043,13 @@
       "recorded_statutory_basis": "VAT and SD Act 2012, sections 2(48), 2(57), 4 and 10; Act 77/2026 and Finance Act 96/2026",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "VAT and SD Act 2012, sections 2(48), 2(57), 4 and 10; Act 77/2026 and Finance Act 96/2026",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+          "date": "2012-12-10",
+          "publication_date": "2012-12-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "2(48)",
@@ -5676,7 +6065,38 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1706.html",
+            "date": "2026-04-10",
+            "note": "The existing NLC amendment register records a deemed effective date of 2025-01-09; rule-specific savings and commencement must be checked.",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
+            "date": "2026-10-14",
+            "note": "The consolidated s.64 footnote and NLC amendment register indicate effect from 2026-10-01; exact Gazette and transition must be pinned.",
+            "publication_date": "2026-10-14",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5713,11 +6133,14 @@
       "recorded_statutory_basis": "Income Tax Act 2023, Section 75",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Income Tax Act 2023, Section 75",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+          "date": "2023-06-22",
+          "authenticEnglish": "https://bdlaws.minlaw.gov.bd/upload/act/2026-01-18-15-24-07-123.-Income-tax-Act%2C-2023.pdf",
+          "publication_date": "2023-06-22",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "75",
@@ -5732,7 +6155,18 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5769,11 +6203,14 @@
       "recorded_statutory_basis": "Income Tax Act 2023, Section 74",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Income Tax Act 2023, Section 74",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+          "date": "2023-06-22",
+          "authenticEnglish": "https://bdlaws.minlaw.gov.bd/upload/act/2026-01-18-15-24-07-123.-Income-tax-Act%2C-2023.pdf",
+          "publication_date": "2023-06-22",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "74",
@@ -5790,7 +6227,18 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5827,11 +6275,13 @@
       "recorded_statutory_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
+          "date": "2009-10-15",
+          "publication_date": "2009-10-15",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -5842,7 +6292,28 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Local Government (Paurashava) Act, 2009 (Act No. 58 of 2009)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1024.html",
+            "date": "2009-10-06",
+            "publication_date": "2009-10-06",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Local Government (City Corporation) (Amendment) Act, 2026 (Act No. 61 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1690.html",
+            "date": "2026-04-10",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Determine competent local authority from the company's actual premises; City Corporation and Paurashava routes are alternatives, not cumulative universal duties."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -5879,11 +6350,13 @@
       "recorded_statutory_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
+          "date": "2009-10-15",
+          "publication_date": "2009-10-15",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -5894,7 +6367,28 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Local Government (Paurashava) Act, 2009 (Act No. 58 of 2009)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1024.html",
+            "date": "2009-10-06",
+            "publication_date": "2009-10-06",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Local Government (City Corporation) (Amendment) Act, 2026 (Act No. 61 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1690.html",
+            "date": "2026-04-10",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "additional_scope_note": "Determine competent local authority from the company's actual premises; City Corporation and Paurashava routes are alternatives, not cumulative universal duties."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -6032,11 +6526,14 @@
       "recorded_statutory_basis": "Stamp Act 1899, current Schedule I and applicable amendments",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Stamp Act 1899, current Schedule I and applicable amendments",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Stamp Act, 1899 (Act No. II of 1899)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-77.html",
+          "date": "1899-01-27",
+          "commencement": "1899-07-01",
+          "publication_date": "1899-01-27",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -6047,7 +6544,8 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "additional_scope_note": "Stamp duty rate depends on instrument type, consideration, execution date and current Schedule I amendments; exact schedule item and all amendments remain open."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -6343,11 +6841,13 @@
       "recorded_statutory_basis": "Value Added Tax Act 2012 (Bangladesh)",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Value Added Tax Act 2012 (Bangladesh)",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+          "date": "2012-12-10",
+          "publication_date": "2012-12-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [
           "64"
@@ -6360,7 +6860,38 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1706.html",
+            "date": "2026-04-10",
+            "note": "The existing NLC amendment register records a deemed effective date of 2025-01-09; rule-specific savings and commencement must be checked.",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
+            "date": "2026-10-14",
+            "note": "The consolidated s.64 footnote and NLC amendment register indicate effect from 2026-10-01; exact Gazette and transition must be pinned.",
+            "publication_date": "2026-10-14",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
@@ -6397,11 +6928,13 @@
       "recorded_statutory_basis": "Value Added Tax Act 2012 (Bangladesh)",
       "statutory_chain": {
         "primary_instrument": {
-          "title": "Value Added Tax Act 2012 (Bangladesh)",
-          "official_url": null,
-          "publication_date": null,
-          "commencement_date": null,
-          "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
+          "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+          "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+          "date": "2012-12-10",
+          "publication_date": "2012-12-10",
+          "effective_from": null,
+          "effective_to": null,
+          "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
         },
         "provision_candidates": [],
         "amendment_events": [],
@@ -6412,7 +6945,38 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "UNRESOLVED",
+        "related_instruments": [
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-print-1706.html",
+            "date": "2026-04-10",
+            "note": "The existing NLC amendment register records a deemed effective date of 2025-01-09; rule-specific savings and commencement must be checked.",
+            "publication_date": "2026-04-10",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "date": "2026-06-30",
+            "publication_date": "2026-06-30",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+            "url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
+            "date": "2026-10-14",
+            "note": "The consolidated s.64 footnote and NLC amendment register indicate effect from 2026-10-01; exact Gazette and transition must be pinned.",
+            "publication_date": "2026-10-14",
+            "effective_from": null,
+            "effective_to": null,
+            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          }
+        ]
       },
       "applicability": {
         "company_type_candidates": [],
