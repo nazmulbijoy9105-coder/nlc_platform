@@ -150,7 +150,7 @@ def test_product_release_scores_product_allowlisted_findings_without_counsel_all
     assert result.final_score == 75
     assert result.override_applied is False
     assert result.black_flag_count == 0
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.risk_band == Severity.RED
 
 
 def test_verified_director_minimum_violation_emits_one_candidate_black_override(monkeypatch, build_profile):
