@@ -36,6 +36,7 @@ def build_contract(rule: dict[str, Any]) -> dict[str, Any]:
         }
         for fact in rule["seed_fact_inputs"]
     ]
+
     # AGM-005's seed inputs omit the company-wide member count even though
     # its pinned statutory-registry requirement makes that count necessary to
     # select the applicable quorum threshold. Preserve it as an explicit draft

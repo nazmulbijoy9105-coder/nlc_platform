@@ -1,0 +1,1552 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_date": "2026-11-18",
+  "jurisdiction": "BD",
+  "record_type": "BANGLADESH_STATUTORY_SOURCE_CHAIN_INTAKE_NOT_LEGAL_VERIFICATION",
+  "canonical_rule_count": 85,
+  "source_policy": {
+    "primary_language": "BANGLA",
+    "source_hierarchy": [
+      "AUTHENTIC_BANGLA_ACT_OR_ORDINANCE",
+      "BANGLADESH_GAZETTE",
+      "OFFICIAL_COMMENCEMENT_OR_AMENDMENT_NOTIFICATION",
+      "OFFICIAL_CONSOLIDATED_TEXT_AS_CROSS_CHECK_ONLY",
+      "ENGLISH_TRANSLATION_AS_RESEARCH_AID_ONLY"
+    ],
+    "date_policy": "Publication, assent, commencement, and retrieval dates are separate fields. Never infer commencement from publication, assent, consolidation, or retrieval.",
+    "amendment_policy": "Record every amendment, substitution, repeal, commencement notification, saving provision, and transitional provision affecting the proposition.",
+    "status_policy": "FAIL_CLOSED"
+  },
+  "rules": [
+    {
+      "rule_id": "ACC-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ACC-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ACC-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-006",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AGM-007",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AR-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AR-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AR-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AR-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AUD-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AUD-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AUD-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AUD-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "AUD-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BNK-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BNK-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BNK-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BOD-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BOD-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BOD-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BSEC-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BSEC-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BSEC-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "BSEC-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "CAP-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "CAP-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "CAP-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "CAP-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "CHG-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DEF-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DEF-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-006",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-007",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-008",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "DIR-010",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ESC-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ESC-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ESC-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ESC-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "ESC-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "FX-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-006",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "INC-007",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "LBR-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "LBR-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "LBR-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "MEM-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "OFF-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "REG-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "REG-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "REG-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "SH-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "SH-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "SH-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "STR-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "STR-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "STR-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TAX-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TAX-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TAX-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TAX-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TL-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TL-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-001",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-004",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-005",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "TR-006",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "VAT-002",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    },
+    {
+      "rule_id": "VAT-003",
+      "source_chain_status": "UNRESOLVED",
+      "legal_proposition": null,
+      "jurisdiction": "BD",
+      "instrument_refs": [],
+      "amendment_events": [],
+      "operative_periods": [],
+      "unresolved_questions": [
+        "Identify the exact statutory proposition represented by this historical rule ID.",
+        "Locate the authentic Bangla primary instrument and exact provision.",
+        "Identify all amendments, substitutions, repeals, commencement notifications, saving and transitional provisions.",
+        "Establish operative date intervals from primary evidence; do not infer dates.",
+        "Verify company scope, exceptions, and the current text against the authentic Bangla source."
+      ],
+      "legal_review_status": "REVIEW_REQUIRED",
+      "source_review_status": "NOT_STARTED"
+    }
+  ]
+}
