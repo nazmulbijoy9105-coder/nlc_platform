@@ -376,7 +376,8 @@ class TestCompanies:
             assert flag["severity"] == "NOT_EVALUATED"
             assert flag["score_impact"] == 0
             assert flag["legal_review_status"] == "NOT_LEGALLY_VERIFIED"
-            assert "No breach" in flag["rule_name"]
+            assert "pending independent counsel review" in flag["rule_name"].lower()
+            assert "No legal conclusion" in flag["rule_name"]
 
         history_response = await api_client.get(
             f"/api/v1/companies/{db_company.id}/score-history",
