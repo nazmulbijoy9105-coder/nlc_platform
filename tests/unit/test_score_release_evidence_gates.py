@@ -105,7 +105,7 @@ def test_product_allowlist_scores_confirmed_finding_without_counsel_approval(mon
     ))
     assert score.category_deductions["AUD"] == 10
     assert score.final_score == 90
-    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.risk_band == Severity.RED
 
 
 def test_product_allowlisted_rule_can_score_in_controlled_release_fixture(monkeypatch):
