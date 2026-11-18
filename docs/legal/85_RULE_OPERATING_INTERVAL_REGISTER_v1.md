@@ -48,6 +48,17 @@ The BSEC Code is separately anchored to the DPP Gazette:
 
 The BSEC-004 title/source conflict remains explicit: the rule title points to Condition 5(1)(a) of the Code, while its recorded statutory basis says the Foreign Exchange Regulation Act 1947. BSEC-001 remains without a provision candidate because its exact quarterly-report instrument and due date are still unidentified.
 
+## Bangladesh Bank foreign-investment / account source chain
+
+The official Bangladesh Bank sources now pinned include:
+- GFET 2018 Volumes 1–2 and FE Circular No.08 dated 4 March 2018, issued under FERA 1947 s.20(3).
+- FE Circular No.10 dated 21 June 2023 on foreign-currency accounts for foreign investment.
+- FEID Circular No.01 dated 27 January 2025, which cites GFET Vol.1 Chapter 9 paragraph 2(A), requires qualifying share-issue reporting within 14 days and preserves Appendix 5/39 or 5/40 encashment certificates with online transaction IDs.
+- FEID Circular No.03 dated 30 September 2025, effective immediately, which relaxes opening-account reporting but requires post-incorporation notification and documentary evidence within 14 days.
+- **FEFD-2 Circular No.12 dated 12 November 2026.** Paragraph 1 repeals existing foreign-currency account instructions in GFET-2018 Vol.1 and subsequent account circulars with issuance, subject to its stated GFET Vol.2 monthly-reporting exception. Part E paragraph 31(3)(a) requires an AD certificate in Appendix 5 for foreign-investment remittances; paragraph 20 says the circular is valid for one year from issue.
+
+The 2026 circular is a material current-law event for INC-005's account evidence chain. It does not automatically repeal every separate share-issuance reporting requirement in GFET Chapter 9. The register flags the need to reconcile the new Appendix-5 certificate with FEID Circulars 1/2025 and 3/2025 and to distinguish account-operation duties from share-issue reporting.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
