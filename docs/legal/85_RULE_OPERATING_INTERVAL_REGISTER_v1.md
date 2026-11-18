@@ -89,6 +89,14 @@ BSEC-001 is not Corporate Governance Code 2018 Condition 8. The exact candidate 
 
 BSEC's 2-Jul-2026 public statement about a proposed move to half-yearly reporting is recorded as a non-binding policy watch only. No formal Gazette/notification replacing Condition 4 was located as of 18-Nov-2026; do not disable the quarterly rule on the strength of the public statement.
 
+## BIDA 2023 procedure — USD 50,000 remittance and work-permit evidence
+
+A signed BIDA Procedure 2023 copy dated 21-May-2023 is located in a Government-hosted PDF. Paragraph 2 says the procedure is effective from issue date. Paragraph 6.5.2.3 requires approved branch/liaison/representative/project offices to bring USD 50,000 (or equivalent) through banking channels within two months of permission; each month of delay attracts an additional 6% amount. Appendix 9 separately lists encashment certificate/proof of USD 50,000 for specified foreign/joint-investment work-permit applications.
+
+However, Bangladesh Bank FEID Circular Letter No.06 dated 17-Oct-2023 confirms that BIDA issued an updated version on 29-May-2023 under memo No.03.219.344.00.00.1142.2019-849 and links the BIDA-hosted PDF. That final BIDA PDF could not be retrieved here. The 21-May copy must not be assumed to be the final operative version.
+
+The USD 50,000 condition is therefore a **conditional administrative application requirement**, not a universal statutory minimum capital for every locally incorporated company with a foreign shareholder. The rule must distinguish office permission, PI-visa recommendation and work-permit application, and must verify the final BIDA guideline and actual bank evidence.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
