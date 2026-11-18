@@ -113,6 +113,20 @@ The source workpack's coverage counters are deliberately explicit: 43/85 evidenc
 
 The workpack now also captures the current `scripts/seed_rules.py` claim and `rule_condition.data_points` for all 85 rules. This yields 246 seed fact candidates; when combined with applicability-model facts, the workpack contains 292 rule-specific fact records across all 85 rules.
 
-Each fact record now has a candidate evidence contract. Candidate roles are generated from the fact's domain and existing evidence model, including expected issuer class, collection procedure and verification standard. The current workpack contains 283 candidate evidence roles across all 85 rules. 21 fact records still have an unresolved evidence type and are explicitly marked for rule-specific legal/custodian mapping.
+Each fact record now has a candidate evidence contract. Candidate roles are generated from the fact's domain and existing evidence model, including expected issuer class, collection procedure and verification standard. The current workpack contains 304 candidate evidence roles across all 85 rules. 21 fact records still have an unresolved evidence type and are explicitly marked for rule-specific legal/custodian mapping.
 
 **Important:** this is a complete inventory of candidate fact/evidence contracts, not a completed verified evidence system. The 43 evidence-model entries are curated source-code mappings; the additional candidate links are domain-based drafts. None of the issuer classes has been independently verified against the issuing authority, none of the candidate links has been signed off by counsel, and none of the evidence standards has been proven against real issuer-origin records. The verified counts remain zero.
+
+
+### Resolution of the 21 generic fact/evidence placeholders
+
+The 21 formerly unresolved fact keys have been assigned rule-specific candidate evidence types, issuer classes, collection procedures and verification standards. Coverage is now 292/292 fact records with a candidate evidence type and 304 candidate evidence roles across 85 rules.
+
+This does **not** mean 292/292 mappings are verified or complete. Issuer authenticity, source document sufficiency, chain of custody and legal fit remain independently unverified. In particular:
+- `appointment_delay_days` is a derived value from the appointment event and RJSC receipt, not an independently uploaded fact. The current source claim has a section 92/115 citation conflict that must be resolved by counsel.
+- `annual_turnover_bdt` must be computed from rolling 12-month underlying transaction records and the statutory threshold/mandatory-registration rules effective for the relevant date; annual accounts alone are not conclusive.
+- `registrar_extension_evidence_ref` is intentionally named in the existing fact contract but the statutory extension under Companies Act s.171 is by Court, not Registrar. Candidate collection requires the certified court order; the legacy fact-key name is not a legal conclusion.
+- `board_approved` is conditional on the operative Articles and transaction; it is not a universal statutory prerequisite for every transfer.
+- `first_auditor_appointed` is linked to the Board's first-auditor appointment under s.210(6), not the separate AGM auditor appointment/notice pathway.
+
+All mappings remain `CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION`; verified mappings remain zero.
