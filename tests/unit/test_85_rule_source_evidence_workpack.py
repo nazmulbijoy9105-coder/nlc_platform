@@ -97,6 +97,9 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert ("DIR-001", "appointment_delay_days") in resolved_fact_keys
     assert ("TAX-002", "annual_turnover_bdt") in resolved_fact_keys
     assert ("TR-003", "aoa_transfer_restriction") in resolved_fact_keys
+    assert ("BOD-003", "board_minutes_prepared") in resolved_fact_keys
+    assert ("CAP-001", "articles_authority_evidence_ref") in resolved_fact_keys
+    assert ("DEF-001", "evidence_ref") in resolved_fact_keys
     assert all(
         fact["candidate_evidence_contract"]["evidence_type"]
         != "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED"
@@ -114,4 +117,5 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["coverage"]["rules_with_candidate_evidence_roles"] == 85
     assert data["coverage"]["fact_records_with_candidate_evidence_contract"] == 292
     assert data["coverage"]["fact_records_unresolved_evidence_type"] == 0
+    assert sum(len(rule["evidence_contract"]["evidence_roles"]) for rule in data["rules"]) == 304
     assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
