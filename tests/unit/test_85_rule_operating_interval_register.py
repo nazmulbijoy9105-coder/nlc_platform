@@ -38,7 +38,8 @@ def test_missing_provision_candidates_are_explicit() -> None:
     payload = load_register()
     missing = [r["rule_id"] for r in payload["rules"] if r["missing_provision_candidate"]]
     assert len(missing) == payload["coverage"]["rules_missing_provision_candidates"]
-    assert len(missing) == 11
+    assert len(missing) == 4
+    assert set(missing) == {"BSEC-001", "FX-001", "INC-006", "TR-002"}
     for rule in payload["rules"]:
         assert rule["missing_provision_candidate"] is (len(rule["candidate_provisions"]) == 0)
 
