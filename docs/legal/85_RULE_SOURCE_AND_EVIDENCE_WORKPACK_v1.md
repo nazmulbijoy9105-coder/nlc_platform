@@ -107,3 +107,12 @@ The workpack now attaches official source candidates for these families. They ar
 - **TR-002:** Stamp Act 1899. Exact Schedule I item, current rate, execution-date version and all subsequent amendments remain open.
 
 The source workpack's coverage counters are deliberately explicit: 43/85 evidence-model entries and 41/85 applicability-model entries; zero independently verified evidence issuers; zero complete fact-to-evidence maps; zero legally approved rules. Do not interpret the number of source URLs as proof that every amendment or Gazette has been screened.
+
+
+## Expanded fact inventory and candidate evidence mapping
+
+The workpack now also captures the current `scripts/seed_rules.py` claim and `rule_condition.data_points` for all 85 rules. This yields 246 seed fact candidates; when combined with applicability-model facts, the workpack contains 292 rule-specific fact records across all 85 rules.
+
+Each fact record now has a candidate evidence contract. Candidate roles are generated from the fact's domain and existing evidence model, including expected issuer class, collection procedure and verification standard. The current workpack contains 289 candidate evidence roles across all 85 rules. 131 fact records still have an unresolved evidence type and are explicitly marked for rule-specific legal/custodian mapping.
+
+**Important:** this is a complete inventory of candidate fact/evidence contracts, not a completed verified evidence system. The 43 evidence-model entries are curated source-code mappings; the additional candidate links are domain-based drafts. None of the issuer classes has been independently verified against the issuing authority, none of the candidate links has been signed off by counsel, and none of the evidence standards has been proven against real issuer-origin records. The verified counts remain zero.
