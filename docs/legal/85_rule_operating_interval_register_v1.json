@@ -653,6 +653,56 @@
         "No SHA-256 captured from original downloaded bytes."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_FINANCE_ACT_26_2012_STAMP_SCHEDULE",
+      "instrument": "Finance Act, 2012 (Act No. 26 of 2012)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published in Bangladesh Gazette Extraordinary",
+      "publication_date": "2012-06-30",
+      "official_issuer_host": "nbr.gov.bd",
+      "issuer_official_url": "https://nbr.gov.bd/uploads/acts/16.pdf",
+      "record_evidence": [
+        "Original Bangladesh Gazette Extraordinary PDF header identifies 30-Jun-2012, National Parliament and Act No.26 of 2012.",
+        "Section 1(2) states the Act comes into force on 1-Jul-2012.",
+        "Section 8 replaces Stamp Act 1899 Schedule I.",
+        "The replaced Schedule I Article 62(a) charges 1.5% of consideration for transfer of shares in an incorporated company or other body corporate.",
+        "Article 62(2) exempts transfer of shares/debentures of public limited companies whose shares are listed on a stock exchange."
+      ],
+      "commencement_clause": "Section 1(2): effective 1-Jul-2012.",
+      "effective_from": "2012-07-01",
+      "effective_to": "2022-07-01",
+      "document_authentication_status": "OFFICIAL_BANGLADESH_GAZETTE_PDF_LOCATED_ON_NBR_HOST; ACT_NUMBER_DATE_AND_STAMP_SCHEDULE_TEXT_LOCATED",
+      "limitations": [
+        "DPP index record for this 2012 issue was not resolved in this review; original Gazette PDF is hosted by NBR.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_FINANCE_ACT_13_2022_STAMP_SCHEDULE",
+      "instrument": "Finance Act, 2022 (Act No. 13 of 2022)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2022-06-30",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/45026",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/45026_26037.pdf",
+      "record_evidence": [
+        "DPP index identifies Finance Act 2022, Act No.13, 30-Jun-2022, Gazette pages 10951–11074.",
+        "Gazette header identifies National Parliament and presidential assent on 30-Jun-2022.",
+        "Section 1(2) makes the Act effective 1-Jul-2022, subject to the Provisional Collection of Taxes Act declaration.",
+        "Section 3 replaces Stamp Act 1899 Schedule I.",
+        "New Schedule I Article 61(a) charges 1.5% of consideration for transfer of shares; Article 61(2) exempts transfers of shares/debentures of public limited companies whose shares are listed."
+      ],
+      "commencement_clause": "Section 1(2): effective 1-Jul-2022, subject to stated declaration.",
+      "effective_from": "2022-07-01",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; SECTION_1_AND_SCHEDULE_I_ARTICLE_61_TEXT_LOCATED",
+      "limitations": [
+        "The current rate is instrument-specific: Article 5(b)(ii) also covers a separate agreement relating to sale of shares at a different ad valorem rate; classify each executed instrument.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -677,14 +727,14 @@
   },
   "coverage": {
     "rules": 85,
-    "rules_with_provision_candidates": 83,
-    "rules_missing_provision_candidates": 2,
+    "rules_with_provision_candidates": 84,
+    "rules_missing_provision_candidates": 1,
     "rules_with_non_exhaustive_amendment_history": 85,
     "rules_with_resolved_rule_specific_intervals": 0,
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Twenty-four Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication.",
+    "note": "Twenty-six Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules, current VAT instruments and Stamp Act share-transfer instruments. This is not independent counsel authentication or complete legal-text authentication.",
     "located_primary_record_anchors": 24,
     "amendment_candidate_entries": 73,
     "rules_with_amendment_candidates": 28,
@@ -4502,18 +4552,53 @@
       "rule_id": "TR-002",
       "rule_name": "Share Transfer Stamp Duty Requires Verification",
       "recorded_basis": "Stamp Act 1899, current Schedule I and applicable amendments",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "Stamp Act 1899, ss.3, 17, 29, 33 and 35",
+        "Stamp Act 1899 Schedule I, Article 61(a) (transfer of shares, 1.5% of consideration), as substituted by Finance Act 2022 s.3 effective 1-Jul-2022",
+        "Stamp Act 1899 Schedule I, Article 5(b)(ii) (separate agreement relating to sale of shares; 2 Taka per 1,000 Taka or part thereof of share value under 2022 Schedule)",
+        "Historical Stamp Act Schedule I Article 62(a), as substituted by Finance Act 2012 s.8 effective 1-Jul-2012"
+      ],
       "primary_instrument": {
-        "title": "Stamp Act, 1899 (Act No. II of 1899)",
-        "url": "https://bdlaws.minlaw.gov.bd/act-print-77.html",
-        "date": "1899-01-27",
-        "commencement": "1899-07-01",
-        "publication_date": "1899-01-27",
-        "effective_from": null,
-        "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "title": "Stamp Act 1899, Schedule I, Article 61(a), as substituted by Finance Act 2022",
+        "official_primary_record_id": "BD_FINANCE_ACT_13_2022_STAMP_SCHEDULE",
+        "relevant_provision": "Article 61(a) transfer of shares; Article 5(b)(ii) separate agreement relating to sale of shares",
+        "scope_note": "Instrument classification, execution date, consideration and listed-public-company exemption determine duty. Private-company share transfers do not fall within the listed-public-company exemption in Article 61(2)."
       },
-      "amendment_candidates": [],
+      "amendment_candidates": [
+        {
+          "instrument_title": "Finance Act, 2012 (Act No.26 of 2012)",
+          "instrument_type": "ACT",
+          "publication_date": "2012-06-30",
+          "claimed_effective_from": "2012-07-01",
+          "claimed_effective_to": "2022-07-01",
+          "commencement_or_effect_note": "Section 1(2) effective 1-Jul-2012. Section 8 replaces Stamp Act Schedule I; Article 62(a) charges 1.5% of consideration for transfer of shares; Article 62(2) exempts transfers of shares/debentures of public limited companies whose shares are listed.",
+          "amended_provisions": [
+            "Stamp Act 1899 Schedule I Article 62(a), Article 62(2)"
+          ],
+          "official_text_url": "https://nbr.gov.bd/uploads/acts/16.pdf",
+          "primary_record_id": "BD_FINANCE_ACT_26_2012_STAMP_SCHEDULE",
+          "source_claim_status": "OFFICIAL_BANGLADESH_GAZETTE_PDF_LOCATED_ON_NBR_HOST",
+          "rule_effect_status": "HISTORICAL_SHARE_TRANSFER_DUTY_AND_LISTED_COMPANY_EXEMPTION_LOCATED"
+        },
+        {
+          "instrument_title": "Finance Act, 2022 (Act No.13 of 2022)",
+          "instrument_type": "ACT",
+          "publication_date": "2022-06-30",
+          "claimed_effective_from": "2022-07-01",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Section 1(2) effective 1-Jul-2022. Section 3 replaces Schedule I and renumbers share transfer from Article 62(a) to Article 61(a), retaining 1.5% of consideration. Article 61(2) exempts transfers of shares/debentures of public limited companies whose shares are listed. Article 5(b)(ii) separately charges a share-sale agreement at 2 Taka per 1,000 Taka or part thereof of share value.",
+          "amended_provisions": [
+            "Stamp Act 1899 Schedule I Articles 5(b)(ii), 61(a), 61(2)"
+          ],
+          "amendment_clause_reference": "Finance Act 2022 ss.1(2), 3",
+          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1409/section-51184.html",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/45026",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/45026_26037.pdf",
+          "primary_record_id": "BD_FINANCE_ACT_13_2022_STAMP_SCHEDULE",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "CURRENT_SCHEDULE_AND_INSTRUMENT_TYPE_RATE_DISTINCTION_LOCATED"
+        }
+      ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
       "operative_interval": {
         "from": null,
@@ -4524,7 +4609,7 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
         "PROVISION GAP: Stamp Act 1899 is only the parent-law candidate. The exact Schedule I article, instrument category, applicable rate, territorial amendment and execution-date version have not been identified; no stamp-duty rate or interval may be inferred.",
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
@@ -4532,7 +4617,20 @@
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
-      ]
+      ],
+      "rule_claim_assessment": {
+        "status": "INSTRUMENT_SPECIFIC_DUTY; PRIVATE_COMPANY_TRANSFER_SUBJECT_UNLESS_EXEMPTION",
+        "recorded_rule_requirement": "Share-transfer stamp duty review prompt only; classify the actual executed instrument, date, consideration and listing status before assessing any shortfall. A missing receipt alone does not prove invalid title.",
+        "assessment": "For an instrument transferring shares, the 2022 Stamp Act Schedule I Article 61(a) charges 1.5% of the value of consideration. Article 61(2) exempts transfers of shares/debentures of public limited companies whose shares are listed; that exemption does not extend to private limited companies merely because they are companies. A separate agreement relating to sale of shares is Article 5(b)(ii), charged at 2 Taka per 1,000 Taka or part thereof of share value, so do not apply Article 61(a) indiscriminately to every document in the transaction. The 2012 Schedule used Article 62(a) for share transfers at 1.5%; Finance Act 2022 replaced the Schedule and renumbered the provision to Article 61(a), effective 1-Jul-2022. Stamp Act s.17 requires stamping before/at execution in Bangladesh; s.35 concerns inadmissibility until duty and penalty are paid, not automatic invalidity of title. Confirm exact instrument, valuation, exemptions, endorsement, execution date and payment evidence.",
+        "evidence_required": [
+          "Executed share transfer instrument(s) and any separate sale agreement",
+          "Execution date and place",
+          "Share consideration/valuation and payment terms",
+          "Company legal form and stock-exchange listing status on execution date",
+          "Stamp/adhesive/e-challan evidence and Collector assessment or impounding record",
+          "Any statutory exemption or adjudication under Stamp Act s.31"
+        ]
+      }
     },
     {
       "rule_id": "TR-003",
