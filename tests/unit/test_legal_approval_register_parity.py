@@ -1,4 +1,4 @@
-"""The counsel register is the sole release source for statutory rule findings."""
+"""The counsel register tracks legal approval separately from product score eligibility."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def test_85_rule_catalogue_matches_counsel_register_and_engine_allowlist():
             assert eligible == "false"
 
 
-def test_unverified_statutory_candidate_is_downgraded_before_api_score_or_rescue(monkeypatch):
+def test_product_scoring_can_use_confirmed_facts_without_claiming_counsel_approval(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
@@ -76,11 +76,10 @@ def test_unverified_statutory_candidate_is_downgraded_before_api_score_or_rescue
     assert len(matches) == 1
 
     finding = matches[0]
-    assert finding.severity is Severity.NOT_EVALUATED
-    assert finding.state is RuleState.UNKNOWN
-    assert finding.eval_state == "UNKNOWN"
-    assert finding.score_impact == 0
-    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
-    assert finding.detail["statutory_finding_authorized"] is False
-    assert finding.detail["candidate_state"] == RuleState.NON_COMPLIANT.value
-    assert output.score_breakdown.risk_band is Severity.NOT_EVALUATED
+    assert finding.severity is Severity.YELLOW
+    assert finding.state is RuleState.NON_COMPLIANT
+    assert finding.eval_state == "VIOLATION"
+    assert finding.score_impact > 0
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    # The product score is a risk indicator; independent legal approval remains absent.
+    assert output.score_breakdown.category_deductions["AUD"] > 0
