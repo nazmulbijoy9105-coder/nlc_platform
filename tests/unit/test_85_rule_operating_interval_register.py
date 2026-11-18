@@ -208,7 +208,6 @@ def test_provision_gap_records_explain_missing_legal_mapping() -> None:
     by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
     expected = {
         "FX-001": "exact enabling section",
-        "TR-002": "exact Schedule I article",
     }
     for rule_id, required_detail in expected.items():
         rule = by_id[rule_id]
@@ -234,10 +233,10 @@ def test_amendment_history_coverage_counters_match_rule_records() -> None:
     payload = load_register()
     rules = payload["rules"]
     coverage = payload["coverage"]
-    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 24
-    assert coverage["amendment_candidate_entries"] == sum(len(rule["amendment_candidates"]) for rule in rules) == 73
-    assert coverage["rules_with_amendment_candidates"] == sum(bool(rule["amendment_candidates"]) for rule in rules) == 28
-    assert coverage["rules_without_amendment_candidates"] == sum(not rule["amendment_candidates"] for rule in rules) == 57
+    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 26
+    assert coverage["amendment_candidate_entries"] == sum(len(rule["amendment_candidates"]) for rule in rules) == 75
+    assert coverage["rules_with_amendment_candidates"] == sum(bool(rule["amendment_candidates"]) for rule in rules) == 29
+    assert coverage["rules_without_amendment_candidates"] == sum(not rule["amendment_candidates"] for rule in rules) == 56
 
 
 def test_bsec_and_bida_source_identity_and_version_gaps_remain_explicit() -> None:
@@ -249,3 +248,16 @@ def test_bsec_and_bida_source_identity_and_version_gaps_remain_explicit() -> Non
     assert any("VERSION GAP:" in item for item in by_id["INC-006"]["unresolved_items"])
     assert by_id["BSEC-001"]["operative_interval"]["from"] is None
     assert by_id["INC-006"]["operative_interval"]["from"] is None
+
+
+def test_tr002_share_transfer_stamp_duty_is_instrument_specific() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "TR-002")
+    assert rule["missing_provision_candidate"] is False
+    assert any("Article 61(a)" in item for item in rule["candidate_provisions"])
+    assert any("Article 5(b)(ii)" in item for item in rule["candidate_provisions"])
+    events = {event["primary_record_id"]: event for event in rule["amendment_candidates"]}
+    assert events["BD_FINANCE_ACT_26_2012_STAMP_SCHEDULE"]["claimed_effective_from"] == "2012-07-01"
+    assert events["BD_FINANCE_ACT_13_2022_STAMP_SCHEDULE"]["claimed_effective_from"] == "2022-07-01"
+    assert rule["operative_interval"]["from"] is None
+    assert any("RULE SCOPE/INTERVAL REVIEW:" in item for item in rule["unresolved_items"])
