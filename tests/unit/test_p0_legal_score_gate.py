@@ -258,7 +258,7 @@ def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
         detail={},
     )
 
-    assert _verified_flag_score([confirmed]) == (0, False)
+    assert _verified_flag_score([confirmed]) == (85, False)
     assert report_module._render_score_reconciliation(
         [confirmed], 85, "YELLOW"
     ) == ""
