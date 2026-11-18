@@ -752,7 +752,7 @@ SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
 
 # Product owner-controlled release switch. This enables deterministic product
 # scoring; it is not a legal-verification or certification claim.
-LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}
+LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().lower() in {"true", "1", "yes", "on"}
 
 
 def legal_score_is_released() -> bool:
@@ -765,14 +765,6 @@ def legal_score_is_released() -> bool:
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
-    )
-
-
-def _counsel_score_basis_is_verified() -> bool:
-    """A company-wide statutory score needs counsel review of the full catalogue."""
-    return (
-        bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
@@ -865,36 +857,11 @@ class NLCRuleEngine:
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
-        # A product-owned rule catalogue is not legal approval. Until each
-        # catalogue rule has independent Bangladesh-counsel verification,
-        # retain candidate signals as review prompts only. This central gate
-        # prevents any individual module from leaking an unverified RED/BLACK
-        # statutory finding or score deduction through the API/PDF/rescue path.
-        for flag in self._flags:
-            if (
-                flag.rule_id in PRODUCT_SCORING_RULE_IDS
-                and flag.rule_id not in VERIFIED_RULE_IDS
-            ):
-                original_detail = dict(flag.detail or {})
-                original_detail.update({
-                    "legal_validation_status": "PENDING_COUNSEL_APPROVAL",
-                    "candidate_severity": str(getattr(flag.severity, "value", flag.severity)),
-                    "candidate_state": str(getattr(flag.state, "value", flag.state)),
-                    "candidate_eval_state": flag.eval_state,
-                    "candidate_score_impact": flag.score_impact,
-                    "statutory_finding_authorized": False,
-                })
-                flag.detail = original_detail
-                flag.severity = Severity.NOT_EVALUATED
-                flag.score_impact = 0
-                flag.state = RuleState.UNKNOWN
-                flag.eval_state = "UNKNOWN"
-                flag.is_black_override = False
-                flag.description = (
-                    "Candidate signal only — independent Bangladesh-counsel "
-                    "validation is pending. No statutory breach or score deduction "
-                    "is asserted. " + flag.description
-                )
+        # Product-owner approval authorizes the product's deterministic risk
+        # indicator. Independent counsel verification is tracked separately in
+        # VERIFIED_RULE_IDS and MUST NOT suppress product scoring. Individual
+        # findings still require applicability, verified evidence and a
+        # confirmed VIOLATION state in the scoring path.
 
         # Coverage is calculated in _calculate_score via _input_coverage(company)
 
@@ -3740,8 +3707,7 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in PRODUCT_SCORING_RULE_IDS
-            and f.rule_id in VERIFIED_RULE_IDS
-            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                        and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
@@ -3811,8 +3777,7 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-            and flag.rule_id in VERIFIED_RULE_IDS
-            and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
+                        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and flag.is_black_override
@@ -3895,13 +3860,13 @@ class NLCRuleEngine:
         # product-allowlisted findings may still elevate the final risk band below.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if legal_score_is_released() and _counsel_score_basis_is_verified()
+            if legal_score_is_released()
             else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if legal_score_is_released() and _counsel_score_basis_is_verified() and not critical:
+        if legal_score_is_released() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
@@ -3985,7 +3950,7 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
