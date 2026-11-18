@@ -4159,5 +4159,24 @@
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
       ]
     }
+  ],
+  "unresolved_instrument_candidates": [
+    {
+      "instrument_title": "Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005)",
+      "source_lead": "A Bangladesh Government Trade Portal-hosted Companies Act 1994 PDF carries a footnote attributing replacement of Companies Act 1994 s.2(2) and s.2(3) to section 7 of the Companies (Amendment) Act, 2005.",
+      "source_url": "https://www.bangladeshtradeportal.gov.bd/kcfinder/upload/files/Companies%20Act-1994.pdf",
+      "primary_gazette_status": "NOT_LOCATED",
+      "publication_date": null,
+      "commencement_date": null,
+      "affected_parent_provisions": [
+        2
+      ],
+      "status": "SECONDARY_CONSOLIDATED_FOOTNOTE_ONLY; ORIGINAL_GAZETTE_AND_EFFECTIVE_DATE_UNVERIFIED",
+      "required_next_evidence": [
+        "Locate original Bangladesh Gazette copy of Act No. 7 of 2005 and its DPP index entry.",
+        "Verify Act number/year, assent/publication date, exact section 7 text and commencement clause.",
+        "Check whether the amendment affects any of the 85 rule applicability/scope propositions; do not infer an operative interval from the consolidated footnote."
+      ]
+    }
   ]
 }
