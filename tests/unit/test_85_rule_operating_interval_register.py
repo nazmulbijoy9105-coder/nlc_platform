@@ -46,7 +46,7 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026", "BD_VAT_AMENDMENT_ACT_77_2026", "BD_FINANCE_ACT_96_2026", "BD_VAT_AMENDMENT_ORDINANCE_38_2026"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         if anchor.get("gazette_index_url"):
@@ -58,6 +58,18 @@ def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_vat_section_64_chain_rejects_universal_annual_return_claim() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "VAT-003")
+    assert rule["rule_claim_assessment"]["status"] == "NO_UNIVERSAL_ANNUAL_RETURN_OBLIGATION_IDENTIFIED; CURRENT_S64_IS_PERIODIC"
+    events = {e["primary_record_id"]: e for e in rule["amendment_candidates"]}
+    assert events["BD_FINANCE_ACT_96_2026"]["claimed_effective_from"] == "2026-07-01"
+    assert events["BD_FINANCE_ACT_96_2026"]["claimed_effective_to"] == "2026-10-01"
+    assert events["BD_VAT_AMENDMENT_ORDINANCE_38_2026"]["claimed_effective_from"] == "2026-10-01"
+    assert "each tax period" in events["BD_VAT_AMENDMENT_ORDINANCE_38_2026"]["commencement_or_effect_note"]
+    assert events["BD_VAT_AMENDMENT_ACT_77_2026"]["rule_effect_status"] == "NO_DIRECT_CHANGE_TO_S64_RETURN_FREQUENCY"
 
 
 def test_trade_license_claim_does_not_assume_31_march_expiry() -> None:
