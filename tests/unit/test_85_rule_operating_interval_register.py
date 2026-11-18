@@ -46,14 +46,32 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026"}
     for anchor in anchors.values():
         assert anchor["issuer"]
-        assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
-        assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
+        if anchor.get("gazette_index_url"):
+            assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
+            assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
+        else:
+            assert anchor["official_issuer_host"] == "sec.gov.bd"
+            assert anchor["issuer_official_url"].startswith("https://sec.gov.bd/")
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_bsec_code_provisions_and_current_female_director_deadline_are_traced() -> None:
+    payload = load_register()
+    by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
+    assert by_id["BSEC-002"]["candidate_provisions"] == ["Corporate Governance Code 2018 Condition 9(1)–(3)"]
+    assert by_id["BSEC-003"]["candidate_provisions"] == ["Corporate Governance Code 2018 Condition 1(2)(a), as amended"]
+    assert by_id["BSEC-004"]["candidate_provisions"] == ["Corporate Governance Code 2018 Condition 5(1)(a)"]
+    bsec3 = by_id["BSEC-003"]["amendment_candidates"]
+    latest = [event for event in bsec3 if event["primary_record_id"] == "BD_BSEC_FEMALE_ID_EXTENSION_2026"]
+    assert len(latest) == 1
+    assert latest[0]["compliance_deadline"] == "2026-12-31"
+    assert "not the existence" in latest[0]["commencement_or_effect_note"]
+    assert "Foreign Exchange Regulation Act 1947" in by_id["BSEC-004"]["unresolved_items"][0]
 
 
 def test_2005_companies_amendment_is_only_an_unresolved_lead() -> None:
