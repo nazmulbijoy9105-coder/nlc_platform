@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/nlc/85-rule-operating-interval-register.schema.json",
+  "title": "NLC 85-rule provision-level amendment and operative interval register",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "register_type",
+    "jurisdiction",
+    "as_of_date",
+    "canonical_rule_count",
+    "status_policy",
+    "issuer_document_authentication_standard",
+    "verified_primary_record_anchors",
+    "interval_method",
+    "coverage",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "register_type": {
+      "const": "85_RULE_PROVISION_LEVEL_AMENDMENT_AND_OPERATIVE_INTERVAL_REGISTER"
+    },
+    "jurisdiction": {
+      "const": "BD"
+    },
+    "as_of_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "canonical_rule_count": {
+      "const": 85
+    },
+    "status_policy": {
+      "const": "FAIL_CLOSED_NO_INFERRED_OPERATIVE_INTERVALS"
+    },
+    "issuer_document_authentication_standard": {
+      "type": "object"
+    },
+    "verified_primary_record_anchors": {
+      "type": "array",
+      "minItems": 3
+    },
+    "interval_method": {
+      "type": "object"
+    },
+    "coverage": {
+      "type": "object"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 85,
+      "maxItems": 85,
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "candidate_provisions",
+          "amendment_candidates",
+          "amendment_completeness",
+          "operative_interval",
+          "issuer_document_authentication_status",
+          "legal_effect_status",
+          "missing_provision_candidate"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string"
+          },
+          "candidate_provisions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amendment_candidates": {
+            "type": "array"
+          },
+          "amendment_completeness": {
+            "const": "OPEN_NOT_EXHAUSTIVE"
+          },
+          "operative_interval": {
+            "type": "object",
+            "required": [
+              "from",
+              "to_exclusive",
+              "status"
+            ],
+            "properties": {
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              },
+              "to_exclusive": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              },
+              "status": {
+                "const": "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
+              }
+            }
+          },
+          "issuer_document_authentication_status": {
+            "type": "string"
+          },
+          "legal_effect_status": {
+            "type": "string"
+          },
+          "missing_provision_candidate": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}\n
