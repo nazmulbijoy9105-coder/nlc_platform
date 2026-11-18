@@ -4140,22 +4140,38 @@
           {
             "title": "BSEC Corporate Governance Code amendment notification 16 October 2023",
             "url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
-            "gazette": "https://www.dpp.gov.bd/upload_file/gazettes/53776_78027.pdf",
+            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/home/download_file/gazettes/51180_72018.pdf",
             "date": "2023-11-20",
             "publication_date": "2023-11-20",
             "effective_from": null,
             "effective_to": null,
-            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+            "status": "OFFICIAL_BSEC_SOURCE_AND_GAZETTE_ARTIFACT_LOCATED"
           },
           {
             "title": "BSEC Corporate Governance Code amendment notification 4 April 2024",
             "url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
-            "gazette": "https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/51180",
+            "gazette": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
             "date": "2024-04-29",
             "publication_date": "2024-04-29",
             "effective_from": null,
             "effective_to": null,
-            "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+            "status": "OFFICIAL_BSEC_GAZETTE_TEXT_LOCATED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 29 July 2025",
+            "publication_date": "2025-07-29",
+            "effective_from": null,
+            "effective_to": "2025-12-31",
+            "url": "https://sec.gov.bd/slaws/Notification_29.07.2025.pdf",
+            "status": "OFFICIAL_EXTENSION_NOTICE_LOCATED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 26 July 2026",
+            "publication_date": "2026-07-26",
+            "effective_from": null,
+            "effective_to": null,
+            "url": "https://sec.gov.bd/storage/laws/Notification__26.07.2026.pdf",
+            "status": "OFFICIAL_NOTICE_LOCATED_DEADLINE_TEXT_AND_SCOPE_REVIEW_REQUIRED"
           }
         ],
         "additional_scope_note": "Recorded 'Corporate Governance Code 2023, Para 8' and canonical 'financial-reporting instrument' conflict; exact quarterly report duty, instrument, clause, listed-issuer scope and due date remain unresolved."
@@ -4295,6 +4311,22 @@
             "effective_from": null,
             "effective_to": null,
             "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 29 July 2025",
+            "publication_date": "2025-07-29",
+            "effective_from": null,
+            "effective_to": "2025-12-31",
+            "url": "https://sec.gov.bd/slaws/Notification_29.07.2025.pdf",
+            "status": "OFFICIAL_EXTENSION_NOTICE_LOCATED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 26 July 2026",
+            "publication_date": "2026-07-26",
+            "effective_from": null,
+            "effective_to": null,
+            "url": "https://sec.gov.bd/storage/laws/Notification__26.07.2026.pdf",
+            "status": "OFFICIAL_NOTICE_LOCATED_DEADLINE_TEXT_AND_SCOPE_REVIEW_REQUIRED"
           }
         ],
         "additional_scope_note": "Confirm issuer listing status and exact condition/clause; Code scope is not universal for ordinary private companies."
@@ -4443,9 +4475,25 @@
             "effective_from": null,
             "effective_to": null,
             "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 29 July 2025",
+            "publication_date": "2025-07-29",
+            "effective_from": null,
+            "effective_to": "2025-12-31",
+            "url": "https://sec.gov.bd/slaws/Notification_29.07.2025.pdf",
+            "status": "OFFICIAL_EXTENSION_NOTICE_LOCATED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 26 July 2026",
+            "publication_date": "2026-07-26",
+            "effective_from": null,
+            "effective_to": null,
+            "url": "https://sec.gov.bd/storage/laws/Notification__26.07.2026.pdf",
+            "status": "OFFICIAL_NOTICE_LOCATED_DEADLINE_TEXT_AND_SCOPE_REVIEW_REQUIRED"
           }
         ],
-        "additional_scope_note": "Confirm issuer listing status and exact condition/clause; Code scope is not universal for ordinary private companies."
+        "additional_scope_note": "Confirm issuer listing status and exact condition/clause; Code scope is not universal for ordinary private companies. The 2024 amendment (notification dated 4 April, Gazette 29 April 2024) inserted the female independent director requirement; BSEC issued extensions on 29 July 2025 and 26 July 2026. The latest notice's exact deadline, eligible issuer scope and any later superseding notice must be checked from the PDF before deadline scoring."
       },
       "applicability": {
         "company_type_candidates": [],
@@ -4591,6 +4639,22 @@
             "effective_from": null,
             "effective_to": null,
             "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 29 July 2025",
+            "publication_date": "2025-07-29",
+            "effective_from": null,
+            "effective_to": "2025-12-31",
+            "url": "https://sec.gov.bd/slaws/Notification_29.07.2025.pdf",
+            "status": "OFFICIAL_EXTENSION_NOTICE_LOCATED"
+          },
+          {
+            "title": "BSEC female independent director appointment extension, 26 July 2026",
+            "publication_date": "2026-07-26",
+            "effective_from": null,
+            "effective_to": null,
+            "url": "https://sec.gov.bd/storage/laws/Notification__26.07.2026.pdf",
+            "status": "OFFICIAL_NOTICE_LOCATED_DEADLINE_TEXT_AND_SCOPE_REVIEW_REQUIRED"
           }
         ],
         "additional_scope_note": "Critical source conflict: rule title says Audit Committee Not Established and current canonical source claim points to BSEC Corporate Governance Code, while recorded statutory_basis says Foreign Exchange Regulation Act 1947. Preserve both; do not score or resolve without counsel."
