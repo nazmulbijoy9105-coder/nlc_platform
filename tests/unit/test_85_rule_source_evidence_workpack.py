@@ -53,9 +53,26 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     agm005 = next(item for item in data["rules"] if item["rule_id"] == "AGM-005")
     assert "Section 89" in agm005["recorded_statutory_basis"]
     assert "Section 85(2)(b)" in agm005["current_canonical_source_claim"]["law"]
-    assert len(agm005["applicability"]["required_facts"]) == 9
+    agm005_fact_keys = {
+        fact["fact_key"] for fact in agm005["applicability"]["required_facts"]
+    }
+    assert {
+        "company_type",
+        "agm_held_this_cycle",
+        "member_count",
+        "members_present_at_agm",
+        "agm_attendance_verified",
+        "agm_attendance_evidence_ref",
+        "agm_quorum_basis_verified",
+        "agm_quorum_evidence_ref",
+        "agm_quorum_required",
+    } <= agm005_fact_keys
     assert all(
-        fact["mapping_status"] == "CANDIDATE_MAPPING_REQUIRES_COUNSEL_AND_CUSTODIAN_VERIFICATION"
+        fact["mapping_status"]
+        in {
+            "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
+            "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+        }
         for fact in agm005["applicability"]["required_facts"]
     )
 
@@ -67,4 +84,6 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["coverage"]["seed_fact_candidate_rules"] == 85
     assert data["coverage"]["fact_inventory_rules"] == 85
     assert data["coverage"]["rules_with_candidate_evidence_roles"] == 85
+    assert data["coverage"]["fact_records_with_candidate_evidence_contract"] == 292
+    assert data["coverage"]["fact_records_unresolved_evidence_type"] == 21
     assert data["coverage"]["complete_fact_to_evidence_mappings"] == 0
