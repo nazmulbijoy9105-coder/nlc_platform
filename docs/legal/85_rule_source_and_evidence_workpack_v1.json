@@ -160,6 +160,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 183, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM held but balance sheet and P&L not presented. Section 183.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -240,6 +247,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 190, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 190, Companies Act 1994 (Bangladesh)",
+        "requirement": "Balance sheet not filed within 30 days of AGM. Section 190.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -312,6 +326,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 181, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 181, Companies Act 1994 (Bangladesh)",
+        "requirement": "Proper books of account not maintained. Section 181.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -327,7 +348,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "81"
+          "81",
+          "81(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -385,6 +407,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "First AGM must be held within 18 calendar months of incorporation. Calculate with calendar-month arithmetic; do not use a fixed-day approximation.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -400,7 +429,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "81"
+          "81",
+          "81(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -463,6 +493,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 81(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 81(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "A subsequent AGM must be held in each Gregorian calendar year and no more than 15 months after the preceding AGM, subject to the first-AGM proviso where the first AGM is held in the incorporation year and a verified Registrar extension within the statutory limit.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -478,7 +515,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "85"
+          "85",
+          "85(1)"
         ],
         "amendment_events": [
           {
@@ -569,6 +607,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM notice was shorter than the statutory notice period. Shorter notice may be valid with written consent of all members entitled to attend and vote. Do not classify as defective unless absence of the required consent is verified.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -584,7 +629,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "85"
+          "85",
+          "85(1)"
         ],
         "amendment_events": [
           {
@@ -675,6 +721,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 85(1)(a), Companies Act 1994 (Bangladesh)",
+        "requirement": "No notice date is recorded before the AGM. A defect is confirmed only where written short-notice consent from all members entitled to attend and vote is verified absent; otherwise legal status remains unknown.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -690,7 +743,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "89"
+          "89",
+          "85(2)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -798,6 +852,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
+        "provision": "UNVERIFIED CANDIDATE — Section 85(2)(b), Companies Act 1994 (Bangladesh), read with the Articles",
+        "requirement": "AGM held but the applicable quorum was not met. Under the default in Section 85(2)(b), a private company with not more than six members requires two members present; a private company with more than six members requires three; other companies require five members personally present. The Articles may provide otherwise and must be checked before a final determination.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -870,6 +931,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 89, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review prompt only: the record indicates minutes may be absent, but the minute book and contemporaneous records have not been independently verified.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -885,7 +953,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "130"
+          "130",
+          "85"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -960,6 +1029,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994, Section 85 and the company Articles; exact adjournment provision requires counsel verification",
+        "requirement": "Review prompt only: verify the applicable Articles, meeting resolution, adjournment terms, notice method and exact statutory consequence before classifying a breach.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1007,6 +1083,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 36 (Schedule X), Companies Act 1994 (Bangladesh)",
+        "requirement": "Schedule X (Annual Return) not filed within 21 days of AGM. Section 36 requires the annual summary of share capital and list of members/directors within 21 days. Every officer in default is personally liable to fine for each day of continuing default.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1055,6 +1138,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.",
+        "provision": "UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 governs a separate Registrar strike-off procedure.",
+        "requirement": "Two or more reported outstanding annual returns are an internal review signal only. Backlog alone does not establish Registrar strike-off, dissolution, director liability or mandatory rescue.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1103,6 +1193,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.",
+        "provision": "UNVERIFIED CANDIDATE — Section 36 and Schedule X (annual-return duty); Section 346 requires separate Registrar grounds and statutory notice steps.",
+        "requirement": "Three or more reported outstanding annual returns remain an internal review signal only. A backlog does not prove that RJSC has commenced Section 346 proceedings, that the company is dissolved, or that directors have incurred a separate penalty.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1150,6 +1247,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+        "requirement": "Annual Return filed but missing required attachments: audited financial statements, directors list, members list, or secretary's certificate. Incomplete filing does not satisfy Section 36; company remains in default.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1197,6 +1301,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 210(6), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 210(6), Companies Act 1994 (Bangladesh)",
+        "requirement": "First auditor not appointed by the Board within one calendar month of incorporation. Section 210(6): the Board shall appoint the first auditor within one month of the date of registration. 'One month' means a calendar month (not a fixed 30 days). Company cannot produce compliant accounts for the first AGM until an auditor is appointed.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1244,6 +1355,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 183, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 183, Companies Act 1994 (Bangladesh)",
+        "requirement": "Audit/accounts not ready for presentation at the AGM. Section 183 governs the balance sheet and profit-and-loss or income-and-expenditure account to be laid before the AGM. Do not describe this fact alone as automatically invalidating every resolution.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1260,7 +1378,8 @@
         },
         "provision_candidates": [
           "151",
-          "210"
+          "210",
+          "183"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -1292,6 +1411,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 183 and 210, Companies Act 1994 (Bangladesh)",
+        "requirement": "AGM recorded without completed audit. This requires review of the actual accounts, auditor appointment and applicable exceptions. It is not automatically a statutory BLACK classification or a finding of fraud.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1307,7 +1433,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "210(2)"
+          "210(2)",
+          "210(3)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -1339,6 +1466,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 210(3), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)",
+        "requirement": "Auditor reappointment or appointment at the AGM must be assessed under Section 210(3), using verified AGM minutes and appointment records.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1386,6 +1520,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 210(3), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 210(3), Companies Act 1994 (Bangladesh)",
+        "requirement": "No verified record establishes whether the retiring auditor was reappointed or a statutory exception applied. Evidence-status only; no 120-day deadline.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1434,6 +1575,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–244; exact petition provision requires case review",
+        "requirement": "Reported company winding-up petition. Verify the Companies Act petition, grounds, court, case number, service, current status, withdrawal/dismissal/stay and authenticated court record. Do not conflate corporate winding-up with personal bankruptcy.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1495,6 +1643,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V; section 255 applies to court-appointed Official Liquidators; route-specific provision requires review",
+        "requirement": "Reported liquidator appointment. Verify whether the appointment arises from a court winding-up order, voluntary winding-up or another statutory route; obtain the appointment instrument and confirm the appointee’s authority and current status.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1543,6 +1698,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh), Part V, including sections 241–246; exact order provision requires case review",
+        "requirement": "Reported court winding-up order. Verify the authenticated order, operative date, court jurisdiction, appeal/stay, correction, suspension or discharge, and current liquidation status.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1623,6 +1785,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 96, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 96, Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 96 requires at least one Board meeting every three months and at least four meetings per year. Review prompt only until the complete, verified meeting history and relevant annual period are available.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1695,6 +1864,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 95, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 95, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review prompt only: verify notice to each director then in Bangladesh, service, address, dispatch/receipt evidence and any applicable Articles before a breach finding.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1767,6 +1943,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 89, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 89, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review prompt only: verify minute book, subsequent approval/signature, custody and inspection records; missing upload alone does not establish non-creation.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1812,6 +1995,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification",
+        "provision": "UNVERIFIED CANDIDATE — Applicable BSEC financial-reporting instrument; exact notification, issuer class, reporting period and due date require verification",
+        "requirement": "Review prompt only: verify the exact BSEC financial-reporting instrument, listed issuer class, reporting period and due date; this is not Corporate Governance Code Condition 8.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1857,6 +2047,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "provision": "UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "requirement": "Review prompt only: Condition 9 requires annual corporate-governance compliance certification by a practicing professional accountant or secretary other than the statutory auditor, with disclosure in the annual report. Verify listed-issuer scope, certifier eligibility, AGM appointment and evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1902,6 +2099,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "provision": "UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "requirement": "Review prompt only: verify Condition 1 board size, independent-director ratio, eligibility and appointment process. The 2024 amendment adds at least one female independent director; BSEC's 26 July 2026 register lists a further extension, reported to 31 December 2026. Verify the original notice and any later direction before applying a deadline.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -1947,6 +2151,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "provision": "UNVERIFIED CANDIDATE — BSEC Corporate Governance Code 2018, as amended by applicable 2023 and 2024 notifications; exact condition-specific applicability and evidence require verification",
+        "requirement": "Review prompt only: verify Condition 5 audit committee composition, independent director, financial literacy, quorum, meetings, duties and listed-issuer scope. Do not infer non-compliance from a single profile boolean.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2029,6 +2240,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 53, 54 and 56, Companies Act 1994 (Bangladesh)",
+        "requirement": "Verify the specific alteration type and Articles authority under section 53. Section 54 addresses specified consolidation/conversion/subdivision notices; increase of registered share capital is separately governed by section 56. Do not assume a special resolution without checking the Act and Articles.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2109,6 +2327,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 159(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 159(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "Review-only until the executed charge instrument, verified creation date, Section 159 registrability and RJSC Form XVIII filing status/date are evidenced. Missing evidence is UNKNOWN; a late filing requires legal review of any Registrar extension and its effect.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2192,6 +2417,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 59-60, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 59-60, Companies Act 1994 (Bangladesh)",
+        "requirement": "A pending capital-reduction workflow without verified court-confirmation evidence requires lawyer review. A pending workflow alone does not prove an unlawful completed reduction.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2207,7 +2439,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "88"
+          "88",
+          "88(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2266,6 +2499,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
+        "provision": "UNVERIFIED CANDIDATE — Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
+        "requirement": "Copy of a special or extraordinary resolution must be filed with RJSC within 15 days under Section 88(1). This filing duty does not by itself determine whether every underlying transaction is valid or complete.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2379,6 +2619,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 172(1), read with Section 159, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review-only. Confirm that the charge is registrable under s.159, authenticate satisfaction and its date, and verify RJSC filing status/date before assessing the 21-day s.172(1) duty. Missing evidence is UNKNOWN; a late Form XXVIII filing requires review of any Registrar extension and its legal effect.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2394,7 +2641,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "94"
+          "94",
+          "94(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2459,6 +2707,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 94(1)(d), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 94(1)(d), Companies Act 1994 (Bangladesh)",
+        "requirement": "Director disqualification requires a specified Section 94 or Articles ground, director identity, authoritative evidence, effective date and continuing status. Unpaid-call ground remains DISPUTED: official Bengali text says 180 days, while English/case materials say six months. Do not automatically classify until a Bangladesh company-law reviewer resolves the discrepancy. Section 94 does not prescribe a universal five-year ban. This finding is not an automatic BLACK override and remains outside production scoring pending independent legal approval.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2533,6 +2788,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Case-specific enabling provision required; not a universal section",
+        "provision": "UNVERIFIED CANDIDATE — Case-specific enabling provision required; not a universal section",
+        "requirement": "Review prompt only: each penalty/prosecution notice must be matched to its enabling provision, issuing authority, service, response deadline, appeal/stay and current disposition. No universal Companies Act penalty provision is assumed.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2548,7 +2810,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "90"
+          "90",
+          "115(2)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2618,6 +2881,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 115(2), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)",
+        "requirement": "Director appointment particulars not filed via Form XII within 14 days under Section 115. Filing default must be distinguished from whether the appointment itself is valid.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2633,7 +2903,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "93"
+          "93",
+          "115(2)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2698,6 +2969,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 115(2), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh)",
+        "requirement": "Director cessation particulars not filed via Form XII within 14 days under Section 115. Filing default must be distinguished from the effective date and legal consequences of resignation, removal or death.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2778,6 +3056,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only",
+        "provision": "UNVERIFIED CANDIDATE — Section 115(2), Companies Act 1994 (Bangladesh); 365-day threshold is NLC policy only",
+        "requirement": "A delay exceeding 365 days is an NLC internal escalation threshold only. The underlying Form XII particulars filing duty is under section 115(2) (14 days); do not infer a separate continuing offence, daily penalty, personal liability or invalid board resolutions without a distinct provision and case-specific evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2793,7 +3078,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "109"
+          "109",
+          "115"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2858,6 +3144,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 115, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 115, Companies Act 1994 (Bangladesh)",
+        "requirement": "Late or missing Form XII cessation particulars require case-specific review of statutory filing default, actual cessation date and third-party reliance. Non-filing alone does not automatically establish continuing director liability.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2940,6 +3233,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994, Section 130 (director-interest disclosure); generic register duty/title requires legal reconciliation",
+        "requirement": "Review prompt only: Section 130 concerns disclosure of a director's interest in a company contract or arrangement; it does not by itself establish this generic register obligation. Verify the actual duty, Articles and documentary evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -2987,6 +3287,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 and applicable Articles; exact register obligation requires counsel verification",
+        "requirement": "Review prompt only: no universal register-of-contracts duty has been established for this generic rule. Verify the exact statutory provision, company Articles, contract category and evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3068,6 +3375,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review",
+        "provision": "UNVERIFIED CANDIDATE — Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review",
+        "requirement": "Written consent to act as director must be filed with the Registrar within 30 days after appointment under section 93(2). Distinguish pre-appointment consent under section 92 and reconcile the current RJSC Form IX instructions before assessment.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3085,7 +3399,8 @@
         "provision_candidates": [
           "195",
           "197",
-          "199"
+          "199",
+          "104"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3160,6 +3475,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 104, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 104, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review prompt only: verify the exact office held, statutory exclusions, company relationship and whether general-meeting consent was obtained. A profile boolean alone cannot establish breach.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3240,6 +3562,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 110, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 110, Companies Act 1994 (Bangladesh)",
+        "requirement": "Review prompt only: verify current appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3341,6 +3670,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+        "provision": "UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+        "requirement": "Review prompt only: multi-year backlog is an internal escalation indicator, not proof that RJSC commenced strike-off. Verify statutory grounds, Registrar notice, service, procedural stage, appeal, restoration and current company status.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3452,6 +3788,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+        "provision": "UNVERIFIED CANDIDATE — Section 346, Companies Act 1994 (Bangladesh); Registrar process and case-specific evidence required",
+        "requirement": "Review prompt only: verify the statutory grounds, Registrar notice, service, procedural stage, appeal, restoration and current register status. A filing backlog or unverified list indicator is not proof that strike-off is imminent or has occurred.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3502,6 +3845,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "NLC internal risk policy; not a statutory risk band under the Companies Act 1994.",
+        "provision": "UNVERIFIED CANDIDATE — NLC internal risk policy; not a statutory risk band under the Companies Act 1994.",
+        "requirement": "Internal BLACK escalation and rescue workflow. A BLACK classification, score threshold and rescue deadline are NLC policy decisions, not statutory consequences. Policy-owner approval is required.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3517,7 +3867,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "130"
+          "130",
+          "286"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3549,6 +3900,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 286 and following provisions, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 286 and following provisions, Companies Act 1994 (Bangladesh)",
+        "requirement": "Reported voluntary winding-up resolution. Verify the statutory ground, resolution, applicable solvency declaration, liquidator appointment, creditor process and current status under Part V; no automatic BLACK classification.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3598,6 +3956,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 195 and 197; section 199 where related entities are included, Companies Act 1994 (Bangladesh)",
+        "requirement": "Reported company investigation. Verify the Government inspector appointment under section 195 or 197, the scope of any section 199 related-entity investigation, authenticated order, parties and current status. An inquiry is not itself a finding of liability.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3643,6 +4008,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Foreign Exchange Regulation Act 1947 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Foreign Exchange Regulation Act 1947 (Bangladesh)",
+        "requirement": "Foreign exchange violation detected under FE Regulation Act 1947.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3668,7 +4040,7 @@
           "status": "UNRESOLVED_RULE_SPECIFIC_INTERVAL",
           "reason": "Requires clause-level review of every amendment, commencement, savings, transition, repeal and corrigendum."
         },
-        "identity_status": "UNRESOLVED"
+        "identity_status": "KNOWN_HISTORICAL_IDENTITY_CONFLICT_OR_QUARANTINE_UNRESOLVED"
       },
       "applicability": {
         "company_type_candidates": [],
@@ -3725,6 +4097,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 23, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 23, Companies Act 1994 (Bangladesh)",
+        "requirement": "MoA/AoA registration is governed by section 23. Non-production in NLC records is not proof of non-registration or invalidity; verify the RJSC registration record, certified copies, incorporation date and amendments.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3740,7 +4119,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "90(2)"
+          "90(2)",
+          "90(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3807,6 +4187,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 90(1) and 90(2), Companies Act 1994 (Bangladesh)",
+        "requirement": "Minimum directors: three for a public company and a private subsidiary of a public company under Section 90(1); two for other private companies under Section 90(2). Require verified director count and verified company classification.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3822,7 +4209,8 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "53"
+          "53",
+          "56"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3887,6 +4275,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review",
+        "provision": "UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh) — applicability and consequences require lawyer review",
+        "requirement": "Paid-up capital exceeds recorded authorised capital. This is a data/legal review trigger; verify capital resolutions, Form IV and RJSC register. Do not automatically conclude excess allotments are void.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3932,6 +4327,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
+        "provision": "UNVERIFIED CANDIDATE — GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
+        "requirement": "No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, foreign-currency-account retention rules and zone-specific exceptions. CONDITIONAL: foreign-shareholder cases only.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -3977,6 +4379,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
+        "provision": "UNVERIFIED CANDIDATE — BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
+        "requirement": "Reported initial-establishment remittance below the USD 50,000 reference amount is an internal screening prompt only. Verify the current BIDA guideline, applicant category, date, exceptions and supporting bank evidence. No statutory breach or work-permit refusal is inferred. CONDITIONAL: foreign-shareholder and BIDA-registered cases only.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4061,6 +4470,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 150(1) and (6), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 150(1) and (6), Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 150 commencement declaration is not universal: subsection (6) excludes private companies and companies that do not issue a prospectus inviting public subscription. Review only where public-company status, prospectus issue and every section 150 condition are independently verified.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4076,7 +4492,11 @@
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
         "provision_candidates": [
-          "35"
+          "35",
+          "326(1)",
+          "201",
+          "354",
+          "355"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -4108,6 +4528,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+        "provision": "UNVERIFIED CANDIDATE — establishment/factory licence applicability and status require source evidence and counsel review",
+        "requirement": "Review the actual establishment category, Rule 354 scope, operative Government direction, DIFE licence status and evidence. Manufacturing status alone is not the licensing predicate.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4123,7 +4550,11 @@
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
         "provision_candidates": [
-          "35"
+          "35",
+          "326(1)",
+          "201",
+          "354",
+          "355"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -4155,6 +4586,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+        "provision": "UNVERIFIED CANDIDATE — licence validity and renewal require current licence evidence and counsel review",
+        "requirement": "Use the expiry date printed on a verified licence. Do not calculate a renewal term from issue date until counsel reconciles amended section 326(1)(b), rule 355(2), contractor status and transitional treatment.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4202,6 +4640,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+        "provision": "UNVERIFIED CANDIDATE — Bangladesh Labour Act 2006 and the specific Labour Court order; enabling provision and operative status require case-specific verification",
+        "requirement": "Review prompt only: verify certified order, parties, company identity, service, operative directions, appeal/revision and stay before finding non-compliance.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4274,6 +4719,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 222, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)",
+        "requirement": "Company below minimum members. Section 222: private < 2, public < 7.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4354,6 +4806,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 77, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 77, Companies Act 1994 (Bangladesh)",
+        "requirement": "Office change not filed via Form VI within 28 days. Section 77 requires 28-day filing (NOT 30 days). Until filed, old address remains legal registered office. Statutory notices served there are valid.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4426,6 +4885,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
+        "provision": "UNVERIFIED CANDIDATE — Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping",
+        "requirement": "Non-core statutory register inventory is incomplete. The Form XII return/notification to RJSC under Section 115(2) is evaluated separately by DIR-001; that filing status does not establish maintenance of the internal directors' register required by Section 115(1), nor does this aggregate inventory prove an individual statutory default.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4533,6 +4999,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+        "requirement": "Core internal records missing: register of members (Section 34), AGM minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4615,6 +5088,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 34(2), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 34(2), Companies Act 1994 (Bangladesh)",
+        "requirement": "Statutory registers not at registered office. Section 34(2): registers must be at registered office unless RJSC notified of alternative location. Alternative must be in Bangladesh and Board-approved. Registers open to inspection during business hours.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4662,6 +5142,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 151, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 151, Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 151 requires a company having share capital to file the return of allotment and prescribed supporting documents within 60 days after allotment, subject to any Registrar extension granted under the section.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4709,6 +5196,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 158, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 158, Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 158 requires share certificates within 90 days after allotment or registration of transfer. This rule currently models allotment date only; transfer-registration events must be added before complete coverage can be claimed.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4756,6 +5250,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 56, Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 56, Companies Act 1994 (Bangladesh)",
+        "requirement": "RJSC guidance identifies Form IV notice of increase of share capital under Section 56 as due within 15 days; confirm the exact statutory trigger, company scope and current form before assessing a default.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4771,7 +5272,9 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "20"
+          "20",
+          "11",
+          "88(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -4844,6 +5347,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "Name change under Section 11; copy of special resolution to RJSC within 15 days under Section 88(1). Further name-change certificate/registration steps must be separately verified.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4859,7 +5369,11 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "17"
+          "17",
+          "12",
+          "15",
+          "16",
+          "88(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -4932,6 +5446,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "MoA object-clause alteration: Sections 12 and 15-16 may require court confirmation/registration; copy of special resolution is filed under Section 88(1) within 15 days. Do not treat the 15-day copy filing as completion of court confirmation.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -4947,7 +5468,9 @@
           "commencement_evidence": "SRO No. 321-Law/1994 dated 1994-11-10, footnoted in official section 1 text"
         },
         "provision_candidates": [
-          "18"
+          "18",
+          "20",
+          "88(1)"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -5012,6 +5535,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
+        "requirement": "AoA alteration under Section 20; special-resolution copy filed within 15 days under Section 88(1). Verify any further registration step.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5026,7 +5556,11 @@
           "commencement_date": null,
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
-        "provision_candidates": [],
+        "provision_candidates": [
+          "166",
+          "261",
+          "264"
+        ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
         "operative_interval": {
@@ -5057,6 +5591,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification",
+        "provision": "UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 166, 261 and 264; company-specific duty and evidence require verification",
+        "requirement": "Review prompt only: verify legal entity and taxpayer identity, return-filing duty under section 166, registration under section 261 and any proof-of-return requirement under section 264. A profile boolean is not authenticated evidence of a breach.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5107,6 +5648,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
+        "provision": "UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, sections 2(48), 2(57), 4 and 10, as amended by Act No. 77 of 2026 and Finance Act No. 96 of 2026; exact current section and taxpayer-specific instruments require counsel verification",
+        "requirement": "Review prompt only. Verify rolling 12-month taxable turnover, mandatory-registration categories and taxpayer activity. Above BDT 30 lakh up to BDT 50 lakh may require turnover-tax enlistment; above BDT 50 lakh may require VAT registration. Verify the 30-day application period and effective date before any breach finding.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5122,7 +5670,9 @@
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
         "provision_candidates": [
-          "75"
+          "75",
+          "170(2)",
+          "171"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -5154,6 +5704,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required",
+        "provision": "UNVERIFIED CANDIDATE — Income Tax Act 2023, Sections 170(2) and 171, as amended by Finance Act 2026 (Act No. 96 of 2026); taxpayer-specific and holiday verification required",
+        "requirement": "For non-individual taxpayers, verify the s.170(2) deadline: 15th day of ninth month after income-year end, but not earlier than the following 15 September; check holiday roll-forward, extensions and taxpayer classification.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5169,7 +5726,11 @@
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
         "provision_candidates": [
-          "74"
+          "74",
+          "154",
+          "157",
+          "87",
+          "88"
         ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -5201,6 +5762,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification",
+        "provision": "UNVERIFIED CANDIDATE — Income Tax Act 2023, sections 154-157, as amended by Finance Act 2026 (Act 96/2026), sections 87-88; NOT_EVALUATED pending taxpayer-specific verification",
+        "requirement": "Review prompt only: s.154(1) threshold is BDT 10 lakh after Finance Act 2026 s.87; s.156 retains a separate BDT 6 lakh new-assessee threshold in the current Act text. Verify s.155 A-B computation, source deductions, four instalments, s.155(5) estimates, exclusions, holiday adjustment and payment evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5246,6 +5814,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+        "provision": "UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+        "requirement": "Trade License not obtained from City Corporation/Municipality.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5291,6 +5866,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+        "provision": "UNVERIFIED CANDIDATE — Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+        "requirement": "Trade License expired. Must renew by 31 March annually.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5385,6 +5967,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 38(3), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 38(3), Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, together with the relevant share/debenture certificate, subject to the statutory lost-instrument/indemnity exception. A missing upload is not proof of absence or automatic invalidity.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5430,6 +6019,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Stamp Act 1899, current Schedule I and applicable amendments",
+        "provision": "UNVERIFIED CANDIDATE — Stamp Act 1899, current Schedule I and applicable amendments",
+        "requirement": "Verify the instrument category, execution facts, current Stamp Act 1899 Schedule I rate, amendments, exemption/adjudication and authenticated payment evidence. Do not infer inadmissibility, invalidity or unenforceable title from a missing receipt.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5491,6 +6087,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
+        "provision": "UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
+        "requirement": "Section 38(7) preserves the company's power under its Articles to refuse registration. Board approval is not a universal statutory requirement; verify the operative Articles, transfer class, notices, refusal and remedies. Do not declare the transfer void or title absent automatically.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5552,6 +6155,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 38(4), Companies Act 1994 (Bangladesh)",
+        "provision": "UNVERIFIED CANDIDATE — Section 38(4), Companies Act 1994 (Bangladesh)",
+        "requirement": "Section 38(4) concerns notice of refusal: where the company refuses registration, it must notify both transferor and transferee within 30 days after the instrument is lodged. This rule does not create a universal two-month register-update deadline; verify the actual refusal and dispatch evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5613,6 +6223,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
+        "provision": "UNVERIFIED CANDIDATE — Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
+        "requirement": "Reported registration despite an Articles restriction requires case-specific review under section 38(7), the Articles, notices, registration record and remedies. The section preserves a power to refuse registration; it does not automatically make every restricted transfer void ab initio.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5661,6 +6278,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
+        "provision": "UNVERIFIED CANDIDATE — Sections 34 and 38, Companies Act 1994 (Bangladesh), and applicable Articles",
+        "requirement": "Two or more transfer-record review signals require document and Articles reconciliation. The composite is an internal review prompt, not a statutory breach, invalidity or title finding.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5675,7 +6299,9 @@
           "commencement_date": null,
           "status": "EXACT_PRIMARY_INSTRUMENT_NOT_PINNED"
         },
-        "provision_candidates": [],
+        "provision_candidates": [
+          "64"
+        ],
         "amendment_events": [],
         "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
         "operative_interval": {
@@ -5706,6 +6332,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs",
+        "provision": "UNVERIFIED CANDIDATE — Value Added Tax and Supplementary Duty Act 2012, section 64 as amended by Finance Act 2026 and VAT Amendment Ordinance 2026, with applicable VAT Rules/SROs",
+        "requirement": "Review prompt only: verify the applicable section 64 version, tax period, taxpayer class, due date, holiday rule, extension and filing evidence.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     },
     {
@@ -5751,6 +6384,13 @@
         "legal_review": "REVIEW_REQUIRED",
         "product_decision": "NOT_REVIEWED",
         "score_eligible": false
+      },
+      "current_canonical_source_claim": {
+        "law": "Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification",
+        "provision": "UNVERIFIED CANDIDATE — Value Added Tax Act 2012 (Bangladesh); specific annual-return obligation and due date require current-law verification",
+        "requirement": "Review prompt only: no universal annual return obligation is assumed; identify the taxpayer-specific operative Act/Rule/SRO before assessing a filing default.",
+        "source_path": "canonical_architecture/statutory_rules.py",
+        "verification_status": "UNVERIFIED_CANDIDATE_NOT_LEGAL_APPROVAL"
       }
     }
   ]
