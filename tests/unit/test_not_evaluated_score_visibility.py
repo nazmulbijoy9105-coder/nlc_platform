@@ -125,6 +125,7 @@ def test_unverified_product_flag_exposes_product_score_and_counsel_status(monkey
         flag_code="AGM-001",
         severity="RED",
         score_impact=15,
+        evaluation_state="VIOLATION",
         flag_status="ACTIVE",
         triggered_date=date(2026, 10, 1),
         resolved_date=None,
@@ -139,6 +140,30 @@ def test_unverified_product_flag_exposes_product_score_and_counsel_status(monkey
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
     assert "Candidate product-risk signal" in response.rule_name
     assert "pending independent counsel review" in response.rule_name
+
+
+def test_unverified_unknown_product_flag_never_exposes_score_impact(monkeypatch):
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
+    monkeypatch.setattr(companies_api, "VERIFIED_RULE_IDS", set())
+    flag = SimpleNamespace(
+        id=uuid4(),
+        rule_id="AGM-001",
+        description="Insufficient AGM evidence",
+        flag_code="AGM-001",
+        severity="RED",
+        score_impact=15,
+        evaluation_state="UNKNOWN",
+        flag_status="ACTIVE",
+        triggered_date=date(2026, 10, 1),
+        resolved_date=None,
+        is_black_override=False,
+        resolution_notes=None,
+    )
+    response = _flag_to_response(flag)
+    assert response.severity == "NOT_EVALUATED"
+    assert response.score_impact == 0
+    assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
 
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
