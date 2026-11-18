@@ -47,7 +47,7 @@
     "fact_inventory_rules": 85,
     "rule_specific_evidence_role_mappings": 43,
     "fact_records_with_candidate_evidence_contract": 292,
-    "fact_records_unresolved_evidence_type": 21,
+    "fact_records_unresolved_evidence_type": 0,
     "rules_with_candidate_evidence_roles": 85,
     "rules_with_fact_inventory": 85
   },
@@ -1262,18 +1262,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain signed written consent from every member entitled to attend and vote, together with the AGM notice, dispatch/service records, register of members and meeting minutes. Link each consent to the exact meeting and notice date.",
+              "verification_standard": "Reconcile the entitled-member population at the relevant date against the register of members and Articles; verify signatures/authority, consent timing, meeting identity, notice contents and evidence of service. Do not infer consent from attendance.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -1348,6 +1348,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain signed written consent from every member entitled to attend and vote, together with the AGM notice, dispatch/service records, register of members and meeting minutes. Link each consent to the exact meeting and notice date.",
+            "verification_standard": "Reconcile the entitled-member population at the relevant date against the register of members and Articles; verify signatures/authority, consent timing, meeting identity, notice contents and evidence of service. Do not infer consent from attendance.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -1542,18 +1551,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain signed written consent from every member entitled to attend and vote, together with the AGM notice, dispatch/service records, register of members and meeting minutes. Link each consent to the exact meeting and notice date.",
+              "verification_standard": "Reconcile the entitled-member population at the relevant date against the register of members and Articles; verify signatures/authority, consent timing, meeting identity, notice contents and evidence of service. Do not infer consent from attendance.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -1628,6 +1637,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "WRITTEN_SHORT_NOTICE_CONSENT_AND_AGM_NOTICE_SERVICE_PROOF",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain signed written consent from every member entitled to attend and vote, together with the AGM notice, dispatch/service records, register of members and meeting minutes. Link each consent to the exact meeting and notice date.",
+            "verification_standard": "Reconcile the entitled-member population at the relevant date against the register of members and Articles; verify signatures/authority, consent timing, meeting identity, notice contents and evidence of service. Do not infer consent from attendance.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -2988,18 +3006,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "FIRST_AUDITOR_BOARD_RESOLUTION_AND_AUDITOR_WRITTEN_CONSENT",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "FIRST_AUDITOR_BOARD_RESOLUTION_AND_AUDITOR_WRITTEN_CONSENT",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director); appointed auditor; RJSC for auditor notice/filing",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain board minutes/resolution appointing first auditor, prior written auditor consent, appointment intimation and auditor's Form 23B/Registrar acknowledgement where required. Link incorporation/registration date and appointment date.",
+              "verification_standard": "Verify appointment made by Board within the statutory calendar-month period under s.210(6); verify written consent predates appointment and auditor's acceptance/refusal notice under applicable s.210 provisions. Distinguish first auditor from AGM-appointed auditor.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -3056,6 +3074,15 @@
             "verification_standard": "Issuer-origin verification against RJSC record; distinguish uploaded/submitted/received/accepted/registered; verify entity, filing ID, effective date and later correction/rejection.",
             "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "FIRST_AUDITOR_BOARD_RESOLUTION_AND_AUDITOR_WRITTEN_CONSENT",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director); appointed auditor; RJSC for auditor notice/filing",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain board minutes/resolution appointing first auditor, prior written auditor consent, appointment intimation and auditor's Form 23B/Registrar acknowledgement where required. Link incorporation/registration date and appointment date.",
+            "verification_standard": "Verify appointment made by Board within the statutory calendar-month period under s.210(6); verify written consent predates appointment and auditor's acceptance/refusal notice under applicable s.210 provisions. Distinguish first auditor from AGM-appointed auditor.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -4228,18 +4255,18 @@
             "fact_key": "board_meeting_held",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain original board minute book, meeting notice, attendance record, agenda and any signed resolutions for the specific meeting.",
+              "verification_standard": "Verify date, directors entitled to notice, attendees, quorum under operative Articles, chair signature and consistency with board calendar; minute book is prima facie evidence under s.89 but may be rebutted.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -4248,18 +4275,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_MEETING_NOTICE_AND_DISPATCH_SERVICE_LOG",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_MEETING_NOTICE_AND_DISPATCH_SERVICE_LOG",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain written notice addressed to every director then in Bangladesh at their Bangladesh address, together with dispatch register, email headers/delivery records or courier acknowledgements and director address register.",
+              "verification_standard": "Reconcile all directors in Bangladesh on dispatch date against register; verify written form, correct address, dispatch timing and receipt/service evidence. Section 95 requires notice; do not infer service from a board minute alone.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -4304,6 +4331,24 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain original board minute book, meeting notice, attendance record, agenda and any signed resolutions for the specific meeting.",
+            "verification_standard": "Verify date, directors entitled to notice, attendees, quorum under operative Articles, chair signature and consistency with board calendar; minute book is prima facie evidence under s.89 but may be rebutted.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_MEETING_NOTICE_AND_DISPATCH_SERVICE_LOG",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain written notice addressed to every director then in Bangladesh at their Bangladesh address, together with dispatch register, email headers/delivery records or courier acknowledgements and director address register.",
+            "verification_standard": "Reconcile all directors in Bangladesh on dispatch date against register; verify written form, correct address, dispatch timing and receipt/service evidence. Section 95 requires notice; do not infer service from a board minute alone.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -4367,18 +4412,18 @@
             "fact_key": "board_meeting_held",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain original board minute book, meeting notice, attendance record, agenda and any signed resolutions for the specific meeting.",
+              "verification_standard": "Verify date, directors entitled to notice, attendees, quorum under operative Articles, chair signature and consistency with board calendar; minute book is prima facie evidence under s.89 but may be rebutted.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -4387,18 +4432,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_MINUTE_BOOK_SIGNED_MINUTES",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_MINUTE_BOOK_SIGNED_MINUTES",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Inspect original minute book and obtain certified extract of the relevant board proceedings; record the minute-book custodian and inspection date.",
+              "verification_standard": "Verify contemporaneous entry, meeting identity, signature by chairman of that meeting or next succeeding meeting, completeness and any correction/alteration history under s.89.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -4443,6 +4488,24 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_MEETING_MINUTES_ATTENDANCE_AND_BOARD_CALENDAR",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain original board minute book, meeting notice, attendance record, agenda and any signed resolutions for the specific meeting.",
+            "verification_standard": "Verify date, directors entitled to notice, attendees, quorum under operative Articles, chair signature and consistency with board calendar; minute book is prima facie evidence under s.89 but may be rebutted.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_MINUTE_BOOK_SIGNED_MINUTES",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Inspect original minute book and obtain certified extract of the relevant board proceedings; record the minute-book custodian and inspection date.",
+            "verification_standard": "Verify contemporaneous entry, meeting identity, signature by chairman of that meeting or next succeeding meeting, completeness and any correction/alteration history under s.89.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -5340,18 +5403,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "RJSC_CERTIFIED_MEMORANDUM_AND_ARTICLES_IN_FORCE_ON_CAPITAL_EVENT_DATE",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "RJSC_CERTIFIED_MEMORANDUM_AND_ARTICLES_IN_FORCE_ON_CAPITAL_EVENT_DATE",
+              "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified registered Articles and Memorandum, all filed alteration documents and RJSC filing acknowledgements. Identify the exact clause authorising the particular capital alteration and its effective date.",
+              "verification_standard": "Authenticate certified copy against RJSC record; reconstruct the Articles version operative on the capital-event date; verify the clause authorises that alteration and no later amendment/restriction superseded it.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -5360,18 +5423,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "SHAREHOLDER_RESOLUTION_SIGNED_MINUTES_AND_FORM_VIII_RJSC_ACK",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "SHAREHOLDER_RESOLUTION_SIGNED_MINUTES_AND_FORM_VIII_RJSC_ACK",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director); RJSC",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain notice, proof of service, signed general-meeting minutes/resolution, voting result and Form VIII/RJSC receipt where the transaction requires a resolution filing.",
+              "verification_standard": "Verify resolution type and threshold under the Act and operative Articles, member entitlement, notice/consent, quorum, votes, execution and filing status. Do not presume every s.53 capital alteration requires special resolution.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -5437,6 +5500,24 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "RJSC_CERTIFIED_MEMORANDUM_AND_ARTICLES_IN_FORCE_ON_CAPITAL_EVENT_DATE",
+            "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified registered Articles and Memorandum, all filed alteration documents and RJSC filing acknowledgements. Identify the exact clause authorising the particular capital alteration and its effective date.",
+            "verification_standard": "Authenticate certified copy against RJSC record; reconstruct the Articles version operative on the capital-event date; verify the clause authorises that alteration and no later amendment/restriction superseded it.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "SHAREHOLDER_RESOLUTION_SIGNED_MINUTES_AND_FORM_VIII_RJSC_ACK",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director); RJSC",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain notice, proof of service, signed general-meeting minutes/resolution, voting result and Form VIII/RJSC receipt where the transaction requires a resolution filing.",
+            "verification_standard": "Verify resolution type and threshold under the Act and operative Articles, member entitlement, notice/consent, quorum, votes, execution and filing status. Do not presume every s.53 capital alteration requires special resolution.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -5624,18 +5705,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+              "expected_issuer_class": "Competent Court registry; RJSC for subsequent registration record",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified court order under s.171 extending the s.159 charge-registration period, application and reasons, and RJSC record showing actual registration date. For a charge satisfaction matter, link the order to the exact charge and satisfaction filing.",
+              "verification_standard": "Verify court jurisdiction, case number, parties, order date, conditions, scope, extension period, whether order remains operative and third-party rights protected by s.171(2). Do not call this a Registrar extension; section 171 assigns extension to Court.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -5711,6 +5792,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+            "expected_issuer_class": "Competent Court registry; RJSC for subsequent registration record",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified court order under s.171 extending the s.159 charge-registration period, application and reasons, and RJSC record showing actual registration date. For a charge satisfaction matter, link the order to the exact charge and satisfaction filing.",
+            "verification_standard": "Verify court jurisdiction, case number, parties, order date, conditions, scope, extension period, whether order remains operative and third-party rights protected by s.171(2). Do not call this a Registrar extension; section 171 assigns extension to Court.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -6222,18 +6312,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+              "expected_issuer_class": "Competent Court registry; RJSC for subsequent registration record",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified court order under s.171 extending the s.159 charge-registration period, application and reasons, and RJSC record showing actual registration date. For a charge satisfaction matter, link the order to the exact charge and satisfaction filing.",
+              "verification_standard": "Verify court jurisdiction, case number, parties, order date, conditions, scope, extension period, whether order remains operative and third-party rights protected by s.171(2). Do not call this a Registrar extension; section 171 assigns extension to Court.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -6332,6 +6422,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "COURT_ORDER_EXTENDING_CHARGE_REGISTRATION_PERIOD",
+            "expected_issuer_class": "Competent Court registry; RJSC for subsequent registration record",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified court order under s.171 extending the s.159 charge-registration period, application and reasons, and RJSC record showing actual registration date. For a charge satisfaction matter, link the order to the exact charge and satisfaction filing.",
+            "verification_standard": "Verify court jurisdiction, case number, parties, order date, conditions, scope, extension period, whether order remains operative and third-party rights protected by s.171(2). Do not call this a Registrar extension; section 171 assigns extension to Court.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -6461,18 +6560,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "DIRECTOR_DISQUALIFICATION_GROUND_SPECIFIC_PRIMARY_RECORD",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "DIRECTOR_DISQUALIFICATION_GROUND_SPECIFIC_PRIMARY_RECORD",
+              "expected_issuer_class": "Relevant issuing authority for the specific s.94 ground (court, insolvency court, civil registration authority, company register or competent statutory record custodian)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "First identify the precise alleged s.94 disqualification ground. Obtain the corresponding certified court/insolvency order, date-of-birth/age record, unpaid-call register and demand evidence, or other statutory primary record; do not use one generic evidence type for all grounds.",
+              "verification_standard": "Map evidence to the exact statutory ground and relevant period; verify identity, finality/appeal/stay, age on relevant date, unpaid-call duration and legal status. Require counsel determination for disputed grounds.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -6626,6 +6725,15 @@
             "verification_standard": "Issuer-origin verification against RJSC record; distinguish uploaded/submitted/received/accepted/registered; verify entity, filing ID, effective date and later correction/rejection.",
             "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "DIRECTOR_DISQUALIFICATION_GROUND_SPECIFIC_PRIMARY_RECORD",
+            "expected_issuer_class": "Relevant issuing authority for the specific s.94 ground (court, insolvency court, civil registration authority, company register or competent statutory record custodian)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "First identify the precise alleged s.94 disqualification ground. Obtain the corresponding certified court/insolvency order, date-of-birth/age record, unpaid-call register and demand evidence, or other statutory primary record; do not use one generic evidence type for all grounds.",
+            "verification_standard": "Map evidence to the exact statutory ground and relevant period; verify identity, finality/appeal/stay, age on relevant date, unpaid-call duration and legal status. Require counsel determination for disputed grounds.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -6916,18 +7024,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director) for appointment resolution; RJSC for official filing receipt",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Do not collect this as a standalone assertion. Derive calendar-day interval from authenticated appointment/effective date in board/shareholder resolution and RJSC Form XII submission/receipt timestamp. Preserve both source records and calculation version.",
+              "verification_standard": "Recompute deterministically from original dates; validate event-date semantics and RJSC receipt timestamp; apply the verified statutory deadline and any valid extension/holiday rule. Missing either source date means UNKNOWN. The NLC source currently conflicts between s.92 and s.115; legal citation must be reconciled before scoring.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -7000,6 +7108,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director) for appointment resolution; RJSC for official filing receipt",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Do not collect this as a standalone assertion. Derive calendar-day interval from authenticated appointment/effective date in board/shareholder resolution and RJSC Form XII submission/receipt timestamp. Preserve both source records and calculation version.",
+            "verification_standard": "Recompute deterministically from original dates; validate event-date semantics and RJSC receipt timestamp; apply the verified statutory deadline and any valid extension/holiday rule. Missing either source date means UNKNOWN. The NLC source currently conflicts between s.92 and s.115; legal citation must be reconciled before scoring.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -7397,18 +7514,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director) for appointment resolution; RJSC for official filing receipt",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Do not collect this as a standalone assertion. Derive calendar-day interval from authenticated appointment/effective date in board/shareholder resolution and RJSC Form XII submission/receipt timestamp. Preserve both source records and calculation version.",
+              "verification_standard": "Recompute deterministically from original dates; validate event-date semantics and RJSC receipt timestamp; apply the verified statutory deadline and any valid extension/holiday rule. Missing either source date means UNKNOWN. The NLC source currently conflicts between s.92 and s.115; legal citation must be reconciled before scoring.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -7506,6 +7623,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "DERIVED_STATUTORY_FILING_DELAY_FROM_APPOINTMENT_AND_RJSC_RECEIPT",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director) for appointment resolution; RJSC for official filing receipt",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Do not collect this as a standalone assertion. Derive calendar-day interval from authenticated appointment/effective date in board/shareholder resolution and RJSC Form XII submission/receipt timestamp. Preserve both source records and calculation version.",
+            "verification_standard": "Recompute deterministically from original dates; validate event-date semantics and RJSC receipt timestamp; apply the verified statutory deadline and any valid extension/holiday rule. Missing either source date means UNKNOWN. The NLC source currently conflicts between s.92 and s.115; legal citation must be reconciled before scoring.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -13780,18 +13906,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "ROLLING_12_MONTH_TURNOVER_LEDGER_AUDITED_ACCOUNTS_AND_NBR_VAT_RETURNS",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "ROLLING_12_MONTH_TURNOVER_LEDGER_AUDITED_ACCOUNTS_AND_NBR_VAT_RETURNS",
+              "expected_issuer_class": "Company finance custodian/auditor; NBR VAT system for filed returns",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Collect month-wise sales/turnover ledger, invoices and credit notes, audited financial statements, relevant VAT returns/Mushak records and NBR acknowledgements for the rolling 12-month period; identify taxable/exempt supplies and mandatory-registration activity categories.",
+              "verification_standard": "Reconcile ledger to invoices, bank receipts, financial statements and filed VAT returns; apply statutory turnover definition and thresholds effective for the relevant date, plus mandatory-registration categories and exemptions. Do not use annual audited revenue as a substitute for the statutory rolling-period calculation.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -13828,6 +13954,15 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "ROLLING_12_MONTH_TURNOVER_LEDGER_AUDITED_ACCOUNTS_AND_NBR_VAT_RETURNS",
+            "expected_issuer_class": "Company finance custodian/auditor; NBR VAT system for filed returns",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Collect month-wise sales/turnover ledger, invoices and credit notes, audited financial statements, relevant VAT returns/Mushak records and NBR acknowledgements for the rolling 12-month period; identify taxable/exempt supplies and mandatory-registration activity categories.",
+            "verification_standard": "Reconcile ledger to invoices, bank receipts, financial statements and filed VAT returns; apply statutory turnover definition and thresholds effective for the relevant date, plus mandatory-registration categories and exemptions. Do not use annual audited revenue as a substitute for the statutory rolling-period calculation.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -14935,18 +15070,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain original board minutes/resolution or written circular resolution approving or refusing registration of the specific transfer, plus notice/agenda and quorum record where required by Articles.",
+              "verification_standard": "Verify operative Articles confer the relevant discretion/approval requirement; match transferor, transferee, shares and date; check quorum, conflicts, reasons, notice of refusal and consistency with s.38(7). Board approval is not universally mandatory.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -14955,18 +15090,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+              "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified Articles and every filed alteration in force on the transfer date; extract the exact share-transfer restriction, pre-emption, consent or refusal clause.",
+              "verification_standard": "Authenticate the operative Articles version and amendment dates; interpret restriction against share class, transfer type and s.38; require counsel review for enforceability and scope.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -14975,18 +15110,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+              "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified Articles, filed special resolutions and RJSC acknowledgements for each amendment affecting the relevant transfer clause; preserve clause text and effective dates.",
+              "verification_standard": "Verify source authenticity, full amendment chain, operative clause on transaction date, company identity and whether restriction was validly adopted; do not rely on an unsigned internal Articles copy.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -15025,6 +15160,33 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain original board minutes/resolution or written circular resolution approving or refusing registration of the specific transfer, plus notice/agenda and quorum record where required by Articles.",
+            "verification_standard": "Verify operative Articles confer the relevant discretion/approval requirement; match transferor, transferee, shares and date; check quorum, conflicts, reasons, notice of refusal and consistency with s.38(7). Board approval is not universally mandatory.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+            "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified Articles and every filed alteration in force on the transfer date; extract the exact share-transfer restriction, pre-emption, consent or refusal clause.",
+            "verification_standard": "Authenticate the operative Articles version and amendment dates; interpret restriction against share class, transfer type and s.38; require counsel review for enforceability and scope.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+            "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified Articles, filed special resolutions and RJSC acknowledgements for each amendment affecting the relevant transfer clause; preserve clause text and effective dates.",
+            "verification_standard": "Verify source authenticity, full amendment chain, operative clause on transaction date, company identity and whether restriction was validly adopted; do not rely on an unsigned internal Articles copy.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
@@ -15361,18 +15523,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+              "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified Articles and every filed alteration in force on the transfer date; extract the exact share-transfer restriction, pre-emption, consent or refusal clause.",
+              "verification_standard": "Authenticate the operative Articles version and amendment dates; interpret restriction against share class, transfer type and s.38; require counsel review for enforceability and scope.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -15381,18 +15543,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+              "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain original board minutes/resolution or written circular resolution approving or refusing registration of the specific transfer, plus notice/agenda and quorum record where required by Articles.",
+              "verification_standard": "Verify operative Articles confer the relevant discretion/approval requirement; match transferor, transferee, shares and date; check quorum, conflicts, reasons, notice of refusal and consistency with s.38(7). Board approval is not universally mandatory.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           },
           {
@@ -15401,18 +15563,18 @@
             "fact_status": "SEED_INPUT_CANDIDATE_REQUIRES_SEMANTIC_REVIEW",
             "evidence_links": [
               {
-                "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-                "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+                "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+                "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
               }
             ],
-            "mapping_status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_COUNSEL",
+            "mapping_status": "CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION",
             "candidate_evidence_contract": {
-              "evidence_type": "RULE_SPECIFIC_PRIMARY_EVIDENCE_REQUIRED",
-              "expected_issuer_class": "ISSUER_AND_DOCUMENT_TYPE_REQUIRE_RULE_SPECIFIC_REVIEW",
-              "issuer_status": "ISSUER_UNRESOLVED",
-              "collection_procedure": "Identify the authoritative record for this fact with independent Bangladesh counsel and the company custodian; obtain original/certified source directly from issuer.",
-              "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
-              "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW"
+              "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+              "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+              "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+              "collection_procedure": "Obtain certified Articles, filed special resolutions and RJSC acknowledgements for each amendment affecting the relevant transfer clause; preserve clause text and effective dates.",
+              "verification_standard": "Verify source authenticity, full amendment chain, operative clause on transaction date, company identity and whether restriction was validly adopted; do not rely on an unsigned internal Articles copy.",
+              "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW"
             }
           }
         ],
@@ -15452,6 +15614,33 @@
             "verification_standard": "Do not score from profile boolean or unverified upload. Verify issuer, entity, period, event date, legal scope, authenticity, completeness, status and contradictory evidence.",
             "status": "UNRESOLVED_EVIDENCE_TYPE_REQUIRES_RULE_SPECIFIC_REVIEW",
             "source": "seed/applicability fact-to-evidence candidate mapping"
+          },
+          {
+            "evidence_type": "RJSC_CERTIFIED_ARTICLES_TRANSFER_RESTRICTION_CLAUSE",
+            "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified Articles and every filed alteration in force on the transfer date; extract the exact share-transfer restriction, pre-emption, consent or refusal clause.",
+            "verification_standard": "Authenticate the operative Articles version and amendment dates; interpret restriction against share class, transfer type and s.38; require counsel review for enforceability and scope.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "BOARD_RESOLUTION_APPROVING_SHARE_TRANSFER",
+            "expected_issuer_class": "Company statutory-record custodian (authorised company secretary/director)",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain original board minutes/resolution or written circular resolution approving or refusing registration of the specific transfer, plus notice/agenda and quorum record where required by Articles.",
+            "verification_standard": "Verify operative Articles confer the relevant discretion/approval requirement; match transferor, transferee, shares and date; check quorum, conflicts, reasons, notice of refusal and consistency with s.38(7). Board approval is not universally mandatory.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
+          },
+          {
+            "evidence_type": "RJSC_CERTIFIED_ARTICLES_CLAUSE_AND_FILED_AMENDMENT_CHAIN",
+            "expected_issuer_class": "Registrar of Joint Stock Companies and Firms (RJSC); company custodian",
+            "issuer_status": "NOT_INDEPENDENTLY_VERIFIED",
+            "collection_procedure": "Obtain certified Articles, filed special resolutions and RJSC acknowledgements for each amendment affecting the relevant transfer clause; preserve clause text and effective dates.",
+            "verification_standard": "Verify source authenticity, full amendment chain, operative clause on transaction date, company identity and whether restriction was validly adopted; do not rely on an unsigned internal Articles copy.",
+            "status": "CANDIDATE_LINK_REQUIRES_AUTHENTICATION_AND_REVIEW",
+            "source": "rule-specific unresolved fact resolution; candidate mapping"
           }
         ],
         "fact_to_evidence_mapping_status": "CANDIDATE_FACT_LINKS_REQUIRE_ISSUER_AUTHENTICATION_AND_COUNSEL_REVIEW",
