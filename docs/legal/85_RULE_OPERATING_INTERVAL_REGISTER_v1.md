@@ -38,6 +38,10 @@ For every artifact preserve original bytes, SHA-256, retrieval timestamp, issuer
 
 Use `from` inclusive and `to_exclusive` exclusive. Keep instrument publication date separate from legal commencement date. For each exact rule proposition, enumerate every amendment, substitution, repeal, delegated rule, SRO, regulator instrument, corrigendum and binding judicial order. Apply express retrospective provisions only within their stated scope and subject to savings/transitional provisions. Split intervals only where the specific proposition legally changes. An open-ended interval is not proof that the law remains unchanged.
 
+## Additional unresolved historical amendment lead
+
+A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
+
 ## Explicit exclusions
 
 No dates are inferred from publication alone. No current consolidated wording is projected backwards. No rule is marked legally verified by the presence of a source URL. No scoring, runtime, database, migration, production record or release flag is changed by this register.
