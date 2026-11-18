@@ -46,18 +46,32 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026", "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016", "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014", "BD_CITY_CORP_SRO_200_LAW_2017", "BD_PAURASHAVA_AMENDMENT_ACT_60_2026", "BD_CITY_CORP_AMENDMENT_ACT_61_2026"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         if anchor.get("gazette_index_url"):
             assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
             assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
         else:
-            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd"}
+            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd", "dpp.gov.bd"}
             assert anchor["issuer_official_url"].startswith("https://" + anchor["official_issuer_host"] + "/")
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_trade_license_claim_does_not_assume_31_march_expiry() -> None:
+    payload = load_register()
+    by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
+    for rule_id in ("TL-001", "TL-002"):
+        assert len(by_id[rule_id]["candidate_provisions"]) == 2
+    tl2 = by_id["TL-002"]
+    assert tl2["rule_claim_assessment"]["status"] == "UNSUPPORTED_AS_UNIVERSAL_DEADLINE"
+    city = next(e for e in tl2["amendment_candidates"] if e["primary_record_id"] == "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016")
+    paur = next(e for e in tl2["amendment_candidates"] if e["primary_record_id"] == "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014")
+    assert "five years" in city["commencement_or_effect_note"]
+    assert "30 September" in paur["commencement_or_effect_note"]
+    assert "not necessarily the licence expiry date" in paur["compliance_deadline"]
 
 
 def test_bangladesh_bank_2026_circular_supersedes_account_instructions() -> None:
