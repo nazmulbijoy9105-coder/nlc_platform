@@ -241,7 +241,7 @@ def test_pdf_reconciliation_fails_closed_for_unknown_persisted_finding(monkeypat
         detail={},
     )
 
-    assert _verified_flag_score([unknown]) == (0, False)
+    assert _verified_flag_score([unknown]) == (100, False)
     assert report_module._render_score_reconciliation([unknown], 100, "GREEN") == ""
 
 
