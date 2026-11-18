@@ -36,10 +36,10 @@ def test_rule_outside_product_scoring_allowlist_cannot_force_zero(monkeypatch):
     result = NLCRuleEngine(today=date(2026, 11, 5))._calculate_score(
         [_engine_flag()], CompanyProfile(company_id="x", company_name="Test")
     )
-    assert result.override_applied is True
-    assert result.black_flag_count == 1
-    assert result.final_score == 0
-    assert result.risk_band == Severity.BLACK
+    assert result.override_applied is False
+    assert result.black_flag_count == 0
+    assert result.final_score == 100
+    assert result.risk_band == Severity.NOT_EVALUATED
 
 
 def test_product_allowlisted_black_override_requires_explicit_override_authorisation(monkeypatch):
