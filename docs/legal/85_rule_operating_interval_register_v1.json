@@ -599,6 +599,60 @@
         "A public statement about planned half-yearly reporting is not an amendment to Condition 4 absent a formal legal instrument."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BIDA_GUIDELINE_2023_21_MAY_COPY",
+      "instrument": "BIDA Procedure 2023 for foreign commercial offices, visa recommendations and work permits (Memo No. 03.129.034.00.00.1442.2019-689)",
+      "instrument_type": "ADMINISTRATIVE_GUIDELINE",
+      "issuer": "Bangladesh Investment Development Authority",
+      "publication_date": "2023-05-21",
+      "notification_number": "03.129.034.00.00.1442.2019-689",
+      "official_issuer_host": "scs.ssd.gov.bd",
+      "issuer_official_url": "https://scs.ssd.gov.bd/uploads/serviceForms/Security_Clearance_Guideline.pdf",
+      "supporting_issuer_index_url": "https://www.boi.gov.bd/acts-laws-circulars",
+      "related_bangladesh_bank_reference": "https://www.bb.org.bd/mediaroom/circulars/feid/oct172023feidl06e.pdf",
+      "record_evidence": [
+        "The Government-hosted PDF includes a signed BIDA Procedure 2023 bearing BIDA memo No.03.129.034.00.00.1442.2019-689 dated 21-May-2023.",
+        "Paragraph 2 says the procedure is effective from the date of issue.",
+        "Paragraph 6.5.2.3 requires approved branch/liaison/representative/project offices to bring at least USD 50,000 (or equivalent) through banking channels within two months of permission, with a stated additional 6% monthly amount for each month of delay.",
+        "Appendix 9 work-permit application document lists include an encashment certificate/proof of minimum USD 50,000 for foreign/joint-investment companies.",
+        "BIDA's official Acts/Laws/Circulars index lists the 2023 guideline.",
+        "Bangladesh Bank FEID Circular Letter No.06 dated 17-Oct-2023 states that BIDA issued an amended/updated version by memo No.03.219.344.00.00.1142.2019-849 dated 29-May-2023 and links the BIDA-hosted Guideline2023.pdf."
+      ],
+      "commencement_clause": "Paragraph 2: effective from date of issue (21-May-2023) for this copy.",
+      "effective_from": "2023-05-21",
+      "effective_to": null,
+      "document_authentication_status": "SIGNED_BIDA_COPY_LOCATED_ON_GOVERNMENT_HOST; LATER_29_MAY_UPDATED_VERSION_REFERENCED_BUT_NOT_RETRIEVED",
+      "limitations": [
+        "The 21-May-2023 signed copy is not proven to be the final version; Bangladesh Bank references an updated 29-May-2023 version (memo ...-849) whose original BIDA PDF could not be retrieved in this review.",
+        "This is an administrative procedure, not an Act or Gazette-issued delegated rule; its binding scope and authority must be assessed as an administrative instrument.",
+        "The USD 50,000 paragraph applies to approved foreign commercial offices; Appendix 9 separately concerns work-permit application evidence. It is not a universal paid-up capital requirement for every private company with a foreign shareholder.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_FEID_CIRCULAR_LETTER_06_2023",
+      "instrument": "Bangladesh Bank FEID Circular Letter No. 06, 17 October 2023",
+      "instrument_type": "CENTRAL_BANK_CIRCULAR_LETTER",
+      "issuer": "Bangladesh Bank, Foreign Exchange Investment Department",
+      "publication_date": "2023-10-17",
+      "official_issuer_host": "www.bb.org.bd",
+      "issuer_official_url": "https://www.bb.org.bd/mediaroom/circulars/feid/oct172023feidl06e.pdf",
+      "record_evidence": [
+        "Official Bangladesh Bank PDF identifies FEID Circular Letter No.06 dated 17-Oct-2023 and the Foreign Exchange Investment Department.",
+        "The circular identifies BIDA's updated Procedure 2023 as Notification No.03.219.344.00.00.1142.2019-849 dated 29-May-2023.",
+        "It gives the official BIDA PDF URL and directs all Authorized Dealers to circulate the instructions to stakeholders."
+      ],
+      "commencement_clause": "No separate commencement clause; it directs Authorized Dealers to circulate the BIDA procedure.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; UPDATED_BIDA_VERSION_AND_MEMO_REFERENCE_CONFIRMED",
+      "limitations": [
+        "This circular confirms the existence and reference number of the 29-May BIDA update but does not reproduce the full guideline text.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -623,14 +677,14 @@
   },
   "coverage": {
     "rules": 85,
-    "rules_with_provision_candidates": 82,
-    "rules_missing_provision_candidates": 3,
+    "rules_with_provision_candidates": 83,
+    "rules_missing_provision_candidates": 2,
     "rules_with_non_exhaustive_amendment_history": 85,
     "rules_with_resolved_rule_specific_intervals": 0,
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Twenty-two Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC Code and Financial Reporting notifications, Bangladesh Bank GFET/FE circulars, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication."
+    "note": "Twenty-four Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication."
   },
   "rules": [
     {
@@ -3152,18 +3206,49 @@
       "rule_id": "INC-006",
       "rule_name": "Initial Establishment Remittance Evidence — Work Permit Review",
       "recorded_basis": "BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "BIDA Procedure 2023, paragraph 6.5.2.3 (USD 50,000 inward remittance within two months of permission for approved branch/liaison/representative/project offices)",
+        "BIDA Procedure 2023, Appendix 9 (work-permit application documentary list for foreign/joint-investment companies; encashment certificate/proof of USD 50,000)",
+        "BIDA Procedure 2023, paragraph 2 (effective from date of issue), subject to later 29-May-2023 updated version"
+      ],
       "primary_instrument": {
-        "title": "BIDA Guidelines for foreign commercial offices and work permits (2023)",
-        "url": "https://www.bida.gov.bd/resources",
-        "date": "2023",
-        "note": "Official resource index identifies the guideline; exact downloadable instrument/version and Gazette locator still need pinning.",
-        "publication_date": "2023",
-        "effective_from": null,
-        "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "title": "BIDA Procedure 2023 for foreign commercial offices, visa recommendations and work permits",
+        "official_primary_record_id": "BD_BIDA_GUIDELINE_2023_21_MAY_COPY",
+        "relevant_provision": "Paragraph 6.5.2.3 and Appendix 9",
+        "scope_note": "Conditional administrative requirement; distinguish foreign commercial office permission from work-permit application for foreign/joint-investment companies. Not a universal company capitalization minimum."
       },
-      "amendment_candidates": [],
+      "amendment_candidates": [
+        {
+          "instrument_title": "BIDA Procedure 2023 (21-May-2023 signed copy; Memo No. 03.129.034.00.00.1442.2019-689)",
+          "instrument_type": "ADMINISTRATIVE_GUIDELINE",
+          "publication_date": "2023-05-21",
+          "claimed_effective_from": "2023-05-21",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Paragraph 2 says effective from date of issue. Paragraph 6.5.2.3 requires approved foreign commercial offices to bring USD50,000 (or equivalent) through banking channels within two months of permission, with 6% monthly additional amount for delay. Appendix 9 separately requires encashment certificate/proof for specified foreign/joint-investment work-permit applications.",
+          "amended_provisions": [
+            "BIDA Procedure 2023 paragraph 2, paragraph 6.5.2.3, Appendix 9"
+          ],
+          "official_text_url": "https://scs.ssd.gov.bd/uploads/serviceForms/Security_Clearance_Guideline.pdf",
+          "primary_record_id": "BD_BIDA_GUIDELINE_2023_21_MAY_COPY",
+          "source_claim_status": "SIGNED_BIDA_COPY_LOCATED_ON_GOVERNMENT_HOST",
+          "rule_effect_status": "CONDITIONAL_ADMINISTRATIVE_APPLICATION_REQUIREMENT; FINAL_VERSION_AND_APPLICABILITY_REVIEW_REQUIRED"
+        },
+        {
+          "instrument_title": "BIDA updated Procedure 2023 (29-May-2023, Memo No. 03.219.344.00.00.1142.2019-849)",
+          "instrument_type": "ADMINISTRATIVE_GUIDELINE_UPDATE",
+          "publication_date": "2023-05-29",
+          "claimed_effective_from": null,
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Bangladesh Bank FEID Circular Letter No.06 dated 17-Oct-2023 confirms BIDA issued this updated version and gives the BIDA-hosted Guideline2023.pdf URL. The original updated BIDA PDF was not retrievable in this review, so no provision text or interval is assumed from the earlier 21-May copy.",
+          "amended_provisions": [
+            "BIDA Procedure 2023; exact changes versus 21-May copy not yet authenticated"
+          ],
+          "official_text_url": "https://www.bida.gov.bd/storage/app/media/pdf/Guideline2023.pdf",
+          "primary_record_id": "BD_BB_FEID_CIRCULAR_LETTER_06_2023",
+          "source_claim_status": "UPDATED_VERSION_REFERENCE_CONFIRMED_BY_BB; ORIGINAL_BIDA_PDF_NOT_RETRIEVED",
+          "rule_effect_status": "SUPERSEDING_VERSION_CANDIDATE; EXACT_CONTENT_AND_EFFECTIVE_DATE_UNRESOLVED"
+        }
+      ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
       "operative_interval": {
         "from": null,
@@ -3174,14 +3259,27 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
-      ]
+      ],
+      "rule_claim_assessment": {
+        "status": "CONDITIONAL_ADMINISTRATIVE_APPLICATION_REQUIREMENT; NOT_GENERAL_COMPANY_STATUTORY_MINIMUM",
+        "recorded_rule_requirement": "Reported initial-establishment remittance below USD 50,000 is an internal screening prompt only. Verify the current BIDA guideline, applicant category, date, exceptions and supporting bank evidence. No statutory breach or work-permit refusal is inferred.",
+        "assessment": "The located 21-May-2023 BIDA Procedure paragraph 6.5.2.3 requires approved branch/liaison/representative/project offices to bring at least USD50,000 through banking channels within two months of permission, with a 6% monthly additional amount for delay. Appendix 9 separately requires an encashment certificate/proof of USD50,000 in specified foreign/joint-investment work-permit applications. This is not a universal minimum capital rule for every locally incorporated company with a foreign shareholder. Bangladesh Bank FEID Circular Letter No.06 confirms BIDA issued an updated 29-May-2023 version, but that final PDF was not retrievable; compare it before release.",
+        "evidence_required": [
+          "BIDA permission letter and issue date",
+          "Applicant category: branch, liaison, representative, project office, JVCA, or locally incorporated foreign/joint-investment company",
+          "Whether the trigger is office permission, PI visa recommendation, or work-permit application",
+          "Authorized Dealer bank encashment certificate, remittance amount/date and transaction identifier",
+          "Final BIDA 29-May-2023 Guideline2023.pdf and any later amendment/clarification",
+          "Any exemption, waiver or inter-ministerial committee decision"
+        ]
+      }
     },
     {
       "rule_id": "INC-007",
