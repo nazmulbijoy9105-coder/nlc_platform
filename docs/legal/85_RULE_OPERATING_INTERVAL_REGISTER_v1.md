@@ -15,7 +15,7 @@ It deliberately does **not** claim that all 85 histories are complete. At this s
 - 0 artifact SHA-256 values have been captured from downloaded original bytes.
 - 0 rules have counsel approval.
 
-## Primary-record anchors established
+## Primary-record anchors located
 
 1. **Companies Act 1994 commencement SRO:** Government Press November 1994 index lists SRO No. 321-Law/94, dated 10 November 1994, Ministry of Commerce, p.5033. The Companies Act section 1 footnote records commencement on 1 December 1994. The DPP-hosted one-page PDF is linked. Its extracted text is garbled, so page-image/certified-copy comparison remains required.
 2. **Companies (Amendment) Act 2020, Act No. 7:** DPP index lists the Act on 25 February 2020, pp.2779–2781. The Gazette header identifies Bangladesh Gazette Extraordinary, National Parliament and Act No.7. Section 1(2) says immediate commencement. Section 8's section-85 amendment removes seal wording from s.85(2)(ch); do not treat that as a notice-period amendment.
