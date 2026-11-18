@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "register_id": "NLC_85_RULE_LEGAL_RELEASE_COMPLETION_BLOCKERS",
+  "as_of": "2026-11-18",
+  "jurisdiction": "BD",
+  "canonical_rule_count": 85,
+  "release_policy": "FAIL_CLOSED",
+  "legal_release_authorized": false,
+  "scoring_release_authorized": false,
+  "status": "BLOCKED",
+  "blockers": [
+    {
+      "id": "PROVISION_MAPPING",
+      "required": "85/85 rule propositions mapped to specific primary provisions or a documented, fact-dependent exception",
+      "current": "84/85 provision candidates; FX-001 remains unmapped",
+      "status": "OPEN",
+      "completion_evidence": "Rule-specific provision, enabling authority, exact Bangla pinpoint, scope and applicability; or approved exception explaining why no single provision can be assigned."
+    },
+    {
+      "id": "AMENDMENT_HISTORY",
+      "required": "Exhaustive provision-specific history including amendments, substitutions, repeal, corrigenda, commencement, savings, transition and supersession",
+      "current": "85/85 histories OPEN_NOT_EXHAUSTIVE; 75 candidate events across 29 rules; 56 rules have no identified event candidate",
+      "status": "OPEN",
+      "completion_evidence": "Primary-source search log and event-by-event disposition for every relevant instrument, including explicit negative-search coverage."
+    },
+    {
+      "id": "SOURCE_AUTHENTICATION",
+      "required": "Issuer competence and original artifact authenticated for every relied-upon source",
+      "current": "26 located anchors; 0 independent issuer/counsel authentications",
+      "status": "OPEN",
+      "completion_evidence": "Original artifact, issuer/signature or promulgation verification, Gazette metadata, page-image comparison, legal authority, scope, correction/supersession review and reviewer record."
+    },
+    {
+      "id": "ARTIFACT_INTEGRITY",
+      "required": "SHA-256 of original downloaded bytes for each relied-upon artifact",
+      "current": "0 captured",
+      "status": "OPEN",
+      "completion_evidence": "Hash computed locally from preserved original bytes, retrieval timestamp, URL, custody and artifact metadata. Hashes must not be inferred from URLs or extracted text."
+    },
+    {
+      "id": "OPERATIVE_INTERVALS",
+      "required": "Rule-specific from-inclusive/to-exclusive legal intervals",
+      "current": "0/85 resolved",
+      "status": "OPEN",
+      "completion_evidence": "Clause-level amendment history, commencement, retrospective effect, savings/transitional treatment, scope and counsel-approved interval."
+    },
+    {
+      "id": "FACT_EVIDENCE_AUTHENTICATION",
+      "required": "Verified issuer, collection procedure, verification standard and fact-to-evidence mapping for every rule fact",
+      "current": "292 fact contracts and 304 candidate roles; candidates are not independently authenticated",
+      "status": "OPEN",
+      "completion_evidence": "Fact-specific evidence protocol, authorized issuer, authenticity checks, custody, freshness, mapping rationale and exception states."
+    },
+    {
+      "id": "LEGAL_CONFLICTS",
+      "required": "Disposition of all conflicting or ambiguous provisions and source identities",
+      "current": "Known conflicts remain, including BSEC-001, BSEC-004, INC-001, INC-005, INC-006, TR-002, FX-001 and rule-specific date/scope issues",
+      "status": "OPEN",
+      "completion_evidence": "Primary-source comparison and documented legal interpretation or REQUIRES_LAWYER_JUDGMENT state; no silent resolution."
+    },
+    {
+      "id": "INDEPENDENT_COUNSEL",
+      "required": "Independent Bangladesh company-law review of every release-eligible rule",
+      "current": "0 counsel-approved rules",
+      "status": "OPEN",
+      "completion_evidence": "Reviewer identity and qualification, review date, artifact-package digest, rule-level findings, approval/rejection and signed review record."
+    },
+    {
+      "id": "EXACT_HEAD_CI",
+      "required": "Required CI workflows pass on the exact final branch head",
+      "current": "Latest-head CI not confirmed; earlier run 44221134335 was stale and had failures",
+      "status": "OPEN",
+      "completion_evidence": "Green required checks tied to exact commit SHA; failures and timeouts resolved, not waived."
+    },
+    {
+      "id": "PRODUCT_OWNER_RELEASE",
+      "required": "Separate product-owner approval after legal approval and technical validation",
+      "current": "Not approved",
+      "status": "OPEN",
+      "completion_evidence": "Explicit product release decision; legal approval must not be inferred from product approval."
+    }
+  ],
+  "fail_closed_rules": [
+    "No rule is score_eligible while any required legal source, interval, evidence, applicability or counsel gate is unresolved.",
+    "UNRESOLVED, UNKNOWN, DISPUTED, NOT_REVIEWED and REQUIRES_LAWYER_JUDGMENT must never be converted to compliant, non-compliant or GREEN by default.",
+    "A source URL, index entry, consolidated text, OCR result or candidate amendment is not authentication.",
+    "No release approval may be inferred from CI passing, PR merge, product-owner approval or this blocker register.",
+    "This register is a status artifact; it does not authenticate legal sources or substitute for counsel."
+  ],
+  "merge_scope": {
+    "research_artifacts_may_be_merged_separately": true,
+    "legal_release_merge_authorized": false,
+    "runtime_scoring_changes_authorized": false,
+    "production_migration_authorized": false,
+    "deployment_authorized": false
+  }
+}
