@@ -90,3 +90,20 @@ Until then, `legal_review=REVIEW_REQUIRED`, `product_decision=NOT_REVIEWED`, and
 ## Validation
 
 The unit test `tests/unit/test_85_rule_source_evidence_workpack.py` checks the 85-ID inventory, fail-closed release fields, unverified issuer status and preservation of the AGM-005 historical/canonical citation conflict. It validates the integrity of this workpack; it does not validate the underlying legal conclusions.
+
+
+## Additional statutory families identified for the 19 non-Companies-Act rules
+
+The workpack now attaches official source candidates for these families. They are source-discovery results, not complete amendment histories or legal approvals:
+
+- **BSEC-001–004:** BSEC Corporate Governance Code 2018 and official 2023/2024 amendment sources. BSEC-001 still has a citation mismatch: the catalogue says Code 2023 paragraph 8 while the canonical registry says a financial-reporting instrument. BSEC-004's catalogue says FERA 1947 although its name and canonical source claim point to the BSEC Audit Committee condition. Both conflicts remain open.
+- **FX-001:** Foreign Exchange Regulation Act 1947, Bangladesh Bank GFET 2018 and later Bangladesh Bank circulars/portal material.
+- **INC-005:** GFET 2018 Chapter 9 paragraph 2(A), Bangladesh Bank FE Circular No. 10 (21 June 2023) and FEID Circular No. 1 (27 January 2025), plus subsequent relevant circulars. A 2025 Bangladesh Bank circular confirms later changes to the reporting and temporary FC-account process; rule-specific applicability must be reconciled.
+- **INC-006:** BIDA's official resource index identifies the 2023 foreign commercial office/work-permit guideline, but the exact guideline bytes, operative clauses, version and amendment history remain unpinned.
+- **LBR-001–003:** Bangladesh Labour Act 2006, Labour (Amendment) Ordinance 2025 and Labour (Amendment) Act 2026. The current canonical candidate for LBR-001/002 is s.326(1)(b) with Labour Rules 2015 rr.354–355, while the seed basis says s.35. This is a material citation conflict; the exact licensing trigger and establishment scope must be validated.
+- **TAX-001/003/004:** Income Tax Act 2023 and Finance Act 2026. TAX-003's canonical candidate is ss.170(2) and 171, not the older catalogue s.75 anchor. TAX-004's canonical candidate is ss.154–157 as amended by Finance Act 2026; tax period, taxpayer class and transitional rules remain open.
+- **TAX-002 / VAT-002 / VAT-003:** VAT and Supplementary Duty Act 2012, VAT Amendment Act 2026 (Act 77), Finance Act 2026 (Act 96) and VAT Amendment Ordinance 2026 (Ordinance 38). The Ordinance 38 source records a new s.64 and an effective date indicated as 1 October 2026; rule-specific tax period, return class, holidays, extensions and savings must be reconciled.
+- **TL-001/002:** Local Government (City Corporation) Act 2009 and Local Government (Paurashava) Act 2009, with the City Corporation (Amendment) Act 2026. The actual local authority depends on the company's premises; these are alternative jurisdictional routes.
+- **TR-002:** Stamp Act 1899. Exact Schedule I item, current rate, execution-date version and all subsequent amendments remain open.
+
+The source workpack's coverage counters are deliberately explicit: 43/85 evidence-model entries and 41/85 applicability-model entries; zero independently verified evidence issuers; zero complete fact-to-evidence maps; zero legally approved rules. Do not interpret the number of source URLs as proof that every amendment or Gazette has been screened.
