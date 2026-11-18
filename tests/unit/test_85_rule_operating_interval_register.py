@@ -45,7 +45,7 @@ def test_missing_provision_candidates_are_explicit() -> None:
 
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
-    anchors = {item["source_id"]: item for item in payload["verified_primary_record_anchors"]}
+    anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
     assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020"}
     for anchor in anchors.values():
         assert anchor["issuer"]
