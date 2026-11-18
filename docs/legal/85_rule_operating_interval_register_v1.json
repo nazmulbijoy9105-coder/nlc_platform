@@ -735,10 +735,10 @@
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
     "note": "Twenty-six Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, BIDA, local-government licensing schedules, current VAT instruments and Stamp Act share-transfer instruments. This is not independent counsel authentication or complete legal-text authentication.",
-    "located_primary_record_anchors": 24,
-    "amendment_candidate_entries": 73,
-    "rules_with_amendment_candidates": 28,
-    "rules_without_amendment_candidates": 57
+    "located_primary_record_anchors": 26,
+    "amendment_candidate_entries": 75,
+    "rules_with_amendment_candidates": 29,
+    "rules_without_amendment_candidates": 56
   },
   "rules": [
     {
@@ -4611,8 +4611,7 @@
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
       "missing_provision_candidate": false,
       "unresolved_items": [
-        "PROVISION GAP: Stamp Act 1899 is only the parent-law candidate. The exact Schedule I article, instrument category, applicable rate, territorial amendment and execution-date version have not been identified; no stamp-duty rate or interval may be inferred.",
-        "Exact statutory provision / paragraph / schedule not identified in current workpack.",
+        "RULE SCOPE/INTERVAL REVIEW: provision candidates now identify Schedule I Articles 61(a), 5(b)(ii), and historical 62(a). Remaining work is to classify the executed instrument, consideration, execution date, listed-public-company exemption and territorial/current law; do not apply one rate to every document in a share transaction.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
