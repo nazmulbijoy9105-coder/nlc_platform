@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/nlc/85-rule-operating-interval-register.schema.json",
   "title": "NLC 85-rule provision-level amendment and operative interval register",
   "type": "object",
   "required": [
@@ -11,7 +10,7 @@
     "canonical_rule_count",
     "status_policy",
     "issuer_document_authentication_standard",
-    "verified_primary_record_anchors",
+    "located_primary_record_anchors",
     "interval_method",
     "coverage",
     "rules"
@@ -39,7 +38,7 @@
     "issuer_document_authentication_standard": {
       "type": "object"
     },
-    "verified_primary_record_anchors": {
+    "located_primary_record_anchors": {
       "type": "array",
       "minItems": 3
     },
