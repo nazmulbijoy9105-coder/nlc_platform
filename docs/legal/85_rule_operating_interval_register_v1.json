@@ -368,6 +368,136 @@
         "No SHA-256 captured from original downloaded bytes."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016",
+      "instrument": "City Corporation Model Tax Schedule, 2016 (SRO No. 13-Law/2016)",
+      "instrument_type": "DELEGATED_TAX_SCHEDULE",
+      "issuer": "Government of Bangladesh, Local Government Division, Ministry of LGRD",
+      "publication_date": "2016-01-31",
+      "notification_date": "2016-01-28",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/15280",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/15280_48592.pdf",
+      "enabling_provision": "Local Government (City Corporation) Act 2009, s.84",
+      "record_evidence": [
+        "DPP January 2016 extraordinary-gazette index lists SRO 13-Law/2016, pages 965–996.",
+        "Gazette identifies Ministry of LGRD / Local Government Division and notification date 28-Jan-2016.",
+        "Clause 1(2) states that the schedule applies to all city corporations.",
+        "Clause 10(3) says trade-licence fees on an annual basis may be collected together for a maximum five-year period; no universal 31-March renewal date appears in the schedule text reviewed.",
+        "The enabling Act s.1(2)(b) makes s.84 immediately effective; the SRO itself has no separate express commencement clause located."
+      ],
+      "commencement_clause": "No separate commencement clause in SRO identified; do not equate Gazette publication date with rule-specific effective date.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; TRADE_LICENSE_CLAUSE_10_LOCATED; SRO_COMMENCEMENT_OPEN",
+      "limitations": [
+        "Exact interaction with each corporation's adopted schedule, licence form, local notification and subsequent amendments remains to be checked.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014",
+      "instrument": "Paurashava Model Tax Schedule, 2014 (SRO No. 246-Law/2014)",
+      "instrument_type": "DELEGATED_TAX_SCHEDULE",
+      "issuer": "Government of Bangladesh, Local Government Division, Ministry of LGRD",
+      "publication_date": "2014-10-23",
+      "notification_date": "2014-10-21",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/11889",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/11889_19438.pdf",
+      "enabling_provision": "Local Government (Paurashava) Act 2009, s.100",
+      "record_evidence": [
+        "DPP October 2014 extraordinary-gazette index lists SRO 246-Law/2014, pages 19127–19162.",
+        "Gazette identifies Ministry of LGRD / Local Government Division, Paur-1 Branch and notification date 21-Oct-2014.",
+        "Clause 1(2) applies by class to all Paurashavas.",
+        "Clause 6 imposes annual business/profession tax by business category; clause 17 provides trade-licence application fees.",
+        "Clause 26 sets a 30-September surcharge trigger for licensees who fail to renew, 5% of trade-licence fee, and a separate 10% annual surcharge on arrears.",
+        "Clause 27 repeals the 2003 Paurashava Model Tax Schedule.",
+        "The enabling Act s.1(3)(b) makes ss.98–109 (including s.100) immediately effective; the SRO itself has no separate commencement clause located."
+      ],
+      "commencement_clause": "No separate commencement clause in SRO identified; the 30-September date is a surcharge trigger, not proof of the licence's expiry date.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; CLAUSES_1_6_17_26_27_LOCATED; SRO_COMMENCEMENT_OPEN",
+      "limitations": [
+        "Verify the current local Paurashava adoption/amendment, business category and actual licence validity date.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_CITY_CORP_SRO_200_LAW_2017",
+      "instrument": "SRO No. 200-Law/2017 amending City Corporation Model Tax Schedule 2016",
+      "instrument_type": "DELEGATED_TAX_SCHEDULE_AMENDMENT",
+      "issuer": "Government of Bangladesh, Local Government Division, Ministry of LGRD",
+      "publication_date": "2017-07-02",
+      "notification_date": "2017-06-20",
+      "official_issuer_host": "dpp.gov.bd",
+      "issuer_official_url": "https://www.dpp.gov.bd/upload_file/gazettes/22024_47294.pdf",
+      "enabling_provision": "Local Government (City Corporation) Act 2009, s.84",
+      "record_evidence": [
+        "Official DPP Gazette PDF identifies SRO 200-Law/2017, notification dated 20-Jun-2017, published 2-Jul-2017.",
+        "The instrument substitutes clause 3(3) of the 2016 Model Tax Schedule (holding-tax exemption for specified freedom-fighter-owned property).",
+        "Clause 2 states it takes effect from 1-Jul-2017.",
+        "No trade-licence clause is amended by this SRO."
+      ],
+      "commencement_clause": "Clause 2: effective from 1-Jul-2017.",
+      "effective_from": "2017-07-01",
+      "effective_to": null,
+      "document_authentication_status": "DPP_GAZETTE_PDF_LOCATED; ISSUER_AND_EFFECTIVE_CLAUSE_TEXT_LOCATED; INDEX_PAGE_NOT_RESOLVED",
+      "limitations": [
+        "This amendment does not alter the trade-licence fee provisions reviewed; full later schedule-amendment search remains open.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_PAURASHAVA_AMENDMENT_ACT_60_2026",
+      "instrument": "Local Government (Paurashava) (Amendment) Act, 2026 (Act No. 60 of 2026)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2026-04-10",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61217",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/61217_36154.pdf",
+      "record_evidence": [
+        "DPP index lists Act No.60 of 2026 on 10-Apr-2026, pages 15903–15904.",
+        "Gazette header identifies National Parliament, presidential assent and publication on 10-Apr-2026.",
+        "Section 1(2) states immediate commencement.",
+        "The Act removes definitions and repeals section 20A; no amendment to s.100 or the 2014 Model Tax Schedule clause 26 is identified in the Act text reviewed."
+      ],
+      "commencement_clause": "Section 1(2): immediately effective.",
+      "effective_from": "2026-04-10",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; IMMEDIATE_COMMENCEMENT_AND_AMENDMENT_SCOPE_LOCATED",
+      "limitations": [
+        "No direct effect on the trade-licence clauses in SRO 246/2014 identified; full municipal-law amendment history remains open.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_CITY_CORP_AMENDMENT_ACT_61_2026",
+      "instrument": "Local Government (City Corporation) (Amendment) Act, 2026 (Act No. 61 of 2026)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2026-04-10",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61218",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/61218_72805.pdf",
+      "record_evidence": [
+        "DPP index lists Act No.61 of 2026 on 10-Apr-2026, pages 15905–15907.",
+        "Gazette header identifies National Parliament, presidential assent and publication on 10-Apr-2026.",
+        "Section 1(2) states immediate commencement.",
+        "Sections 7–8 amend Third Schedule item 19.2 and Fifth Schedule item 60A for e-rickshaw licensing/registration and related offences; no general business trade-licence rule is amended."
+      ],
+      "commencement_clause": "Section 1(2): immediately effective.",
+      "effective_from": "2026-04-10",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; IMMEDIATE_COMMENCEMENT_AND_SCHEDULE_SCOPE_LOCATED",
+      "limitations": [
+        "Relevant to e-rickshaw licensing only; do not generalise to ordinary company trade licences.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -392,14 +522,14 @@
   },
   "coverage": {
     "rules": 85,
-    "rules_with_provision_candidates": 78,
-    "rules_missing_provision_candidates": 7,
+    "rules_with_provision_candidates": 80,
+    "rules_missing_provision_candidates": 5,
     "rules_with_non_exhaustive_amendment_history": 85,
     "rules_with_resolved_rule_specific_intervals": 0,
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Thirteen Government Press/official-issuer primary-record anchors are located: four Companies Act/Financial Reporting Act records; BSEC Code 2018, BSEC amendments 2023 and 2024, and BSEC 2026 deadline-extension letter; Bangladesh Bank GFET 2018 and FE/FEID/FEFD-2 circulars 2023, 2025 and 2026. This is not independent counsel authentication or complete legal-text authentication."
+    "note": "Eighteen Government Press/official-issuer primary-record anchors are located: Companies Act/Financial Reporting Act records; BSEC Code and amendments; Bangladesh Bank GFET/FE circulars; City Corporation and Paurashava model tax schedules; related 2017 SRO; and 2026 local-government amendment Acts. This is not independent counsel authentication or complete legal-text authentication."
   },
   "rules": [
     {
@@ -3874,46 +4004,104 @@
       "rule_id": "TL-001",
       "rule_name": "Trade License Not Obtained",
       "recorded_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "Local Government (City Corporation) Act 2009, ss.82–84, read with City Corporation Model Tax Schedule 2016 (SRO 13-Law/2016), clauses 1(2), 10(1)–(3) and business-category schedule",
+        "Local Government (Paurashava) Act 2009, s.100, read with Paurashava Model Tax Schedule 2014 (SRO 246-Law/2014), clauses 1(2), 6, 17 and 26"
+      ],
       "primary_instrument": {
-        "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+        "title": "Local authority-specific model tax schedule under the relevant local-government Act",
         "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
         "date": "2009-10-15",
         "publication_date": "2009-10-15",
         "effective_from": null,
         "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
+        "scope_note": "City Corporation and Paurashava are alternative local authorities. Resolve the company's premises, local authority, business category, adopted schedule, licence form and current amendments."
       },
       "amendment_candidates": [
         {
-          "instrument_title": "Local Government (Paurashava) Act, 2009 (Act No. 58 of 2009)",
-          "instrument_type": null,
-          "publication_date": "2009-10-06",
+          "instrument_title": "City Corporation Model Tax Schedule 2016 (SRO No. 13-Law/2016)",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE",
+          "publication_date": "2016-01-31",
           "claimed_effective_from": null,
           "claimed_effective_to": null,
-          "commencement_or_effect_note": null,
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1024.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+          "commencement_or_effect_note": "Applies to all City Corporations under clause 1(2). Clause 10(3) permits annual trade-licence fees to be collected together for up to five years. No universal 31-March renewal date or separate commencement clause located.",
+          "amended_provisions": [
+            "City Corporation Model Tax Schedule 2016 clauses 1(2), 10(1)–(3), relevant business-category schedule"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/15280_48592.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/15280",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/15280_48592.pdf",
+          "primary_record_id": "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "CITY_CORPORATION_FEE_RULE_LOCATED; LICENCE_EXPIRY_DATE_NOT_SPECIFIED"
+        },
+        {
+          "instrument_title": "Paurashava Model Tax Schedule 2014 (SRO No. 246-Law/2014)",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE",
+          "publication_date": "2014-10-23",
+          "claimed_effective_from": null,
+          "claimed_effective_to": null,
+          "compliance_deadline": "30 September each financial year is the clause 26 surcharge trigger, not necessarily the licence expiry date",
+          "commencement_or_effect_note": "Applies by class to all Paurashavas under clause 1(2). Clause 6 provides annual business/profession tax; clause 26 imposes a 5% surcharge for failure to renew by 30 September and a separate 10% annual surcharge on arrears. No 31-March date appears in the clause reviewed.",
+          "amended_provisions": [
+            "Paurashava Model Tax Schedule 2014 clauses 1(2), 6, 17, 26, 27"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/11889_19438.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/11889",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/11889_19438.pdf",
+          "primary_record_id": "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "PAURASHAVA_SURCHARGE_TRIGGER_LOCATED; LICENCE_EXPIRY_DATE_REQUIRES_LOCAL_RECORD"
+        },
+        {
+          "instrument_title": "SRO No. 200-Law/2017 amending City Corporation Model Tax Schedule 2016",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE_AMENDMENT",
+          "publication_date": "2017-07-02",
+          "claimed_effective_from": "2017-07-01",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Clause 2 makes the SRO effective 1-Jul-2017. It substitutes clause 3(3) concerning specified holding-tax exemptions; no direct change to trade-licence fee clauses is identified.",
+          "amended_provisions": [
+            "City Corporation Model Tax Schedule 2016 clause 3(3) only"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/22024_47294.pdf",
+          "primary_record_id": "BD_CITY_CORP_SRO_200_LAW_2017",
+          "source_claim_status": "DPP_GAZETTE_PDF_LOCATED; INDEX_PAGE_NOT_RESOLVED",
+          "rule_effect_status": "NO_DIRECT_CHANGE_TO_TRADE_LICENSE_CLAUSES"
+        },
+        {
+          "instrument_title": "Local Government (Paurashava) (Amendment) Act, 2026 (Act No. 60 of 2026)",
+          "instrument_type": "ACT",
+          "publication_date": "2026-04-10",
+          "claimed_effective_from": "2026-04-10",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Section 1(2) immediate commencement. The Act removes definitions and repeals section 20A; no amendment to the s.100 power or Paurashava Model Tax Schedule 2014 clause 26 is identified.",
+          "amended_provisions": [
+            "Paurashava Act 2009 s.2 and s.20A"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/61217_36154.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61217",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/61217_36154.pdf",
+          "primary_record_id": "BD_PAURASHAVA_AMENDMENT_ACT_60_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "NO_DIRECT_CHANGE_TO_TRADE_LICENSE_SCHEDULE_IDENTIFIED"
         },
         {
           "instrument_title": "Local Government (City Corporation) (Amendment) Act, 2026 (Act No. 61 of 2026)",
-          "instrument_type": null,
+          "instrument_type": "ACT",
           "publication_date": "2026-04-10",
-          "claimed_effective_from": null,
+          "claimed_effective_from": "2026-04-10",
           "claimed_effective_to": null,
-          "commencement_or_effect_note": null,
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1690.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+          "commencement_or_effect_note": "Section 1(2) immediate commencement. Sections 7–8 amend Third Schedule item 19.2 and Fifth Schedule item 60A for e-rickshaw licensing/registration; not a general trade-licence renewal rule.",
+          "amended_provisions": [
+            "City Corporation Act 2009 Third Schedule item 19.2 and Fifth Schedule item 60A"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/61218_72805.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61218",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/61218_72805.pdf",
+          "primary_record_id": "BD_CITY_CORP_AMENDMENT_ACT_61_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "E_RICKSHAW_ONLY; NO_GENERAL_TRADE_LICENSE_EFFECT"
         }
       ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3926,59 +4114,129 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
-      ]
+      ],
+      "rule_claim_assessment": {
+        "status": "LOCAL_AUTHORITY_AND_ACTIVITY_SCOPE_REQUIRED",
+        "recorded_rule_requirement": "Trade License not obtained from City Corporation/Municipality.",
+        "assessment": "The rule requires the competent local authority, premises, business category, licence class, and applicable local schedule to be identified. City Corporation and Paurashava routes are alternatives, not cumulative.",
+        "evidence_required": [
+          "Actual issued trade licence and stated validity/expiry date",
+          "Company registered/operating premises and competent local authority",
+          "Business category and paid-up capital/classification where relevant",
+          "Current local authority adoption/order, fee schedule and amendments",
+          "Renewal demand/receipt and any surcharge notice"
+        ]
+      }
     },
     {
       "rule_id": "TL-002",
       "rule_name": "Trade License Expired",
       "recorded_basis": "Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "Local Government (City Corporation) Act 2009, ss.82–84, read with City Corporation Model Tax Schedule 2016 (SRO 13-Law/2016), clauses 1(2), 10(1)–(3) and business-category schedule",
+        "Local Government (Paurashava) Act 2009, s.100, read with Paurashava Model Tax Schedule 2014 (SRO 246-Law/2014), clauses 1(2), 6, 17 and 26"
+      ],
       "primary_instrument": {
-        "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+        "title": "Local authority-specific model tax schedule under the relevant local-government Act",
         "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
         "date": "2009-10-15",
         "publication_date": "2009-10-15",
         "effective_from": null,
         "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
+        "scope_note": "City Corporation and Paurashava are alternative local authorities. Resolve the company's premises, local authority, business category, adopted schedule, licence form and current amendments."
       },
       "amendment_candidates": [
         {
-          "instrument_title": "Local Government (Paurashava) Act, 2009 (Act No. 58 of 2009)",
-          "instrument_type": null,
-          "publication_date": "2009-10-06",
+          "instrument_title": "City Corporation Model Tax Schedule 2016 (SRO No. 13-Law/2016)",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE",
+          "publication_date": "2016-01-31",
           "claimed_effective_from": null,
           "claimed_effective_to": null,
-          "commencement_or_effect_note": null,
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1024.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+          "commencement_or_effect_note": "Applies to all City Corporations under clause 1(2). Clause 10(3) permits annual trade-licence fees to be collected together for up to five years. No universal 31-March renewal date or separate commencement clause located.",
+          "amended_provisions": [
+            "City Corporation Model Tax Schedule 2016 clauses 1(2), 10(1)–(3), relevant business-category schedule"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/15280_48592.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/15280",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/15280_48592.pdf",
+          "primary_record_id": "BD_CITY_CORP_MODEL_TAX_SCHEDULE_2016",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "CITY_CORPORATION_FEE_RULE_LOCATED; LICENCE_EXPIRY_DATE_NOT_SPECIFIED"
+        },
+        {
+          "instrument_title": "Paurashava Model Tax Schedule 2014 (SRO No. 246-Law/2014)",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE",
+          "publication_date": "2014-10-23",
+          "claimed_effective_from": null,
+          "claimed_effective_to": null,
+          "compliance_deadline": "30 September each financial year is the clause 26 surcharge trigger, not necessarily the licence expiry date",
+          "commencement_or_effect_note": "Applies by class to all Paurashavas under clause 1(2). Clause 6 provides annual business/profession tax; clause 26 imposes a 5% surcharge for failure to renew by 30 September and a separate 10% annual surcharge on arrears. No 31-March date appears in the clause reviewed.",
+          "amended_provisions": [
+            "Paurashava Model Tax Schedule 2014 clauses 1(2), 6, 17, 26, 27"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/11889_19438.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/11889",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/11889_19438.pdf",
+          "primary_record_id": "BD_PAURASHAVA_MODEL_TAX_SCHEDULE_2014",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "PAURASHAVA_SURCHARGE_TRIGGER_LOCATED; LICENCE_EXPIRY_DATE_REQUIRES_LOCAL_RECORD"
+        },
+        {
+          "instrument_title": "SRO No. 200-Law/2017 amending City Corporation Model Tax Schedule 2016",
+          "instrument_type": "DELEGATED_TAX_SCHEDULE_AMENDMENT",
+          "publication_date": "2017-07-02",
+          "claimed_effective_from": "2017-07-01",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Clause 2 makes the SRO effective 1-Jul-2017. It substitutes clause 3(3) concerning specified holding-tax exemptions; no direct change to trade-licence fee clauses is identified.",
+          "amended_provisions": [
+            "City Corporation Model Tax Schedule 2016 clause 3(3) only"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/22024_47294.pdf",
+          "primary_record_id": "BD_CITY_CORP_SRO_200_LAW_2017",
+          "source_claim_status": "DPP_GAZETTE_PDF_LOCATED; INDEX_PAGE_NOT_RESOLVED",
+          "rule_effect_status": "NO_DIRECT_CHANGE_TO_TRADE_LICENSE_CLAUSES"
+        },
+        {
+          "instrument_title": "Local Government (Paurashava) (Amendment) Act, 2026 (Act No. 60 of 2026)",
+          "instrument_type": "ACT",
+          "publication_date": "2026-04-10",
+          "claimed_effective_from": "2026-04-10",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Section 1(2) immediate commencement. The Act removes definitions and repeals section 20A; no amendment to the s.100 power or Paurashava Model Tax Schedule 2014 clause 26 is identified.",
+          "amended_provisions": [
+            "Paurashava Act 2009 s.2 and s.20A"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/61217_36154.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61217",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/61217_36154.pdf",
+          "primary_record_id": "BD_PAURASHAVA_AMENDMENT_ACT_60_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "NO_DIRECT_CHANGE_TO_TRADE_LICENSE_SCHEDULE_IDENTIFIED"
         },
         {
           "instrument_title": "Local Government (City Corporation) (Amendment) Act, 2026 (Act No. 61 of 2026)",
-          "instrument_type": null,
+          "instrument_type": "ACT",
           "publication_date": "2026-04-10",
-          "claimed_effective_from": null,
+          "claimed_effective_from": "2026-04-10",
           "claimed_effective_to": null,
-          "commencement_or_effect_note": null,
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1690.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+          "commencement_or_effect_note": "Section 1(2) immediate commencement. Sections 7–8 amend Third Schedule item 19.2 and Fifth Schedule item 60A for e-rickshaw licensing/registration; not a general trade-licence renewal rule.",
+          "amended_provisions": [
+            "City Corporation Act 2009 Third Schedule item 19.2 and Fifth Schedule item 60A"
+          ],
+          "official_text_url": "https://www.dpp.gov.bd/upload_file/gazettes/61218_72805.pdf",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61218",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/61218_72805.pdf",
+          "primary_record_id": "BD_CITY_CORP_AMENDMENT_ACT_61_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "E_RICKSHAW_ONLY; NO_GENERAL_TRADE_LICENSE_EFFECT"
         }
       ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -3991,14 +4249,26 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
-      ]
+      ],
+      "rule_claim_assessment": {
+        "status": "UNSUPPORTED_AS_UNIVERSAL_DEADLINE",
+        "recorded_rule_requirement": "Trade License expired. Must renew by 31 March annually.",
+        "assessment": "The 31-March annual renewal date is not supported by the primary schedules located. City Corporation Schedule 2016 clause 10(3) allows annual fees to be collected in advance for up to five years and does not set a universal renewal date. Paurashava Schedule 2014 clause 26 uses 30 September as a surcharge trigger (5%) and separately provides 10% annual surcharge on arrears; it does not state that every licence expires on 30 September. Use the actual licence expiry date and applicable local authority notification.",
+        "evidence_required": [
+          "Actual issued trade licence and stated validity/expiry date",
+          "Company registered/operating premises and competent local authority",
+          "Business category and paid-up capital/classification where relevant",
+          "Current local authority adoption/order, fee schedule and amendments",
+          "Renewal demand/receipt and any surcharge notice"
+        ]
+      }
     },
     {
       "rule_id": "TR-001",
