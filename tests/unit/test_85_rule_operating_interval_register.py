@@ -185,3 +185,42 @@ def test_all_non_null_candidate_dates_are_iso_calendar_dates() -> None:
                 value = candidate[key]
                 if value is not None:
                     date.fromisoformat(value)
+
+
+def test_provision_gap_records_explain_missing_legal_mapping() -> None:
+    payload = load_register()
+    by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
+    expected = {
+        "BSEC-001": "exact current operative paragraph",
+        "FX-001": "exact enabling section",
+        "INC-006": "exact guideline PDF/version",
+        "TR-002": "exact Schedule I article",
+    }
+    for rule_id, required_detail in expected.items():
+        rule = by_id[rule_id]
+        assert rule["missing_provision_candidate"] is True
+        assert any(
+            item.startswith("PROVISION GAP:") and required_detail in item
+            for item in rule["unresolved_items"]
+        )
+
+
+def test_vat_bill_passage_is_only_a_watch_item_not_an_enacted_source() -> None:
+    payload = load_register()
+    vat = next(rule for rule in payload["rules"] if rule["rule_id"] == "VAT-003")
+    assert any(
+        item.startswith("CURRENT-LAW WATCH:")
+        and "No authenticated assent/Gazette artifact" in item
+        and "not legal authority" in item
+        for item in vat["unresolved_items"]
+    )
+
+
+def test_amendment_history_coverage_counters_match_rule_records() -> None:
+    payload = load_register()
+    rules = payload["rules"]
+    coverage = payload["coverage"]
+    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 21
+    assert coverage["amendment_candidate_entries"] == sum(len(rule["amendment_candidates"]) for rule in rules) == 74
+    assert coverage["rules_with_amendment_candidates"] == sum(bool(rule["amendment_candidates"]) for rule in rules) == 27
+    assert coverage["rules_without_amendment_candidates"] == sum(not rule["amendment_candidates"] for rule in rules) == 58
