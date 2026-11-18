@@ -114,6 +114,14 @@ The USD 50,000 condition is therefore a **conditional administrative application
 
 BSS reported that Parliament passed a VAT and Supplementary Duty (Amendment) Bill on 16 November 2026. The report is a discovery lead only: this register does not yet pin an authenticated assent/Gazette artifact or Act number for the post-Ordinance bill. Until the official parliamentary and Gazette records are checked, do not silently assume that Ordinance 38/2026 remains the current section 64 text beyond the parliamentary passage event, and do not treat the news report as a primary legal source. See [BSS report of 16 November 2026](https://www.bssnews.net/js-session/447084).
 
+## Share-transfer stamp duty source chain
+
+The share-transfer duty has a clear schedule transition:
+- **Finance Act 2012 (Act 26)**, Gazette 30-Jun-2012, effective 1-Jul-2012 under s.1(2). Section 8 replaced Stamp Act Schedule I; Article 62(a) charged 1.5% of consideration for transfer of shares. Article 62(2) exempted transfers of shares/debentures of public limited companies whose shares were listed.
+- **Finance Act 2022 (Act 13)**, Gazette 30-Jun-2022, effective 1-Jul-2022 under s.1(2). Section 3 replaced Schedule I; share transfer was renumbered to Article 61(a), retaining 1.5% of consideration and the listed-public-company exemption in Article 61(2).
+- The 2022 Schedule separately charges a **share-sale agreement** under Article 5(b)(ii) at 2 Taka per 1,000 Taka or part thereof of share value. Do not apply the 1.5% transfer-instrument rate to every document in the same transaction.
+- Stamp Act s.17 requires an instrument executed in Bangladesh to be stamped before or at execution. Section 35 concerns admissibility until duty and penalty are paid; it does not automatically make the share title void.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
