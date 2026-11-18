@@ -498,6 +498,79 @@
         "No SHA-256 captured from original downloaded bytes."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_VAT_AMENDMENT_ACT_77_2026",
+      "instrument": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2026-04-10",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61232",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/61232_61624.pdf",
+      "record_evidence": [
+        "DPP index lists Act No.77 of 2026 on 10-Apr-2026, pages 16359–16365.",
+        "Gazette header identifies Bangladesh Gazette Extraordinary, National Parliament, Act No.77 and date 10-Apr-2026.",
+        "Section 1(2) deems the Act effective from 9-Jan-2025.",
+        "Sections 2–4 amend VAT Act definitions and schedules; section 5 repeals VAT Amendment Ordinance 1/2025 with savings. It does not amend VAT Act s.64."
+      ],
+      "commencement_clause": "Section 1(2): deemed effective from 9-Jan-2025.",
+      "effective_from": "2025-01-09",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; COMMENCEMENT_AND_NO_S64_AMENDMENT_SCOPE_LOCATED",
+      "limitations": [
+        "Relevant to VAT definitions and schedules, not the return-frequency provision in s.64.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_FINANCE_ACT_96_2026",
+      "instrument": "Finance Act, 2026 (Act No. 96 of 2026)",
+      "instrument_type": "ACT",
+      "issuer": "Jatiya Sangsad / National Parliament; published by Bangladesh Government Press",
+      "publication_date": "2026-06-30",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/62167",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/62167_39884.pdf",
+      "record_evidence": [
+        "DPP index lists Act No.96 of 2026 on 30-Jun-2026, pages 20283–20433.",
+        "Gazette header identifies Bangladesh Gazette Extraordinary, National Parliament and Act No.96.",
+        "Section 1(2) provides that the Act comes into force on 1-Jul-2026, subject to the stated Provisional Collection of Taxes Act declaration.",
+        "Section 11 substitutes VAT Act s.64 with a return after every three tax periods, generally within 15 days (20 days for specified bodies, banks, insurers and nil-return filers)."
+      ],
+      "commencement_clause": "Section 1(2): effective 1-Jul-2026, subject to stated declaration.",
+      "effective_from": "2026-07-01",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; SECTION_1_AND_SECTION_11_TEXT_LOCATED",
+      "limitations": [
+        "The s.64 replacement was subsequently replaced by VAT Amendment Ordinance 38/2026, deemed effective 1-Oct-2026.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_VAT_AMENDMENT_ORDINANCE_38_2026",
+      "instrument": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+      "instrument_type": "ORDINANCE",
+      "issuer": "President of Bangladesh under Constitution Article 93(1); published by Bangladesh Government Press",
+      "publication_date": "2026-10-14",
+      "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/63234",
+      "gazette_pdf_url": "https://www.dpp.gov.bd/upload_file/gazettes/63234_51897.pdf",
+      "record_evidence": [
+        "DPP index lists Ordinance No.38 of 2026 on 14-Oct-2026, pages 26155–26156, Ministry of Law, Justice and Parliamentary Affairs.",
+        "Gazette header identifies Bangladesh Gazette Extraordinary and date 14-Oct-2026.",
+        "The ordinance preamble invokes Constitution Article 93(1).",
+        "Section 1(2) deems the Ordinance effective from 1-Oct-2026.",
+        "Section 2 replaces VAT Act s.64: registered/listed/registrable persons file a return for each tax period within 15 days; specified government bodies, banks, insurers and nil-return filers may file within 20 days."
+      ],
+      "commencement_clause": "Section 1(2): deemed effective from 1-Oct-2026.",
+      "effective_from": "2026-10-01",
+      "effective_to": null,
+      "document_authentication_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH; ARTICLE_93_PREAMBLE_AND_RETROSPECTIVE_COMMENCEMENT_LOCATED",
+      "limitations": [
+        "No SHA-256 captured from original downloaded bytes.",
+        "Confirm subsequent Parliamentary action, replacement, disallowance or savings before projecting beyond the as-of date."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -522,14 +595,14 @@
   },
   "coverage": {
     "rules": 85,
-    "rules_with_provision_candidates": 80,
-    "rules_missing_provision_candidates": 5,
+    "rules_with_provision_candidates": 81,
+    "rules_missing_provision_candidates": 4,
     "rules_with_non_exhaustive_amendment_history": 85,
     "rules_with_resolved_rule_specific_intervals": 0,
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Eighteen Government Press/official-issuer primary-record anchors are located: Companies Act/Financial Reporting Act records; BSEC Code and amendments; Bangladesh Bank GFET/FE circulars; City Corporation and Paurashava model tax schedules; related 2017 SRO; and 2026 local-government amendment Acts. This is not independent counsel authentication or complete legal-text authentication."
+    "note": "Twenty-one Government Press/official-issuer primary-record anchors are located across Companies Act/Financial Reporting Act, BSEC, Bangladesh Bank, local-government licensing schedules and current VAT instruments. This is not independent counsel authentication or complete legal-text authentication."
   },
   "rules": [
     {
@@ -4658,76 +4731,73 @@
       "rule_id": "VAT-003",
       "rule_name": "VAT Annual Return Overdue",
       "recorded_basis": "Value Added Tax Act 2012 (Bangladesh)",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "Value Added Tax and Supplementary Duty Act 2012, s.64, as substituted by Finance Act 2026 s.11 (effective 1-Jul-2026) and again by VAT Amendment Ordinance 38/2026 s.2 (deemed effective 1-Oct-2026)"
+      ],
       "primary_instrument": {
-        "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+        "title": "Value Added Tax and Supplementary Duty Act 2012, s.64 (periodic return provision)",
         "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
         "date": "2012-12-10",
         "publication_date": "2012-12-10",
         "effective_from": null,
         "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
+        "official_primary_record_id": "BD_VAT_AMENDMENT_ORDINANCE_38_2026",
+        "scope_note": "Taxable person registration/listing status and tax period control; do not infer annual filing obligation."
       },
       "amendment_candidates": [
         {
-          "instrument_title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
-          "instrument_type": null,
+          "instrument_title": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No.77 of 2026)",
+          "instrument_type": "ACT",
+          "publication_date": "2026-04-10",
+          "claimed_effective_from": "2025-01-09",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Section 1(2) deems Act 77 effective 9-Jan-2025. It amends VAT Act definitions and schedules and repeals VAT Amendment Ordinance 1/2025 with savings; it does not amend s.64. Included as a parent-statute chain event, not a return-frequency change.",
+          "amended_provisions": [
+            "VAT Act 2012 definitions and Second/Third Schedules; no s.64 amendment"
+          ],
+          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1706.html",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/61232",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/61232_61624.pdf",
+          "primary_record_id": "BD_VAT_AMENDMENT_ACT_77_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "NO_DIRECT_CHANGE_TO_S64_RETURN_FREQUENCY"
+        },
+        {
+          "instrument_title": "Finance Act, 2026 (Act No.96 of 2026)",
+          "instrument_type": "ACT",
+          "publication_date": "2026-06-30",
+          "claimed_effective_from": "2026-07-01",
+          "claimed_effective_to": "2026-10-01",
+          "commencement_or_effect_note": "Section 1(2) effective 1-Jul-2026. Section 11 replaces VAT Act s.64 with returns after every three tax periods, generally within 15 days (specified classes within 20 days). Its s.64 text is later replaced by Ordinance 38/2026 from 1-Oct-2026. The interval end is represented as exclusive.",
+          "amended_provisions": [
+            64
+          ],
+          "amendment_clause_reference": "Finance Act 2026 s.11",
+          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1725/section-59165.html",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/62167",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/62167_39884.pdf",
+          "primary_record_id": "BD_FINANCE_ACT_96_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "INTERMEDIATE_S64_WORDING_AND_EFFECTIVE_DATE_LOCATED"
+        },
+        {
+          "instrument_title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No.38 of 2026)",
+          "instrument_type": "ORDINANCE",
           "publication_date": "2026-10-14",
           "claimed_effective_from": "2026-10-01",
           "claimed_effective_to": null,
-          "commencement_or_effect_note": "Ordinance s.2 substitutes VAT Act s.64; official consolidated VAT Act footnote states effective 1 October 2026.",
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": "https://www.dpp.gov.bd/bgpress/bangla/index.php/home/download_file/gazettes/63234_51897.pdf",
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_TEXT_AND_CONSOLIDATED_EFFECTIVE_DATE_LOCATED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
-        },
-        {
-          "instrument_title": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
-          "instrument_type": null,
-          "publication_date": "2026-04-10",
-          "claimed_effective_from": null,
-          "claimed_effective_to": null,
-          "commencement_or_effect_note": "The existing NLC amendment register records a deemed effective date of 2025-01-09; rule-specific savings and commencement must be checked.",
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-print-1706.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
-        },
-        {
-          "instrument_title": "Finance Act, 2026 (Act No. 96 of 2026)",
-          "instrument_type": null,
-          "publication_date": "2026-06-30",
-          "claimed_effective_from": null,
-          "claimed_effective_to": null,
-          "commencement_or_effect_note": null,
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/62167_39884.pdf",
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
-        },
-        {
-          "instrument_title": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
-          "instrument_type": null,
-          "publication_date": "2026-10-14",
-          "claimed_effective_from": null,
-          "claimed_effective_to": null,
-          "commencement_or_effect_note": "The consolidated s.64 footnote and NLC amendment register indicate effect from 2026-10-01; exact Gazette and transition must be pinned.",
-          "amended_provisions": [],
-          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
-          "gazette_index_url": null,
-          "gazette_artifact_url": null,
-          "primary_record_id": null,
-          "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
-          "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+          "commencement_or_effect_note": "Section 1(2) deems the Ordinance effective from 1-Oct-2026. Section 2 replaces VAT Act s.64: return for each tax period within 15 days; specified government bodies, banks, insurers and nil-return filers within 20 days. This is periodic filing, not an annual return.",
+          "amended_provisions": [
+            64
+          ],
+          "amendment_clause_reference": "VAT Amendment Ordinance 38/2026 ss.1(2), 2",
+          "official_text_url": "https://bdlaws.minlaw.gov.bd/act-1742/section-59742.html",
+          "gazette_index_url": "https://www.dpp.gov.bd/bgpress/index.php/document/get_extraordinary/63234",
+          "gazette_artifact_url": "https://www.dpp.gov.bd/upload_file/gazettes/63234_51897.pdf",
+          "primary_record_id": "BD_VAT_AMENDMENT_ORDINANCE_38_2026",
+          "source_claim_status": "DPP_INDEX_AND_GAZETTE_HEADER_MATCH",
+          "rule_effect_status": "CURRENT_S64_PERIODIC_RETURN_RULE_LOCATED; AS_OF_2026_11_18"
         }
       ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -4740,14 +4810,26 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
         "Check repeals, substitutions, delegated rules, SROs, circulars, regulator directions and court orders relevant to the proposition.",
         "Determine entity scope, exceptions and the exact date on which the obligation applies to the company."
-      ]
+      ],
+      "rule_claim_assessment": {
+        "status": "NO_UNIVERSAL_ANNUAL_RETURN_OBLIGATION_IDENTIFIED; CURRENT_S64_IS_PERIODIC",
+        "recorded_rule_requirement": "Review prompt only: do not assume a universal annual VAT return; identify taxpayer-specific operative Act/Rule/SRO and filing period before assessing default.",
+        "assessment": "VAT Act 2012 s.64 was replaced by Finance Act 2026 s.11 effective 1-Jul-2026 to require filing after every three tax periods (generally within 15 days). VAT Amendment Ordinance 38/2026 s.2, deemed effective 1-Oct-2026, replaced s.64 again: every registered/listed/registrable person files for each tax period within 15 days, with a 20-day period for specified public bodies, banks, insurers and nil-return filers. Neither provision establishes a universal annual return. Verify taxpayer status, tax period and any NBR extension order.",
+        "evidence_required": [
+          "VAT registration/enlistment status and effective dates",
+          "Tax period assigned by NBR and applicable filing frequency",
+          "Returns filed and NBR acknowledgements for each relevant tax period",
+          "Any Board order extending filing deadline under s.64",
+          "Taxpayer class for 15-day versus 20-day rule"
+        ]
+      }
     }
   ],
   "unresolved_instrument_candidates": [
