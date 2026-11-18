@@ -752,7 +752,7 @@ SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
 
 # Product owner-controlled release switch. This enables deterministic product
 # scoring; it is not a legal-verification or certification claim.
-LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().lower() in {"true", "1", "yes", "on"}
+LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}
 
 
 def legal_score_is_released() -> bool:
