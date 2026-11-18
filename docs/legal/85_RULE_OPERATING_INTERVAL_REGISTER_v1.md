@@ -38,6 +38,16 @@ For every artifact preserve original bytes, SHA-256, retrieval timestamp, issuer
 
 Use `from` inclusive and `to_exclusive` exclusive. Keep instrument publication date separate from legal commencement date. For each exact rule proposition, enumerate every amendment, substitution, repeal, delegated rule, SRO, regulator instrument, corrigendum and binding judicial order. Apply express retrospective provisions only within their stated scope and subject to savings/transitional provisions. Split intervals only where the specific proposition legally changes. An open-ended interval is not proof that the law remains unchanged.
 
+## BSEC Corporate Governance Code source chain
+
+The BSEC Code is separately anchored to the DPP Gazette:
+- 2018 Code, notification dated 3 June and published 10 June 2018, DPP pp.6871–6902. Relevant provisions include Condition 1(2)(a), Condition 5(1)(a), and Condition 9(1)–(3).
+- 2023 amendment, notification dated 16 October and published 20 November 2023, DPP pp.16911–16914. It changes Condition 1(2)(a) and other provisions. The final sentence says “This shall have immediate effect” after item 13; the register does not assume that this applies to every preceding item.
+- 2024 amendment, notification dated 4 April and published 29 April 2024, DPP pp.11071–11072. It adds the female independent-director proviso to Condition 1(2)(a), with compliance required within one year of issuance.
+- BSEC letter dated 26 July 2026, ref. BSEC/ICAD/CGD/2023/106/Part-I/333, on the official BSEC domain, extends that appointment deadline to 31 December 2026. It is an official issuer letter, not a Gazette; authority/delegation and supersession remain review items.
+
+The BSEC-004 title/source conflict remains explicit: the rule title points to Condition 5(1)(a) of the Code, while its recorded statutory basis says the Foreign Exchange Regulation Act 1947. BSEC-001 remains without a provision candidate because its exact quarterly-report instrument and due date are still unidentified.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
