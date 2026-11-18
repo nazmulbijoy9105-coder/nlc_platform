@@ -39,10 +39,10 @@ class TestRulesAPI:
     async def test_black_overrides(self, api_client, super_admin_headers):
         r = await api_client.get("/api/v1/rules", headers=super_admin_headers)
         assert r.status_code == 200
-        # The product-owned override candidate is not active without counsel approval.
+        # Product override authority is independent of counsel verification.
         rules = r.json()
         assert all(isinstance(x["product_scoring_enabled"], bool) for x in rules)
-        assert not any(x["is_black_override"] for x in rules)
+        assert [x["rule_id"] for x in rules if x["is_black_override"]] == ["INC-003"]
         assert all(x["default_severity"] is None for x in rules)
         assert all(x["score_impact"] == 0 for x in rules)
         assert all(
