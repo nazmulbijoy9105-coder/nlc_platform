@@ -58,7 +58,10 @@ def is_notification_eligible(
     if not normalized_type or related_flag_id is not None:
         return False
     if is_rule_notification_type(normalized_type):
-        return legal_score_is_released() and normalized_type in PRODUCT_SCORING_RULE_IDS
+        # Product scoring release is not authority to send statutory/legal alerts.
+        # Rule-linked notifications require independent counsel approval.
+        from app.rule_engine.engine import VERIFIED_RULE_IDS
+        return normalized_type in PRODUCT_SCORING_RULE_IDS and normalized_type in VERIFIED_RULE_IDS
     if normalized_type in GENERIC_LEGAL_ALERT_TYPES:
         return False
     legal_tokens = (
