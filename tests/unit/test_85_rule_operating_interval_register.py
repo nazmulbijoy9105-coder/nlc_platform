@@ -1,0 +1,79 @@
+"""Fail-closed structural checks for the 85-rule operative interval register."""
+from __future__ import annotations
+
+import json
+from datetime import date
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+REGISTER = ROOT / "docs/legal/85_rule_operating_interval_register_v1.json"
+
+
+def load_register() -> dict:
+    return json.loads(REGISTER.read_text(encoding="utf-8"))
+
+
+def test_register_contains_exactly_85_unique_rules() -> None:
+    payload = load_register()
+    rules = payload["rules"]
+    ids = [rule["rule_id"] for rule in rules]
+    assert payload["canonical_rule_count"] == 85
+    assert len(rules) == 85
+    assert len(ids) == len(set(ids)) == 85
+
+
+def test_every_rule_fails_closed_until_interval_review_is_complete() -> None:
+    payload = load_register()
+    for rule in payload["rules"]:
+        interval = rule["operative_interval"]
+        assert interval["from"] is None
+        assert interval["to_exclusive"] is None
+        assert interval["status"] == "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
+        assert rule["amendment_completeness"] == "OPEN_NOT_EXHAUSTIVE"
+        assert rule["issuer_document_authentication_status"] == "NOT_INDEPENDENTLY_VERIFIED"
+        assert rule["legal_effect_status"] == "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW"
+
+
+def test_missing_provision_candidates_are_explicit() -> None:
+    payload = load_register()
+    missing = [r["rule_id"] for r in payload["rules"] if r["missing_provision_candidate"]]
+    assert len(missing) == payload["coverage"]["rules_missing_provision_candidates"]
+    assert len(missing) == 11
+    for rule in payload["rules"]:
+        assert rule["missing_provision_candidate"] is (len(rule["candidate_provisions"]) == 0)
+
+
+def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
+    payload = load_register()
+    anchors = {item["source_id"]: item for item in payload["verified_primary_record_anchors"]}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020"}
+    for anchor in anchors.values():
+        assert anchor["issuer"]
+        assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
+        assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
+        assert anchor["publication_date"]
+        assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
+        assert anchor["artifact_sha256"] is None
+
+
+def test_companies_act_2020_amendments_are_not_conflated() -> None:
+    payload = load_register()
+    by_id = {r["rule_id"]: r for r in payload["rules"]}
+    agm3_events = by_id["AGM-003"]["amendment_candidates"]
+    act7 = [e for e in agm3_events if e["primary_record_id"] == "BD_ACT_7_2020"]
+    act24 = [e for e in agm3_events if e["primary_record_id"] == "BD_ACT_24_2020"]
+    assert act7 and act24
+    assert "seal wording" in (act7[0]["commencement_or_effect_note"] or "")
+    assert act7[0]["claimed_effective_from"] == "2020-02-25"
+    assert act24[0]["claimed_effective_from"] == "2020-11-26"
+    assert 85 in act24[0]["amended_provisions"]
+
+
+def test_all_non_null_candidate_dates_are_iso_calendar_dates() -> None:
+    payload = load_register()
+    for rule in payload["rules"]:
+        for candidate in rule["amendment_candidates"]:
+            for key in ("publication_date", "claimed_effective_from", "claimed_effective_to"):
+                value = candidate[key]
+                if value is not None:
+                    date.fromisoformat(value)
