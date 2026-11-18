@@ -40,7 +40,7 @@
     },
     "located_primary_record_anchors": {
       "type": "array",
-      "minItems": 18
+      "minItems": 21
     },
     "interval_method": {
       "type": "object"
