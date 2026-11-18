@@ -130,8 +130,7 @@ def _rule_to_response(rule) -> RuleResponse:
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
     product_scoring_enabled = (
         legal_score_is_released()
-        and scoring_catalogue_member
-        and legally_verified
+        and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
     )
     return RuleResponse(
         rule_id=rule.rule_id,
@@ -154,7 +153,7 @@ def _rule_to_response(rule) -> RuleResponse:
         product_scoring_enabled=product_scoring_enabled,
         score_impact=(
             rule.score_impact
-            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            if product_scoring_enabled
             else 0
         ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
@@ -163,7 +162,6 @@ def _rule_to_response(rule) -> RuleResponse:
         is_black_override=(
             legally_verified
             product_scoring_enabled
-            and legally_verified
             and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
@@ -278,7 +276,6 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
-        and rule.rule_id in VERIFIED_RULE_IDS
         and legal_score_is_released()
     ]
 

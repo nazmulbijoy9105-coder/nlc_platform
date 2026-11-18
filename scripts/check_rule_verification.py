@@ -211,13 +211,13 @@ def main() -> int:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    expected_release_assignment = 'LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}'
+    expected_release_assignment = 'LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().lower() in {"true", "1", "yes", "on"}'
     if expected_release_assignment not in engine_source:
-        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to false")
+        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to true")
         return 1
     env_example = Path(".env.example").read_text(encoding="utf-8")
-    if not re.search(r"^LEGAL_SCORE_RELEASED=false$", env_example, re.MULTILINE):
-        print("FAIL: .env.example must keep product scoring disabled by default")
+    if not re.search(r"^LEGAL_SCORE_RELEASED=true$", env_example, re.MULTILINE):
+        print("FAIL: .env.example must enable product scoring by default")
         return 1
     release_tree = ast.parse(engine_source)
     release_function = next(

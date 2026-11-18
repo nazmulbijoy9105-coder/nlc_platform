@@ -210,9 +210,14 @@ class TestComplianceService:
         assert isinstance(kpis, dict)
 
     @pytest.mark.asyncio
-    async def test_evaluate_company_full_pipeline(self, db, db_company):
+    async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
+        import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService
+
+        # This fixture explicitly exercises the paused-product-release contract.
+        # Do not depend on the production default, which is now owner-enabled.
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
 
         # Use the production result contract so added scoring fields fail
         # immediately at fixture construction instead of deep in persistence.
@@ -283,8 +288,8 @@ class TestComplianceService:
         )
 
         assert result is not None
-        # Findings are evaluated and persisted, but statutory scores are not
-        # published until both product release and independent legal review exist.
+        # Findings are evaluated and persisted, but the explicit product
+        # release pause withholds the score; counsel review is tracked separately.
         assert result["score"] is None
         assert result["risk_band"] == "NOT_EVALUATED"
         assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
@@ -885,7 +890,7 @@ def test_score_allocation_uses_product_allowlist_and_excludes_unknown_findings(m
     assert allocations[1] == {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
 
 
-def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_approval(monkeypatch):
+def test_score_allocation_applies_product_allowlisted_rule_without_counsel_approval(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState
     from app.services.compliance_service import _applied_score_impacts
@@ -905,7 +910,7 @@ def test_score_allocation_rejects_product_allowlisted_rule_without_counsel_appro
     )
 
     assert _applied_score_impacts([finding]) == [
-        {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
+        {"applied": 10, "status": "APPLIED"}
     ]
 
 
@@ -1199,7 +1204,7 @@ def test_rescue_target_date_prefers_explicit_then_latest_step_date():
 # COUNSEL APPROVAL RELEASE BOUNDARIES
 # =============================================================================
 
-def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch):
+def test_company_flag_api_exposes_product_signal_with_counsel_status_separate(monkeypatch):
     import app.api.companies as companies_api
 
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
@@ -1212,6 +1217,7 @@ def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch
         flag_code="AGM-001",
         severity="RED",
         score_impact=15,
+        evaluation_state="VIOLATION",
         flag_status="ACTIVE",
         triggered_date=date(2026, 11, 1),
         resolved_date=None,
@@ -1221,15 +1227,15 @@ def test_company_flag_api_quarantines_unapproved_statutory_candidate(monkeypatch
 
     response = companies_api._flag_to_response(flag)
 
-    assert response.severity == "NOT_EVALUATED"
-    assert response.score_impact == 0
+    assert response.severity == "RED"
+    assert response.score_impact == 15
     assert response.legal_review_status == "NOT_LEGALLY_VERIFIED"
-    assert response.is_black_override is False
-    assert "No breach" in response.rule_name
+    assert response.is_black_override is False  # AGM-001 is not product-authorised for BLACK override
+    assert "Candidate product-risk signal" in response.rule_name
 
 
 @pytest.mark.asyncio
-async def test_black_override_api_requires_full_counsel_release(monkeypatch):
+async def test_black_override_api_uses_product_authorization_not_counsel_gate(monkeypatch):
     import app.api.rules as rules_api
     import app.rule_engine.engine as engine_module
 
@@ -1237,11 +1243,9 @@ async def test_black_override_api_requires_full_counsel_release(monkeypatch):
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"})
     )
-    monkeypatch.setattr(
-        engine_module, "VERIFIED_RULE_IDS", frozenset({"INC-003"})
-    )
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(rules_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
-    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset({"INC-003"}))
+    monkeypatch.setattr(rules_api, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(
         rules_api, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset({"INC-003"})
     )
@@ -1277,11 +1281,14 @@ async def test_black_override_api_requires_full_counsel_release(monkeypatch):
     assert len(result) == 1
     assert result[0].rule_id == "INC-003"
     assert result[0].is_black_override is True
-    assert result[0].default_severity == "RED"
+    # The product override is authorized, but legal severity remains withheld
+    # until independent counsel verification is recorded.
+    assert result[0].default_severity is None
     assert result[0].score_impact == 20
+    assert result[0].verification_status == "PENDING"
 
 
-def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_override(monkeypatch):
+def test_rule_evaluator_scores_confirmed_candidate_without_claiming_counsel_approval(monkeypatch):
     import app.rule_engine.engine as engine_module
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
@@ -1303,22 +1310,22 @@ def test_rule_evaluator_quarantines_unapproved_candidate_before_score_or_overrid
     output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
     finding = next(flag for flag in output.flags if flag.rule_id == "AUD-001")
 
-    assert finding.severity is engine_module.Severity.NOT_EVALUATED
-    assert finding.state is engine_module.RuleState.UNKNOWN
-    assert finding.eval_state == "UNKNOWN"
-    assert finding.score_impact == 0
-    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
-    assert finding.detail["statutory_finding_authorized"] is False
+    assert finding.severity is engine_module.Severity.YELLOW
+    assert finding.state is engine_module.RuleState.NON_COMPLIANT
+    assert finding.eval_state == "VIOLATION"
+    assert finding.score_impact > 0
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    assert output.score_breakdown.category_deductions["AUD"] > 0
 
 
-def test_compliance_score_impact_requires_verified_rule_and_global_release(monkeypatch):
+def test_compliance_score_impact_uses_product_allowlist_and_global_release(monkeypatch):
     import app.rule_engine.engine as engine_module
     import app.services.compliance_service as compliance_module
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
     flag = SimpleNamespace(
         rule_id="AGM-001",

@@ -108,6 +108,18 @@ def test_confirmed_finding_is_review_required_when_legal_score_release_is_closed
     assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
 
+def test_product_score_does_not_activate_unverified_rescue_action(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = _flag("AGM-001")
+    steps = _seq([finding])
+    assert len(steps) == 1  # candidate remains available for professional review
+    result = _dispositions([finding], steps=steps)
+    assert result[0]["disposition"] == "REVIEW_REQUIRED"
+    assert result[0]["reason"] == "COUNSEL_APPROVAL_REQUIRED"
+
+
 def test_yellow_finding_has_explicit_no_action_reason_in_red_plan(controlled_release):
     finding = _flag("AGM-001", severity=Severity.YELLOW)
 
@@ -255,7 +267,8 @@ def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("NO-SUCH-RULE")])
 
-def test_default_paused_release_keeps_rescue_plan_in_review_only_state():
+def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     assert engine_module.legal_score_is_released() is False
     finding = _flag("AGM-001")
     steps = _seq([finding])
