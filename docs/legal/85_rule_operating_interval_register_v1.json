@@ -246,6 +246,128 @@
         "The 29-Jul-2025 predecessor letter is referenced in this 2026 letter; its original PDF URL in the workpack currently fails to open."
       ],
       "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_GFET_2018",
+      "instrument": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
+      "instrument_type": "CENTRAL_BANK_GUIDELINE",
+      "issuer": "Bangladesh Bank, Foreign Exchange Policy Department",
+      "publication_date": "2018-03-04",
+      "issuer_official_url": "https://www.bb.org.bd/feidportal/guidelines/fullguide_v1.pdf",
+      "supporting_issuer_circular_url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
+      "official_issuer_host": "bb.org.bd",
+      "record_evidence": [
+        "Bangladesh Bank's official guidelines index lists GFET 2018 Volume 1 and Volume 2.",
+        "FE Circular No. 08 dated 4-Mar-2018 states the 2018 volumes supersede the 2009/2010 editions and incorporate instructions through 30-Nov-2017.",
+        "FE Circular No. 08 states that the circular and GFET volumes are issued under section 20(3) of the Foreign Exchange Regulation Act 1947.",
+        "The official Volume 1 PDF is hosted on bb.org.bd."
+      ],
+      "commencement_clause": "No express general effective date identified in the circular; it is issued on 4-Mar-2018. Later circulars modify/repeal topic-specific instructions.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_GUIDELINE_AND_CIRCULAR_LOCATED; LEGAL_EFFECT_AND_AMENDMENT_CHAIN_OPEN",
+      "limitations": [
+        "The 2018 volume is expressly to be read with subsequent amendments and modifications.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_FE_CIRCULAR_10_2023",
+      "instrument": "Bangladesh Bank FE Circular No. 10, 21 June 2023",
+      "instrument_type": "CENTRAL_BANK_CIRCULAR",
+      "issuer": "Bangladesh Bank, Foreign Exchange Policy Department",
+      "publication_date": "2023-06-21",
+      "issuer_official_url": "https://www.bb.org.bd/mediaroom/circulars/fepd/jun212023fepd10e.pdf",
+      "official_issuer_host": "bb.org.bd",
+      "record_evidence": [
+        "Official BB PDF identifies Foreign Exchange Policy Department, FE Circular No.10 and date 21-Jun-2023.",
+        "Circular concerns maintenance of foreign-currency accounts for foreign investment.",
+        "It authorizes ADs to retain foreign currency remitted by foreign investors, open temporary FC accounts, issue Appendix 5/40 certificates, and provides one-year account tenure."
+      ],
+      "commencement_clause": "No express commencement clause identified in the circular text reviewed.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; REFERENCE_DATE_AND_DIRECTOR_SIGNATURE_TEXT_VISIBLE",
+      "limitations": [
+        "Exact interaction with later 2025 and 2026 circulars must be resolved by topic and paragraph.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_FEID_CIRCULAR_01_2025",
+      "instrument": "Bangladesh Bank FEID Circular No. 01, 27 January 2025",
+      "instrument_type": "CENTRAL_BANK_CIRCULAR",
+      "issuer": "Bangladesh Bank, Foreign Exchange Investment Department",
+      "publication_date": "2025-01-27",
+      "issuer_official_url": "https://www.bb.org.bd/mediaroom/circulars/feid/jan272025feid01e.pdf",
+      "official_issuer_host": "bb.org.bd",
+      "record_evidence": [
+        "Official BB PDF identifies FEID Circular No.01 dated 27-Jan-2025, addressed to all Authorized Dealers.",
+        "It expressly cites GFET-2018 Volume 1, Chapter 9, paragraph 2(A), reporting within 14 days of non-resident share issuance.",
+        "It requires ADs/clients to preserve encashment certificates in Appendix 5/39 or 5/40 with the online transaction ID.",
+        "For cash share issuance up to BDT 1 million it sets AD scrutiny/declaration; cumulative share issuance above BDT 1 million is reported to FEID."
+      ],
+      "commencement_clause": "No express commencement clause identified in the circular text reviewed.",
+      "effective_from": null,
+      "effective_to": null,
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; REFERENCE_DATE_AND_DIRECTOR_SIGNATURE_TEXT_VISIBLE",
+      "limitations": [
+        "The threshold/reporting route and the underlying certificate-retention obligation must be kept distinct.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_FEID_CIRCULAR_03_2025",
+      "instrument": "Bangladesh Bank FEID Circular No. 03, 30 September 2025",
+      "instrument_type": "CENTRAL_BANK_CIRCULAR",
+      "issuer": "Bangladesh Bank, Foreign Exchange Investment Department",
+      "publication_date": "2025-09-30",
+      "issuer_official_url": "https://www.bb.org.bd/mediaroom/circulars/feid/sep302025feid03e.pdf",
+      "official_issuer_host": "bb.org.bd",
+      "record_evidence": [
+        "Official BB PDF identifies FEID Circular No.03 dated 30-Sep-2025, addressed to all Authorized Dealers.",
+        "It relaxes reporting of opening temporary NRTAs/FC accounts, but after incorporation requires FEID notification within 14 days with encashment certificate carrying online transaction ID, NRTA/temporary FC account statement and permanent-account entries.",
+        "Paragraph 39 states the circular comes into force immediately."
+      ],
+      "commencement_clause": "Paragraph 39: immediate effect.",
+      "effective_from": "2025-09-30",
+      "effective_to": null,
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; REFERENCE_DATE_TEXT_AND_DIRECTOR_SIGNATURE_VISIBLE",
+      "limitations": [
+        "Scope is the reporting of temporary accounts and subsequent incorporation/share issue; do not generalize to every foreign investment fact.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
+    },
+    {
+      "source_id": "BD_BB_FEFD2_CIRCULAR_12_2026",
+      "instrument": "Bangladesh Bank FEFD-2 Circular No. 12, 12 November 2026",
+      "instrument_type": "CENTRAL_BANK_CIRCULAR",
+      "issuer": "Bangladesh Bank, Foreign Exchange Policy Department-2",
+      "publication_date": "2026-11-12",
+      "issuer_official_url": "https://www.bb.org.bd/mediaroom/circulars/fepd-2/nov122026fepd-212e.pdf",
+      "official_issuer_host": "bb.org.bd",
+      "record_evidence": [
+        "Official BB PDF identifies FEFD-2 Circular No.12 dated 12-Nov-2026, addressed to all Authorized Dealers.",
+        "Paragraph 1 states existing foreign-currency account instructions in GFET-2018 Volume 1 and subsequent circulars stand repealed with issuance, except monthly reporting instructions in GFET Volume 2.",
+        "Paragraph 31 Part E regulates FC accounts for foreign investment; paragraph 31(3)(a) requires ADs to issue a certificate in Appendix 5 for inward remittances.",
+        "The circular is issued under section 20(3) of the Foreign Exchange Regulation Act 1947.",
+        "Paragraph 20 states the instructions remain valid for one year from issue date."
+      ],
+      "commencement_clause": "Paragraph 1: existing account instructions stand repealed with issuance; paragraph 20: circular valid for one year from issue date.",
+      "effective_from": "2026-11-12",
+      "effective_to": null,
+      "validity_period_text": "One year from 12-Nov-2026; exact last operative date and any later circular/savings interpretation remain to be confirmed.",
+      "document_authentication_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; REFERENCE_DATE_SIGNATORY_AND_SUPERSESSION_TEXT_VISIBLE",
+      "limitations": [
+        "The supersession is limited to existing foreign-currency account instructions in GFET-2018 Vol.1 and subsequent circulars; it does not automatically repeal every share-issuance reporting requirement in GFET Chapter 9.",
+        "The relationship between FEID Circular 1/2025, FEID Circular 3/2025, GFET Chapter 9 paragraphs 2(A)/2(C), and new Part E paragraph 31 must be determined clause by clause.",
+        "No SHA-256 captured from original downloaded bytes."
+      ],
+      "artifact_sha256": null
     }
   ],
   "interval_method": {
@@ -270,14 +392,14 @@
   },
   "coverage": {
     "rules": 85,
-    "rules_with_provision_candidates": 77,
-    "rules_missing_provision_candidates": 8,
+    "rules_with_provision_candidates": 78,
+    "rules_missing_provision_candidates": 7,
     "rules_with_non_exhaustive_amendment_history": 85,
     "rules_with_resolved_rule_specific_intervals": 0,
     "independently_authenticated_issuers": 0,
     "source_artifact_sha256_captured": 0,
     "legal_counsel_approved_rules": 0,
-    "note": "Eight Government Press/official-issuer primary-record anchors are located: Companies Act commencement SRO 321-Law/1994; Companies Amendment Acts 7/2020 and 24/2020; Financial Reporting Act 2015; BSEC Corporate Governance Code 2018, BSEC amendments 2023 and 2024, and BSEC 2026 deadline-extension letter. This is not independent counsel authentication or complete legal-text authentication."
+    "note": "Thirteen Government Press/official-issuer primary-record anchors are located: four Companies Act/Financial Reporting Act records; BSEC Code 2018, BSEC amendments 2023 and 2024, and BSEC 2026 deadline-extension letter; Bangladesh Bank GFET 2018 and FE/FEID/FEFD-2 circulars 2023, 2025 and 2026. This is not independent counsel authentication or complete legal-text authentication."
   },
   "rules": [
     {
@@ -2676,15 +2798,24 @@
       "rule_id": "INC-005",
       "rule_name": "Encashment Certificate Missing — Foreign Shareholding",
       "recorded_basis": "GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
-      "candidate_provisions": [],
+      "candidate_provisions": [
+        "GFET 2018 Volume 1, Chapter 9, paragraph 2(A)",
+        "GFET 2018 Volume 1, Chapter 9, paragraph 2(C)",
+        "Bangladesh Bank FE Circular No. 10 dated 21 June 2023",
+        "Bangladesh Bank FEID Circular No. 01 dated 27 January 2025",
+        "Bangladesh Bank FEID Circular No. 03 dated 30 September 2025",
+        "Bangladesh Bank FEFD-2 Circular No. 12 dated 12 November 2026, Part E paragraph 31(3)(a)"
+      ],
       "primary_instrument": {
-        "title": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
+        "title": "GFET 2018 Volume 1, Chapter 9, paragraph 2(A), read with subsequent Bangladesh Bank circulars",
         "url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
         "date": "2018-03-04",
         "publication_date": "2018-03-04",
         "effective_from": null,
         "effective_to": null,
-        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED"
+        "status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
+        "official_primary_record_id": "BD_BB_GFET_2018",
+        "scope_note": "Foreign-investment share issuance in favour of non-residents; bank/AD duties, resident company status, foreign remittance channel, transaction value and applicable reporting route require fact-specific review."
       },
       "amendment_candidates": [
         {
@@ -2731,6 +2862,66 @@
           "primary_record_id": null,
           "source_claim_status": "OFFICIAL_SOURCE_LOCATED_RULE_LEVEL_EFFECTIVE_INTERVAL_AND_SCOPE_REVIEW_REQUIRED",
           "rule_effect_status": "REQUIRES_PROVISION_LEVEL_COMPARISON_AND_COUNSEL_REVIEW"
+        },
+        {
+          "instrument_title": "Bangladesh Bank FE Circular No. 10, 21 June 2023",
+          "instrument_type": "CENTRAL_BANK_CIRCULAR",
+          "publication_date": "2023-06-21",
+          "claimed_effective_from": null,
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Authorizes AD retention of foreign-currency remittances for foreign investment, temporary FC accounts, Appendix 5/40 certificates and one-year account tenure. No express commencement clause located.",
+          "amended_provisions": [
+            "GFET 2018 Volume 1, Chapter 9, paragraph 2(C) foreign-investment account operations"
+          ],
+          "official_text_url": "https://www.bb.org.bd/mediaroom/circulars/fepd/jun212023fepd10e.pdf",
+          "primary_record_id": "BD_BB_FE_CIRCULAR_10_2023",
+          "source_claim_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED",
+          "rule_effect_status": "TOPIC_SPECIFIC_ACCOUNT_RULE; LATER_SUPERSESSION_REVIEW_REQUIRED"
+        },
+        {
+          "instrument_title": "Bangladesh Bank FEID Circular No. 01, 27 January 2025",
+          "instrument_type": "CENTRAL_BANK_CIRCULAR",
+          "publication_date": "2025-01-27",
+          "claimed_effective_from": null,
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Cites GFET-2018 Vol.1 Chapter 9 paragraph 2(A), requires reporting within 14 days of qualifying non-resident share issuance and preservation of Appendix 5/39 or 5/40 encashment certificate with online transaction ID. BDT 1 million threshold/reporting route is distinct from certificate preservation.",
+          "amended_provisions": [
+            "GFET 2018 Volume 1, Chapter 9, paragraph 2(A) reporting and documentary requirements"
+          ],
+          "official_text_url": "https://www.bb.org.bd/mediaroom/circulars/feid/jan272025feid01e.pdf",
+          "primary_record_id": "BD_BB_FEID_CIRCULAR_01_2025",
+          "source_claim_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED",
+          "rule_effect_status": "DOCUMENTARY_REQUIREMENT_LOCATED; EXACT_COMPANY_AND_TRANSACTION_SCOPE_REVIEW_REQUIRED"
+        },
+        {
+          "instrument_title": "Bangladesh Bank FEID Circular No. 03, 30 September 2025",
+          "instrument_type": "CENTRAL_BANK_CIRCULAR",
+          "publication_date": "2025-09-30",
+          "claimed_effective_from": "2025-09-30",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Express immediate effect. Relaxes opening-reporting of temporary NRTAs/FC accounts but requires post-incorporation notification within 14 days with encashment certificate, online transaction ID and account statements.",
+          "amended_provisions": [
+            "GFET 2018 Volume 1, Chapter 9, paragraphs 2(A) and 2(C) reporting for temporary investment accounts"
+          ],
+          "official_text_url": "https://www.bb.org.bd/mediaroom/circulars/feid/sep302025feid03e.pdf",
+          "primary_record_id": "BD_BB_FEID_CIRCULAR_03_2025",
+          "source_claim_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; IMMEDIATE_EFFECT_CLAUSE_LOCATED",
+          "rule_effect_status": "IMMEDIATE_EFFECT_TEXT_LOCATED; COMPANY_AND_TRANSACTION_SCOPE_REVIEW_REQUIRED"
+        },
+        {
+          "instrument_title": "Bangladesh Bank FEFD-2 Circular No. 12, 12 November 2026",
+          "instrument_type": "CENTRAL_BANK_CIRCULAR",
+          "publication_date": "2026-11-12",
+          "claimed_effective_from": "2026-11-12",
+          "claimed_effective_to": null,
+          "commencement_or_effect_note": "Paragraph 1 repeals existing GFET-2018 Vol.1 foreign-currency account instructions and subsequent account circulars with issuance, subject to the stated exception for GFET Vol.2 monthly reporting. Part E paragraph 31 governs foreign-investment FC accounts and 31(3)(a) requires an AD certificate in Appendix 5. The circular is valid for one year from issue date. It does not automatically repeal every separate Chapter 9 share-issuance reporting duty.",
+          "amended_provisions": [
+            "GFET 2018 Volume 1 foreign-currency account instructions; Part E paragraph 31(1)–(3) foreign-investment FC accounts"
+          ],
+          "official_text_url": "https://www.bb.org.bd/mediaroom/circulars/fepd-2/nov122026fepd-212e.pdf",
+          "primary_record_id": "BD_BB_FEFD2_CIRCULAR_12_2026",
+          "source_claim_status": "OFFICIAL_BB_ISSUER_CIRCULAR_LOCATED; ISSUANCE_SUPERSESSION_AND_VALIDITY_TEXT_LOCATED",
+          "rule_effect_status": "ACCOUNT_RULE_SUPERSESSION_LOCATED; CHAPTER_9_SHARE_ISSUE_INTERACTION_REQUIRES_COUNSEL"
         }
       ],
       "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
@@ -2743,8 +2934,9 @@
       },
       "issuer_document_authentication_status": "NOT_INDEPENDENTLY_VERIFIED",
       "legal_effect_status": "REQUIRES_INDEPENDENT_BANGLADESH_COUNSEL_REVIEW",
-      "missing_provision_candidate": true,
+      "missing_provision_candidate": false,
       "unresolved_items": [
+        "As of 12-Nov-2026, Bangladesh Bank FEFD-2 Circular No.12 replaces existing GFET-2018 Vol.1 foreign-currency account instructions and contains new Part E paragraph 31. Counsel must reconcile its Appendix-5 certificate with FEID Circulars 1/2025 and 3/2025 and distinguish account-operation rules from continuing Chapter 9 share-issuance reporting.",
         "Exact statutory provision / paragraph / schedule not identified in current workpack.",
         "Check authentic Bangla Gazette wording and any corrigendum/erratum.",
         "Check each amendment instrument, commencement clause, retrospective provision, savings and transitional provision.",
