@@ -130,3 +130,10 @@ This does **not** mean 292/292 mappings are verified or complete. Issuer authent
 - `first_auditor_appointed` is linked to the Board's first-auditor appointment under s.210(6), not the separate AGM auditor appointment/notice pathway.
 
 All mappings remain `CANDIDATE_MAPPING_REQUIRES_ISSUER_AUTHENTICATION`; verified mappings remain zero.
+
+
+### Additional primary-source pinning
+
+The workpack now pins direct Bangladesh Laws provision pages for Companies Act 1994 ss.53, 85, 89, 95, 159, 172, 210(6), and 38(7), plus the official Bangladesh Government Press Gazette PDF for Companies (Second Amendment) Act 2020 (Act 24 of 2020), dated 26 November 2020. The Gazette text confirms s.38(3A) insertion and s.85(1) amendment. Act 7 of 2020 is also linked with its official text/Gazette and its s.85(2)(ch) scope is distinguished from the short-notice consent rule.
+
+The Act's SRO commencement date, 1 December 1994, is recorded as a **base commencement candidate** on the directly sourced rules. It is not promoted to a complete operative interval: later amendment screening, savings/transitional provisions and rule-specific commencement remain open. The operative interval status remains unresolved until that full screening is completed.
