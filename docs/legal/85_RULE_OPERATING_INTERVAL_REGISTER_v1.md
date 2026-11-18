@@ -69,6 +69,15 @@ Primary Gazette records now pinned:
 
 **Rule correction:** the workpack's generic “renew by 31 March annually” claim is unsupported as a universal rule. For a City Corporation, the 2016 schedule allows up to five years' advance fee collection and does not set a universal renewal date. For a Paurashava, clause 26 uses 30 September for a surcharge trigger, not necessarily the licence expiry date. The actual licence and current local authority order must control.
 
+## VAT return provision source chain
+
+The annual-return rule is not supported as a universal obligation. The current source chain for VAT Act 2012 section 64 is:
+- **Finance Act 2026 (Act 96)**, published 30-Jun-2026; section 1(2) brings it into force on 1-Jul-2026. Section 11 replaced s.64 with a return after every three tax periods, generally within 15 days (20 days for specified categories).
+- **VAT Amendment Ordinance 38/2026**, Gazette 14-Oct-2026; section 1(2) deems it effective from 1-Oct-2026. Section 2 replaces s.64 again, requiring a return for each tax period within 15 days (20 days for specified government bodies, banks, insurers and nil-return filers).
+- **VAT Amendment Act 77/2026**, effective 9-Jan-2025 by section 1(2), changes VAT definitions/schedules and repeals the 2025 amendment ordinance with savings; it does not amend s.64.
+
+Therefore, as of 18-Nov-2026, the located s.64 text is periodic, not a universal annual return. Taxpayer registration status, assigned tax period and any NBR extension order control the assessment.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
