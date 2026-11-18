@@ -859,9 +859,24 @@ class NLCRuleEngine:
 
         # Product-owner approval authorizes the product's deterministic risk
         # indicator. Independent counsel verification is tracked separately in
-        # VERIFIED_RULE_IDS and MUST NOT suppress product scoring. Individual
-        # findings still require applicability, verified evidence and a
-        # confirmed VIOLATION state in the scoring path.
+        # VERIFIED_RULE_IDS and MUST NOT suppress product scoring. Preserve an
+        # explicit legal-review annotation for candidate findings without
+        # changing their evaluator state, severity, evidence or score impact.
+        for flag in self._flags:
+            if (
+                flag.rule_id in PRODUCT_SCORING_RULE_IDS
+                and flag.rule_id not in VERIFIED_RULE_IDS
+            ):
+                detail = dict(flag.detail or {})
+                detail.update({
+                    "legal_validation_status": "PENDING_COUNSEL_APPROVAL",
+                    "candidate_severity": str(getattr(flag.severity, "value", flag.severity)),
+                    "candidate_state": str(getattr(flag.state, "value", flag.state)),
+                    "candidate_eval_state": flag.eval_state,
+                    "candidate_score_impact": flag.score_impact,
+                    "statutory_finding_authorized": False,
+                })
+                flag.detail = detail
 
         # Coverage is calculated in _calculate_score via _input_coverage(company)
 
