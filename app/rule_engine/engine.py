@@ -3707,7 +3707,7 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in PRODUCT_SCORING_RULE_IDS
-                        and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+            and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
@@ -3776,7 +3776,7 @@ class NLCRuleEngine:
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-                        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
+            and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and flag.is_black_override
