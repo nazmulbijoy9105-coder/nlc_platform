@@ -191,9 +191,7 @@ def test_provision_gap_records_explain_missing_legal_mapping() -> None:
     payload = load_register()
     by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
     expected = {
-        "BSEC-001": "exact current operative paragraph",
         "FX-001": "exact enabling section",
-        "INC-006": "exact guideline PDF/version",
         "TR-002": "exact Schedule I article",
     }
     for rule_id, required_detail in expected.items():
@@ -220,7 +218,18 @@ def test_amendment_history_coverage_counters_match_rule_records() -> None:
     payload = load_register()
     rules = payload["rules"]
     coverage = payload["coverage"]
-    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 21
-    assert coverage["amendment_candidate_entries"] == sum(len(rule["amendment_candidates"]) for rule in rules) == 74
-    assert coverage["rules_with_amendment_candidates"] == sum(bool(rule["amendment_candidates"]) for rule in rules) == 27
-    assert coverage["rules_without_amendment_candidates"] == sum(not rule["amendment_candidates"] for rule in rules) == 58
+    assert coverage["located_primary_record_anchors"] == len(payload["located_primary_record_anchors"]) == 24
+    assert coverage["amendment_candidate_entries"] == sum(len(rule["amendment_candidates"]) for rule in rules) == 73
+    assert coverage["rules_with_amendment_candidates"] == sum(bool(rule["amendment_candidates"]) for rule in rules) == 28
+    assert coverage["rules_without_amendment_candidates"] == sum(not rule["amendment_candidates"] for rule in rules) == 57
+
+
+def test_bsec_and_bida_source_identity_and_version_gaps_remain_explicit() -> None:
+    payload = load_register()
+    by_id = {rule["rule_id"]: rule for rule in payload["rules"]}
+    assert by_id["BSEC-001"]["missing_provision_candidate"] is False
+    assert any("SOURCE IDENTITY CONFLICT:" in item for item in by_id["BSEC-001"]["unresolved_items"])
+    assert by_id["INC-006"]["missing_provision_candidate"] is False
+    assert any("VERSION GAP:" in item for item in by_id["INC-006"]["unresolved_items"])
+    assert by_id["BSEC-001"]["operative_interval"]["from"] is None
+    assert by_id["INC-006"]["operative_interval"]["from"] is None
