@@ -46,18 +46,30 @@ def test_missing_provision_candidates_are_explicit() -> None:
 def test_primary_record_anchors_have_issuer_and_gazette_provenance() -> None:
     payload = load_register()
     anchors = {item["source_id"]: item for item in payload["located_primary_record_anchors"]}
-    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026"}
+    assert set(anchors) == {"BD_DPP_SRO_321_LAW_1994", "BD_ACT_7_2020", "BD_ACT_24_2020", "BD_ACT_16_2015_FINANCIAL_REPORTING", "BD_BSEC_CGC_2018", "BD_BSEC_CGC_AMENDMENT_2023", "BD_BSEC_CGC_AMENDMENT_2024", "BD_BSEC_FEMALE_ID_EXTENSION_2026", "BD_BB_GFET_2018", "BD_BB_FE_CIRCULAR_10_2023", "BD_BB_FEID_CIRCULAR_01_2025", "BD_BB_FEID_CIRCULAR_03_2025", "BD_BB_FEFD2_CIRCULAR_12_2026"}
     for anchor in anchors.values():
         assert anchor["issuer"]
         if anchor.get("gazette_index_url"):
             assert anchor["gazette_index_url"].startswith("https://www.dpp.gov.bd/")
             assert anchor["gazette_pdf_url"].startswith("https://www.dpp.gov.bd/")
         else:
-            assert anchor["official_issuer_host"] == "sec.gov.bd"
-            assert anchor["issuer_official_url"].startswith("https://sec.gov.bd/")
+            assert anchor["official_issuer_host"] in {"sec.gov.bd", "bb.org.bd"}
+            assert anchor["issuer_official_url"].startswith("https://" + anchor["official_issuer_host"] + "/")
         assert anchor["publication_date"]
         assert anchor["document_authentication_status"] != "FULLY_AUTHENTICATED"
         assert anchor["artifact_sha256"] is None
+
+
+def test_bangladesh_bank_2026_circular_supersedes_account_instructions() -> None:
+    payload = load_register()
+    rule = next(r for r in payload["rules"] if r["rule_id"] == "INC-005")
+    assert len(rule["candidate_provisions"]) == 6
+    events = [e for e in rule["amendment_candidates"] if e["primary_record_id"] == "BD_BB_FEFD2_CIRCULAR_12_2026"]
+    assert len(events) == 1
+    event = events[0]
+    assert event["claimed_effective_from"] == "2026-11-12"
+    assert "repeals existing GFET-2018 Vol.1" in event["commencement_or_effect_note"]
+    assert "Chapter 9 share-issuance reporting" in event["commencement_or_effect_note"]
 
 
 def test_bsec_code_provisions_and_current_female_director_deadline_are_traced() -> None:
