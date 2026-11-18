@@ -15,6 +15,19 @@ It deliberately does **not** claim that all 85 histories are complete. At this s
 - 0 artifact SHA-256 values have been captured from downloaded original bytes.
 - 0 rules have counsel approval.
 
+## Provision-level gaps that remain open
+
+The 85-rule inventory currently has 81 provision candidates and four explicit gaps. These are deliberately not filled with guessed section numbers:
+
+| Rule | Recorded source claim | What is still missing |
+|---|---|---|
+| BSEC-001 | BSEC Corporate Governance Code 2023, paragraph 8 | Exact current operative paragraph/instrument and the quarterly-reporting clause must be authenticated. |
+| FX-001 | Foreign Exchange Regulation Act 1947 | Exact FERA enabling section and current GFET chapter/paragraph/circular clause for the actual rule proposition. |
+| INC-006 | BIDA 2023 foreign commercial office/work-permit guidelines | Exact guideline bytes/version, issuer/authority, clause, commencement, scope and supersession chain. |
+| TR-002 | Stamp Act 1899 | Exact Schedule I article, instrument category, rate, territorial amendment and execution-date version. |
+
+The register contains 74 amendment/related-instrument candidate entries across 27 rules; 58 rules have no amendment candidate entry in this snapshot. These are research candidates, not exhaustive amendment histories. All 85 histories remain OPEN_NOT_EXHAUSTIVE. No missing section, date or rate is to be inferred merely to make the register appear complete.
+
 ## Primary-record anchors located
 
 1. **Companies Act 1994 commencement SRO:** Government Press November 1994 index lists SRO No. 321-Law/94, dated 10 November 1994, Ministry of Commerce, p.5033. The Companies Act section 1 footnote records commencement on 1 December 1994; the SRO scan remains only partially text-authenticated. The DPP-hosted one-page PDF is linked. Its extracted text is garbled, so page-image/certified-copy comparison remains required.
@@ -96,6 +109,10 @@ A signed BIDA Procedure 2023 copy dated 21-May-2023 is located in a Government-h
 However, Bangladesh Bank FEID Circular Letter No.06 dated 17-Oct-2023 confirms that BIDA issued an updated version on 29-May-2023 under memo No.03.219.344.00.00.1142.2019-849 and links the BIDA-hosted PDF. That final BIDA PDF could not be retrieved here. The 21-May copy must not be assumed to be the final operative version.
 
 The USD 50,000 condition is therefore a **conditional administrative application requirement**, not a universal statutory minimum capital for every locally incorporated company with a foreign shareholder. The rule must distinguish office permission, PI-visa recommendation and work-permit application, and must verify the final BIDA guideline and actual bank evidence.
+
+## Current VAT legislative watch — 18 November 2026
+
+BSS reported that Parliament passed a VAT and Supplementary Duty (Amendment) Bill on 16 November 2026. The report is a discovery lead only: this register does not yet pin an authenticated assent/Gazette artifact or Act number for the post-Ordinance bill. Until the official parliamentary and Gazette records are checked, do not silently assume that Ordinance 38/2026 remains the current section 64 text beyond the parliamentary passage event, and do not treat the news report as a primary legal source. See [BSS report of 16 November 2026](https://www.bssnews.net/js-session/447084).
 
 ## Additional unresolved historical amendment lead
 
