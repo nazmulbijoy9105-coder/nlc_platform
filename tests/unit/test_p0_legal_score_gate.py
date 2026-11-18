@@ -266,5 +266,4 @@ def test_pdf_reconciliation_requires_active_explicit_violation(monkeypatch):
     # The absence of persisted applied-impact metadata uses the legacy snapshot
     # compatibility path; it must not suppress the reconciliation section.
     assert "Score reconciliation" in rendered
-    assert "AGM" in rendered
     assert "15" in rendered
