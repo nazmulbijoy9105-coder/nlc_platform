@@ -24,8 +24,8 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
     """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
     if request.node.name in {
         "test_product_released_corpus_reports_score_with_full_input_coverage",
-        "test_product_owner_black_override_is_blocked_without_counsel_allowlist",
-        "test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue",
+        "test_product_owner_black_override_is_allowed_without_counsel_allowlist",
+        "test_product_scoring_is_released_while_counsel_catalogue_remains_unverified",
     }:
         # These tests assert the real production defaults or explicitly
         # exercise the separation between product release and counsel status.
