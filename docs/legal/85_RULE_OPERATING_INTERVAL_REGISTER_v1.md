@@ -78,6 +78,17 @@ The annual-return rule is not supported as a universal obligation. The current s
 
 Therefore, as of 18-Nov-2026, the located s.64 text is periodic, not a universal annual return. Taxpayer registration status, assigned tax period and any NBR extension order control the assessment.
 
+## BSEC quarterly-report source correction
+
+BSEC-001 is not Corporate Governance Code 2018 Condition 8. The exact candidate is BSEC Notification No. BSEC/CMRRCD/2006-158/208/Admin/81, dated 20-Jun-2018 and published in the Bangladesh Gazette on 8-Aug-2018:
+- Condition 4(1): Q1 within 45 days; listed life insurers within 90 days.
+- Condition 4(2): Q2 within one month.
+- Condition 4(3): Q3 within one month.
+- It applies to companies listed with any Bangladesh stock exchange.
+- Condition 10(1) repeals named earlier reporting instruments; Condition 10(2) contains savings. The notification text reviewed does not state an exact commencement date.
+
+BSEC's 2-Jul-2026 public statement about a proposed move to half-yearly reporting is recorded as a non-binding policy watch only. No formal Gazette/notification replacing Condition 4 was located as of 18-Nov-2026; do not disable the quarterly rule on the strength of the public statement.
+
 ## Additional unresolved historical amendment lead
 
 A Government Bangladesh Trade Portal-hosted Companies Act PDF carries a footnote attributing replacement of Companies Act 1994 section 2(2) and section 2(3) to section 7 of the Companies (Amendment) Act, 2005 (candidate Act No. 7 of 2005). The original Gazette artifact, DPP index entry, exact text and commencement clause have not yet been located/authenticated. It is recorded as an unresolved lead only; no date or operative interval is inferred.
