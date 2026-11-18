@@ -70,6 +70,16 @@ def test_rule_outside_product_allowlist_is_excluded_from_score_reconciliation(mo
     ]
 
 
+def test_service_score_reconciliation_applies_product_deduction_without_counsel_allowlist(monkeypatch):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    flag = _engine_flag(rule_id="AUD-003", severity=Severity.RED, black=False)
+    assert _applied_score_impacts([flag]) == [
+        {"applied": 25, "status": "APPLIED"}
+    ]
+
+
 def test_pdf_score_reconciliation_ignores_rule_outside_product_allowlist(monkeypatch):
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset())
     flag = SimpleNamespace(rule_id="AUD-003", severity="BLACK", score_impact=25)
