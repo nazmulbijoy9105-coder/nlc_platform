@@ -86,14 +86,14 @@ The latest CI audit run (`44775805744`) returned `0 FAIL / 63 WARN / 52 PASS`. T
 
 Production Neon branch `br-purple-fog-aodj8s04`, database `neondb`, was inspected read-only:
 
-- Alembic revision: `0112_runtime_acl_and_alembic_rls`; migration to 0122 is not complete.
+- Alembic revision: `0122_rls_staff_scope_and_score_history` is now applied to production. The migration workflow's follow-up `alembic current` check failed because the pooled connection returned the exact migration login with the owner role already active; the Render deploy hook was skipped. PR #383 fixes the idempotent role preflight and resets the role between Alembic processes.
 - `legal_rules`: 86 rows, 86 active, 0 marked VERIFIED, 0 catalogue rows with non-zero `score_impact`. The extra row relative to the 85-rule product set requires identity reconciliation; do not force parity with ad hoc inserts/deletes.
 - Target company latest stored evaluation: `3150a0df-de28-4dd3-ab97-6bb16e1d7683`, calculated 15 November 2026, catalogue count 86, score 85, risk band RED.
 - Its 86 rule outcomes: 77 NOT_EVALUATED, 4 UNKNOWN, 2 NON_COMPLIANT, 3 REQUIRES_LAWYER_JUDGMENT.
 - Current active flags: 9 total — 7 UNKNOWN with zero impact; 2 VIOLATION findings (TL-001 impact 5; REG-002 impact 12).
 - Score history has only three rows; its newest row is 9 November with null score and `NOT_RELEASED`. The 15 November evaluation is not represented by a matching score-history row. Reconcile this persistence/reporting difference before treating the historical dashboard trend as current.
 
-These are stored database observations, not a fresh authenticated API evaluation. A new evaluation and six-state endpoint response must be generated after migration/deployment and tenant authorization checks.
+Post-migration row counts are 549 compliance flags, 74 score-history rows, 175 evaluation runs and 86 legal-rule rows. The canonical identity registry contains 85 identities and 85 unresolved aliases (0 resolved); historical finding bindings, finding-evidence links, finding contexts and rescue-audit rows remain 0. This is a fail-closed, no-backfill posture, but it means old findings still lack canonical rule/evidence binding. These are stored database observations, not a fresh authenticated API evaluation. A new evaluation and six-state endpoint response must be generated after migration/deployment and tenant authorization checks.
 
 The main CI static coverage artifact (run `44774872530`) reports 85 registered and 85 implemented rules, but active, applicable and evaluated counts are explicitly `not collected`; it is not a live six-state company report. The production endpoint is `GET /api/v1/companies/{company_id}/rule-coverage` and requires a signed user with company access. No authenticated production response was available during this audit, so the live six-state endpoint remains unverified.
 
@@ -101,7 +101,7 @@ The main CI static coverage artifact (run `44774872530`) reports 85 registered a
 
 On the same production branch, the runtime role `nlc_app_role` reported `rolsuper=false` and `rolbypassrls=false`. `neondb_owner` is provider-managed and BYPASSRLS, but it is not the runtime role. RLS is enabled and forced on the inspected tables `companies`, `company_user_access`, `compliance_flags`, `compliance_evaluation_runs`, `compliance_score_history` and `user_activity_logs`. The activity-log table has exactly one policy.
 
-The production `company_user_access` policy inventory still contains `company_user_access_staff_write`; migration 0122 is designed to replace it with `company_user_access_admin_write`. This independently confirms why the current 0112 revision cannot be treated as the final P0 security state. These catalog checks are spot checks, not a full signed-user cross-tenant denial matrix.
+Post-migration policy inventory now shows `company_user_access_admin_write` and `company_user_access_scoped_read`; the former `company_user_access_staff_write` policy is absent. `compliance_score_history` has only tenant-scoped INSERT and SELECT policies; `user_activity_logs` still has exactly one actor/tenant policy. These catalog checks are spot checks, not a full signed-user cross-tenant denial matrix.
 
 ## Release disposition
 
