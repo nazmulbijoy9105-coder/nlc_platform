@@ -1,5 +1,4 @@
 from datetime import date, datetime, timezone
-from types import SimpleNamespace
 
 from canonical_architecture.applicability_model import ApplicabilityRule
 from app.compliance.rule_applicability import (
