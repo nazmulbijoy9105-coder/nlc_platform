@@ -13,14 +13,13 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException, Request
 
 from app.db_url import is_render_runtime, normalize_asyncpg_url
+from app.models.base import Base
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
-    AsyncAttrs,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 if TYPE_CHECKING:
@@ -113,15 +112,6 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
-
-
-# ── BASE ──────────────────────────────────────────────────────────────
-class Base(AsyncAttrs, DeclarativeBase):
-    """
-    Declarative base for all ORM models.
-    AsyncAttrs enables async lazy-loading of relationships.
-    """
-    pass
 
 
 # ── SESSION DEPENDENCY ────────────────────────────────────────────────
