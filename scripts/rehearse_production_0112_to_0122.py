@@ -185,6 +185,13 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     if not score_history["rls"] or not score_history["force_rls"] or not score_history["append_only"]:
         raise RuntimeError(f"Score history append-only/RLS invariant missing: {dict(score_history)!r}")
 
+    role_boundary = await conn.fetchrow(
+        "SELECT pg_has_role('nlc_migration_user', 'nlc_migration_owner', 'SET') AS migration_set, "
+        "pg_has_role('nlc_app_role', 'nlc_migration_owner', 'SET') AS app_set"
+    )
+    if not role_boundary["migration_set"] or role_boundary["app_set"]:
+        raise RuntimeError(f"Migration role boundary is not least-privilege: {dict(role_boundary)!r}")
+
     legal_rule_guard = await conn.fetchval(
         "SELECT pg_get_functiondef('public.nlc_require_legal_rule_version_snapshot()'::regprocedure)"
     )
@@ -202,6 +209,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "required_identity_evidence_tables": list(required_tables),
         "score_history_invariants": dict(score_history),
         "scoped_migration_guard_exception_verified": True,
+        "migration_role_boundary": dict(role_boundary),
     }
 
 
