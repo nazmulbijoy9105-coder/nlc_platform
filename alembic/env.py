@@ -415,10 +415,14 @@ def prepare_production_migration_role(connection: Connection) -> None:
         )
     ).one()
 
-    if session_user != "nlc_migration_user" or current_user != session_user:
+    if session_user != "nlc_migration_user" or current_user not in {
+        "nlc_migration_user",
+        "nlc_migration_owner",
+    }:
         raise RuntimeError(
-            "Production migrations must connect as session_user "
-            "'nlc_migration_user' before assuming 'nlc_migration_owner'; "
+            "Production migrations must use session_user 'nlc_migration_user' "
+            "and may only start as that login or its explicitly assumed "
+            "nlc_migration_owner role; "
             f"observed session_user={session_user!r}, current_user={current_user!r}."
         )
     if server_version < 160000:
@@ -479,7 +483,11 @@ def prepare_production_migration_role(connection: Connection) -> None:
             "SET ROLE membership in nlc_migration_owner."
         )
 
-    connection.execute(text("SET ROLE nlc_migration_owner"))
+    # Neon/PgBouncer may return a session where this exact dedicated login
+    # already has its SET-only owner role active. Validate the role flags and
+    # membership above before accepting that state; never accept another role.
+    if current_user == session_user:
+        connection.execute(text("SET ROLE nlc_migration_owner"))
     assumed_role = connection.execute(text("SELECT current_user")).scalar_one()
     if assumed_role != "nlc_migration_owner":
         raise RuntimeError(
@@ -695,20 +703,30 @@ async def run_async_migrations() -> None:
         connect_args=connect_args,
     )
 
-    async with connectable.connect() as connection:
-        await connection.execute(text("SET timezone = 'UTC'"))
-        await connection.commit()
-        await connection.run_sync(prepare_production_migration_role)
-        await connection.run_sync(validate_production_migration_role)
-        # This guard is environment-independent and runs before any Alembic
-        # DDL, including the historical 0044 schema-only reconstruction.
-        await connection.run_sync(preflight_historical_evidence_schema)
-        await connection.run_sync(ensure_alembic_version_column_capacity)
-        await connection.commit()
-        await connection.run_sync(do_run_migrations)
-        await connection.commit()
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            try:
+                await connection.execute(text("SET timezone = 'UTC'"))
+                await connection.commit()
+                await connection.run_sync(prepare_production_migration_role)
+                await connection.run_sync(validate_production_migration_role)
+                # This guard is environment-independent and runs before any Alembic
+                # DDL, including the historical 0044 schema-only reconstruction.
+                await connection.run_sync(preflight_historical_evidence_schema)
+                await connection.run_sync(ensure_alembic_version_column_capacity)
+                await connection.commit()
+                await connection.run_sync(do_run_migrations)
+                await connection.commit()
+            finally:
+                if _is_production_migration_environment():
+                    # RESET ROLE is essential with pooled PostgreSQL endpoints:
+                    # a second Alembic CLI invocation must not inherit the
+                    # previous process's elevated current_user state.
+                    await connection.rollback()
+                    await connection.execute(text("RESET ROLE"))
+                    await connection.commit()
+    finally:
+        await connectable.dispose()
 
 
 def run_migrations_online() -> None:
