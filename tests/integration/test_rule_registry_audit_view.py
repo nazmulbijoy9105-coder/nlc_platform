@@ -16,6 +16,15 @@ from tools.audit_rule_parity import get_seed_rules
 
 pytestmark = [pytest.mark.integration]
 
+# SEED-01 governance contract: see test_rule_registry_parity.py. The archive
+# row is written by migration 0115 before FORCE RLS locks the table, so the
+# connecting role (cluster superuser in CI / local test runs) can still read
+# it; the nlc_ci_audit_role must not.
+QUARANTINED_IDS_SQL = (
+    "SELECT DISTINCT legacy_rule_id FROM legal_rule_identity_archive "
+    "WHERE disposition = 'QUARANTINED_LEGACY_IDENTITY'"
+)
+
 
 @pytest.mark.asyncio
 async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_claims(db):
@@ -26,6 +35,18 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
         if os.getenv("CI", "").lower() == "true":
             pytest.fail("CI must provision nlc_ci_audit_role before migration/integration tests")
         pytest.skip("nlc_ci_audit_role is provisioned by the CI integration database setup")
+
+    # Read the governance registry as the connecting role, BEFORE switching to
+    # nlc_ci_audit_role (the archive is revoked from the audit role).
+    quarantined_ids = set(
+        (await db.execute(text(QUARANTINED_IDS_SQL))).scalars()
+    )
+    assert quarantined_ids, (
+        "legal_rule_identity_archive returned no quarantined identities; "
+        "this connection cannot see the append-only archive (FORCE RLS, no "
+        "policy) so the inventory contract cannot be asserted safely"
+    )
+    seed_ids = get_seed_rules()
 
     await db.execute(text("SET LOCAL ROLE nlc_ci_audit_role"))
     rows = (
@@ -52,9 +73,12 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
     inactive_ids = {row["rule_id"] for row in rows if row["is_active"] is not True}
 
     # Inventory completeness is an identity assertion, not a legal conclusion.
-    assert len(inventory) == len(rows) == 86
-    assert active_ids == get_seed_rules()
-    assert inactive_ids == {"INC-002"}
+    # Every identity-quarantined rule id stays inactive: canonical INC-001
+    # activation is deferred (0115), INC-002 is retired and excluded from the
+    # canonical manifest.
+    assert len(inventory) == len(rows) == len(seed_ids) + len(quarantined_ids - seed_ids)
+    assert active_ids == seed_ids - quarantined_ids
+    assert inactive_ids == quarantined_ids
     assert all(row["verification_status"] == "PENDING" for row in rows)
     assert verified_ids == []
 

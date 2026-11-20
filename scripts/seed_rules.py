@@ -1,4 +1,5 @@
-# SEED-01: This script inserts missing rule IDs only; existing definitions are preserved.
+# SEED-01: This script inserts missing rule IDs only; existing definitions and
+# operator activation decisions (is_active) are preserved.
 # It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
@@ -6,7 +7,9 @@ NEUM LEX COUNSEL — Legal Rules Seeder
 scripts/seed_rules.py
 
 Development-only bootstrap utility for the 85-rule ILRMF catalogue.
-Safe to repeat — inserts missing IDs and preserves existing definitions.
+Safe to repeat — inserts missing IDs and preserves existing definitions and
+operator activation decisions. Deactivating a rule is an audited Super Admin
+decision (RulesService workflow); this bootstrap must never re-arm it.
 
 Statutory bases must match app/rule_engine/engine.py.
 ID parity is verified by tests; field-level statutory_basis
@@ -278,13 +281,11 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             existing = res.fetchone()
 
             if existing:
-                # Catalogue activation is separate from definition changes.
-                # Keep existing rule definitions immutable here, but ensure every
-                # canonical seed ID remains active for deterministic evaluation.
-                await conn.execute(
-                    sa.text("UPDATE legal_rules SET is_active = TRUE, updated_at = :now WHERE rule_id = :rid"),
-                    {"now": now, "rid": rule["rule_id"]},
-                )
+                # Existing rows are fully immutable here — definitions AND the
+                # operator-controlled activation state. Re-arming a disabled
+                # rule would silently reverse an audited Super Admin decision,
+                # and the engine already downgrades findings for inactive
+                # catalogue entries (RULE_INACTIVE → NOT_EVALUATED, 0 pts).
                 actual = dict(existing._mapping)
                 expected = {
                     "rule_name": rule["rule_name"],
@@ -361,7 +362,11 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
         print(f" Done! Inserted: {inserted}, Existing unchanged: {unchanged}, Drift: {drift}")
         print(f" DB active rules: {db_count} (seed expects {EXPECTED_RULE_COUNT})")
         if missing_ids:
-            print("  Missing rule IDs: " + ", ".join(missing_ids))
+            print(
+                "  Inactive or missing rule IDs (operator decisions preserved; "
+                "re-activate via the audited RulesService workflow): "
+                + ", ".join(missing_ids)
+            )
         if extra_ids:
             print("  Extra active rule IDs (do not delete automatically): " + ", ".join(extra_ids))
         if drifted_rules:
