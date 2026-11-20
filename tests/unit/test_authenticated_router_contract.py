@@ -57,7 +57,10 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
 
     # Public legal-rule catalogue listing is intentionally read-only and
     # uses the dedicated CATALOG RLS principal instead of a user JWT.
-    public_catalogue_endpoints = {("rules", "list_rules")}
+    public_catalogue_endpoints = {
+        ("rules", "list_rules"),
+        ("admin", "cron_health"),
+    }
     service_secret_endpoints = {("admin", "cron_evaluate_all")}
     checked = 0
     for module_name in protected_modules:
@@ -161,3 +164,16 @@ def test_portfolio_cron_route_rejects_invalid_secret(monkeypatch):
     with pytest.raises(HTTPException) as invalid:
         asyncio.run(cron_evaluate_all(_cron_request("wrong-secret"), db=None))
     assert invalid.value.status_code == 403
+
+
+def test_public_cron_health_endpoint_exposes_only_liveness_metadata():
+    import asyncio
+
+    from app.api.admin import cron_health
+
+    result = asyncio.run(cron_health())
+    assert result["status"] == "ok"
+    assert result["service"] == "nlc-platform"
+    assert "time" in result
+    assert "company" not in result
+    assert "user" not in result
