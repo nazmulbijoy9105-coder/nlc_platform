@@ -38,14 +38,16 @@ The promulgated Bangla text must be treated as controlling where an English tran
 The former `tools/legal_citation_audit.py` contained stale expectations that could incorrectly flag the corrected runtime mappings. The following anchors were updated in PR #382:
 
 - DIR-001 / DIR-002: s.115, not s.90 / s.93.
+- DIR-004: s.115 (director cessation particulars/Form XII), not ss.109–110.
 - DIR-007: s.93(2) plus s.92 / Form IX cross-reference.
 - REG-002: ss.34, 89 and 174.
+- CAP-001: ss.53, 54 and 56; the rule is an internal review signal, not a blanket special-resolution breach.
 - CAP-003: ss.59–60, not s.150.
 - CHG-001: s.172, not s.159.
 - DEF-001: s.94, not ss.118(6) / 182(9).
 - AGM-005: s.85(2)(b); AGM-006: s.89.
 
-The audit script is a citation-anchor consistency check only. It does not establish that every element of a rule proposition is legally correct.
+The audit script is a citation-anchor consistency check only. It does not establish that every element of a rule proposition is legally correct. CI reports unmapped IDs as warnings; those warnings are an explicit remaining worklist, not passed legal mappings. REG-001 is intentionally left without a single statutory anchor because it aggregates multiple register duties; split and map each register type before enabling any rule-specific adverse finding.
 
 ## Scoring and legal verification — separate controls
 
