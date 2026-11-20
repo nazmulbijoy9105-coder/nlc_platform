@@ -383,7 +383,7 @@ async def main() -> None:
                 "restricted_audit_view_parity": audit_view,
                 "notes": "The isolated branch was already at 0122; no migration was replayed.",
             }
-            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\\n", encoding="utf-8")
+            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
         if revisions != [START_REVISION]:
