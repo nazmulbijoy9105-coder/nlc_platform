@@ -269,6 +269,14 @@ def upgrade():
     # access after the migration's archive writes are complete.
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY")
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY")
+    # Permit only the non-login migration owner to verify the immutable archive.
+    # Runtime and audit roles retain no table privileges or RLS policy.
+    op.execute(f"""
+        CREATE POLICY legal_rule_identity_archive_migration_read
+        ON public.{ARCHIVE_TABLE}
+        FOR SELECT TO nlc_migration_owner
+        USING (current_user = 'nlc_migration_owner')
+    """)
     op.execute(
         f"REVOKE ALL PRIVILEGES ON TABLE public.{ARCHIVE_TABLE} "
         "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"
