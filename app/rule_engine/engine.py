@@ -458,6 +458,7 @@ class CompanyProfile:
     # Internal trust metadata populated only from verified, document-backed CompanyFact rows.
     # It is not a user-writable CompanyProfile field and never inferred from legacy DB booleans.
     verified_fact_keys: frozenset[str] = field(default_factory=frozenset)
+    verified_fact_context: Dict[str, Dict[str, str | None]] = field(default_factory=dict, repr=False)
     # Production evaluation binds every emitted rule to the LegalRule catalogue.
     # Direct pure-engine tests may omit this snapshot; service evaluations must set it.
     catalogue_binding_required: bool = False
@@ -850,6 +851,22 @@ class NLCRuleEngine:
         self._default_today = today
         self.today = today or business_date_today()
         self._flags: List[ComplianceFlag] = []
+
+    @staticmethod
+    def _facts_share_evidence_context(
+        company: CompanyProfile, first_key: str, second_key: str
+    ) -> bool:
+        """Require two facts used for one finding to share a document or source reference."""
+        contexts = getattr(company, "verified_fact_context", {}) or {}
+        first = contexts.get(first_key) or {}
+        second = contexts.get(second_key) or {}
+        first_document = first.get("document_id")
+        second_document = second.get("document_id")
+        if first_document and second_document and first_document == second_document:
+            return True
+        first_source = first.get("source_reference")
+        second_source = second.get("source_reference")
+        return bool(first_source and second_source and first_source == second_source)
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
