@@ -40,12 +40,17 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
         if isinstance(route, APIRoute)
     }
 
+    # Public legal-rule catalogue listing is intentionally read-only and
+    # uses the dedicated CATALOG RLS principal instead of a user JWT.
+    public_catalogue_endpoints = {("rules", "list_rules")}
     checked = 0
     for module_name in protected_modules:
         module = importlib.import_module(f"app.api.{module_name}")
         assert module.router.routes, f"{module_name} router unexpectedly has no routes"
         for router_route in module.router.routes:
             if not isinstance(router_route, APIRoute):
+                continue
+            if (module_name, router_route.endpoint.__name__) in public_catalogue_endpoints:
                 continue
             app_route = next(
                 (
