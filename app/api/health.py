@@ -156,11 +156,15 @@ async def _check_s3() -> ComponentHealth:
 
 
 # ---------------------------------------------------------------------------
-# GET /health - Full health check
+# GET/HEAD /health - Full health check
+# HEAD is registered explicitly: FastAPI routes do not auto-answer HEAD, so
+# platform port-scan probes and uptime monitors that default to HEAD would
+# otherwise see 405 and treat the instance as closed.
 # ---------------------------------------------------------------------------
 
-@router.get(
+@router.api_route(
     "/health",
+    methods=["GET", "HEAD"],
     summary="Full system health check",
     description="Checks DB, Redis, Celery workers, and S3. Returns overall status.",
     tags=["Health"],
@@ -234,11 +238,12 @@ async def full_health_check():
 
 
 # ---------------------------------------------------------------------------
-# GET /health/live - Kubernetes liveness probe
+# GET/HEAD /health/live - Kubernetes liveness probe
 # ---------------------------------------------------------------------------
 
-@router.get(
+@router.api_route(
     "/health/live",
+    methods=["GET", "HEAD"],
     summary="Liveness probe - confirms the process is running",
     tags=["Health"],
 )
@@ -254,11 +259,12 @@ async def liveness():
 
 
 # ---------------------------------------------------------------------------
-# GET /health/ready - Kubernetes readiness probe
+# GET/HEAD /health/ready - Kubernetes readiness probe
 # ---------------------------------------------------------------------------
 
-@router.get(
+@router.api_route(
     "/health/ready",
+    methods=["GET", "HEAD"],
     summary="Readiness probe - confirms the app is ready to serve traffic",
     tags=["Health"],
 )
