@@ -112,6 +112,29 @@ def test_i4_active_row_outside_registry_is_rejected():
     assert "ZZZ-999" in str(excinfo.value)
 
 
+def test_i4_active_must_be_implemented():
+    report = _report(
+        registered=frozenset({"AAA-001", "BBB-002"}),
+        implemented=frozenset({"AAA-001"}),
+        active=frozenset({"AAA-001", "BBB-002"}),
+    )
+    with pytest.raises(CoverageInvariantError) as excinfo:
+        report.validate()
+    assert "I4" in str(excinfo.value)
+    assert "BBB-002" in str(excinfo.value)
+
+
+def test_i5_static_hold_must_reference_an_implemented_rule():
+    report = _report(
+        active=None,
+        active_hold_reasons={"ZZZ-999": "claimed activation hold"},
+    )
+    with pytest.raises(CoverageInvariantError) as excinfo:
+        report.validate()
+    assert "I5" in str(excinfo.value)
+    assert "ZZZ-999" in str(excinfo.value)
+
+
 def test_i5_implemented_inactive_without_hold_reason_is_rejected():
     report = _report(
         registered=frozenset({"AAA-001", "BBB-002"}),
