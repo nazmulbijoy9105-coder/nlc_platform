@@ -142,7 +142,7 @@ jobs:
           export APP_DATABASE_URL="$APP_URL"
           export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
           export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
-          export NLC_REHEARSAL_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
+          export NLC_TARGET_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           python -m py_compile scripts/rehearse_production_0112_to_0122.py
           python scripts/rehearse_production_0112_to_0122.py
 
