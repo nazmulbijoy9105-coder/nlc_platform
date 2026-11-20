@@ -796,13 +796,27 @@ _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT = 3000000
 
 
 _COVERAGE_FIELDS: dict[str, float] = {
+    # Essential company classification and registration facts.
+    "company_type":             2.0,
+    "incorporation_date":       2.0,
+    # Core annual compliance history.
     "last_agm_date":            2.0,
     "last_audit_signed_date":   2.0,
     "last_return_filed_year":   2.0,
     "first_auditor_appointed":  1.0,
+    "annual_return_filed":      1.0,
+    # Current statutory licence / tax status.
+    "trade_license_obtained":   1.0,
+    "trade_license_expiry":     1.0,
     "tin_obtained":             1.0,
+    # Current governance and internal-record position.
     "current_director_count":   0.5,
     "member_count":             0.5,
+    "register_of_members_maintained": 1.0,
+    "register_of_directors_maintained": 1.0,
+    "register_of_charges_maintained": 1.0,
+    "minutes_book_agm_maintained": 1.0,
+    "minutes_book_board_maintained": 1.0,
 }
 
 
@@ -814,6 +828,8 @@ def _input_coverage(company) -> float:
     are not a substitute for a current CompanyFact provenance record.
     """
     verified = set(getattr(company, "verified_fact_keys", ()) or ())
+    if not {"company_type", "incorporation_date"}.issubset(verified):
+        return 0.0
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
     for field_name, weight in _COVERAGE_FIELDS.items():
@@ -821,7 +837,7 @@ def _input_coverage(company) -> float:
         if value is None or field_name not in verified:
             continue
         if field_name in {"member_count", "current_director_count"}:
-            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 continue
         known_weight += weight
     return min(1.0, known_weight / total_weight)
