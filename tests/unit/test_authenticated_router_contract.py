@@ -47,9 +47,16 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
         for router_route in module.router.routes:
             if not isinstance(router_route, APIRoute):
                 continue
-            full_path = f"/api/v1{router_route.path}"
-            app_route = registered.get(full_path)
-            assert app_route is not None, f"{module_name} route is not mounted: {full_path}"
+            app_route = next(
+                (
+                    candidate for candidate in registered.values()
+                    if candidate.endpoint is router_route.endpoint
+                ),
+                None,
+            )
+            assert app_route is not None, (
+                f"{module_name} route is not mounted: {router_route.path}"
+            )
             calls = set(_dependency_calls(app_route.dependant))
             assert verify_access_token in calls, (
                 f"Protected route lacks verified JWT dependency: "
