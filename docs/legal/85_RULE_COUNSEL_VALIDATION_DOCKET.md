@@ -1269,7 +1269,7 @@ This docket expands the source triage into a separate signed-review record for e
 ### REG-003 — Registers Not Kept at Registered Office
 
 - **Catalogue anchor:** Unresolved location proposition; Companies Act 1994 (Bangladesh)
-- **Current canonical provision candidate (unverified):** UNRESOLVED — Section 34(2) is a penalty provision, not a location authority; primary-source/counsel review required
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — UNRESOLVED: Section 34(2) is a penalty provision, not a location authority; primary-source/counsel review required
 
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
