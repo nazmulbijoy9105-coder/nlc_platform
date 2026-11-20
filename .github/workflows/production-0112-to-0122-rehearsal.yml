@@ -1,4 +1,4 @@
-name: Production 0112 to 0122 Neon Migration Rehearsal
+name: Production 0114 to 0122 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nlc-production-0112-0122-rehearsal
+  group: nlc-production-0114-0122-rehearsal
   cancel-in-progress: false
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
       - name: Install migration dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt
 
-      - name: Verify isolated branch and rehearse from production revision 0112
+      - name: Verify isolated branch and rehearse from verified production revision 0114
         shell: bash
         run: |
           set -euo pipefail
@@ -133,9 +133,9 @@ jobs:
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload production-schema migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0114-to-0122.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0112-to-0122-rehearsal
+          name: nlc-production-0114-to-0122-rehearsal
           path: artifacts/neon-production-0112-to-0122.json
           if-no-files-found: error
