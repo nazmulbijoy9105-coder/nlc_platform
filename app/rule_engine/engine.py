@@ -2364,7 +2364,7 @@ class NLCRuleEngine:
                 ),
                 statutory_basis=(
                     "Companies Act 1994 (Bangladesh) and applicable Articles; "
-                    "individual register duties require separate mapping"
+                    "individual register duties require their own statutory mapping"
                 ),
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
