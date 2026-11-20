@@ -224,6 +224,47 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     }
 
 
+async def _audit_view_parity() -> dict[str, Any]:
+    raw = os.environ.get("NLC_AUDIT_DATABASE_URL", "").strip()
+    if not raw:
+        raise RuntimeError("NLC_AUDIT_DATABASE_URL is required for restricted-view verification.")
+    if make_url(raw).username != "nlc_ci_audit_role":
+        raise RuntimeError("Audit-view verification must use nlc_ci_audit_role.")
+    url, args = prepare_asyncpg_connection(raw, require_tls=True)
+    dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+    audit_conn = await asyncpg.connect(dsn, **args)
+    try:
+        row = await audit_conn.fetchrow("SELECT * FROM audit.production_release_parity")
+        if row is None:
+            raise RuntimeError("Restricted audit role cannot read audit.production_release_parity.")
+        result = dict(row)
+        required_true = (
+            "identity_archive_present", "identities_present", "aliases_present",
+            "revisions_present", "finding_bindings_present", "finding_evidence_present",
+            "finding_contexts_present", "finding_context_reviews_present",
+            "inc001_quarantined", "inc002_quarantined",
+            "score_history_rls_forced", "score_history_append_only_trigger",
+            "score_history_app_mutation_revoked", "score_history_mutation_policies_absent",
+            "users_write_scope_restricted", "users_credential_reads_scoped",
+            "membership_write_scope_restricted", "membership_reads_scoped",
+            "app_role_cannot_bypass_rls", "migration_role_isolated",
+            "legal_rule_migration_guard_scoped", "core_tenant_rls_forced",
+        )
+        failed = [key for key in required_true if result.get(key) is not True]
+        if result.get("alembic_revision") != HEAD_REVISION or failed:
+            raise RuntimeError(
+                f"Restricted audit view parity failed: revision={result.get('alembic_revision')!r}; "
+                f"failed={failed!r}"
+            )
+        if result.get("identity_archive_rows", 0) < 1:
+            raise RuntimeError("Restricted audit view reports no preserved legacy identities.")
+        if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
+            raise RuntimeError("Restricted audit view reports historical finding backfill.")
+        return result
+    finally:
+        await audit_conn.close()
+
+
 async def main() -> None:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     conn = await _connect()
@@ -256,6 +297,7 @@ async def main() -> None:
         if final_revisions != [HEAD_REVISION]:
             raise RuntimeError(f"Unexpected final Alembic revisions: {final_revisions!r}")
         postflight = await _postflight(conn, before_tables, before_rules)
+        audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
             "started_at": started,
@@ -265,6 +307,7 @@ async def main() -> None:
             "final_revision": final_revisions,
             "alembic_current": current,
             **postflight,
+            "restricted_audit_view_parity": audit_view,
         }
         REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
         print(json.dumps(report, indent=2, default=str))
