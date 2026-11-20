@@ -107,9 +107,27 @@ FACT_MAX_AGE_DAYS: dict[str, int] = {
 }
 
 
+FACT_NO_EXPIRY_KEYS = frozenset({
+    "incorporation_date",
+    "company_registration_number",
+    "tin_obtained",
+    "last_agm_date",
+    "last_audit_signed_date",
+    "last_return_filed_year",
+    "first_auditor_appointed",
+    "special_resolution_date",
+    "special_resolution_filed",
+    "registered_office_change_date",
+    "form_vi_filed",
+    "below_minimum_members_since",
+})
+
+
 def fact_freshness_max_age_days(fact_key: str) -> int | None:
-    """Return the internal maximum age for a current-status fact; None means historical."""
-    return FACT_MAX_AGE_DAYS.get(fact_key)
+    """Return NLC's maximum age; unknown facts default to 365 days, not infinity."""
+    if fact_key in FACT_NO_EXPIRY_KEYS:
+        return None
+    return FACT_MAX_AGE_DAYS.get(fact_key, 365)
 
 
 def fact_freshness_status(fact_key: str, observed_on: date, as_of: date) -> str:
