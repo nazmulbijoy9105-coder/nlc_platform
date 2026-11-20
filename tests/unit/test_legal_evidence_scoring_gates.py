@@ -292,6 +292,29 @@ def test_two_verified_directors_with_unknown_subsidiary_status_are_not_black():
     assert flag.is_black_override is False
 
 
+def test_private_company_two_directors_without_verified_subsidiary_status_is_unknown():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            current_director_count=2,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-UNKNOWN",
+            directors_verified_at=date(2026, 11, 1),
+            directors_verified_by="reviewer-001",
+            is_private_subsidiary_of_public_company=True,
+            subsidiary_status_verified=True,
+            subsidiary_status_evidence_ref="GROUP-STRUCTURE-UNKNOWN",
+            subsidiary_status_verified_at=date(2026, 11, 1),
+            subsidiary_status_verified_by="reviewer-001",
+            verified_fact_keys=frozenset({"company_type", "current_director_count"}),
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "INC-003")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.is_black_override is False
+    assert flag.score_impact == 0
+
+
 def test_private_subsidiary_of_public_company_requires_three_verified_directors():
     result = NLCRuleEngine().evaluate(
         _profile(
