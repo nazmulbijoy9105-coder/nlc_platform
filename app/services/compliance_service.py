@@ -265,6 +265,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
 
+        # Only independently verified, authorized document-backed facts can
+        # authorize negative findings from legacy profile booleans. User
+        # assertions and unattributed company-table defaults remain unknown.
+        profile.verified_fact_keys = frozenset(
+            fact.fact_key
+            for fact in used_facts
+            if getattr(fact.trust_level, "value", fact.trust_level)
+            == "AUTHORIZED_DOCUMENT_BACKED"
+            and getattr(fact.verification_status, "value", fact.verification_status)
+            == "VERIFIED"
+        )
+
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
