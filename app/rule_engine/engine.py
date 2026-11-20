@@ -1151,7 +1151,8 @@ class NLCRuleEngine:
         # private companies or to companies that do not issue a prospectus
         # inviting public subscription (s.150(6)). Require verified scope.
         if (
-            c.company_type == "PUBLIC_LIMITED"
+            "company_type" in verified
+            and c.company_type == "PUBLIC_LIMITED"
             and c.section150_prospectus_issued is True
             and c.section150_applicability_verified
             and bool(c.section150_applicability_evidence_ref)
@@ -3479,6 +3480,9 @@ class NLCRuleEngine:
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if "company_type" not in verified:
+            return
         company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
         # The Corporate Governance Code is not a default private-company
         # obligation. A contradictory positive listing flag on a private or
