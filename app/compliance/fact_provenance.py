@@ -3,9 +3,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from enum import Enum
 from typing import Any
 from uuid import UUID
+
+
+BANGLADESH_TZ = ZoneInfo("Asia/Dhaka")
+
+
+def business_date_today() -> date:
+    """Bangladesh statutory calendar date; persisted timestamps remain UTC."""
+    return datetime.now(BANGLADESH_TZ).date()
 
 
 class _StrEnum(str, Enum):
