@@ -169,3 +169,11 @@ def test_only_fresh_verified_document_facts_authorize_scoring():
         verified_fact("incorporation_date", today - timedelta(days=900)),
     ]
     assert verified_document_fact_keys(facts, as_of=today) == frozenset({"incorporation_date"})
+
+
+def test_business_date_today_uses_a_date_value():
+    from datetime import date
+
+    from app.compliance.fact_provenance import business_date_today
+
+    assert isinstance(business_date_today(), date)
