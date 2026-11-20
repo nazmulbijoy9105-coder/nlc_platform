@@ -440,10 +440,26 @@ class TestAnnualReturnRules:
         profile = build_profile(
             annual_return_filed=True,
             annual_return_content_complete=False,
-            verified_fact_keys=frozenset({"annual_return_content_complete"}),
+            verified_fact_keys=frozenset({"annual_return_filed", "annual_return_content_complete"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-004")
+
+    def test_AR004_requires_filing_and_content_facts_from_same_source(self, rule_engine, build_profile):
+        profile = build_profile(
+            annual_return_filed=True,
+            annual_return_content_complete=False,
+            verified_fact_keys=frozenset({"annual_return_filed", "annual_return_content_complete"}),
+            verified_fact_context={
+                "annual_return_filed": {"document_id": "receipt-1", "source_reference": "RJSC-FILING-2026"},
+                "annual_return_content_complete": {"document_id": "return-contents-2", "source_reference": "OTHER-FILING-2025"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "AR-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
 
     def test_AR004_unverified_content_flag_is_review_only(self, rule_engine, build_profile):
         profile = build_profile(
@@ -883,6 +899,21 @@ class TestOfficeRules:
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "OFF-001")
 
+    def test_OFF001_requires_date_and_form_status_from_same_event(self, rule_engine, build_profile):
+        profile = build_profile(
+            registered_office_change_date=date.today() - timedelta(days=60),
+            form_vi_filed=False,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
+            verified_fact_context={
+                "registered_office_change_date": {"document_id": "office-change-1", "source_reference": "OFFICE-CHANGE-2026"},
+                "form_vi_filed": {"document_id": "form-vi-2", "source_reference": "OTHER-OFFICE-CHANGE"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "OFF-001")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
+
     def test_OFF001_unverified_legacy_fields_are_review_only(self, rule_engine, build_profile):
         profile = build_profile(
             registered_office_change_date=date.today() - timedelta(days=60),
@@ -905,6 +936,21 @@ class TestOfficeRules:
 # =============================================================================
 
 class TestCapitalRules:
+
+    def test_CAP004_requires_date_and_filing_status_from_same_resolution(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=40),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset({"special_resolution_date", "special_resolution_filed"}),
+            verified_fact_context={
+                "special_resolution_date": {"document_id": "resolution-1", "source_reference": "SR-2026"},
+                "special_resolution_filed": {"document_id": "filing-2", "source_reference": "OTHER-SR"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
 
     def test_CAP001_triggers_capital_change_no_resolution(self, rule_engine, build_profile):
         """Capital altered without board/member resolution → CAP-001."""
@@ -1777,6 +1823,20 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
         assert output.score_breakdown.risk_band.value == "RED"
+
+    def test_TL002_requires_obtained_and_expiry_facts_from_same_licence(self, rule_engine, build_profile):
+        profile = build_profile(
+            trade_license_obtained=True,
+            trade_license_expiry=date.today() - timedelta(days=100),
+            verified_fact_context={
+                "trade_license_obtained": {"document_id": "licence-1", "source_reference": "LICENCE-2025"},
+                "trade_license_expiry": {"document_id": "licence-2", "source_reference": "LICENCE-2024"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "TL-002")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
 
     def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(unfiled_returns_count=2)
