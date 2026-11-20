@@ -185,6 +185,15 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     if not score_history["rls"] or not score_history["force_rls"] or not score_history["append_only"]:
         raise RuntimeError(f"Score history append-only/RLS invariant missing: {dict(score_history)!r}")
 
+    legal_rule_guard = await conn.fetchval(
+        "SELECT pg_get_functiondef('public.nlc_require_legal_rule_version_snapshot()'::regprocedure)"
+    )
+    if (
+        "session_user = 'nlc_migration_user'" not in legal_rule_guard
+        or "current_setting('role', true) = 'nlc_migration_owner'" not in legal_rule_guard
+    ):
+        raise RuntimeError("Legal-rule guard does not recognize only the scoped migration login/owner pair.")
+
     return {
         "historical_table_fingerprints_before": before_tables,
         "historical_table_fingerprints_after": after_tables,
@@ -192,6 +201,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "quarantined_legacy_rules": [dict(row) for row in quarantined],
         "required_identity_evidence_tables": list(required_tables),
         "score_history_invariants": dict(score_history),
+        "scoped_migration_guard_exception_verified": True,
     }
 
 
