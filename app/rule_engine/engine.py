@@ -3014,56 +3014,84 @@ class NLCRuleEngine:
         verified. These aggregate workflow flags remain review-only.
         """
         verified = set(getattr(c, "verified_fact_keys", ()) or ())
-        workflows = (
-            (
-                "STR-001",
-                "NAME_CHANGE_WORKFLOW_REQUIRES_REVIEW",
-                c.name_change_pending,
-                c.name_change_date,
-                "name_change_pending",
-                "name_change_date",
-                "Section 11 and Section 88(1), Companies Act 1994 (Bangladesh)",
-                "Name-change workflow reported. Verify the special resolution, Registrar approval, certificate of incorporation and Section 88 filing receipt; pending status alone does not establish default.",
-            ),
-            (
-                "STR-002",
-                "OBJECT_CLAUSE_WORKFLOW_REQUIRES_REVIEW",
-                c.object_clause_change_pending,
-                c.object_clause_change_date,
-                "object_clause_change_pending",
-                "object_clause_change_date",
-                "Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
-                "Object-clause alteration reported. Verify the special resolution, court confirmation where required, registration and filing receipts; a workflow date alone does not establish default.",
-            ),
-            (
-                "STR-003",
-                "AOA_ALTERATION_WORKFLOW_REQUIRES_REVIEW",
-                c.aoa_alteration_pending,
-                c.aoa_alteration_date,
-                "aoa_alteration_pending",
-                "aoa_alteration_date",
-                "Section 20 and Section 88(1), Companies Act 1994 (Bangladesh)",
-                "Articles alteration reported. Verify the special resolution, Registrar filing and any registration requirements; a workflow date alone does not establish default.",
-            ),
-        )
-        for rule_id, flag_code, pending, event_date, pending_key, date_key, basis, description in workflows:
-            if pending and event_date and {pending_key, date_key}.issubset(verified):
-                self._add_flag(ComplianceFlag(
-                    rule_id=rule_id,
-                    flag_code=flag_code,
-                    severity=Severity.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=description,
-                    statutory_basis=basis,
-                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
-                    eval_state="UNKNOWN",
-                    detail={
-                        "event_date": event_date.isoformat(),
-                        "verified_fact_keys": [pending_key, date_key],
-                        "special_resolution_filing_checked_by": "CAP-004",
-                    },
-                ))
+
+        if (
+            c.name_change_pending
+            and c.name_change_date
+            and {"name_change_pending", "name_change_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-001",
+                flag_code="NAME_CHANGE_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Name-change workflow reported. Verify the special resolution, "
+                    "Registrar approval, certificate of incorporation and Section 88 "
+                    "filing receipt; pending status alone does not establish default."
+                ),
+                statutory_basis="Section 11 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.name_change_date.isoformat(),
+                    "verified_fact_keys": ["name_change_pending", "name_change_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
+
+        if (
+            c.object_clause_change_pending
+            and c.object_clause_change_date
+            and {"object_clause_change_pending", "object_clause_change_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-002",
+                flag_code="OBJECT_CLAUSE_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Object-clause alteration reported. Verify the special resolution, "
+                    "court confirmation where required, registration and filing receipts; "
+                    "a workflow date alone does not establish default."
+                ),
+                statutory_basis="Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.object_clause_change_date.isoformat(),
+                    "verified_fact_keys": ["object_clause_change_pending", "object_clause_change_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
+
+        if (
+            c.aoa_alteration_pending
+            and c.aoa_alteration_date
+            and {"aoa_alteration_pending", "aoa_alteration_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-003",
+                flag_code="AOA_ALTERATION_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Articles alteration reported. Verify the special resolution, "
+                    "Registrar filing and any registration requirements; a workflow "
+                    "date alone does not establish default."
+                ),
+                statutory_basis="Section 20 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.aoa_alteration_date.isoformat(),
+                    "verified_fact_keys": ["aoa_alteration_pending", "aoa_alteration_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 12: ESCALATION
