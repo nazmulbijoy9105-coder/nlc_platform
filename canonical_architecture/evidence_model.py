@@ -222,9 +222,9 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         "conclusive", "S150"),
 
     "MEM-001": EvidenceMapping("MEM-001",
-        (REGISTER_ENTRY,),
-        ("MEMBERSHIP_BELOW_MINIMUM",),
-        "prima_facie", "S222"),
+        (REGISTER_ENTRY, "BUSINESS_ACTIVITY_PROOF", "MEMBER_SPECIFIC_KNOWLEDGE_EVIDENCE"),
+        ("MEMBERSHIP_BELOW_MINIMUM", "BUSINESS_OVER_SIX_MONTHS", "MEMBER_REMAINED_AND_KNEW"),
+        "documentary", "S222"),
 
     "TR-001": EvidenceMapping("TR-001",
         (FORM_XVII, "STAMP_DUTY_CERTIFICATE"),
