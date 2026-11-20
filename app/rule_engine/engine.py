@@ -857,7 +857,7 @@ class NLCRuleEngine:
         self._rule_versions = dict(company.catalogue_rule_versions or {})
         self._rule_active = dict(company.catalogue_rule_active or {})
         self._catalogue_binding_required = company.catalogue_binding_required is True
-        self.today = today or self._default_today or date.today()
+        self.today = today or self._default_today or business_date_today()
 
         self._run_incorporation_rules(company)
         self._run_auditor_rules(company)
