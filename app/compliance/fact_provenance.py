@@ -119,6 +119,7 @@ FACT_MAX_AGE_DAYS: dict[str, int] = {
 
 INTERNAL_PROFILE_FACT_KEYS = frozenset({
     "verified_fact_keys",
+    "verified_fact_context",
     "catalogue_binding_required",
     "catalogue_rule_versions",
     "catalogue_rule_active",
