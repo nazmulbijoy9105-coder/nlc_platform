@@ -318,8 +318,8 @@ async def _audit_view_parity() -> dict[str, Any]:
                 f"Restricted audit view parity failed: revision={result.get('alembic_revision')!r}; "
                 f"failed={failed!r}"
             )
-        if result.get("identity_archive_rows", 0) < 1:
-            raise RuntimeError("Restricted audit view reports no preserved legacy identities.")
+        if result.get("identity_archive_rows") != 2:
+            raise RuntimeError("Expected exactly the two preserved legacy identity collision records.")
         expected_identity_counts = {
             "canonical_identity_rows": 85,
             "canonical_alias_rows": 85,
