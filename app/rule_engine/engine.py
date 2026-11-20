@@ -347,6 +347,8 @@ class CompanyProfile:
     managing_director_appointment_date: Optional[date] = None
     # ── Members (Section 222) ──
     member_count: int | None = None
+    below_minimum_members_since: date | None = None
+    company_operating: bool | None = None
     # ── Business commencement (Section 150) ──
     business_commencement_declaration_filed: bool | None = None
     section150_prospectus_issued: bool | None = None
@@ -1101,20 +1103,61 @@ class NLCRuleEngine:
                     conditional_applies=True,
                 ))
 
-        # MEM-001: Company operating with fewer than minimum members (Section 222)
-        member_count = c.member_count or 0
-        if member_count > 0:
+        # MEM-001: Section 222 requires a continuous six-month shortfall and
+        # member-specific knowledge before personal liability arises. A count
+        # alone cannot establish those elements or identify the liable member.
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        member_count = c.member_count
+        if (
+            c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED")
+            and "member_count" in verified
+            and isinstance(member_count, int)
+            and not isinstance(member_count, bool)
+        ):
             min_members = 2 if c.company_type == "PRIVATE_LIMITED" else 7
             if member_count < min_members:
+                six_month_threshold_met = False
+                if (
+                    "below_minimum_members_since" in verified
+                    and "company_operating" in verified
+                    and c.below_minimum_members_since is not None
+                    and c.company_operating is True
+                ):
+                    six_month_threshold_met = (
+                        self.today > self._add_months(c.below_minimum_members_since, 6)
+                    )
                 self._add_flag(ComplianceFlag(
                     rule_id="MEM-001",
-                    flag_code="BELOW_MINIMUM_MEMBERS",
-                    severity=Severity.RED,
-                    score_impact=10,
+                    flag_code="BELOW_MINIMUM_MEMBERS_REQUIRES_LEGAL_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Company has {member_count} members, below minimum {min_members}. Section 222: members personally liable.",
+                    description=(
+                        f"Verified membership is {member_count}, below the {min_members}-member "
+                        f"minimum. Section 222 requires the company to carry on business for "
+                        "more than six months with the reduced membership; personal liability "
+                        "also depends on each member's knowledge. "
+                        + (
+                            "The six-month and continuing-business facts are verified; "
+                            "member-specific knowledge and liability still require lawyer review."
+                            if six_month_threshold_met
+                            else "The six-month period and/or continuing-business condition is not established."
+                        )
+                    ),
                     statutory_basis="Section 222, Companies Act 1994 (Bangladesh)",
-                    detail={"member_count": member_count, "minimum": min_members}
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={
+                        "member_count": member_count,
+                        "minimum": min_members,
+                        "below_minimum_members_since": (
+                            c.below_minimum_members_since.isoformat()
+                            if c.below_minimum_members_since else None
+                        ),
+                        "company_operating": c.company_operating,
+                        "six_month_threshold_met": six_month_threshold_met,
+                        "member_specific_knowledge_verified": False,
+                    },
                 ))
 
         # INC-007: Section 150 is not universal. It does not apply to
@@ -2477,16 +2520,44 @@ class NLCRuleEngine:
         if c.registered_office_change_date and c.form_vi_filed is False:
             delay = (self.today - c.registered_office_change_date).days
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="OFF-001",
-                    flag_code="REGISTERED_OFFICE_CHANGE_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Office change not filed via Form VI. Section 77: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay, "form": "Form VI"}
-                ))
+                verified = set(getattr(c, "verified_fact_keys", ()) or ())
+                office_facts_verified = {
+                    "registered_office_change_date",
+                    "form_vi_filed",
+                }.issubset(verified)
+                if office_facts_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="OFF-001",
+                        flag_code="REGISTERED_OFFICE_CHANGE_VERIFIED_NOT_FILED",
+                        severity=Severity.YELLOW if delay < 90 else Severity.RED,
+                        score_impact=3,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"Verified registered-office change has no verified Form VI "
+                            f"filing receipt within 28 days under Section 77; {delay} days elapsed."
+                        ),
+                        statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.VERIFIED_ABSENT,
+                        eval_state="VIOLATION",
+                        detail={"delay": delay, "form": "Form VI", "verified_fact_keys": ["registered_office_change_date", "form_vi_filed"]},
+                    ))
+                else:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="OFF-001",
+                        flag_code="REGISTERED_OFFICE_CHANGE_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "A registered-office change and missing Form VI are reported, "
+                            "but the change date and RJSC filing status are not both verified. "
+                            "This is a review prompt, not a confirmed breach."
+                        ),
+                        statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"delay_days_reported": delay},
+                    ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 9: CAPITAL & CHARGES
