@@ -37,5 +37,6 @@ def test_seeded_identity_aliases_are_candidate_only_not_historical_attribution()
 
     assert "'NLC_ENGINE_REGISTRY_V2'" in migration
     assert "'UNRESOLVED'" in migration
+    assert "split_part(obligation_key, ':', 3)" in migration
     assert "not a resolution to any legacy legal_rules row" in migration
     assert "historical finding" in migration
