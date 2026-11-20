@@ -215,6 +215,9 @@ jobs:
           mkdir -p artifacts
           python tools/audit_rule_parity.py --no-db --no-api --report-json artifacts/rule-registry-static-parity.json
 
+      - name: Current statutory citation anchor audit
+        run: python tools/legal_citation_audit.py
+
       - name: Upload static rule registry parity report
         if: always()
         uses: actions/upload-artifact@v4
