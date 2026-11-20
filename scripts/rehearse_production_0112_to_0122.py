@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the verified live production 0114 schema through 0122 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through 0122 on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -24,7 +24,7 @@ from app.db_url import prepare_asyncpg_connection
 PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
-START_REVISION = "0114_annual_return_filing_status_provenance"
+START_REVISION = "0112_runtime_acl_and_alembic_rls"
 HEAD_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -50,7 +50,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0114-to-0122.json")
+REPORT = Path("artifacts/neon-production-0112-to-0122.json")
 
 
 def _url() -> str:
