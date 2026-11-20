@@ -185,6 +185,14 @@ async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenan
         delete(Company).where(Company.id == db_other_company.id)
     )
     assert deleted.rowcount == 0
+    # The runtime role has no DELETE table privilege on companies. Treat the
+    # database privilege denial as the expected fail-closed result; a zero-row
+    # RLS result alone would not prove the operation is unavailable.
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(
+                delete(Company).where(Company.id == db_other_company.id)
+            )
 
     with pytest.raises(DBAPIError):
         async with db.begin_nested():
@@ -208,6 +216,7 @@ async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenan
 async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company):
     from fastapi import HTTPException
     from sqlalchemy import delete
+    from sqlalchemy import update
 
     from app.core.dependencies import TokenData, require_company_access
     from app.models.company import CompanyUserAccess
@@ -231,6 +240,15 @@ async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company
             CompanyUserAccess.user_id == client.id,
             CompanyUserAccess.company_id == db_company.id,
         )
+    # Revoke the membership through the trusted ADMIN service principal.
+    # The runtime role intentionally has no DELETE grant on membership rows.
+    await db.execute(
+        update(CompanyUserAccess)
+        .where(
+            CompanyUserAccess.user_id == client.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
+        .values(is_active=False)
     )
     await db.flush()
     await set_rls_context(db, str(client.id))

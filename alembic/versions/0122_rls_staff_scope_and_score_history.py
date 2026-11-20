@@ -165,6 +165,12 @@ def upgrade() -> None:
                 AS canonical_identity_rows,
             (SELECT count(*) FROM public.legal_rule_aliases)
                 AS canonical_alias_rows,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'UNRESOLVED')
+                AS unresolved_alias_rows,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'RESOLVED')
+                AS resolved_alias_rows,
             (SELECT count(*) FROM public.legal_rule_revisions)
                 AS canonical_revision_rows,
             (SELECT count(*) FROM public.compliance_finding_bindings)

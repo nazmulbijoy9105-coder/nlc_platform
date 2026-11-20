@@ -20,6 +20,7 @@ import asyncpg
 from sqlalchemy.engine import make_url
 
 from app.db_url import prepare_asyncpg_connection
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
 PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
@@ -78,6 +79,13 @@ async def _connect() -> asyncpg.Connection:
     if identity["branch_id"] != os.environ.get("NLC_REHEARSAL_BRANCH_ID"):
         await conn.close()
         raise RuntimeError("Connection does not point to the disposable rehearsal branch.")
+    target_branch_id = (
+        os.environ.get("NLC_TARGET_BRANCH_ID")
+        or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+    )
+    if identity["branch_id"] != target_branch_id:
+        await conn.close()
+        raise RuntimeError("Connection does not point to the explicitly pinned Neon target branch.")
     await conn.execute("SET ROLE nlc_migration_owner")
     role = await conn.fetchrow("SELECT session_user, current_user")
     if role["session_user"] != "nlc_migration_user" or role["current_user"] != "nlc_migration_owner":
@@ -176,6 +184,62 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     if missing:
         raise RuntimeError(f"Canonical identity/evidence migration tables missing: {missing!r}")
 
+    identity_counts = await conn.fetchrow("""
+        SELECT
+            (SELECT count(*) FROM public.legal_rule_identities) AS identities,
+            (SELECT count(*) FROM public.legal_rule_identities
+              WHERE identity_status = 'ACTIVE') AS active_identities,
+            (SELECT count(*) FROM public.legal_rule_aliases) AS aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'UNRESOLVED') AS unresolved_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'RESOLVED') AS resolved_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2') AS engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace <> 'NLC_ENGINE_REGISTRY_V2') AS other_source_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE historical_rule_id = '') AS empty_alias_ids,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+                AND historical_rule_id = 'INC-001') AS inc001_engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+                AND historical_rule_id = 'INC-002') AS inc002_engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_revisions) AS revisions
+    """)
+    expected_identity_counts = {
+        "identities": 85,
+        "active_identities": 85,
+        "aliases": 85,
+        "unresolved_aliases": 85,
+        "resolved_aliases": 0,
+        "engine_aliases": 85,
+        "other_source_aliases": 0,
+        "empty_alias_ids": 0,
+        "inc001_engine_aliases": 1,
+        "inc002_engine_aliases": 0,
+        "revisions": 0,
+    }
+    if dict(identity_counts) != expected_identity_counts:
+        raise RuntimeError(
+            "Canonical engine identities/aliases are incomplete or incorrectly resolved: "
+            f"actual={dict(identity_counts)!r} expected={expected_identity_counts!r}"
+        )
+    alias_rows = await conn.fetch("""
+        SELECT historical_rule_id
+          FROM public.legal_rule_aliases
+         WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+    """)
+    actual_alias_ids = {row["historical_rule_id"] for row in alias_rows}
+    expected_alias_ids = set(STATUTORY_RULE_REGISTRY)
+    if actual_alias_ids != expected_alias_ids:
+        raise RuntimeError(
+            "Canonical engine alias IDs do not exactly match the static registry: "
+            f"missing={sorted(expected_alias_ids - actual_alias_ids)!r}, "
+            f"unexpected={sorted(actual_alias_ids - expected_alias_ids)!r}"
+        )
+
     binding_counts = {
         table: await conn.fetchval(f'SELECT count(*) FROM public."{table}"')
         for table in ("compliance_finding_bindings", "compliance_finding_evidence")
@@ -217,6 +281,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "legacy_archive_verified": sorted(before_rules),
         "quarantined_legacy_rules": [dict(row) for row in quarantined],
         "required_identity_evidence_tables": list(required_tables),
+        "canonical_identity_seed_counts": dict(identity_counts),
         "historical_finding_binding_rows_after_migration": binding_counts,
         "score_history_invariants": dict(score_history),
         "scoped_migration_guard_exception_verified": True,
@@ -234,6 +299,19 @@ async def _audit_view_parity() -> dict[str, Any]:
     dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
     audit_conn = await asyncpg.connect(dsn, **args)
     try:
+        expected_branch_id = (
+            os.environ.get("NLC_TARGET_BRANCH_ID")
+            or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+        )
+        actual_branch_id = await audit_conn.fetchval(
+            "SELECT current_setting('neon.branch_id', true)"
+        )
+        if not expected_branch_id or actual_branch_id != expected_branch_id:
+            raise RuntimeError(
+                "Restricted audit connection is not pinned to the same Neon branch "
+                f"as the migration target: expected={expected_branch_id!r}, "
+                f"actual={actual_branch_id!r}"
+            )
         row = await audit_conn.fetchrow("SELECT * FROM audit.production_release_parity")
         if row is None:
             raise RuntimeError("Restricted audit role cannot read audit.production_release_parity.")
@@ -258,6 +336,22 @@ async def _audit_view_parity() -> dict[str, Any]:
             )
         if result.get("identity_archive_rows", 0) < 1:
             raise RuntimeError("Restricted audit view reports no preserved legacy identities.")
+        if result.get("identity_archive_rows") != 2:
+            raise RuntimeError("Expected exactly the two preserved legacy identity collision records.")
+        expected_identity_counts = {
+            "canonical_identity_rows": 85,
+            "canonical_alias_rows": 85,
+            "unresolved_alias_rows": 85,
+            "resolved_alias_rows": 0,
+            "canonical_revision_rows": 0,
+        }
+        actual_identity_counts = {
+            key: result.get(key) for key in expected_identity_counts
+        }
+        if actual_identity_counts != expected_identity_counts:
+            raise RuntimeError(
+                f"Restricted audit view canonical identity counts mismatch: {actual_identity_counts!r}"
+            )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
             raise RuntimeError("Restricted audit view reports historical finding backfill.")
         return result
@@ -278,6 +372,29 @@ async def main() -> None:
         revisions = await _alembic_revision(conn)
         if revisions != [START_REVISION]:
             raise RuntimeError(f"Expected exact production starting revision {START_REVISION}; got {revisions!r}")
+        if revisions == [HEAD_REVISION]:
+            # A previous one-shot rehearsal may already have migrated this
+            # disposable branch. Revalidate branch-pinned restricted parity
+            # instead of trying to replay the 0112-only migration.
+            await conn.close()
+            audit_view = await _audit_view_parity()
+            report = {
+                "status": "PASS",
+                "mode": "verified_existing_rehearsal",
+                "started_at": started,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "target": identity,
+                "starting_revision": START_REVISION,
+                "final_revision": revisions,
+                "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
+                "restricted_audit_view_parity": audit_view,
+                "notes": "The isolated branch was already at 0122; no migration was replayed.",
+            }
+            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+            print(json.dumps(report, indent=2, default=str))
+            return
+        if revisions != [START_REVISION]:
+            raise RuntimeError(f"Expected exact starting revision {START_REVISION} or already-rehearsed {HEAD_REVISION}; got {revisions!r}")
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(conn)
         await conn.close()

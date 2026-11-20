@@ -64,6 +64,8 @@ jobs:
             echo "::error::Production release is permitted only from main."
             exit 1
           fi
+          API_URL="${API_URL%/}"
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
 
       - name: Verify production branch, preserved backup and Render target
         shell: bash
@@ -92,6 +94,8 @@ jobs:
           if [[ "$(jq -r '.repo // empty' <<<"$SERVICE")" != "https://github.com/nazmulbijoy9105-coder/nlc_platform" ||
                 "$(jq -r '.branch // empty' <<<"$SERVICE")" != "main" ||
                 "$(jq -r '.autoDeployTrigger // "off"' <<<"$SERVICE")" != "off" ]]; then
+                "$(jq -r '.type // empty' <<<"$SERVICE")" != "web_service" ||
+                "$(jq -r '.autoDeploy // empty' <<<"$SERVICE")" != "no" ]]; then
             echo "::error::Render target does not match the expected manual-deploy NLC production service."
             exit 1
           fi
@@ -135,6 +139,7 @@ jobs:
             echo "NLC_PRODUCTION_DATABASE_URL=$AUDIT_URL"
             echo "BACKUP_DATABASE_URL=$BACKUP_URL"
             echo "NLC_REHEARSAL_BRANCH_ID=$NEON_PRODUCTION_BRANCH_ID"
+            echo "NLC_TARGET_BRANCH_ID=$NEON_PRODUCTION_BRANCH_ID"
             echo "NLC_RLS_HMAC_SECRET=$REHEARSAL_HMAC_SECRET"
           } >> "$GITHUB_ENV"
 
@@ -156,6 +161,12 @@ jobs:
               try:
                   branch_id = await conn.fetchval("SELECT current_setting('neon.branch_id', true)")
                   revision = await conn.fetchval("SELECT version_num FROM public.alembic_version")
+                  await conn.execute("SET ROLE nlc_migration_owner")
+                  branch_id = await conn.fetchval("SELECT current_setting('neon.branch_id', true)")
+                  active_role = await conn.fetchval("SELECT current_user")
+                  revision = await conn.fetchval("SELECT version_num FROM public.alembic_version")
+                  if active_role != "nlc_migration_owner":
+                      raise RuntimeError(f"Backup verification did not assume migration owner: {active_role!r}")
                   if branch_id != os.environ["NEON_BACKUP_BRANCH_ID"]:
                       raise RuntimeError(f"Backup connection reached wrong branch: {branch_id!r}")
                   if revision != "0112_runtime_acl_and_alembic_rls":
@@ -181,6 +192,9 @@ jobs:
           mkdir -p artifacts
           REPORT_PATH=artifacts/neon-production-0112-to-0122.json \
             python scripts/rehearse_production_0112_to_0122.py
+          mkdir -p artifacts
+          curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
+          jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
 
       - name: Configure Render readiness health check
         shell: bash
@@ -195,6 +209,14 @@ jobs:
           SERVICE=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" "https://api.render.com/v1/services/$RENDER_SERVICE_ID")
           jq -e '.serviceDetails.healthCheckPath == "/api/v1/health/ready"' <<<"$SERVICE" >/dev/null
 
+      - name: Apply and verify production migrations 0112 through 0122
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          REPORT_PATH=artifacts/neon-production-0112-to-0122.json \
+            python scripts/rehearse_production_0112_to_0122.py
+
       - name: Deploy exact main SHA and verify Render deployment
         id: deploy
         shell: bash
@@ -205,6 +227,7 @@ jobs:
             --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
             "${RENDER_AUTH[@]}" -H "Content-Type: application/json" \
             --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\",\"clearCache\":\"do_not_clear\"}")
+            --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\"}")
           DEPLOY_ID=$(jq -r '.id // .deploy.id // empty' <<<"$RESPONSE")
           if [[ -z "$DEPLOY_ID" ]]; then
             echo "::error::Render did not return a deploy ID."

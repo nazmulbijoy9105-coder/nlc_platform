@@ -11,6 +11,7 @@ permissions:
 
 concurrency:
   group: nlc-production-0112-0122-rehearsal
+  group: nlc-production-0112-0122-rehearsal-r8
   cancel-in-progress: false
 
 jobs:
@@ -24,6 +25,8 @@ jobs:
       NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
       NEON_REHEARSAL_BRANCH_ID: br-late-haze-aoiuu98s
       NEON_REHEARSAL_ENDPOINT_ID: ep-patient-smoke-ao6q34tu
+      NEON_REHEARSAL_BRANCH_ID: br-holy-waterfall-aoghdxa8
+      NEON_REHEARSAL_ENDPOINT_ID: ep-wispy-frog-aoibi6pt
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v5
@@ -59,6 +62,7 @@ jobs:
           branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
           branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
           if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r5" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
             echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
             exit 1
           fi
@@ -143,6 +147,7 @@ jobs:
           export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
           export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
           export NLC_REHEARSAL_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
+          export NLC_TARGET_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           python -m py_compile scripts/rehearse_production_0112_to_0122.py
           python scripts/rehearse_production_0112_to_0122.py
 

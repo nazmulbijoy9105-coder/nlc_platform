@@ -3,8 +3,9 @@
 Revision ID: 0116_canonical_rule_identity_registry
 Revises: 0115_rule_identity_collision_reconciliation
 
-This is additive only. It intentionally performs no automatic identity
-assignment, alias backfill, historical finding update, or score change.
+This is additive and seeds 85 stable technical identities for the static engine
+registry. Source aliases remain UNRESOLVED; no legacy legal_rules row, historical
+finding, legal revision, statutory validity, or score is automatically assigned.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -116,6 +117,142 @@ def upgrade() -> None:
         "legal_rule_revisions",
         ["canonical_rule_id", "effective_from", "effective_to"],
     )
+
+    # Stable technical identities for the exact 85-key engine registry. These
+    # identify source keys only: they do not validate statutory content, dates,
+    # scope, or attribute any historical legal_rules row/finding. Aliases stay
+    # UNRESOLVED; no legal revisions or historical finding bindings are seeded.
+    op.execute("""
+        WITH engine_rule_ids(rule_id) AS (
+            VALUES
+            ('ACC-001'),
+            ('ACC-002'),
+            ('ACC-003'),
+            ('AGM-001'),
+            ('AGM-002'),
+            ('AGM-003'),
+            ('AGM-004'),
+            ('AGM-005'),
+            ('AGM-006'),
+            ('AGM-007'),
+            ('AR-001'),
+            ('AR-002'),
+            ('AR-003'),
+            ('AR-004'),
+            ('AUD-001'),
+            ('AUD-002'),
+            ('AUD-003'),
+            ('AUD-004'),
+            ('AUD-005'),
+            ('BNK-001'),
+            ('BNK-002'),
+            ('BNK-003'),
+            ('BOD-001'),
+            ('BOD-002'),
+            ('BOD-003'),
+            ('BSEC-001'),
+            ('BSEC-002'),
+            ('BSEC-003'),
+            ('BSEC-004'),
+            ('CAP-001'),
+            ('CAP-002'),
+            ('CAP-003'),
+            ('CAP-004'),
+            ('CHG-001'),
+            ('DEF-001'),
+            ('DEF-002'),
+            ('DIR-001'),
+            ('DIR-002'),
+            ('DIR-003'),
+            ('DIR-004'),
+            ('DIR-005'),
+            ('DIR-006'),
+            ('DIR-007'),
+            ('DIR-008'),
+            ('DIR-010'),
+            ('ESC-001'),
+            ('ESC-002'),
+            ('ESC-003'),
+            ('ESC-004'),
+            ('ESC-005'),
+            ('FX-001'),
+            ('INC-001'),
+            ('INC-003'),
+            ('INC-004'),
+            ('INC-005'),
+            ('INC-006'),
+            ('INC-007'),
+            ('LBR-001'),
+            ('LBR-002'),
+            ('LBR-003'),
+            ('MEM-001'),
+            ('OFF-001'),
+            ('REG-001'),
+            ('REG-002'),
+            ('REG-003'),
+            ('SH-001'),
+            ('SH-002'),
+            ('SH-003'),
+            ('STR-001'),
+            ('STR-002'),
+            ('STR-003'),
+            ('TAX-001'),
+            ('TAX-002'),
+            ('TAX-003'),
+            ('TAX-004'),
+            ('TL-001'),
+            ('TL-002'),
+            ('TR-001'),
+            ('TR-002'),
+            ('TR-003'),
+            ('TR-004'),
+            ('TR-005'),
+            ('TR-006'),
+            ('VAT-002'),
+            ('VAT-003')
+        )
+        INSERT INTO public.legal_rule_identities (
+            jurisdiction, obligation_key, identity_status,
+            creation_basis, created_by
+        )
+        SELECT
+            'BD',
+            'BD:NLC_ENGINE_REGISTRY_V2:' || rule_id,
+            'ACTIVE',
+            'Stable technical identity from the NLC statutory engine registry v2 key only. '
+            'This does not certify legal validity, effective dates, statutory scope, '
+            'or attribution of legacy legal_rules rows or historical findings.',
+            'migration:0116'
+        FROM engine_rule_ids
+        ON CONFLICT (obligation_key) DO NOTHING
+    """)
+    op.execute("""
+        INSERT INTO public.legal_rule_aliases (
+            canonical_rule_id, source_namespace, historical_rule_id,
+            resolution_status, mapping_basis
+        )
+        SELECT
+            id,
+            'NLC_ENGINE_REGISTRY_V2',
+            split_part(obligation_key, ':', 3),
+            'UNRESOLVED',
+            'Engine registry source key only. This is not a resolution to any '
+            'legacy legal_rules row or historical finding; no legal revision '
+            'or statutory validity is asserted.'
+        FROM public.legal_rule_identities
+        WHERE obligation_key LIKE 'BD:NLC_ENGINE_REGISTRY_V2:%'
+        ON CONFLICT (
+            source_namespace, historical_rule_id, canonical_rule_id
+        ) DO NOTHING
+    """)
+    op.execute("""
+        COMMENT ON TABLE public.legal_rule_identities IS
+        'Stable technical rule identities; identity status is not a legal-validity or scoring-release status.'
+    """)
+    op.execute("""
+        COMMENT ON TABLE public.legal_rule_aliases IS
+        'Source-key aliases; UNRESOLVED rows do not attribute legacy database rules or historical findings.'
+    """)
 
     # Serialize inserts per canonical identity and reject overlapping
     # half-open effective intervals. This is database-enforced, including
