@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
-from app.compliance.fact_provenance import is_internal_profile_fact_key
+from app.compliance.fact_provenance import business_date_today, is_internal_profile_fact_key
 from app.models.documents import Document
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.services.score_invalidation import invalidate_company_score
@@ -79,7 +79,7 @@ class CompanyFactService:
         self, *, company_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
-        if observed_on > date.today():
+        if observed_on > business_date_today():
             raise HTTPException(status_code=422, detail="observed_on cannot be in the future.")
         normalized_key = self._normalize_fact_key(fact_key)
         try:
