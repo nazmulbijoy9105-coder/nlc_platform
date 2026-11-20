@@ -85,6 +85,61 @@ class CompanyFact:
         return "Based on an authorized upload that has not yet been verified."
 
 
+# NLC internal evidence freshness policy (calendar days from observed_on).
+# These are conservative product controls, not statutory filing deadlines.
+FACT_MAX_AGE_DAYS: dict[str, int] = {
+    "current_director_count": 30,
+    "member_count": 30,
+    "company_operating": 30,
+    "name_change_pending": 30,
+    "object_clause_change_pending": 30,
+    "aoa_alteration_pending": 30,
+    "register_of_members_maintained": 90,
+    "register_of_directors_maintained": 90,
+    "register_of_charges_maintained": 90,
+    "minutes_book_agm_maintained": 90,
+    "minutes_book_board_maintained": 90,
+    "register_location": 90,
+    "trade_license_obtained": 90,
+    "trade_license_expiry": 365,
+    "annual_return_filed": 365,
+    "annual_return_content_complete": 365,
+}
+
+
+def fact_freshness_max_age_days(fact_key: str) -> int | None:
+    """Return the internal maximum age for a current-status fact; None means historical."""
+    return FACT_MAX_AGE_DAYS.get(fact_key)
+
+
+def fact_freshness_status(fact_key: str, observed_on: date, as_of: date) -> str:
+    """Classify whether a verified document fact is current enough for scoring."""
+    if not isinstance(observed_on, date) or observed_on > as_of:
+        return "FUTURE_DATED"
+    max_age = fact_freshness_max_age_days(fact_key)
+    if max_age is None:
+        return "NOT_TIME_LIMITED"
+    return "FRESH" if (as_of - observed_on).days <= max_age else "STALE"
+
+
+def verified_document_fact_keys(facts: Any, *, as_of: date) -> frozenset[str]:
+    """Only fresh authorized-document-backed VERIFIED facts may authorize scoring."""
+    keys: set[str] = set()
+    for fact in facts:
+        trust_level = getattr(fact.trust_level, "value", fact.trust_level)
+        verification_status = getattr(
+            fact.verification_status, "value", fact.verification_status
+        )
+        if (
+            trust_level == FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED.value
+            and verification_status == FactVerificationStatus.VERIFIED.value
+            and fact_freshness_status(fact.fact_key, fact.observed_on, as_of)
+            in {"FRESH", "NOT_TIME_LIMITED"}
+        ):
+            keys.add(fact.fact_key)
+    return frozenset(keys)
+
+
 def _json_safe_fact_value(value: Any) -> Any:
     if isinstance(value, (date, datetime)):
         return value.isoformat()
