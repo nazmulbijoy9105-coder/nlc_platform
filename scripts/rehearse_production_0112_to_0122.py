@@ -367,6 +367,29 @@ async def main() -> None:
         revisions = await _alembic_revision(conn)
         if revisions != [START_REVISION]:
             raise RuntimeError(f"Expected exact production starting revision {START_REVISION}; got {revisions!r}")
+        if revisions == [HEAD_REVISION]:
+            # A previous one-shot rehearsal may already have migrated this
+            # disposable branch. Revalidate branch-pinned restricted parity
+            # instead of trying to replay the 0112-only migration.
+            await conn.close()
+            audit_view = await _audit_view_parity()
+            report = {
+                "status": "PASS",
+                "mode": "verified_existing_rehearsal",
+                "started_at": started,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "target": identity,
+                "starting_revision": START_REVISION,
+                "final_revision": revisions,
+                "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
+                "restricted_audit_view_parity": audit_view,
+                "notes": "The isolated branch was already at 0122; no migration was replayed.",
+            }
+            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+            print(json.dumps(report, indent=2, default=str))
+            return
+        if revisions != [START_REVISION]:
+            raise RuntimeError(f"Expected exact starting revision {START_REVISION} or already-rehearsed {HEAD_REVISION}; got {revisions!r}")
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(conn)
         await conn.close()

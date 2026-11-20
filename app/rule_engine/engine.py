@@ -124,6 +124,8 @@ class ComplianceFlag:
     escalation_pending: bool = False
     state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
+    applicability_state: str | None = None
+    applicability_reason: str | None = None
     eval_state: str = "VIOLATION"   # F3: UNKNOWN -> impact forced to 0
 
     def __post_init__(self):
@@ -4283,6 +4285,11 @@ class NLCRuleEngine:
                 flag.eval_state = "UNKNOWN"
                 flag.is_black_override = False
                 flag.conditional_applies = False
+                flag.applicability_state = "UNKNOWN"
+                flag.applicability_reason = (
+                    "Rule is inactive or missing from the active database catalogue; "
+                    "applicability cannot be established."
+                )
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:
