@@ -42,6 +42,14 @@ INC001_LEGACY_FINGERPRINTS = (
         "Section 23, Companies Act 1994 (Bangladesh)",
         "moa_aoa_filed == False",
     ),
+    # Observed legacy hybrid: Section 11 identity fields from the
+    # historical INC-001 catalogue row, with the later-populated
+    # moa_aoa_filed trigger. Accepted ONLY for archive/quarantine.
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    ),
 )
 INC002_LEGACY_FINGERPRINTS = (
     (
