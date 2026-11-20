@@ -336,3 +336,44 @@ async def test_score_history_is_not_mutable_by_application_role(db, db_company):
         """)
     )
     assert trigger.scalar_one() is True
+
+
+
+@pytest.mark.asyncio
+async def test_every_company_scoped_table_enforces_rls_and_has_a_policy(db):
+    """New tenant tables cannot silently ship without forced RLS."""
+    result = await db.execute(
+        text("""
+            SELECT
+                c.relname AS table_name,
+                c.relrowsecurity AS rls_enabled,
+                c.relforcerowsecurity AS force_rls,
+                count(p.policyname) AS policy_count
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            JOIN pg_attribute a
+              ON a.attrelid = c.oid
+             AND a.attname = 'company_id'
+             AND NOT a.attisdropped
+            LEFT JOIN pg_policies p
+              ON p.schemaname = n.nspname
+             AND p.tablename = c.relname
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'r'
+            GROUP BY c.relname, c.relrowsecurity, c.relforcerowsecurity
+            ORDER BY c.relname
+        """)
+    )
+    rows = result.fetchall()
+    assert rows, "Tenant table inventory must not be empty"
+    violations = [
+        {
+            "table": row.table_name,
+            "rls_enabled": row.rls_enabled,
+            "force_rls": row.force_rls,
+            "policy_count": row.policy_count,
+        }
+        for row in rows
+        if not row.rls_enabled or not row.force_rls or row.policy_count < 1
+    ]
+    assert not violations, f"Tenant tables missing forced RLS/policies: {violations!r}"
