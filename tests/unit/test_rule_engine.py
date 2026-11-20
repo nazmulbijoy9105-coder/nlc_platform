@@ -742,31 +742,43 @@ class TestTransferRules:
 
 class TestRegisterRules:
 
-    def test_REG001_triggers_registers_incomplete(self, rule_engine, build_profile):
-        """Non-core register missing while core registers present → REG-001."""
+    def test_REG001_is_review_only_for_verified_non_core_register_absence(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges", "minutes_agm"],
+            register_of_directors_maintained=False,
+            verified_fact_keys=frozenset({"register_of_directors_maintained"}),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "REG-001")
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
-    def test_REG001_no_trigger_all_registers_maintained(self, rule_engine, build_profile):
+    def test_REG001_ignores_unattributed_legacy_register_inventory(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
+            maintained_registers=["members", "directors", "charges", "minutes_agm"],
+            verified_fact_keys=frozenset(),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "REG-001")
 
-    def test_REG004_triggers_core_register_missing(self, rule_engine, build_profile):
-        """Core statutory register missing → REG-002.
-        
-        
-        """
+    def test_REG002_requires_verified_absence_of_a_core_register(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges"]  # missing minutes_agm → triggers REG-002,
+            register_of_members_maintained=False,
+            verified_fact_keys=frozenset({"register_of_members_maintained"}),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "REG-002")
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-002")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 12
+
+    def test_REG002_ignores_unattributed_legacy_register_inventory(self, rule_engine, build_profile):
+        profile = build_profile(
+            maintained_registers=[],
+            verified_fact_keys=frozenset(),
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "REG-002")
 
 
     def test_REG004_no_trigger_all_core_registers_maintained(self, rule_engine, build_profile):
@@ -1554,8 +1566,21 @@ class TestUntestedRules:
         out = rule_engine.evaluate(build_profile(any_director_disqualified=False))
         assert not any(f.rule_id == "DEF-001" for f in out.flags)
 
-    def test_TL001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(trade_license_obtained=False)), "TL-001")
+    def test_TL001_ignores_unverified_legacy_false(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            trade_license_obtained=False, verified_fact_keys=frozenset()
+        ))
+        assert_flag_not_triggered(output, "TL-001")
+
+    def test_TL001_triggers_only_for_verified_absence(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            trade_license_obtained=False,
+            verified_fact_keys=frozenset({"trade_license_obtained"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "TL-001")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 5
 
     def test_AGM007_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(agm_adjourned_without_notice=True)), "AGM-007")
