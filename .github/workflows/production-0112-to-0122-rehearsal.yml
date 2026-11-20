@@ -83,6 +83,22 @@ jobs:
           fi
           echo "::add-mask::$MIGRATION_URL"
 
+          APP_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=$NEON_REHEARSAL_BRANCH_ID" \
+            --data-urlencode "endpoint_id=$NEON_REHEARSAL_ENDPOINT_ID" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_app_role" \
+            --data-urlencode "pooled=false" \
+            "$API/connection_uri" | jq -r '.uri // empty')
+          if [[ -z "$APP_URL" ]]; then
+            echo "::error::Neon did not return the direct nlc_app_role URI required for Alembic model imports."
+            exit 1
+          fi
+          echo "::add-mask::$APP_URL"
+
+          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
+          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
+
           ready=false
           for attempt in $(seq 1 30); do
             if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
@@ -110,6 +126,8 @@ jobs:
 
           export ENVIRONMENT=production
           export MIGRATION_DATABASE_URL="$MIGRATION_URL"
+          export APP_DATABASE_URL="$APP_URL"
+          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
           export NLC_REHEARSAL_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           python -m py_compile scripts/rehearse_production_0112_to_0122.py
           python scripts/rehearse_production_0112_to_0122.py
