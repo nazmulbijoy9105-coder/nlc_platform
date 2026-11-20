@@ -303,6 +303,20 @@ async def _audit_view_parity() -> dict[str, Any]:
             )
         if result.get("identity_archive_rows", 0) < 1:
             raise RuntimeError("Restricted audit view reports no preserved legacy identities.")
+        expected_identity_counts = {
+            "canonical_identity_rows": 85,
+            "canonical_alias_rows": 85,
+            "unresolved_alias_rows": 85,
+            "resolved_alias_rows": 0,
+            "canonical_revision_rows": 0,
+        }
+        actual_identity_counts = {
+            key: result.get(key) for key in expected_identity_counts
+        }
+        if actual_identity_counts != expected_identity_counts:
+            raise RuntimeError(
+                f"Restricted audit view canonical identity counts mismatch: {actual_identity_counts!r}"
+            )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
             raise RuntimeError("Restricted audit view reports historical finding backfill.")
         return result
