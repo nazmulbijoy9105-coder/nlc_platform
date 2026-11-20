@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import is_internal_profile_fact_key
 from app.models.documents import Document
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.services.score_invalidation import invalidate_company_score
@@ -34,16 +35,14 @@ class CompanyFactService:
 
         normalized = fact_key.strip()
         allowed = {
-            item.name for item in fields(CompanyProfile)
-        } - {
-            "company_id", "company_name", "verified_fact_keys",
-            "catalogue_binding_required", "catalogue_rule_versions",
-            "catalogue_rule_active",
-        }
+            item.name
+            for item in fields(CompanyProfile)
+            if not is_internal_profile_fact_key(item.name)
+        } - {"company_id", "company_name"}
         if normalized not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail="fact_key must be a supported CompanyProfile field; company identity fields are read-only.",
+                detail="fact_key must be a supported CompanyProfile fact; company identity and reviewer/system metadata are read-only.",
             )
         annotation = get_type_hints(CompanyProfile).get(normalized)
         candidates = get_args(annotation) or (annotation,)
