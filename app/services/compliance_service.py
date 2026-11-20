@@ -237,7 +237,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         used_facts = []
         profile_field_names = {
             field.name for field in dataclass_fields(CompanyProfile)
-        } - {"company_id", "company_name"}
+        } - {
+            "company_id", "company_name", "verified_fact_keys",
+            "catalogue_binding_required", "catalogue_rule_versions",
+            "catalogue_rule_active",
+        }
         for fact in current_facts:
             if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
