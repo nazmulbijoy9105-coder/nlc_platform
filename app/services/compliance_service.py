@@ -24,13 +24,18 @@ import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
-from datetime import UTC, date, datetime
+from datetime import date, UTC, datetime
 
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import (
+    fact_freshness_max_age_days,
+    fact_freshness_status,
+    verified_document_fact_keys,
+)
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.compliance.outcome_status import derive_compliance_outcome
@@ -237,9 +242,17 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
                 used_facts.append(fact)
-        fact_provenance_snapshot = [
-            fact.provenance_payload() for fact in used_facts
-        ]
+        evaluation_date = getattr(rule_engine, "today", date.today())
+        fact_provenance_snapshot = []
+        for fact in used_facts:
+            payload = fact.provenance_payload()
+            payload["freshness_status"] = fact_freshness_status(
+                fact.fact_key, fact.observed_on, evaluation_date
+            )
+            payload["freshness_max_age_days"] = fact_freshness_max_age_days(
+                fact.fact_key
+            )
+            fact_provenance_snapshot.append(payload)
         normalized_profile_data = _company_profile_kwargs(profile_data, CompanyProfile)
         untracked_profile_fields = sorted(
             set(normalized_profile_data)
@@ -268,13 +281,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Only independently verified, authorized document-backed facts can
         # authorize negative findings from legacy profile booleans. User
         # assertions and unattributed company-table defaults remain unknown.
-        profile.verified_fact_keys = frozenset(
-            fact.fact_key
-            for fact in used_facts
-            if getattr(fact.trust_level, "value", fact.trust_level)
-            == "AUTHORIZED_DOCUMENT_BACKED"
-            and getattr(fact.verification_status, "value", fact.verification_status)
-            == "VERIFIED"
+        profile.verified_fact_keys = verified_document_fact_keys(
+            used_facts, as_of=evaluation_date
         )
 
         # Bind the evaluator to the exact active/inactive catalogue snapshot
