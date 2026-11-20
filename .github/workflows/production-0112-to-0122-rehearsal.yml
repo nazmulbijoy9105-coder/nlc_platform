@@ -22,6 +22,8 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: rapid-bonus-26545234
       NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
+      NEON_REHEARSAL_BRANCH_ID: br-calm-sky-ao1ph9xg
+      NEON_REHEARSAL_ENDPOINT_ID: ep-jolly-moon-aogtqkj9
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v5
@@ -34,7 +36,7 @@ jobs:
       - name: Install migration dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt
 
-      - name: Create disposable child of the preserved production backup and rehearse
+      - name: Verify isolated branch and rehearse from production revision 0112
         shell: bash
         run: |
           set -euo pipefail
@@ -45,48 +47,36 @@ jobs:
 
           API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
           AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
-          BRANCH_ID=""
-          cleanup() {
-            if [[ -n "$BRANCH_ID" ]]; then
-              curl --silent --show-error --fail --request DELETE "${AUTH[@]}" \
-                "$API/branches/$BRANCH_ID" >/dev/null \
-                || echo "::warning::Disposable branch cleanup needs manual confirmation: $BRANCH_ID"
-            fi
-          }
-          trap cleanup EXIT
-
           parent_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$NEON_PARENT_BRANCH_ID")
           parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
-          parent_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$parent_json")
-          if [[ "$parent_name" != "nlc-prod-backup-2026-11-20-before-0122" || "$parent_default" != "false" ]]; then
-            echo "::error::Refusing to run: the pinned parent is not the preserved non-default production backup."
+          if [[ "$parent_name" != "nlc-prod-backup-2026-11-20-before-0122" ]]; then
+            echo "::error::Pinned backup branch name mismatch."
             exit 1
           fi
 
-          branch_name="nlc-0112-to-0122-$GITHUB_RUN_ID"
-          payload=$(jq -n --arg name "$branch_name" --arg parent "$NEON_PARENT_BRANCH_ID" \
-            '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
-          created=$(curl --silent --show-error --fail --request POST \
-            "${AUTH[@]}" -H "Content-Type: application/json" \
-            --data "$payload" "$API/branches")
-          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
-          ENDPOINT_ID=$(jq -r '.endpoints[0].id // empty' <<<"$created")
-          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
-            echo "::error::Neon did not return the disposable branch and endpoint IDs."
+          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$NEON_REHEARSAL_BRANCH_ID")
+          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
+          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
+          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+            echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
             exit 1
           fi
-          echo "Created disposable branch $BRANCH_ID from the preserved production backup."
 
-          get_uri() {
-            curl --silent --show-error --fail --get "${AUTH[@]}" \
-              --data-urlencode "branch_id=$BRANCH_ID" \
-              --data-urlencode "endpoint_id=$ENDPOINT_ID" \
-              --data-urlencode "database_name=neondb" \
-              --data-urlencode "role_name=nlc_migration_user" \
-              --data-urlencode "pooled=false" \
-              "$API/connection_uri" | jq -r '.uri // empty'
-          }
-          MIGRATION_URL=$(get_uri)
+          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$NEON_REHEARSAL_ENDPOINT_ID")
+          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
+          if [[ "$endpoint_branch" != "$NEON_REHEARSAL_BRANCH_ID" ]]; then
+            echo "::error::Read-write endpoint does not belong to the pinned rehearsal branch."
+            exit 1
+          fi
+
+          MIGRATION_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=$NEON_REHEARSAL_BRANCH_ID" \
+            --data-urlencode "endpoint_id=$NEON_REHEARSAL_ENDPOINT_ID" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_migration_user" \
+            --data-urlencode "pooled=false" \
+            "$API/connection_uri" | jq -r '.uri // empty')
           if [[ -z "$MIGRATION_URL" ]]; then
             echo "::error::Neon did not return a direct nlc_migration_user URI."
             exit 1
@@ -112,13 +102,13 @@ jobs:
             sleep 2
           done
           if [[ "$ready" != "true" ]]; then
-            echo "::error::Disposable Neon compute did not become reachable as nlc_migration_user."
+            echo "::error::Pinned Neon compute did not become reachable as nlc_migration_user."
             exit 1
           fi
 
           export ENVIRONMENT=production
           export MIGRATION_DATABASE_URL="$MIGRATION_URL"
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
+          export NLC_REHEARSAL_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           python -m py_compile scripts/rehearse_production_0112_to_0122.py
           python scripts/rehearse_production_0112_to_0122.py
 
