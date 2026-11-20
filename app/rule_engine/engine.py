@@ -3727,7 +3727,7 @@ class NLCRuleEngine:
             and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
-            for f in self._flags if not f.resolved and f.conditional_applies is not False is not False
+            for f in self._flags if not f.resolved and f.conditional_applies is not False
         )
 
         if legal_score_is_released() and (pre_score <= 29 or has_black_override):
@@ -3826,7 +3826,7 @@ class NLCRuleEngine:
         return self._score_from_deductions(self._category_deductions(scored))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
-        active = [f for f in flags if not f.resolved and f.conditional_applies is not False is not False]
+        active = [f for f in flags if not f.resolved and f.conditional_applies is not False]
 
         # One eligibility filter and one category-cap implementation are
         # shared with the pre-escalation score to prevent calculation drift.
@@ -4093,7 +4093,7 @@ class NLCRuleEngine:
         ]
         active = [
             f for f in flags
-            if not f.resolved and f.conditional_applies is not False is not False
+            if not f.resolved and f.conditional_applies is not False
         ]
         # Rescue planning is a separate evidence-review workflow; it must
         # remain deterministic while statutory score publication is paused.
