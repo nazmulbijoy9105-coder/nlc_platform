@@ -835,7 +835,7 @@ class TestRegisterRules:
     def test_MEM001_is_review_only_when_member_count_is_verified_but_duration_is_not(self, rule_engine, build_profile):
         output = rule_engine.evaluate(build_profile(
             member_count=1,
-            verified_fact_keys=frozenset({"member_count"}),
+            verified_fact_keys=frozenset({"company_type", "member_count"}),
         ))
         flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
         assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
@@ -848,7 +848,7 @@ class TestRegisterRules:
             below_minimum_members_since=date.today() - timedelta(days=220),
             company_operating=True,
             verified_fact_keys=frozenset({
-                "member_count", "below_minimum_members_since", "company_operating",
+                "company_type", "member_count", "below_minimum_members_since", "company_operating",
             }),
         ))
         flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
