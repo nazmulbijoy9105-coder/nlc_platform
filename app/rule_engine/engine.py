@@ -807,50 +807,18 @@ _COVERAGE_FIELDS: dict[str, float] = {
 
 
 def _input_coverage(company) -> float:
-    """Weighted completeness of evidence-backed company-profile inputs.
+    """Weighted completeness of fresh, evidence-backed company-profile inputs.
 
-    This is NOT the fraction of statutory rules evaluated or verified. Legacy
-    profile values and user assertions do not count as verified inputs. A field
-    counts only when its dedicated reviewer/evidence gate is satisfied or it
-    appears in the internal verified document-backed fact allowlist.
+    Only keys supplied by the internal fresh VERIFIED document-fact allowlist
+    count. Legacy profile verification booleans and evidence-reference strings
+    are not a substitute for a current CompanyFact provenance record.
     """
     verified = set(getattr(company, "verified_fact_keys", ()) or ())
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
-
-    def has_verified_value(field_name: str) -> bool:
-        if field_name in verified:
-            return True
-        if field_name == "last_agm_date":
-            return (
-                getattr(company, "agm_history_verified", False) is True
-                and bool(getattr(company, "agm_history_evidence_ref", None))
-            )
-        if field_name == "last_audit_signed_date":
-            return (
-                getattr(company, "audit_completion_verified", False) is True
-                and bool(getattr(company, "audit_completion_evidence_ref", None))
-            )
-        if field_name == "last_return_filed_year":
-            return (
-                getattr(company, "annual_return_filing_status_verified", False) is True
-                and bool(getattr(company, "annual_return_filing_status_evidence_ref", None))
-            )
-        if field_name == "first_auditor_appointed":
-            return (
-                getattr(company, "first_auditor_appointment_verified", False) is True
-                and bool(getattr(company, "first_auditor_appointment_evidence_ref", None))
-            )
-        if field_name == "current_director_count":
-            return (
-                getattr(company, "directors_verified", False) is True
-                and bool(getattr(company, "directors_verification_evidence_ref", None))
-            )
-        return False
-
     for field_name, weight in _COVERAGE_FIELDS.items():
         value = getattr(company, field_name, None)
-        if value is None or not has_verified_value(field_name):
+        if value is None or field_name not in verified:
             continue
         if field_name in {"member_count", "current_director_count"}:
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
@@ -1929,10 +1897,7 @@ class NLCRuleEngine:
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
             verified = set(getattr(c, "verified_fact_keys", ()) or ())
-            filing_status_verified = (
-                c.annual_return_filing_status_verified is True
-                and bool(c.annual_return_filing_status_evidence_ref)
-            )
+            filing_status_verified = "annual_return_filed" in verified
             content_verified = "annual_return_content_complete" in verified
             missing = [
                 label
@@ -1972,7 +1937,7 @@ class NLCRuleEngine:
                                 "shareholders_list_attached",
                             })
                         ),
-                        "filing_evidence_ref": c.annual_return_filing_status_evidence_ref,
+                        "filing_status_fact_verified": True,
                     },
                 ))
             else:
