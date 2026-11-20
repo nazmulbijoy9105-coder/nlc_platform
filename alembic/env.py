@@ -175,14 +175,44 @@ def get_database_url() -> str:
 
 
 # ── Autogenerate Configuration ────────────────────────────────────────
+# Tables that exist in the database only because migrations created them
+# (quarantine snapshots, RLS signing key material, append-only audit
+# ledgers, verification event logs). They are intentionally model-free
+# and managed exclusively by migrations, so autogenerate / `alembic
+# check` must never propose dropping them. Reflected tables NOT in this
+# allowlist still surface as drift — the check stays meaningful.
+# tests/unit/test_alembic_migration_only_tables.py pins this allowlist
+# against the migrations/models source on every CI run.
+MIGRATION_ONLY_TABLES = frozenset({
+    "articles_verification_events",
+    "articles_verifications",
+    "legal_release_quarantine_events",
+    "legal_rule_identity_archive",
+    "legal_rule_reconciliation_audit",
+    "rls_signing_key",
+    "section150_legacy_status_snapshot",
+    "share_transfer_legacy_status_snapshot",
+})
+
+
 def include_object(object, name, type_, reflected, compare_to):
     """
     Control what Alembic includes in autogenerate diff.
-    Exclude: PostgreSQL system schemas, views (managed in migrations directly).
-    Include: All 29 tables in public schema.
+    Exclude: PostgreSQL system schemas, views (managed in migrations directly),
+    and the model-free migration-managed tables above (only when reflected
+    from the database — a future ORM model for the same name still compares).
+    Include: All remaining tables in public schema.
     """
     if type_ == "table" and name.startswith("vw_"):
         # Views are created via raw SQL in migrations, not ORM
+        return False
+    if (
+        type_ == "table"
+        and reflected
+        and compare_to is None
+        and name in MIGRATION_ONLY_TABLES
+    ):
+        # DB-only table explicitly maintained by migrations: never auto-drop
         return False
     return not (type_ == "schema" and name not in (None, "public"))
 
