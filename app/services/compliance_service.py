@@ -302,6 +302,35 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         fact_provenance_snapshot.append(catalogue_binding)
 
+        # Applicability is a separate, run-scoped assessment. Only verified,
+        # document-backed CompanyFact records may satisfy scope predicates.
+        # Missing policies/facts remain UNKNOWN; findings are never used to
+        # infer applicability and this result does not gate scoring or activation.
+        from app.compliance.rule_applicability import build_rule_applicability_results
+
+        verified_fact_records = {}
+        for fact in current_facts:
+            fact_record = fact.to_fact_record()
+            if fact_record.is_verified_document_fact():
+                verified_fact_records[fact.fact_key] = fact_record
+        active_rule_ids = [row.rule_id for row in catalogue_rows if bool(row.is_active)]
+        applicability_results = build_rule_applicability_results(
+            active_rule_ids, verified_fact_records
+        )
+        applicability_fact_ids = {
+            evidence.get("fact_id")
+            for result in applicability_results.values()
+            for evidence in result.get("fact_evidence", [])
+            if evidence.get("fact_id")
+        }
+        already_snapshotted_fact_ids = {str(fact.id) for fact in used_facts}
+        for fact in current_facts:
+            if (
+                str(fact.id) in applicability_fact_ids
+                and str(fact.id) not in already_snapshotted_fact_ids
+            ):
+                fact_provenance_snapshot.append(fact.provenance_payload())
+
         # ── Step 2: Run rule engine ────────────────────────────────
         # Explicit injection supports deterministic tests and controlled
         # evaluation runs. Production callers retain the canonical engine.
@@ -321,6 +350,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         evaluation_run = await self._persist_evaluation(
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
+            applicability_results=applicability_results,
         )
 
         logger.info(
@@ -480,6 +510,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         output,  # EngineOutput from C_rule_engine.py
         trigger_source: str,
         fact_provenance_snapshot: list[dict] | None = None,
+        applicability_results: dict[str, dict] | None = None,
     ) -> ComplianceEvaluationRun:
         """
         Persist all evaluation results to DB atomically.
@@ -819,7 +850,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         active_legal_rules = list(catalogue_result.scalars().all())
         rule_outcomes_snapshot = jsonable_encoder(
-            build_rule_outcomes_snapshot(active_legal_rules, output.flags)
+            build_rule_outcomes_snapshot(
+                active_legal_rules,
+                output.flags,
+                applicability_results=applicability_results,
+            )
         )
         rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
 
