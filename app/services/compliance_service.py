@@ -97,7 +97,7 @@ def _applied_score_impacts(flags) -> list[dict]:
     eligible: list[tuple[int, str, int, str | None]] = []
     for index, flag in enumerate(flags):
         state = getattr(flag, "state", None)
-        active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", None) is not False
+        active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
         if not active:
             results[index] = {"applied": 0, "status": "INACTIVE"}
             continue
