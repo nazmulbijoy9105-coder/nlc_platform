@@ -207,7 +207,7 @@ jobs:
           RESPONSE=$(curl --silent --show-error --fail --request POST \
             --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
             "${RENDER_AUTH[@]}" -H "Content-Type: application/json" \
-            --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\",\"clearCache\":\"do_not_clear\"}")
+            --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\"}")
           DEPLOY_ID=$(jq -r '.id // .deploy.id // empty' <<<"$RESPONSE")
           if [[ -z "$DEPLOY_ID" ]]; then
             echo "::error::Render did not return a deploy ID."
