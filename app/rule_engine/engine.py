@@ -123,7 +123,7 @@ class ComplianceFlag:
     is_black_override: bool = False
     escalation_pending: bool = False
     state: RuleState = RuleState.NON_COMPLIANT
-    conditional_applies: bool = True
+    conditional_applies: bool | None = None
     eval_state: str = "VIOLATION"   # F3: UNKNOWN -> impact forced to 0
 
     def __post_init__(self):
@@ -3727,7 +3727,7 @@ class NLCRuleEngine:
             and f.severity == Severity.BLACK
             and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and f.eval_state == "VIOLATION"
-            for f in self._flags if not f.resolved and f.conditional_applies
+            for f in self._flags if not f.resolved and f.conditional_applies is not False is not False
         )
 
         if legal_score_is_released() and (pre_score <= 29 or has_black_override):
@@ -3739,7 +3739,7 @@ class NLCRuleEngine:
                 and f.severity == Severity.BLACK
                 and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
                 and f.eval_state == "VIOLATION"
-                and not f.resolved and f.conditional_applies
+                and not f.resolved and f.conditional_applies is not False
                 and f.rule_id not in self._ESC_RULE_IDS
             ])
             esc003_impact = 10 if black_count <= 2 else (25 if black_count == 3 else 35)
@@ -3787,7 +3787,7 @@ class NLCRuleEngine:
         return [
             flag for flag in flags
             if not flag.resolved
-            and flag.conditional_applies
+            and flag.conditional_applies is not False
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
@@ -3826,7 +3826,7 @@ class NLCRuleEngine:
         return self._score_from_deductions(self._category_deductions(scored))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
-        active = [f for f in flags if not f.resolved and f.conditional_applies]
+        active = [f for f in flags if not f.resolved and f.conditional_applies is not False is not False]
 
         # One eligibility filter and one category-cap implementation are
         # shared with the pre-escalation score to prevent calculation drift.
@@ -4003,7 +4003,7 @@ class NLCRuleEngine:
             if getattr(flag, "resolved", False):
                 disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
             elif (
-                not getattr(flag, "conditional_applies", True)
+                getattr(flag, "conditional_applies", None) is False
                 or state == RuleState.NOT_APPLICABLE.value
             ):
                 disposition, reason = "NO_ACTION", "RULE_NOT_APPLICABLE"
@@ -4093,7 +4093,7 @@ class NLCRuleEngine:
         ]
         active = [
             f for f in flags
-            if not f.resolved and f.conditional_applies
+            if not f.resolved and f.conditional_applies is not False is not False
         ]
         # Rescue planning is a separate evidence-review workflow; it must
         # remain deterministic while statutory score publication is paused.
