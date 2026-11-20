@@ -15,7 +15,7 @@ def _value(value: Any) -> str | None:
 
 
 def _applicability(findings: list[Any]) -> tuple[str, str, str, bool]:
-    """Resolve only explicit engine applicability signals; absence means UNKNOWN."""
+    """Resolve only the dedicated applicability result; never reuse scoring flags."""
     if not findings:
         return (
             "UNKNOWN",
@@ -28,32 +28,36 @@ def _applicability(findings: list[Any]) -> tuple[str, str, str, bool]:
     sources: set[str] = set()
     reasons: list[str] = []
     for flag in findings:
-        state = _value(getattr(flag, "state", None))
-        conditional = getattr(flag, "conditional_applies", None)
+        explicit = _value(getattr(flag, "applicability_state", None))
+        outcome = _value(getattr(flag, "state", None))
         detail = getattr(flag, "detail", None)
-        reason = (
-            detail.get("applicability_reason")
-            if isinstance(detail, dict)
-            else None
-        )
-        if state == "NOT_APPLICABLE" or conditional is False:
-            decisions.add("NOT_APPLICABLE")
-            sources.add("ENGINE_CONDITIONAL_APPLICABILITY")
-            reasons.append(str(reason or "The engine explicitly marked the condition as not applicable."))
-        elif conditional is True:
-            decisions.add("APPLICABLE")
-            sources.add("ENGINE_CONDITIONAL_APPLICABILITY")
-            reasons.append(str(reason or "The engine explicitly marked the emitted rule finding as applicable."))
+        reason = getattr(flag, "applicability_reason", None)
+        if not reason and isinstance(detail, dict):
+            reason = detail.get("applicability_reason")
+
+        if explicit in {"APPLICABLE", "NOT_APPLICABLE", "UNKNOWN"}:
+            decision = explicit
+            source = "ENGINE_EXPLICIT_APPLICABILITY_RESULT"
+        elif outcome == "NOT_APPLICABLE":
+            decision = "NOT_APPLICABLE"
+            source = "ENGINE_NOT_APPLICABLE_OUTCOME"
         else:
-            decisions.add("UNKNOWN")
-            sources.add("ENGINE_APPLICABILITY_UNRESOLVED")
-            reasons.append(str(reason or "The engine did not provide a conclusive applicability value."))
+            decision = "UNKNOWN"
+            source = "ENGINE_APPLICABILITY_UNRESOLVED"
+
+        decisions.add(decision)
+        sources.add(source)
+        reasons.append(str(reason or {
+            "APPLICABLE": "The evaluator explicitly marked the obligation applicable.",
+            "NOT_APPLICABLE": "The evaluator explicitly marked the obligation not applicable.",
+            "UNKNOWN": "The evaluator did not provide a conclusive applicability result.",
+        }[decision]))
 
     if len(decisions) != 1:
         return (
             "UNKNOWN",
             "CONFLICTING_ENGINE_APPLICABILITY_RESULTS",
-            "Findings for this rule contain conflicting applicability results.",
+            "Findings for this rule contain conflicting explicit applicability results.",
             True,
         )
     state = next(iter(decisions))
