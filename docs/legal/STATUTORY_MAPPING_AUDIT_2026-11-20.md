@@ -51,7 +51,7 @@ The audit script is a citation-anchor consistency check only. It does not establ
 
 ## Scoring and legal verification — separate controls
 
-- Product scoring: the engine's `LEGAL_SCORE_RELEASED` switch defaults to true; `PRODUCT_SCORING_RULE_IDS` and `SCORE_DEDUCTION_RULE_IDS` each contain the 85 product-owner-approved rule IDs. Production Render was explicitly set to `LEGAL_SCORE_RELEASED=true` on 20 November 2026; deployment completion must be confirmed separately.
+- Product scoring: the engine's `LEGAL_SCORE_RELEASED` switch defaults to true; `PRODUCT_SCORING_RULE_IDS` and `SCORE_DEDUCTION_RULE_IDS` each contain the 85 product-owner-approved rule IDs. Production Render was explicitly set to `LEGAL_SCORE_RELEASED=true` on 20 November 2026 and deployment `dep-dc07cb61egvs7387q090` is confirmed live on SHA `dfdd96fa6fadd48e6080acf1375286ff78113f6b`.
 - Independent legal verification: `VERIFIED_RULE_IDS` remains empty. All 85 entries in `docs/legal/legal_approval_register.yaml` remain `REVIEW_REQUIRED / score_eligible: false`. No independent counsel approval is recorded.
 - Product scoring is a deterministic NLC risk metric, not a legal opinion, statutory verification or compliance certificate. Deductions must remain gated by confirmed violation, applicability, provenance, evidence sufficiency, state and category caps. `UNKNOWN`, `NOT_EVALUATED`, `DISPUTED` and `REQUIRES_LAWYER_JUDGMENT` must not be treated as compliant or scored as a confirmed violation.
 
