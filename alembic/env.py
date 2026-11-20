@@ -89,6 +89,10 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 # ── Import ALL models so Alembic sees them in metadata ────────────────
+# The metadata-only guard is accepted only for the Alembic CLI process with
+# a dedicated migration URL; it prevents API pool/RLS startup side effects.
+os.environ.setdefault("NLC_ALEMBIC_METADATA_ONLY", "1")
+
 # This is critical for autogenerate — every model must be imported here
 from app.models import (  # noqa: F401 — imports are for side-effects
     AGM,
