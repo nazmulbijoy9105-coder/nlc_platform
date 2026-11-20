@@ -49,7 +49,7 @@ def test_engine_finding_state_and_explicit_applicability_are_preserved():
     assert rows[0]["outcome_state"] == "UNKNOWN"
     assert rows[0]["assessment_source"] == "ENGINE_FINDING"
     assert rows[0]["applicability_state"] == "APPLICABLE"
-    assert rows[0]["applicability_source"] == "ENGINE_CONDITIONAL_APPLICABILITY"
+    assert rows[0]["applicability_source"] == "ENGINE_EXPLICIT_APPLICABILITY_RESULT"
 
 
 def test_explicit_not_applicable_result_is_not_inferred_from_missing_finding():
