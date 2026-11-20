@@ -274,6 +274,7 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
         company_name="Coverage Test Ltd",
         current_director_count=3,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
     )
 
     assert _input_coverage(unverified) == 0.0
