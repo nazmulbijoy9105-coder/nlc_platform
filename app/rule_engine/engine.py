@@ -993,7 +993,8 @@ class NLCRuleEngine:
         if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and "company_type" in verified and "current_director_count" in verified and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
             count = c.current_director_count
             if (c.company_type == "PRIVATE_LIMITED" and count == 2
-                    and (c.subsidiary_status_verified is not True
+                    and ("is_private_subsidiary_of_public_company" not in verified
+                         or c.subsidiary_status_verified is not True
                          or not c.subsidiary_status_evidence_ref
                          or c.subsidiary_status_verified_at is None
                          or not c.subsidiary_status_verified_by)):
