@@ -717,14 +717,14 @@ async def get_pdf_url(
 class CompanyFactAssertionRequest(BaseModel):
     fact_key: str = Field(min_length=1, max_length=120)
     fact_value: Any
-    observed_on: date
+    observed_on: date = Field(description="As-of date of the source evidence/observation. For historical event facts, keep the event date in fact_value and set observed_on to the date the current record was checked.")
     source_reference: str | None = None
 
 
 class CompanyFactDocumentRequest(BaseModel):
     fact_key: str = Field(min_length=1, max_length=120)
     fact_value: Any
-    observed_on: date
+    observed_on: date = Field(description="As-of date of the source evidence/observation. For historical event facts, keep the event date in fact_value and set observed_on to the date the current record was checked.")
 
 
 class CompanyFactVerificationRequest(BaseModel):
