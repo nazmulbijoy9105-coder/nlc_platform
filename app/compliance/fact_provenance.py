@@ -89,6 +89,7 @@ class CompanyFact:
 # These are conservative product controls, not statutory filing deadlines.
 FACT_MAX_AGE_DAYS: dict[str, int] = {
     "current_director_count": 30,
+    "is_private_subsidiary_of_public_company": 90,
     "member_count": 30,
     "company_operating": 30,
     "name_change_pending": 30,
@@ -132,18 +133,11 @@ def is_internal_profile_fact_key(fact_key: str) -> bool:
 
 
 FACT_NO_EXPIRY_KEYS = frozenset({
+    # Immutable identifiers / dates. Other historical events require a recent
+    # evidence observation (default 365 days) so newer events cannot be missed.
     "incorporation_date",
     "company_registration_number",
     "tin_obtained",
-    "last_agm_date",
-    "last_audit_signed_date",
-    "last_return_filed_year",
-    "first_auditor_appointed",
-    "special_resolution_date",
-    "special_resolution_filed",
-    "registered_office_change_date",
-    "form_vi_filed",
-    "below_minimum_members_since",
 })
 
 
