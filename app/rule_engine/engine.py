@@ -973,7 +973,8 @@ class NLCRuleEngine:
             ))
 
 
-        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and "company_type" in verified and "current_director_count" in verified and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
             count = c.current_director_count
             if (c.company_type == "PRIVATE_LIMITED" and count == 2
                     and (c.subsidiary_status_verified is not True
@@ -1078,6 +1079,7 @@ class NLCRuleEngine:
         member_count = c.member_count
         if (
             c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED")
+            and "company_type" in verified
             and "member_count" in verified
             and isinstance(member_count, int)
             and not isinstance(member_count, bool)
