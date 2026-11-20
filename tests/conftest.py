@@ -405,6 +405,16 @@ def build_profile():
             "company_name": "Test Company Ltd",
             "company_type": "PRIVATE_LIMITED",
             # Pure-engine fixtures model explicit document-backed verification.
+            "verified_fact_context": {
+                "trade_license_obtained": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+                "trade_license_expiry": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+                "registered_office_change_date": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+                "form_vi_filed": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+                "special_resolution_date": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+                "special_resolution_filed": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+                "annual_return_filed": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+                "annual_return_content_complete": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+            },
             "verified_fact_keys": frozenset({
                 "trade_license_obtained", "trade_license_expiry", "tin_obtained",
                 "company_type", "incorporation_date", "member_count", "current_director_count", "last_agm_date",
