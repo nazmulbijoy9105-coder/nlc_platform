@@ -49,6 +49,16 @@ def _profile(**overrides):
         "company_type": "PRIVATE_LIMITED",
         "incorporation_date": date(2020, 1, 31),
         "is_private_subsidiary_of_public_company": False,
+        "verified_fact_context": {
+            "trade_license_obtained": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+            "trade_license_expiry": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+            "registered_office_change_date": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+            "form_vi_filed": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+            "special_resolution_date": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+            "special_resolution_filed": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+            "annual_return_filed": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+            "annual_return_content_complete": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+        },
         "verified_fact_keys": frozenset({
             "company_type", "incorporation_date", "current_director_count",
             "is_private_subsidiary_of_public_company", "member_count",
