@@ -69,8 +69,8 @@ async def _database_parity() -> dict:
                 "Production DB parity invariants failed: "
                 + ", ".join(f"{name}={result.get(name)!r}" for name in failures)
             )
-        if result.get("identity_archive_rows", 0) < 1:
-            raise RuntimeError("No legacy identity archive rows were preserved.")
+        if result.get("identity_archive_rows") != 2:
+            raise RuntimeError("Expected exactly two preserved legacy identity collision records.")
         expected_identity_counts = {
             "canonical_identity_rows": 85,
             "canonical_alias_rows": 85,
