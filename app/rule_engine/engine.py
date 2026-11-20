@@ -848,7 +848,7 @@ class NLCRuleEngine:
 
     def __init__(self, today: date | None = None):
         self._default_today = today
-        self.today = today or date.today()
+        self.today = today or business_date_today()
         self._flags: List[ComplianceFlag] = []
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
