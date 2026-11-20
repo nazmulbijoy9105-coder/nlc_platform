@@ -234,7 +234,7 @@ def upgrade() -> None:
         SELECT
             id,
             'NLC_ENGINE_REGISTRY_V2',
-            split_part(obligation_key, ':', 4),
+            split_part(obligation_key, ':', 3),
             'UNRESOLVED',
             'Engine registry source key only. This is not a resolution to any '
             'legacy legal_rules row or historical finding; no legal revision '
