@@ -1154,11 +1154,13 @@ class NLCRuleEngine:
             "company_type" in verified
             and c.company_type == "PUBLIC_LIMITED"
             and c.section150_prospectus_issued is True
+            and "section150_prospectus_issued" in verified
             and c.section150_applicability_verified
             and bool(c.section150_applicability_evidence_ref)
             and c.business_commencement_declaration_verified
             and bool(c.business_commencement_declaration_evidence_ref)
             and c.business_commencement_declaration_filed is False
+            and "business_commencement_declaration_filed" in verified
         ):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-007",
