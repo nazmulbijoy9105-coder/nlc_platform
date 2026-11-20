@@ -1229,11 +1229,13 @@ class NLCRuleEngine:
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
         reg_date = c.incorporation_date
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
         appointment_verified = (
             c.first_auditor_appointment_verified is True
             and bool(c.first_auditor_appointment_evidence_ref)
             and c.first_auditor_appointment_verified_at is not None
             and bool(c.first_auditor_appointment_verified_by)
+            and {"incorporation_date", "first_auditor_appointed"}.issubset(verified)
         )
 
         def add_aud001_unknown(code: str, description: str) -> None:
@@ -1718,14 +1720,17 @@ class NLCRuleEngine:
                         detail={"days_to_agm": days_rem, "short_notice_consent": False},
                     ))
 
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
         attendance_verified = (
             c.agm_attendance_verified is True
             and bool(c.agm_attendance_evidence_ref)
+            and {"agm_held_this_cycle", "members_present_at_agm"}.issubset(verified)
         )
         quorum_basis_verified = (
             c.agm_quorum_basis_verified is True
             and bool(c.agm_quorum_evidence_ref)
             and c.agm_quorum_required is not None
+            and "agm_quorum_required" in verified
         )
         if c.agm_held_this_cycle and attendance_verified and not quorum_basis_verified:
             self._add_flag(ComplianceFlag(
@@ -1775,11 +1780,13 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_annual_return_rules(self, c: CompanyProfile) -> None:
         if c.last_agm_date:
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
             filing_status_verified = (
                 c.annual_return_filing_status_verified is True
                 and bool(c.annual_return_filing_status_evidence_ref)
                 and c.annual_return_filing_status_verified_at is not None
                 and bool(c.annual_return_filing_status_verified_by)
+                and {"last_agm_date", "annual_return_filed"}.issubset(verified)
             )
             deadline = c.last_agm_date + timedelta(days=ANNUAL_RETURN_DEADLINE_DAYS)
             if not filing_status_verified:
