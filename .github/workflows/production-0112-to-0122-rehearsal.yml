@@ -89,9 +89,11 @@ jobs:
           import asyncio, os
           import asyncpg
           from app.db_url import prepare_asyncpg_connection
+          from sqlalchemy.engine import make_url
           async def main():
               url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
-              conn = await asyncpg.connect(url, **args)
+              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+              conn = await asyncpg.connect(dsn, **args)
               await conn.close()
           asyncio.run(main())
           PY
