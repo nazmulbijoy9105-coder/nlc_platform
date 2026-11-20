@@ -69,6 +69,12 @@ async def test_legal_staff_cannot_grant_unassigned_company_membership_or_edit_ot
     )
     assert visible_memberships.scalar_one() == 0
 
+    visible_user = await db.execute(
+        text("SELECT id FROM public.users WHERE id = :target_user_id"),
+        {"target_user_id": target_user.id},
+    )
+    assert visible_user.scalar_one_or_none() is None
+
     updated = await db.execute(
         text("""
             UPDATE public.users
@@ -126,7 +132,11 @@ async def test_staff_membership_policies_are_scoped_and_admin_write_is_explicit(
     by_name = {row.policyname: row for row in policies}
 
     assert "users_staff_write" not in by_name
+    assert "users_self_or_staff_select" not in by_name
     assert "company_user_access_staff_write" not in by_name
+    assert by_name["users_self_or_admin_select"].cmd == "SELECT"
+    assert "nlc_current_user_id" in by_name["users_self_or_admin_select"].qual
+    assert "nlc_current_user_is_rule_admin" in by_name["users_self_or_admin_select"].qual
     assert by_name["users_admin_write"].cmd == "ALL"
     assert "nlc_current_user_is_rule_admin" in by_name["users_admin_write"].qual
     assert by_name["company_user_access_admin_write"].cmd == "ALL"
