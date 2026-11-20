@@ -1,6 +1,6 @@
 # NLC legal source corrections — 7 November 2026
 
-**Status:** Source-corroborated engineering corrections only. **Not a legal opinion, not independent counsel approval, and not authority to activate any rule.** All 85 rules remain `NOT_EVALUATED / score_impact 0 / is_black_override false` pending individual review.
+**Status (historical snapshot, 7 November 2026):** Source-corroborated engineering corrections only. **Not a legal opinion, not independent counsel approval, and not authority to mark any rule VERIFIED.** As of 20 November 2026 the separate product-scoring switch is enabled, but all 85 statutory approval entries remain `REVIEW_REQUIRED / score_eligible: false`, `VERIFIED_RULE_IDS` remains empty, and production `legal_rules` rows retain zero score impact. Product scoring is not legal verification.
 
 ## 1. Source register and correction log
 
