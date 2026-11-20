@@ -407,7 +407,7 @@ def build_profile():
             # Pure-engine fixtures model explicit document-backed verification.
             "verified_fact_keys": frozenset({
                 "trade_license_obtained", "trade_license_expiry", "tin_obtained",
-                "member_count", "current_director_count", "last_agm_date",
+                "company_type", "member_count", "current_director_count", "last_agm_date",
                 "last_audit_signed_date", "last_return_filed_year",
                 "first_auditor_appointed", "annual_return_filed",
                 "register_of_members_maintained", "register_of_directors_maintained",
