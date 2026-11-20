@@ -110,4 +110,4 @@ def test_active_unimplemented_database_rule_is_reported_as_invariant_failure():
     )
 
     assert report["validation_status"] == "FAILED"
-    assert any("phantom active" in item for item in report["validation_violations"])
+    assert any("active rows for IDs absent" in item for item in report["validation_violations"])
