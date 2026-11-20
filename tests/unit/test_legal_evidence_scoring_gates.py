@@ -658,8 +658,8 @@ def test_profile_coverage_is_not_mislabelled_as_rule_coverage():
         member_count=None,
     )
 
-    # Known False tri-state values count as supplied inputs (2 of 9 weight).
-    assert engine_module._input_coverage(profile) == pytest.approx(2 / 9)
+    # Legacy False values and unverified counts do not count as evidenced inputs.
+    assert engine_module._input_coverage(profile) == pytest.approx(0.0)
 
 
 def test_score_hash_commits_to_category_cap_configuration(monkeypatch):
@@ -869,7 +869,13 @@ def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified(
         tin_obtained=True,
         current_director_count=2,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
         member_count=2,
+        verified_fact_keys=frozenset({
+            "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
+            "first_auditor_appointed", "tin_obtained", "current_director_count",
+            "member_count",
+        }),
     )
     score = NLCRuleEngine()._calculate_score([], profile)
     assert score.final_score == 100
