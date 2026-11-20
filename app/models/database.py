@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import HTTPException, Request
 
@@ -51,8 +51,10 @@ _ALEMBIC_METADATA_ONLY = (
 
 if _ALEMBIC_METADATA_ONLY:
     DATABASE_URL = ""
-    engine = None
-    AsyncSessionLocal = None
+    # Runtime-only names are inert in this process. Keep their static types
+    # opaque here so API dependency annotations remain type-checkable.
+    engine = cast(Any, None)
+    AsyncSessionLocal = cast(Any, None)
     _REQUIRE_RLS_APP_ROLE = False
 else:
     # ══════════════════════════════════════════════════════════════════════
