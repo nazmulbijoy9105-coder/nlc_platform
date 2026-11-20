@@ -68,6 +68,12 @@ Production Neon branch `br-purple-fog-aodj8s04`, database `neondb`, was inspecte
 
 These are stored database observations, not a fresh authenticated API evaluation. A new evaluation and six-state endpoint response must be generated after migration/deployment and tenant authorization checks.
 
+## Production RLS spot-check — read-only
+
+On the same production branch, the runtime role `nlc_app_role` reported `rolsuper=false` and `rolbypassrls=false`. `neondb_owner` is provider-managed and BYPASSRLS, but it is not the runtime role. RLS is enabled and forced on the inspected tables `companies`, `company_user_access`, `compliance_flags`, `compliance_evaluation_runs`, `compliance_score_history` and `user_activity_logs`. The activity-log table has exactly one policy.
+
+The production `company_user_access` policy inventory still contains `company_user_access_staff_write`; migration 0122 is designed to replace it with `company_user_access_admin_write`. This independently confirms why the current 0112 revision cannot be treated as the final P0 security state. These catalog checks are spot checks, not a full signed-user cross-tenant denial matrix.
+
 ## Release disposition
 
 1. Keep product scoring enabled as an explicitly labelled product risk metric.
