@@ -70,6 +70,39 @@ TEST_DATABASE_URL = _get_test_db_url()
 assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+# Local-only Alembic migration identity. Never used by the application engine.
+# Validated lazily so pure unit tests can be collected without a DB env.
+TEST_DATABASE_MIGRATION_URL = os.environ.get(
+    "DATABASE_URL_TEST_MIGRATION", ""
+).strip()
+
+
+def _require_test_migration_url() -> str:
+    """Validate the migration identity; DB fixtures call this lazily."""
+    if not TEST_DATABASE_MIGRATION_URL:
+        raise RuntimeError(
+            "DATABASE_URL_TEST_MIGRATION is required for local test migrations"
+        )
+    _app_url = _make_url(TEST_DATABASE_URL)
+    _migration_url = _make_url(TEST_DATABASE_MIGRATION_URL)
+    assert _migration_url.host in ("localhost", "127.0.0.1"), (
+        "test migration connection must be local"
+    )
+    assert _migration_url.database == _app_url.database, (
+        "application and migration connections must target the same database"
+    )
+    assert _migration_url.username != _app_url.username, (
+        "application and migration identities must be separate"
+    )
+    return TEST_DATABASE_MIGRATION_URL
+
+# Test-only HMAC key. Never use this value in production.
+TEST_RLS_HMAC_SECRET = (
+    "nlc-test-only-hmac-secret-not-for-production-2026"
+)
+assert len(TEST_RLS_HMAC_SECRET) >= 32
+os.environ["NLC_RLS_HMAC_SECRET"] = TEST_RLS_HMAC_SECRET
 os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
 
 
@@ -94,6 +127,7 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(request):
+    _require_test_migration_url()
     """
     Async engine pointing at nlc_test database.
     NullPool ensures no connection leaks between tests.
@@ -138,7 +172,12 @@ async def test_engine(request):
     proc = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if proc.returncode != 0:
@@ -149,7 +188,12 @@ async def test_engine(request):
     heads_proc = subprocess.run(
         [sys.executable, "-m", "alembic", "heads"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if heads_proc.returncode != 0:
@@ -169,7 +213,12 @@ async def test_engine(request):
     current_proc = subprocess.run(
         [sys.executable, "-m", "alembic", "current"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if current_proc.returncode != 0:
@@ -190,6 +239,7 @@ async def test_engine(request):
         env={
             **os.environ,
             "DATABASE_URL": TEST_DATABASE_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
             "NLC_ALLOW_DEVELOPMENT_RULE_SEED": "true",
             "ENVIRONMENT": "test",
         },
