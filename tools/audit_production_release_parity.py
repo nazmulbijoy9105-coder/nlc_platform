@@ -36,6 +36,7 @@ REQUIRED_TRUE = (
     "membership_reads_scoped",
     "app_role_cannot_bypass_rls",
     "migration_role_isolated",
+    "legal_rule_migration_guard_scoped",
     "core_tenant_rls_forced",
 )
 
