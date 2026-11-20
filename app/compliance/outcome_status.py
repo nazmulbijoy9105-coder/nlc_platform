@@ -20,7 +20,7 @@ def derive_compliance_outcome(flag, *, counsel_verified_rule: bool) -> str:
     state = _value(getattr(flag, "state", None))
     evaluation = _value(getattr(flag, "eval_state", None))
 
-    applicability = getattr(flag, "conditional_applies", True)
+    applicability = getattr(flag, "conditional_applies", None)
     if applicability is False:
         return "NOT_APPLICABLE"
     if applicability is None:
