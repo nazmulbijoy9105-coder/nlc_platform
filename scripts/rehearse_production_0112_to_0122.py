@@ -296,6 +296,19 @@ async def _audit_view_parity() -> dict[str, Any]:
     dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
     audit_conn = await asyncpg.connect(dsn, **args)
     try:
+        expected_branch_id = (
+            os.environ.get("NLC_TARGET_BRANCH_ID")
+            or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+        )
+        actual_branch_id = await audit_conn.fetchval(
+            "SELECT current_setting('neon.branch_id', true)"
+        )
+        if not expected_branch_id or actual_branch_id != expected_branch_id:
+            raise RuntimeError(
+                "Restricted audit connection is not pinned to the same Neon branch "
+                f"as the migration target: expected={expected_branch_id!r}, "
+                f"actual={actual_branch_id!r}"
+            )
         row = await audit_conn.fetchrow("SELECT * FROM audit.production_release_parity")
         if row is None:
             raise RuntimeError("Restricted audit role cannot read audit.production_release_parity.")
