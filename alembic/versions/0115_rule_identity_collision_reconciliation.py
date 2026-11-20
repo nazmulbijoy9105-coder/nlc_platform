@@ -145,7 +145,7 @@ def _allow_scoped_migration_owner_updates(bind):
             END IF;
 
             IF session_user = 'nlc_migration_user'
-               AND current_setting('role', true) = 'nlc_migration_owner' THEN
+               AND pg_has_role(session_user, 'nlc_migration_owner', 'SET') THEN
                 RETURN NEW;
             END IF;
 
