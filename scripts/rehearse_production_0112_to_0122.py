@@ -75,9 +75,13 @@ async def _connect() -> asyncpg.Connection:
     if identity["current_database"] != DATABASE or identity["project_id"] != PROJECT_ID:
         await conn.close()
         raise RuntimeError(f"Wrong Neon target: {dict(identity)!r}")
-    if identity["branch_id"] != os.environ.get("NLC_REHEARSAL_BRANCH_ID"):
+    target_branch_id = (
+        os.environ.get("NLC_TARGET_BRANCH_ID")
+        or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+    )
+    if identity["branch_id"] != target_branch_id:
         await conn.close()
-        raise RuntimeError("Connection does not point to the disposable rehearsal branch.")
+        raise RuntimeError("Connection does not point to the explicitly pinned Neon target branch.")
     await conn.execute("SET ROLE nlc_migration_owner")
     role = await conn.fetchrow("SELECT session_user, current_user")
     if role["session_user"] != "nlc_migration_user" or role["current_user"] != "nlc_migration_owner":
