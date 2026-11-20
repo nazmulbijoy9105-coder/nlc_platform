@@ -8,6 +8,8 @@ TLS is enforced through verified asyncpg SSL contexts in production.
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, Request
@@ -38,9 +40,6 @@ class Base(AsyncAttrs, DeclarativeBase):
 # Alembic needs ORM metadata, not the API's runtime connection pool. This
 # mode is accepted only inside the Alembic CLI process and only when a
 # dedicated migration URL is present. It never supplies a runtime engine.
-from pathlib import Path
-import sys
-
 _ALEMBIC_METADATA_ONLY = (
     os.environ.get("NLC_ALEMBIC_METADATA_ONLY", "").strip() == "1"
     and Path(sys.argv[0]).name.lower().startswith("alembic")
