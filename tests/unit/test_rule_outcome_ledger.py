@@ -69,3 +69,46 @@ def test_engine_finding_without_active_catalogue_rule_is_preserved_as_unmapped()
     orphan = next(item for item in rows if item["rule_id"] == "UNKNOWN-999")
     assert orphan["verification_status"] == "UNMAPPED"
     assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+
+
+
+def test_applicability_is_explicit_and_independent_of_findings():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")],
+        [],
+        applicability_results={
+            "AGM-001": {
+                "status": "APPLICABLE",
+                "reason": "Verified scope predicates satisfied",
+                "policy_version": "NLC-APPLICABILITY-TEST",
+                "fact_evidence": [{"fact_id": "fact-1", "fact_key": "is_active"}],
+            }
+        },
+    )
+    assert rows[0]["applicability_status"] == "APPLICABLE"
+    assert rows[0]["outcome_state"] == "NOT_EVALUATED"
+    assert rows[0]["assessment_source"] == "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE"
+
+
+def test_absent_applicability_result_defaults_to_unknown_even_when_finding_exists():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")],
+        [_flag("AGM-001", "UNKNOWN")],
+    )
+    assert rows[0]["applicability_status"] == "UNKNOWN"
+    assert rows[0]["applicability_reason"] == "NO_EXPLICIT_APPLICABILITY_RESULT"
+    assert rows[0]["outcome_state"] == "UNKNOWN"
+
+
+def test_applicability_is_included_in_immutable_snapshot_hash():
+    applicable = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")],
+        [],
+        applicability_results={"AGM-001": {"status": "APPLICABLE", "reason": "verified"}},
+    )
+    unknown = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")],
+        [],
+        applicability_results={"AGM-001": {"status": "UNKNOWN", "reason": "missing fact"}},
+    )
+    assert hash_rule_outcomes_snapshot(applicable) != hash_rule_outcomes_snapshot(unknown)
