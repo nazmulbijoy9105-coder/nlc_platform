@@ -1,4 +1,4 @@
-name: Production 0114 to 0122 Neon Migration Rehearsal
+name: Production 0112 to 0122 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nlc-production-0114-0122-rehearsal
+  group: nlc-production-0112-0122-rehearsal
   cancel-in-progress: false
 
 jobs:
@@ -22,8 +22,8 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: rapid-bonus-26545234
       NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
-      NEON_REHEARSAL_BRANCH_ID: br-steep-lab-ao3529q0
-      NEON_REHEARSAL_ENDPOINT_ID: ep-weathered-hill-aolj8512
+      NEON_REHEARSAL_BRANCH_ID: br-soft-mouse-aov3spes
+      NEON_REHEARSAL_ENDPOINT_ID: ep-solitary-river-ao1a0xw8
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v5
@@ -36,7 +36,7 @@ jobs:
       - name: Install migration dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt
 
-      - name: Verify isolated branch and rehearse from verified production revision 0114
+      - name: Verify isolated branch and rehearse from verified production revision 0112
         shell: bash
         run: |
           set -euo pipefail
@@ -58,7 +58,7 @@ jobs:
           branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
           branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
           branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r3" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r4" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
             echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
             exit 1
           fi
@@ -133,9 +133,9 @@ jobs:
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload production-schema migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0114-to-0122.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0114-to-0122-rehearsal
+          name: nlc-production-0112-to-0122-rehearsal
           path: artifacts/neon-production-0112-to-0122.json
           if-no-files-found: error
