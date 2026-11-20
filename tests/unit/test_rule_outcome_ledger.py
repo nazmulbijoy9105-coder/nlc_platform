@@ -97,3 +97,13 @@ def test_engine_finding_without_active_catalogue_rule_is_preserved_as_unmapped()
     assert orphan["verification_status"] == "UNMAPPED"
     assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
     assert orphan["applicability_state"] == "APPLICABLE"
+
+
+def test_emitted_finding_without_explicit_applicability_remains_unknown():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001")],
+        [_flag("AGM-001", "NON_COMPLIANT", conditional_applies=None)],
+    )
+    assert rows[0]["outcome_state"] == "NON_COMPLIANT"
+    assert rows[0]["applicability_state"] == "UNKNOWN"
+    assert rows[0]["applicability_source"] == "ENGINE_APPLICABILITY_UNRESOLVED"
