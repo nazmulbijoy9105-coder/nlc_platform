@@ -20,6 +20,7 @@ import asyncpg
 from sqlalchemy.engine import make_url
 
 from app.db_url import prepare_asyncpg_connection
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
 PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
@@ -195,6 +196,8 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
             (SELECT count(*) FROM public.legal_rule_aliases
               WHERE source_namespace <> 'NLC_ENGINE_REGISTRY_V2') AS other_source_aliases,
             (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE historical_rule_id = '') AS empty_alias_ids,
+            (SELECT count(*) FROM public.legal_rule_aliases
               WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
                 AND historical_rule_id = 'INC-001') AS inc001_engine_aliases,
             (SELECT count(*) FROM public.legal_rule_aliases
@@ -210,6 +213,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "resolved_aliases": 0,
         "engine_aliases": 85,
         "other_source_aliases": 0,
+        "empty_alias_ids": 0,
         "inc001_engine_aliases": 1,
         "inc002_engine_aliases": 0,
         "revisions": 0,
@@ -218,6 +222,19 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         raise RuntimeError(
             "Canonical engine identities/aliases are incomplete or incorrectly resolved: "
             f"actual={dict(identity_counts)!r} expected={expected_identity_counts!r}"
+        )
+    alias_rows = await conn.fetch("""
+        SELECT historical_rule_id
+          FROM public.legal_rule_aliases
+         WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+    """)
+    actual_alias_ids = {row["historical_rule_id"] for row in alias_rows}
+    expected_alias_ids = set(STATUTORY_RULE_REGISTRY)
+    if actual_alias_ids != expected_alias_ids:
+        raise RuntimeError(
+            "Canonical engine alias IDs do not exactly match the static registry: "
+            f"missing={sorted(expected_alias_ids - actual_alias_ids)!r}, "
+            f"unexpected={sorted(actual_alias_ids - expected_alias_ids)!r}"
         )
 
     binding_counts = {
