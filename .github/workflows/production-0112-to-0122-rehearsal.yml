@@ -1,0 +1,155 @@
+name: Production 0112 to 0122 Neon Migration Rehearsal
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nlc-production-0112-0122-rehearsal-r8
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: rapid-bonus-26545234
+      NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
+      NEON_REHEARSAL_BRANCH_ID: br-holy-waterfall-aoghdxa8
+      NEON_REHEARSAL_ENDPOINT_ID: ep-wispy-frog-aoibi6pt
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install migration dependencies
+        run: python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Verify isolated branch and rehearse from verified production revision 0112
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEON_API_KEY:-}" ]]; then
+            echo "::error::NEON_API_KEY repository secret is required."
+            exit 1
+          fi
+
+          API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
+          AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
+          parent_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$NEON_PARENT_BRANCH_ID")
+          parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
+          if [[ "$parent_name" != "nlc-prod-backup-2026-11-20-before-0122" ]]; then
+            echo "::error::Pinned backup branch name mismatch."
+            exit 1
+          fi
+
+          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$NEON_REHEARSAL_BRANCH_ID")
+          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
+          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
+          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+            echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
+            exit 1
+          fi
+
+          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$NEON_REHEARSAL_ENDPOINT_ID")
+          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
+          if [[ "$endpoint_branch" != "$NEON_REHEARSAL_BRANCH_ID" ]]; then
+            echo "::error::Read-write endpoint does not belong to the pinned rehearsal branch."
+            exit 1
+          fi
+
+          MIGRATION_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=$NEON_REHEARSAL_BRANCH_ID" \
+            --data-urlencode "endpoint_id=$NEON_REHEARSAL_ENDPOINT_ID" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_migration_user" \
+            --data-urlencode "pooled=false" \
+            "$API/connection_uri" | jq -r '.uri // empty')
+          if [[ -z "$MIGRATION_URL" ]]; then
+            echo "::error::Neon did not return a direct nlc_migration_user URI."
+            exit 1
+          fi
+          echo "::add-mask::$MIGRATION_URL"
+
+          APP_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=$NEON_REHEARSAL_BRANCH_ID" \
+            --data-urlencode "endpoint_id=$NEON_REHEARSAL_ENDPOINT_ID" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_app_role" \
+            --data-urlencode "pooled=false" \
+            "$API/connection_uri" | jq -r '.uri // empty')
+          if [[ -z "$APP_URL" ]]; then
+            echo "::error::Neon did not return the direct nlc_app_role URI required for Alembic model imports."
+            exit 1
+          fi
+          echo "::add-mask::$APP_URL"
+
+          AUDIT_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=$NEON_REHEARSAL_BRANCH_ID" \
+            --data-urlencode "endpoint_id=$NEON_REHEARSAL_ENDPOINT_ID" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_ci_audit_role" \
+            --data-urlencode "pooled=false" \
+            "$API/connection_uri" | jq -r '.uri // empty')
+          if [[ -z "$AUDIT_URL" ]]; then
+            echo "::error::Neon did not return the direct nlc_ci_audit_role URI."
+            exit 1
+          fi
+          echo "::add-mask::$AUDIT_URL"
+
+          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
+          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
+
+          ready=false
+          for attempt in $(seq 1 30); do
+            if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
+          import asyncio, os
+          import asyncpg
+          from app.db_url import prepare_asyncpg_connection
+          from sqlalchemy.engine import make_url
+          async def main():
+              url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
+              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+              conn = await asyncpg.connect(dsn, **args)
+              await conn.close()
+          asyncio.run(main())
+          PY
+            then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != "true" ]]; then
+            echo "::error::Pinned Neon compute did not become reachable as nlc_migration_user."
+            exit 1
+          fi
+
+          export ENVIRONMENT=production
+          export MIGRATION_DATABASE_URL="$MIGRATION_URL"
+          export APP_DATABASE_URL="$APP_URL"
+          export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
+          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
+          export NLC_TARGET_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
+          python -m py_compile scripts/rehearse_production_0112_to_0122.py
+          python scripts/rehearse_production_0112_to_0122.py
+
+      - name: Upload production-schema migration rehearsal report
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-production-0112-to-0122-rehearsal
+          path: artifacts/neon-production-0112-to-0122.json
+          if-no-files-found: error

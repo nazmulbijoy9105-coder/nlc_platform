@@ -122,6 +122,66 @@ def _matches_legacy(row, fingerprints):
     )
 
 
+def _allow_scoped_migration_owner_updates(bind):
+    """Permit only the dedicated migration role to perform this data repair.
+
+    The trigger is SECURITY DEFINER and checks session_user for database-owner
+    sessions. Production migrations deliberately log in as nlc_migration_user
+    and SET ROLE nlc_migration_owner, so the trigger must recognize that exact
+    controlled role pair without weakening the runtime SUPER_ADMIN rule.
+    """
+    bind.execute(sa.text("""
+        CREATE OR REPLACE FUNCTION public.nlc_require_legal_rule_version_snapshot()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        SET search_path TO 'pg_catalog', 'public'
+        AS $function$
+        DECLARE
+            actor_id uuid;
+        BEGIN
+            IF pg_has_role(session_user, 'pg_database_owner', 'USAGE') THEN
+                RETURN NEW;
+            END IF;
+
+            IF session_user = 'nlc_migration_user'
+               AND pg_has_role(session_user, 'nlc_migration_owner', 'SET') THEN
+                RETURN NEW;
+            END IF;
+
+            actor_id := public.nlc_current_user_id();
+            IF actor_id IS NULL OR NOT public.nlc_current_user_is_super_admin() THEN
+                RAISE EXCEPTION 'Only an active SUPER_ADMIN may modify legal rules'
+                    USING ERRCODE = '42501';
+            END IF;
+
+            IF NEW.rule_id IS DISTINCT FROM OLD.rule_id THEN
+                RAISE EXCEPTION 'legal_rules.rule_id is immutable'
+                    USING ERRCODE = '55000';
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM public.legal_rule_versions v
+                WHERE v.rule_id = OLD.rule_id
+                  AND v.changed_by = actor_id
+                  AND v.changed_at >= transaction_timestamp() - INTERVAL '15 minutes'
+                  AND v.previous_definition->>'id' = OLD.id::text
+                  AND v.previous_definition->>'rule_version' = COALESCE(OLD.rule_version, '1.0')
+                  AND v.previous_definition->>'rule_name' IS NOT DISTINCT FROM OLD.rule_name
+                  AND v.previous_definition->>'statutory_basis' IS NOT DISTINCT FROM OLD.statutory_basis
+                  AND NULLIF(BTRIM(v.change_reason), '') IS NOT NULL
+            ) THEN
+                RAISE EXCEPTION 'A matching legal_rule_versions snapshot is required before changing a rule'
+                    USING ERRCODE = '55000';
+            END IF;
+
+            RETURN NEW;
+        END
+        $function$;
+    """))
+
+
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
@@ -154,6 +214,11 @@ def upgrade():
         sa.Column("captured_at", sa.DateTime(timezone=True), nullable=False),
         schema="public",
     )
+
+    # The production migration login assumes this exact non-login role.
+    # The trigger continues to require a database-backed SUPER_ADMIN for all
+    # application sessions; only this dedicated migration session is exempt.
+    _allow_scoped_migration_owner_updates(bind)
 
     inc001 = bind.execute(sa.text("""
         SELECT rule_name, statutory_basis, rule_condition
@@ -204,6 +269,19 @@ def upgrade():
     # access after the migration's archive writes are complete.
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} ENABLE ROW LEVEL SECURITY")
     op.execute(f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY")
+    # Permit only the non-login migration owner to verify the immutable archive.
+    # Runtime and audit roles retain no table privileges or RLS policy.
+    op.execute(f"""
+        DO $policy$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN
+                EXECUTE 'CREATE POLICY legal_rule_identity_archive_migration_read '
+                    || 'ON public.{ARCHIVE_TABLE} FOR SELECT TO nlc_migration_owner '
+                    || 'USING (current_user = ''nlc_migration_owner'')';
+            END IF;
+        END
+        $policy$
+    """)
     op.execute(
         f"REVOKE ALL PRIVILEGES ON TABLE public.{ARCHIVE_TABLE} "
         "FROM PUBLIC, nlc_app_role, nlc_ci_audit_role"

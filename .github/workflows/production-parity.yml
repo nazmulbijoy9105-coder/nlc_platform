@@ -1,4 +1,4 @@
-name: Production Rule Parity
+name: Production DB/API Release Parity
 
 on:
   workflow_dispatch:
@@ -7,35 +7,57 @@ on:
         description: Deployed NLC API base URL
         required: true
         default: https://nlc-platform.onrender.com
+      expected_sha:
+        description: Expected deployed Git SHA (defaults to the selected main revision)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
 
 jobs:
   production-parity:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       DATABASE_URL: ${{ secrets.NLC_PRODUCTION_DATABASE_URL }}
+      NLC_PRODUCTION_DATABASE_URL: ${{ secrets.NLC_PRODUCTION_DATABASE_URL }}
       API_URL: ${{ inputs.api_url }}
+      EXPECTED_DEPLOYED_SHA: ${{ inputs.expected_sha || github.sha }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-      - name: Install read-only audit dependency
-        run: python -m pip install asyncpg
+          python-version: "3.11"
+      - name: Install read-only parity dependencies
+        run: python -m pip install asyncpg sqlalchemy
+
       - name: Require least-privilege production audit credential
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::error::Configure NLC_PRODUCTION_DATABASE_URL with the read-only audit-schema role."
+          if [ -z "$NLC_PRODUCTION_DATABASE_URL" ]; then
+            echo "::error::Configure NLC_PRODUCTION_DATABASE_URL with the read-only nlc_ci_audit_role credential."
             exit 1
           fi
-      - name: Compare production DB, API, engine and full seed metadata
+          if [[ "$NLC_PRODUCTION_DATABASE_URL" != *"nlc_ci_audit_role"* ]]; then
+            echo "::error::Production parity refuses non-audit database credentials."
+            exit 1
+          fi
+
+      - name: Compare production DB, API, engine and seed metadata
         run: |
           mkdir -p artifacts
           python tools/audit_rule_parity.py --report-json artifacts/production-rule-registry-parity.json
 
-      - name: Upload production rule registry parity report
+      - name: Verify migrated schema, tenant security and deployed API SHA
+        run: |
+          set -o pipefail
+          python tools/audit_production_release_parity.py | tee artifacts/production-release-parity.json
+
+      - name: Upload production parity reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: production-rule-registry-parity
-          path: artifacts/production-rule-registry-parity.json
+          name: production-db-api-release-parity
+          path: artifacts/production-*-parity.json
           if-no-files-found: warn
