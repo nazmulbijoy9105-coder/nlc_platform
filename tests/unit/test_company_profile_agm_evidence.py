@@ -275,6 +275,7 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
         current_director_count=3,
         directors_verified=True,
         directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
+        verified_fact_keys=frozenset({"current_director_count"}),
     )
 
     assert _input_coverage(unverified) == 0.0
