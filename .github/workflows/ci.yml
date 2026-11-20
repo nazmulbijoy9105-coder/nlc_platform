@@ -223,6 +223,24 @@ jobs:
           path: artifacts/rule-registry-static-parity.json
           if-no-files-found: warn
 
+      # Six-state rule coverage funnel (fix-order item 9): registered,
+      # implemented, active, applicable, evaluated, deferred. The CLI fails
+      # the build on any silent state collapse; run-scoped stages
+      # (active/applicable/evaluated) stay injectable for live collection
+      # in production-parity.yml without changing the artifact schema.
+      - name: Six-state rule coverage report
+        run: |
+          mkdir -p artifacts
+          python -m canonical_architecture.coverage_report --output artifacts/rule-coverage-report.json
+
+      - name: Upload six-state rule coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rule-coverage-report
+          path: artifacts/rule-coverage-report.json
+          if-no-files-found: warn
+
       # Live DB/API parity is a separate release gate in production-parity.yml.
       # It must be dispatched after the read-only audit role and API are ready.
 
