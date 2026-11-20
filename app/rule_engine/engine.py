@@ -1885,27 +1885,70 @@ class NLCRuleEngine:
             ))
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
-            missing = []
-            if c.schedule_x_attached is False:
-                missing.append("Schedule X")
-            if c.balance_sheet_attached is False:
-                missing.append("Balance Sheet")
-            if c.profit_loss_attached is False:
-                missing.append("P&L Account")
-            if c.directors_list_attached is False:
-                missing.append("Directors List")
-            if c.shareholders_list_attached is False:
-                missing.append("Shareholders List")
-            self._add_flag(ComplianceFlag(
-                rule_id="AR-004",
-                flag_code="ANNUAL_RETURN_INCOMPLETE",
-                severity=Severity.YELLOW,
-                score_impact=8,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Annual Return incomplete. Missing: {', '.join(missing)}. Section 36 + Schedule X require complete disclosure.",
-                statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
-                detail={"missing": missing}
-            ))
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
+            filing_status_verified = (
+                c.annual_return_filing_status_verified is True
+                and bool(c.annual_return_filing_status_evidence_ref)
+            )
+            content_verified = "annual_return_content_complete" in verified
+            missing = [
+                label
+                for field_name, label in (
+                    ("schedule_x_attached", "Schedule X"),
+                    ("balance_sheet_attached", "Balance Sheet"),
+                    ("profit_loss_attached", "P&L Account"),
+                    ("directors_list_attached", "Directors List"),
+                    ("shareholders_list_attached", "Shareholders List"),
+                )
+                if field_name in verified and getattr(c, field_name, None) is False
+            ]
+            if filing_status_verified and content_verified:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-004",
+                    flag_code="ANNUAL_RETURN_VERIFIED_INCOMPLETE",
+                    severity=Severity.YELLOW,
+                    score_impact=8,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "Authenticated RJSC filing evidence and a verified content "
+                        "fact establish that the annual list/return is incomplete "
+                        "under Section 36 and Schedule X."
+                    ),
+                    statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.NON_COMPLIANT,
+                    eval_state="VIOLATION",
+                    detail={
+                        "missing": missing,
+                        "verified_fact_keys": sorted(
+                            verified.intersection({
+                                "annual_return_content_complete",
+                                "schedule_x_attached",
+                                "balance_sheet_attached",
+                                "profit_loss_attached",
+                                "directors_list_attached",
+                                "shareholders_list_attached",
+                            })
+                        ),
+                        "filing_evidence_ref": c.annual_return_filing_status_evidence_ref,
+                    },
+                ))
+            else:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-004",
+                    flag_code="ANNUAL_RETURN_CONTENT_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "The profile reports incomplete annual-return content, but "
+                        "the filing receipt and content checklist are not both "
+                        "verified. This is an evidence-review prompt, not a breach."
+                    ),
+                    statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"reported_missing": missing},
+                ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 4: DIRECTORS
@@ -2421,7 +2464,7 @@ class NLCRuleEngine:
                     "Check Board authority, the alternative-location notice and the "
                     "statutory inspection requirements before determining compliance."
                 ),
-                statutory_basis="Section 34(2), Companies Act 1994 (Bangladesh)",
+                statutory_basis=("Unresolved location proposition: Section 34(2) is the penalty provision, not a location authority; confirm the operative statutory text and Articles before any finding."),
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={"location": c.register_location},
@@ -2682,17 +2725,48 @@ class NLCRuleEngine:
             ))
 
         if c.special_resolution_date and c.special_resolution_filed is False:
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
+            resolution_facts_verified = {
+                "special_resolution_date",
+                "special_resolution_filed",
+            }.issubset(verified)
             delay = (self.today - c.special_resolution_date).days
-            if delay > 15:
+            if delay > 15 and resolution_facts_verified:
                 self._add_flag(ComplianceFlag(
                     rule_id="CAP-004",
-                    flag_code="SPECIAL_RESOLUTION_NOT_FILED",
+                    flag_code="SPECIAL_RESOLUTION_VERIFIED_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
+                    description=(
+                        "A document-backed special-resolution date and RJSC filing "
+                        "status verify that the resolution copy was not filed within "
+                        "15 days under Section 88(1)."
+                    ),
                     statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
-                    detail={"delay": delay}
+                    state=RuleState.VERIFIED_ABSENT,
+                    eval_state="VIOLATION",
+                    detail={
+                        "delay": delay,
+                        "verified_fact_keys": ["special_resolution_date", "special_resolution_filed"],
+                    },
+                ))
+            elif delay > 15:
+                self._add_flag(ComplianceFlag(
+                    rule_id="CAP-004",
+                    flag_code="SPECIAL_RESOLUTION_FILING_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "The profile reports a special-resolution filing delay, but "
+                        "the resolution date and/or RJSC filing status is not verified. "
+                        "Do not treat this as a breach."
+                    ),
+                    statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"delay_days_reported": delay},
                 ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2861,43 +2935,63 @@ class NLCRuleEngine:
     # MODULE 11: STRUCTURAL CHANGE
     # ───────────────────────────────────────────────────────────────────
     def _run_structural_change_rules(self, c: CompanyProfile) -> None:
-        if c.name_change_pending and c.name_change_date and c.name_change_sr_passed is False:
-            delay = (self.today - c.name_change_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="STR-001", flag_code="NAME_CHANGE_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Name change not filed. Section 11 applies to change of company name; special-resolution filing under Section 88(1) is within 15 days. Overdue {delay} days.",
-                    statutory_basis="Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
-                ))
+        """Report structural-change workflows without inferring an overdue filing.
 
-        if c.object_clause_change_pending and c.object_clause_change_date:
-            delay = (self.today - c.object_clause_change_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
+        The legacy profile has dates and pending flags but no authoritative
+        filing-receipt fields for each change type. Section 88(1) filing status
+        is evaluated separately by CAP-004 when both date and RJSC status are
+        verified. These aggregate workflow flags remain review-only.
+        """
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        workflows = (
+            (
+                "STR-001",
+                "NAME_CHANGE_WORKFLOW_REQUIRES_REVIEW",
+                c.name_change_pending,
+                c.name_change_date,
+                "name_change_pending",
+                "name_change_date",
+                "Section 11 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                "Name-change workflow reported. Verify the special resolution, Registrar approval, certificate of incorporation and Section 88 filing receipt; pending status alone does not establish default.",
+            ),
+            (
+                "STR-002",
+                "OBJECT_CLAUSE_WORKFLOW_REQUIRES_REVIEW",
+                c.object_clause_change_pending,
+                c.object_clause_change_date,
+                "object_clause_change_pending",
+                "object_clause_change_date",
+                "Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
+                "Object-clause alteration reported. Verify the special resolution, court confirmation where required, registration and filing receipts; a workflow date alone does not establish default.",
+            ),
+            (
+                "STR-003",
+                "AOA_ALTERATION_WORKFLOW_REQUIRES_REVIEW",
+                c.aoa_alteration_pending,
+                c.aoa_alteration_date,
+                "aoa_alteration_pending",
+                "aoa_alteration_date",
+                "Section 20 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                "Articles alteration reported. Verify the special resolution, Registrar filing and any registration requirements; a workflow date alone does not establish default.",
+            ),
+        )
+        for rule_id, flag_code, pending, event_date, pending_key, date_key, basis, description in workflows:
+            if pending and event_date and {pending_key, date_key}.issubset(verified):
                 self._add_flag(ComplianceFlag(
-                    rule_id="STR-002", flag_code="OBJECT_CLAUSE_CHANGE_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
+                    rule_id=rule_id,
+                    flag_code=flag_code,
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Memorandum object-clause alteration not filed. Sections 12 and 88(1) apply to the resolution filing; court confirmation/registration requirements under Sections 15-16 must be assessed separately. Overdue {delay} days.",
-                    statutory_basis="Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
-                ))
-
-        if c.aoa_alteration_pending and c.aoa_alteration_date:
-            delay = (self.today - c.aoa_alteration_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="STR-003", flag_code="AOA_ALTERATION_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Articles alteration not filed. Section 20 and the special-resolution filing requirement in Section 88(1) apply; confirm any further registration steps before calculating a deadline. Overdue {delay} days.",
-                    statutory_basis="Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
+                    description=description,
+                    statutory_basis=basis,
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={
+                        "event_date": event_date.isoformat(),
+                        "verified_fact_keys": [pending_key, date_key],
+                        "special_resolution_filing_checked_by": "CAP-004",
+                    },
                 ))
 
     # ───────────────────────────────────────────────────────────────────
