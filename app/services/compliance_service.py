@@ -34,6 +34,7 @@ from app.models.company_fact import CompanyFact
 from app.compliance.fact_provenance import (
     fact_freshness_max_age_days,
     fact_freshness_status,
+    is_internal_profile_fact_key,
     verified_document_fact_keys,
 )
 from app.models.rules import LegalRule
@@ -236,12 +237,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         ]
         used_facts = []
         profile_field_names = {
-            field.name for field in dataclass_fields(CompanyProfile)
-        } - {
-            "company_id", "company_name", "verified_fact_keys",
-            "catalogue_binding_required", "catalogue_rule_versions",
-            "catalogue_rule_active",
-        }
+            field.name
+            for field in dataclass_fields(CompanyProfile)
+            if not is_internal_profile_fact_key(field.name)
+        } - {"company_id", "company_name"}
         for fact in current_facts:
             if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
