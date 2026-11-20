@@ -204,8 +204,19 @@ def main() -> int:
 
     engine_source = engine_path.read_text(encoding="utf-8")
     seed_source = seed_path.read_text(encoding="utf-8")
-    if "UPDATE legal_rules SET is_active = TRUE" not in seed_source:
-        print("FAIL: seed_rules.py must activate existing canonical catalogue rows")
+    # Operator activation decisions are authoritative. The seeder is an
+    # insert-only bootstrap: it must never re-arm a disabled catalogue row.
+    # (Deactivation is an audited Super Admin decision via RulesService, and
+    # the engine already downgrades findings for inactive rows to
+    # RULE_INACTIVE / NOT_EVALUATED with zero score impact.)
+    if re.search(r"UPDATE\s+legal_rules\b[^;]*?is_active", seed_source, re.DOTALL):
+        print(
+            "FAIL: seed_rules.py must not write is_active on existing rows; "
+            "operator activation decisions are preserved"
+        )
+        return 1
+    if "UPDATE legal_rules" in seed_source:
+        print("FAIL: seed_rules.py must not update existing legal_rules rows at all")
         return 1
     if "TRUE, :now, :now" not in seed_source:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
