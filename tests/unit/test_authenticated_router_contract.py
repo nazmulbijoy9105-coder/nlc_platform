@@ -34,10 +34,25 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
     import importlib
 
     app = create_app()
-    registered = {
-        route.path: route
-        for route in app.routes
-        if isinstance(route, APIRoute)
+    registered = [
+        route for route in app.routes if isinstance(route, APIRoute)
+    ]
+    mount_prefixes = {
+        "companies": "/companies",
+        "portfolio_compliance": "",
+        "filings": "/filings",
+        "rescue": "/rescue",
+        "documents": "/documents",
+        "commercial": "/commercial",
+        "finance": "/finance",
+        "subscriptions": "/subscriptions",
+        "rjsc_forms": "/rjsc-forms",
+        "calendar": "",
+        "legal_provenance": "",
+        "rules": "/rules",
+        "admin": "/admin",
+        "notifications": "/notifications",
+        "webhooks": "/webhooks",
     }
 
     # Public legal-rule catalogue listing is intentionally read-only and
@@ -52,15 +67,20 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
                 continue
             if (module_name, router_route.endpoint.__name__) in public_catalogue_endpoints:
                 continue
+            full_path = (
+                f"/api/v1{mount_prefixes[module_name]}{router_route.path}"
+            )
             app_route = next(
                 (
-                    candidate for candidate in registered.values()
-                    if candidate.endpoint is router_route.endpoint
+                    candidate for candidate in registered
+                    if candidate.path == full_path
+                    and candidate.methods == router_route.methods
+                    and candidate.endpoint.__name__ == router_route.endpoint.__name__
                 ),
                 None,
             )
             assert app_route is not None, (
-                f"{module_name} route is not mounted: {router_route.path}"
+                f"{module_name} route is not mounted: {full_path}"
             )
             calls = set(_dependency_calls(app_route.dependant))
             assert verify_access_token in calls, (
