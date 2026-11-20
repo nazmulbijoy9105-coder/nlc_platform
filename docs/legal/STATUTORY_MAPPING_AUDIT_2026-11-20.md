@@ -2,7 +2,7 @@
 
 ## Scope and authority
 
-Repository baseline reviewed: `main` at `dfdd96fa6fadd48e6080acf1375286ff78113f6b`. This is a first-pass source-backed engineering audit of high-impact Companies Act 1994 (Bangladesh) mappings and the current production scoring data. It is not a completed 85-rule legal opinion, a statutory compliance certificate, or independent counsel approval.
+Repository baseline reviewed: `main` at `d5d1e0a2c52cc0881c356e17b1628fdd0b4d915b` (PR #382 merge). Post-deployment verification updated 21 November 2026. This is a first-pass source-backed engineering audit of high-impact Companies Act 1994 (Bangladesh) mappings and the current production scoring data. It is not a completed 85-rule legal opinion, a statutory compliance certificate, or independent counsel approval.
 
 Primary sources checked:
 
@@ -87,16 +87,16 @@ The latest CI audit run (`44775805744`) returned `0 FAIL / 63 WARN / 52 PASS`. T
 
 Production Neon branch `br-purple-fog-aodj8s04`, database `neondb`, was inspected read-only:
 
-- Alembic revision: `0122_rls_staff_scope_and_score_history` is now applied to production. The migration workflow's follow-up `alembic current` check failed because the pooled connection returned the exact migration login with the owner role already active; the Render deploy hook was skipped. PR #383 fixes the idempotent role preflight and resets the role between Alembic processes.
-- `legal_rules`: 86 rows, 86 active, 0 marked VERIFIED, 0 catalogue rows with non-zero `score_impact`. The extra row relative to the 85-rule product set requires identity reconciliation; do not force parity with ad hoc inserts/deletes.
+- Alembic revision: `0122_rls_staff_scope_and_score_history` is applied to production. Deployment workflow #44779717093 completed successfully on 21 November local time / 20 November UTC: migration upgrade and current-revision verification passed, Render deploy hook was accepted, and liveness/readiness both returned HTTP 200. Render deployment `dep-dc07tcs9v7es73at23hg` is `live` on SHA `d5d1e0a2c52cc0881c356e17b1628fdd0b4d915b`. Readiness reported database and Redis `ok` and the exact deployed revision.
+- `legal_rules`: 86 rows, 84 active and 2 inactive; all 86 remain `PENDING`, zero are `VERIFIED`, and zero catalogue rows have non-zero `score_impact`. The 85 canonical registry IDs are all present in the DB. The extra row is `INC-002`, an inactive duplicate; `INC-001` is also inactive as the quarantined legacy identity. Do not force parity with ad hoc inserts/deletes.
 - Target company latest stored evaluation: `3150a0df-de28-4dd3-ab97-6bb16e1d7683`, calculated 15 November 2026, catalogue count 86, score 85, risk band RED.
-- Its 86 rule outcomes: 77 NOT_EVALUATED, 4 UNKNOWN, 2 NON_COMPLIANT, 3 REQUIRES_LAWYER_JUDGMENT.
-- Current active flags: 9 total — 7 UNKNOWN with zero impact; 2 VIOLATION findings (TL-001 impact 5; REG-002 impact 12).
-- Score history has only three rows; its newest row is 9 November with null score and `NOT_RELEASED`. The 15 November evaluation is not represented by a matching score-history row. Reconcile this persistence/reporting difference before treating the historical dashboard trend as current.
+- Its 86 rule outcomes: 77 NOT_EVALUATED, 4 UNKNOWN, 2 NON_COMPLIANT, 3 REQUIRES_LAWYER_JUDGMENT. Every outcome has `applicability_state=UNKNOWN` in this legacy snapshot; it contains no explicit applicability determination.
+- Current active flags: 9 total — 7 UNKNOWN with zero impact; 2 VIOLATION findings (TL-001 impact 5; REG-002 impact 12). The two active violation flags carry impacts 5 and 12 respectively; the other seven carry zero.
+- Score history has three rows: newest 9 November is null score / `NOT_RELEASED`; 1 October is score 90 / GREEN on engine 1.0.0; 28 September is score 0 / BLACK on engine 1.0.0. The 15 November engine 2.2 evaluation (score 85 / RED) is not represented by a matching score-history row. Reconcile this persistence/reporting difference before treating the historical dashboard trend as current.
 
 Post-migration row counts are 549 compliance flags, 74 score-history rows, 175 evaluation runs and 86 legal-rule rows. The canonical identity registry contains 85 identities and 85 unresolved aliases (0 resolved); historical finding bindings, finding-evidence links, finding contexts and rescue-audit rows remain 0. This is a fail-closed, no-backfill posture, but it means old findings still lack canonical rule/evidence binding. These are stored database observations, not a fresh authenticated API evaluation. A new evaluation and six-state endpoint response must be generated after migration/deployment and tenant authorization checks.
 
-The main CI static coverage artifact (run `44774872530`) reports 85 registered and 85 implemented rules, but active, applicable and evaluated counts are explicitly `not collected`; it is not a live six-state company report. The production endpoint is `GET /api/v1/companies/{company_id}/rule-coverage` and requires a signed user with company access. No authenticated production response was available during this audit, so the live six-state endpoint remains unverified.
+The main CI static coverage artifact (run `44774872530`) reports 85 registered and 85 implemented rules, but active, applicable and evaluated counts are explicitly `not collected`; it is not a live six-state company report. The production endpoint is `GET /api/v1/companies/{company_id}/rule-coverage` and requires a signed user with company access. Production DB inspection supports a live-funnel expectation of 85 registered, 85 implemented, 84 active, and an explicit activation hold for `INC-001`; the inactive duplicate `INC-002` is outside the canonical registry. For the selected legacy run, all 84 active rules resolve to applicability `UNKNOWN`, so applicable and evaluated counts should be zero and the applicability summary should be 84 UNKNOWN. This is a deterministic read of stored DB state, not an authenticated endpoint response. No fresh authenticated production response or evaluation has yet been captured.
 
 ## Production RLS spot-check — read-only
 
@@ -109,6 +109,6 @@ Post-migration policy inventory now shows `company_user_access_admin_write` and 
 1. Keep product scoring enabled as an explicitly labelled product risk metric.
 2. Keep legal verification fail-closed: zero `VERIFIED_RULE_IDS` until actual independent, rule-specific counsel decisions are recorded.
 3. Keep all unresolved rule outcomes non-scoring; no default GREEN, no missing-evidence breach and no automatic BLACK from a backlog or allegation.
-4. Finish PR #381 (Alembic metadata-only fix) and PR #382 (citation audit correction) with passing CI.
-5. Complete migration 0112→0122, verify RLS/tenant isolation and production readiness, then generate a fresh company-specific six-state evaluation and reconcile score history.
+4. PR #382 is merged and the exact main SHA has passed CI; migration 0112→0122 is complete, Render is live, and liveness/readiness are green. Continue the full signed-user tenant-isolation matrix; the current RLS evidence is still a spot check.
+5. Obtain an authenticated production response from `GET /api/v1/companies/{company_id}/rule-coverage`, then run a fresh authorized evaluation only after reviewing its applicability and evidence inputs; reconcile the 15 November evaluation with score history.
 6. Complete the remaining 85-rule proposition-by-proposition source and applicability review before making any claim of statutory legal verification.
