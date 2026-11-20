@@ -2,7 +2,7 @@
 
 ## Release configuration
 
-- `LEGAL_SCORE_RELEASED` is read from the deployment environment. Values `true`, `1`, `yes`, and `on` enable product scoring; all other values, including an unset variable, disable score-bearing output. `.env.example` defaults to `LEGAL_SCORE_RELEASED=true`. On 20 November 2026 the production Render service environment was explicitly set to `LEGAL_SCORE_RELEASED=true`; the resulting deployment must be confirmed live before claiming the runtime has picked up the setting.
+- `LEGAL_SCORE_RELEASED` is read from the deployment environment. Values `true`, `1`, `yes`, and `on` enable product scoring; all other values, including an unset variable, disable score-bearing output. `.env.example` defaults to `LEGAL_SCORE_RELEASED=true`. On 20 November 2026 the production Render service environment was explicitly set to `LEGAL_SCORE_RELEASED=true`. Render deployment `dep-dc07cb61egvs7387q090` is confirmed live on SHA `dfdd96fa6fadd48e6080acf1375286ff78113f6b`; startup logs report `runtime_role_verified=true`.
 - `PRODUCT_SCORING_RULE_IDS`: all 85 product-owner-approved rules, active for evaluation, visibility and scoring eligibility.
 - `SCORE_DEDUCTION_RULE_IDS`: the same 85 product-approved rules; each may contribute only its configured deduction after evidence, applicability, confirmed-violation and state gates.
 - `AR-001` and `SH-002` are active and score-eligible under the same evidence/state controls as the other rules.
