@@ -1221,6 +1221,9 @@ class NLCRuleEngine:
             and "trade_license_obtained" in verified
             and c.trade_license_expiry is not None
             and "trade_license_expiry" in verified
+            and self._facts_share_evidence_context(
+                c, "trade_license_obtained", "trade_license_expiry"
+            )
             and c.trade_license_expiry < self.today
         ):
             days_expired = (self.today - c.trade_license_expiry).days
@@ -1240,6 +1243,27 @@ class NLCRuleEngine:
                 state=RuleState.NON_COMPLIANT,
                 eval_state="VIOLATION",
                 detail={"expired_days": days_expired, "verified_fact_keys": ["trade_license_obtained", "trade_license_expiry"]},
+            ))
+        elif (
+            c.trade_license_obtained is True
+            and "trade_license_obtained" in verified
+            and c.trade_license_expiry is not None
+            and "trade_license_expiry" in verified
+            and not self._facts_share_evidence_context(
+                c, "trade_license_obtained", "trade_license_expiry"
+            )
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="TL-002",
+                flag_code="TRADE_LICENSE_FACTS_NOT_LINKED_TO_SAME_LICENCE",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Licence status and expiry are individually verified but are not linked to the same licence document or source reference; do not infer expiry.",
+                statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verified_fact_keys": ["trade_license_obtained", "trade_license_expiry"]},
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1956,7 +1980,10 @@ class NLCRuleEngine:
                 )
                 if field_name in verified and getattr(c, field_name, None) is False
             ]
-            if filing_status_verified and content_verified:
+            same_filing_evidence = self._facts_share_evidence_context(
+                c, "annual_return_filed", "annual_return_content_complete"
+            )
+            if filing_status_verified and content_verified and same_filing_evidence:
                 self._add_flag(ComplianceFlag(
                     rule_id="AR-004",
                     flag_code="ANNUAL_RETURN_VERIFIED_INCOMPLETE",
@@ -2532,10 +2559,15 @@ class NLCRuleEngine:
             delay = (self.today - c.registered_office_change_date).days
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
                 verified = set(getattr(c, "verified_fact_keys", ()) or ())
-                office_facts_verified = {
-                    "registered_office_change_date",
-                    "form_vi_filed",
-                }.issubset(verified)
+                office_facts_verified = (
+                    {
+                        "registered_office_change_date",
+                        "form_vi_filed",
+                    }.issubset(verified)
+                    and self._facts_share_evidence_context(
+                        c, "registered_office_change_date", "form_vi_filed"
+                    )
+                )
                 if office_facts_verified:
                     self._add_flag(ComplianceFlag(
                         rule_id="OFF-001",
@@ -2561,7 +2593,7 @@ class NLCRuleEngine:
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=(
                             "A registered-office change and missing Form VI are reported, "
-                            "but the change date and RJSC filing status are not both verified. "
+                            "but the change date and RJSC filing status are not both verified and linked to the same event. "
                             "This is a review prompt, not a confirmed breach."
                         ),
                         statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
@@ -2808,10 +2840,15 @@ class NLCRuleEngine:
 
         if c.special_resolution_date and c.special_resolution_filed is False:
             verified = set(getattr(c, "verified_fact_keys", ()) or ())
-            resolution_facts_verified = {
-                "special_resolution_date",
-                "special_resolution_filed",
-            }.issubset(verified)
+            resolution_facts_verified = (
+                {
+                    "special_resolution_date",
+                    "special_resolution_filed",
+                }.issubset(verified)
+                and self._facts_share_evidence_context(
+                    c, "special_resolution_date", "special_resolution_filed"
+                )
+            )
             delay = (self.today - c.special_resolution_date).days
             if delay > 15 and resolution_facts_verified:
                 self._add_flag(ComplianceFlag(
@@ -2842,7 +2879,7 @@ class NLCRuleEngine:
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                     description=(
                         "The profile reports a special-resolution filing delay, but "
-                        "the resolution date and/or RJSC filing status is not verified. "
+                        "the resolution date and/or RJSC filing status is not verified and linked to the same resolution. "
                         "Do not treat this as a breach."
                     ),
                     statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
