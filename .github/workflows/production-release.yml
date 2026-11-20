@@ -177,14 +177,6 @@ jobs:
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
 
-      - name: Apply and verify production migrations 0112 through 0122
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          REPORT_PATH=artifacts/neon-production-0112-to-0122.json \
-            python scripts/rehearse_production_0112_to_0122.py
-
       - name: Configure Render readiness health check
         shell: bash
         run: |
@@ -197,6 +189,14 @@ jobs:
             --data '{"serviceDetails":{"healthCheckPath":"/api/v1/health/ready"}}' >/dev/null
           SERVICE=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" "https://api.render.com/v1/services/$RENDER_SERVICE_ID")
           jq -e '.serviceDetails.healthCheckPath == "/api/v1/health/ready"' <<<"$SERVICE" >/dev/null
+
+      - name: Apply and verify production migrations 0112 through 0122
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          REPORT_PATH=artifacts/neon-production-0112-to-0122.json \
+            python scripts/rehearse_production_0112_to_0122.py
 
       - name: Deploy exact main SHA and verify Render deployment
         id: deploy
