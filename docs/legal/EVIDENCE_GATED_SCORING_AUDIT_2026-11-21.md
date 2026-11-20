@@ -5,6 +5,7 @@
 This is a technical release-control record for the evidence-gating patch. It is not a Bangladesh counsel opinion, statutory certification, or approval to mark any rule `VERIFIED`. The independent counsel register remains fail-closed: the 85 rule-specific legal dispositions remain `RECONCILE` / `PENDING`.
 
 ## Product scoring control
+- Statutory date comparisons and evidence observation-date validation use the Bangladesh calendar date (Asia/Dhaka); persisted timestamps remain UTC and are converted only for display.
 
 - This patch does not turn off `LEGAL_SCORE_RELEASED` or remove the 85-rule product scoring allowlist.
 - Product scoring and independent statutory verification are separate controls. The product score may be produced only from sufficient evidence-backed inputs and score-eligible findings.
