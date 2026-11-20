@@ -32,6 +32,7 @@ from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.company_fact import CompanyFact
 from app.compliance.fact_provenance import (
+    business_date_today,
     fact_freshness_max_age_days,
     fact_freshness_status,
     is_internal_profile_fact_key,
@@ -245,7 +246,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
                 used_facts.append(fact)
-        evaluation_date = getattr(rule_engine, "today", date.today())
+        evaluation_date = getattr(rule_engine, "today", business_date_today())
         fact_provenance_snapshot = []
         for fact in used_facts:
             payload = fact.provenance_payload()
