@@ -31,7 +31,7 @@ Invariants (enforced by :meth:`RuleCoverageReport.validate`, each pinned by
     I2  registered ⊆ (implemented | deferred)       (no silent implementation gap)
     I3  deferred ⊆ registered, deferred ∩ implemented = ∅,
         every deferred ID has a non-empty reason    (deferral is explicit)
-    I4  active ⊆ registered                         (no phantom active rows)
+    I4  active ⊆ implemented ⊆ registered         (no phantom active rows)
     I5  implemented - active carries an explicit
         hold reason each                            (no silent activation holds)
     I6  applicable ⊆ active                         (applicability funnel)
@@ -272,6 +272,11 @@ class RuleCoverageReport:
                 violations.append(
                     f"I4 active rows for IDs absent from the registry: {sorted(phantom_active)}"
                 )
+            active_not_implemented = self.active - self.implemented
+            if active_not_implemented:
+                violations.append(
+                    f"I4 active IDs not implemented by the engine: {sorted(active_not_implemented)}"
+                )
             unheld = self.implemented - self.active - set(self.active_hold_reasons)
             if unheld:
                 violations.append(
@@ -283,13 +288,23 @@ class RuleCoverageReport:
                     f"I5 hold reasons recorded for IDs that are not implemented-and-inactive: "
                     f"{sorted(stray_holds)}"
                 )
-            empty_holds = {
-                rule_id
-                for rule_id, reason in self.active_hold_reasons.items()
-                if not str(reason).strip()
-            }
-            if empty_holds:
-                violations.append(f"I5 hold reasons must be non-empty: {sorted(empty_holds)}")
+        else:
+            # Static reports cannot establish which rows are inactive, but any
+            # supplied hold must still refer to a known engine implementation.
+            unknown_hold_ids = set(self.active_hold_reasons) - self.implemented
+            if unknown_hold_ids:
+                violations.append(
+                    f"I5 hold reasons recorded for IDs not implemented by the engine: "
+                    f"{sorted(unknown_hold_ids)}"
+                )
+
+        empty_holds = {
+            rule_id
+            for rule_id, reason in self.active_hold_reasons.items()
+            if not str(reason).strip()
+        }
+        if empty_holds:
+            violations.append(f"I5 hold reasons must be non-empty: {sorted(empty_holds)}")
 
         if self.applicable is not None:
             if self.active is None:
