@@ -33,6 +33,29 @@ The promulgated Bangla text must be treated as controlling where an English tran
 | AR-001 / AR-003 — annual return | s.36 and Schedule X; s.346 is a separate Registrar process | Annual-return duty and strike-off action must not be conflated. A backlog alone does not prove that Registrar proceedings have commenced or that the company is dissolved. |
 | DEF-001 — director disqualification | s.94 and the Articles | Require a specific ground, director identity, authoritative evidence, effective date and continuing status. The unpaid-call threshold remains disputed in the source dossier; do not auto-classify it. |
 
+## Historical source-triage discrepancies found against current runtime declarations
+
+A comparison of the 6 November 85-rule source-triage table with the current runtime declarations found that several old candidate anchors were superseded by later engineering corrections. These are not counsel approvals; they are source-mapping corrections or review flags:
+
+| Rule | Older triage anchor | Current runtime anchor / disposition |
+|---|---|---|
+| INC-004 | s.53 | s.56 is cited for the increase-in-registered-capital filing trigger; confirm the exact capital transaction before applying. |
+| AUD-003 | ss.151, 210 | ss.183 and 210; s.151 is return of allotment and must not anchor audited-accounts findings. |
+| AUD-004 | s.210(2) | s.210(3) is the current retiring-auditor reappointment anchor; s.210(2) is a separate notice duty. |
+| DIR-001 | s.90 | s.115(2) / Form XII filing; s.90 concerns minimum director count. |
+| DIR-004 | s.109 | s.115 / director particulars; cessation filing is not the s.109 managing-director restriction. |
+| DIR-007 | s.92 only | s.93(2) for the 30-day Registrar filing period, with s.92/Form IX cross-reference. |
+| CAP-001 | s.53 only | ss.53, 54 and 56; the trigger must distinguish capital alteration type and filing duty. |
+| BNK-001 | Bankruptcy Act 1997 s.12 | Companies Act 1994 Part V, including ss.241–244; exact petition ground is case-specific. |
+| BNK-002 | Bankruptcy Act 1997 s.14 | Companies Act 1994 Part V; s.255 applies to court-appointed Official Liquidators, and voluntary appointment is route-specific. |
+| BNK-003 | Bankruptcy Act 1997 s.18 | Companies Act 1994 Part V, including ss.241–246; require the operative court order. |
+| ESC-001 | s.304 | s.346; require authenticated Registrar process, not a return-backlog heuristic. |
+| ESC-004 | s.130 | s.286 and following provisions for voluntary winding-up; verify the actual resolution/route. |
+| ESC-005 | s.104 | ss.195, 197 and, where related entities are included, s.199; require the relevant investigation/order. |
+| REG-001 | s.34 | Current engine rule is a generic internal-register completeness signal with no single statutory basis. Split by register type before treating it as a statutory finding. |
+
+Additional current runtime rules intentionally remain without a single universal section anchor: DIR-002, DIR-006, DEF-002, BSEC-001 and VAT-003. FX-001, BSEC-002–004, TAX-001–004, VAT-002, LBR-001–003 and TL-001–002 require exact instrument, amendment, company/taxpayer class or local-authority scope review. ESC-003 is NLC internal risk policy, not a statutory breach. None of these unresolved anchors should be converted into an adverse statutory finding by default.
+
 ## Audit-tool correction
 
 The former `tools/legal_citation_audit.py` contained stale expectations that could incorrectly flag the corrected runtime mappings. The following anchors were updated in PR #382:
