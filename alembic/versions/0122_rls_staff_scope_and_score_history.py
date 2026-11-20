@@ -36,6 +36,23 @@ def upgrade() -> None:
         )
     """)
 
+    # Password hashes and encrypted TOTP secrets live on users. Legal staff
+    # must not be able to read other users' credential-bearing rows merely
+    # because their role is operational staff. Login keeps the signed AUTH
+    # principal; administrative user management keeps rule-admin access.
+    op.execute(
+        "DROP POLICY IF EXISTS users_self_or_staff_select ON public.users"
+    )
+    op.execute("""
+        CREATE POLICY users_self_or_admin_select ON public.users
+        FOR SELECT
+        USING (
+            id = public.nlc_current_user_id()
+            OR public.nlc_current_user_principal() IN ('ADMIN', 'AUTH')
+            OR public.nlc_current_user_is_rule_admin()
+        )
+    """)
+
     op.execute(
         "DROP POLICY IF EXISTS company_user_access_staff_write "
         "ON public.company_user_access"
