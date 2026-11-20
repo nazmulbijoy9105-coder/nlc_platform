@@ -9,6 +9,8 @@ Primary sources checked:
 - Bangladesh Laws (official consolidated Companies Act 1994): https://bdlaws.minlaw.gov.bd/act-print-788.html
 - Official Companies Act, capital reduction provisions, ss.58–70: https://bdlaws.minlaw.gov.bd/act-788/act-part-print-354.html
 - Official Companies Act, management, directors, audit and other provisions: https://bdlaws.minlaw.gov.bd/act-788/act-part-print-355.html
+- Official s.90 minimum director count: https://bdlaws.minlaw.gov.bd/act-788/section-32914.html?lang=bn
+- Official s.172 charge-satisfaction filing: https://bdlaws.minlaw.gov.bd/act-788/section-33519.html
 - Official Companies Act s.210: https://bdlaws.minlaw.gov.bd/act-788/section-33854.html?lang=en
 - RJSC eBRS official filing FAQ (Form IX, Form XII, Form XV and filing periods): https://ebrs.roc.gov.bd/public/faqs
 - RJSC official Form IX PDF: https://roc.gov.bd/sites/default/files/files/roc.portal.gov.bd/forms/6ad39f2f_1cd0_4910_acce_7f477f3def68/FORM%20IX%20%282%29.pdf
@@ -24,12 +26,12 @@ The promulgated Bangla text must be treated as controlling where an English tran
 | AGM-005 — quorum | s.85(2)(b), read with the Articles | Default quorum is two for a private company with no more than six members, three for a private company with more than six members, and five for other companies. Verify the operative Articles and actual membership/attendance before a breach finding. |
 | AGM-006 — minutes | s.89 | Minutes are an internal statutory record. Missing upload is not proof that minutes were never made or maintained. |
 | Minimum directors | s.90(1)–(2) | At least three for a public company and a private subsidiary of a public company; at least two for other private companies. Subsidiary classification and actual director status need authoritative evidence. |
-| DIR-001 — Form XII | s.115; RJSC Form XII guidance | RJSC eBRS lists Form XII within 14 days after appointment/change. Keep this separate from director consent and internal registers. |
+| DIR-001 — Form XII | s.115(2); RJSC Form XII | The Act itself gives 14 days for first particulars and subsequent changes; current eBRS FAQ also says 14 days. A legacy RJSC portal page says 15 days, which conflicts with the Act/current FAQ and must not override the statutory text. Keep this separate from director consent and internal registers. |
 | DIR-007 — director consent | s.93(2), with s.92 / Form IX cross-reference | The Act's s.93(2) sets the 30-day Registrar-filing period after appointment. RJSC labels Form IX under s.92 and its FAQ also describes the 30-day post-appointment filing. Retain both references; do not collapse pre-appointment eligibility/consent and post-appointment Registrar filing into one event. |
 | AUD-001 — first auditor | s.210(6) | Official s.210 text requires the Board to appoint the first auditor within one month after registration. Use calendar-month arithmetic. Do not confuse this with s.210(2)'s separate auditor notice duty. |
 | CAP-003 — capital reduction | ss.59–60 (and related ss.61–70 as applicable) | A reduction requires constitutional authority, special resolution and court confirmation under the statutory process. A pending workflow alone is not proof of an unlawful completed reduction. |
 | REG-002 — internal registers | ss.34, 89, 174 | Distinguish register of members, meeting minutes and register of charges. Director particulars/Form XII are a separate s.115 filing duty, not an inferred internal register. |
-| CHG-001 — satisfaction of charge | s.172; creation/registration is separately under s.159 | Satisfaction notice is due within 21 days under s.172. Do not cite s.159 as the satisfaction provision. |
+| CHG-001 — satisfaction of charge | s.172(1), read with s.159; creation/registration is separately under s.159 | The official Act text at s.172(1) requires notice within 21 days after satisfaction of a registrable charge. The RJSC eBRS FAQ lists Form XXVIII with ss.12/391, which conflicts with the Act section text; keep s.172 as the statutory anchor and record the form cross-reference discrepancy for counsel/RJSC confirmation. Do not cite s.159 alone as the satisfaction provision. |
 | AR-001 / AR-003 — annual return | s.36 and Schedule X; s.346 is a separate Registrar process | Annual-return duty and strike-off action must not be conflated. A backlog alone does not prove that Registrar proceedings have commenced or that the company is dissolved. |
 | DEF-001 — director disqualification | s.94 and the Articles | Require a specific ground, director identity, authoritative evidence, effective date and continuing status. The unpaid-call threshold remains disputed in the source dossier; do not auto-classify it. |
 
