@@ -115,7 +115,7 @@ class CompanyFactService:
         self, *, document_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date,
     ) -> CompanyFact:
-        if observed_on > date.today():
+        if observed_on > business_date_today():
             raise HTTPException(status_code=422, detail="observed_on cannot be in the future.")
         result = await self.db.execute(
             select(Document).where(Document.id == document_id, Document.is_active.is_(True))
