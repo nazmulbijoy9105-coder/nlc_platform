@@ -229,6 +229,13 @@ jobs:
       - name: Rule verification status check
         run: python scripts/check_rule_verification.py
 
+      # Engine guard tripwire (64d9259 incident + 2026-11-15 born-red drift).
+      # This file lives outside tests/unit, so the coverage job never ran it;
+      # from now on any change to a confirmed-violation gate must keep these
+      # pins green in the same PR.
+      - name: Engine guard tripwire
+        run: python -m pytest tests/test_engine_guards.py -q --tb=short
+
   integration-tests:
     runs-on: ubuntu-latest
 
