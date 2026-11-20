@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import asyncpg
+from sqlalchemy.engine import make_url
 
 from app.db_url import prepare_asyncpg_connection
 
@@ -61,7 +62,8 @@ def _url() -> str:
 
 async def _connect() -> asyncpg.Connection:
     url, args = prepare_asyncpg_connection(_url(), require_tls=True)
-    conn = await asyncpg.connect(url, **args)
+    dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+    conn = await asyncpg.connect(dsn, **args)
     identity = await conn.fetchrow(
         "SELECT session_user, current_user, current_database(), "
         "current_setting('neon.project_id', true) AS project_id, "
