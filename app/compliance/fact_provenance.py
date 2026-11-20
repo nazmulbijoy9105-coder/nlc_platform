@@ -107,6 +107,30 @@ FACT_MAX_AGE_DAYS: dict[str, int] = {
 }
 
 
+INTERNAL_PROFILE_FACT_KEYS = frozenset({
+    "verified_fact_keys",
+    "catalogue_binding_required",
+    "catalogue_rule_versions",
+    "catalogue_rule_active",
+})
+
+
+def is_internal_profile_fact_key(fact_key: str) -> bool:
+    """Identify reviewer/system trust metadata that is never a user company fact."""
+    key = fact_key.strip()
+    return (
+        key in INTERNAL_PROFILE_FACT_KEYS
+        or key.startswith("catalogue_")
+        or key.endswith((
+            "_verified",
+            "_verified_at",
+            "_verified_by",
+            "_evidence_ref",
+            "_evidence_reference",
+        ))
+    )
+
+
 FACT_NO_EXPIRY_KEYS = frozenset({
     "incorporation_date",
     "company_registration_number",
