@@ -62,6 +62,8 @@ def test_verified_document_facts_count_toward_score_coverage():
     profile = CompanyProfile(
         company_id="coverage-test",
         company_name="Coverage Test Ltd",
+        company_type="PRIVATE_LIMITED",
+        incorporation_date=date(2020, 1, 1),
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 12, 31),
         last_return_filed_year=2025,
