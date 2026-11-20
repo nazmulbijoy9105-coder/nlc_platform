@@ -1189,3 +1189,21 @@ async def verify_company_charge(
     )
     await db.refresh(charge)
     return charge
+
+
+@router.get(
+    "/{company_id}/rule-coverage",
+    summary="Get live six-state rule coverage for an authorised company",
+)
+async def get_company_rule_coverage(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+    _: uuid.UUID = Depends(require_company_access("company_id")),
+):
+    """Return current DB activity and explicit applicability from the latest immutable run."""
+    from app.services.rule_coverage_service import collect_company_rule_coverage
+
+    result = await collect_company_rule_coverage(db, company_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found.")
+    return result
