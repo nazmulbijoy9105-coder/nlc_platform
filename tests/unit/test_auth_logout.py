@@ -91,3 +91,34 @@ async def test_logout_succeeds_only_after_access_and_matching_refresh_are_revoke
         "refresh_revoked": True,
         "user_id": "user-1",
     }
+
+
+def test_access_token_is_rejected_when_redis_blacklist_is_unavailable(monkeypatch):
+    from fastapi import HTTPException
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    from app.core import dependencies
+
+    def unavailable(*args, **kwargs):
+        raise token_blacklist.BlacklistUnavailable("redis unavailable")
+
+    monkeypatch.setattr(
+        dependencies,
+        "decode_token",
+        lambda token, expected_type: {
+            "jti": "access-jti",
+            "sub": "user-1",
+            "user_id": "user-1",
+            "email": "user-1@nlctest.com",
+            "role": "CLIENT_DIRECTOR",
+            "exp": 1_900_000_000,
+        },
+    )
+    monkeypatch.setattr(token_blacklist, "is_revoked", unavailable)
+
+    with pytest.raises(HTTPException) as exc:
+        dependencies.verify_access_token(
+            HTTPAuthorizationCredentials(scheme="Bearer", credentials="access-token")
+        )
+    assert exc.value.status_code == 401
+    assert "temporarily unavailable" in exc.value.detail
