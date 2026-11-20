@@ -288,6 +288,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
         profile.verified_fact_keys = verified_document_fact_keys(
             used_facts, as_of=evaluation_date
         )
+        profile.verified_fact_context = {
+            fact.fact_key: {
+                "document_id": str(fact.document_id) if fact.document_id else None,
+                "source_reference": fact.source_reference,
+            }
+            for fact in used_facts
+            if fact.fact_key in profile.verified_fact_keys
+        }
 
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
