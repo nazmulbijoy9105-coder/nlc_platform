@@ -16,6 +16,7 @@ Used by:
 """
 
 
+import os
 import time
 from datetime import UTC, datetime
 
@@ -213,6 +214,7 @@ async def full_health_check():
     response_body = {
         "status": overall,
         "version": settings.app_version,
+        "revision": os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_SHA") or "unknown",
         "environment": settings.environment,
         "timestamp": datetime.now(UTC).isoformat(),
         "uptime_check": True,
@@ -284,6 +286,7 @@ async def readiness():
 
     response = {
         "ready": ready,
+        "revision": os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_SHA") or "unknown",
         "timestamp": datetime.now(UTC).isoformat(),
         "database": db_health.status,
         "redis": redis_health.status,
