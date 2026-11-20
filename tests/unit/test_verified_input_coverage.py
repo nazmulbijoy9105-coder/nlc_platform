@@ -90,3 +90,27 @@ def test_internal_trust_metadata_cannot_be_asserted_as_a_company_fact():
         with pytest.raises(HTTPException) as exc:
             CompanyFactService._normalize_fact_key(key)
         assert exc.value.status_code == 422
+
+
+
+def test_legacy_verification_flags_do_not_count_without_fresh_fact_keys():
+    profile = CompanyProfile(
+        company_id="coverage-test",
+        company_name="Coverage Test Ltd",
+        last_agm_date=date(2025, 6, 1),
+        agm_history_verified=True,
+        agm_history_evidence_ref="legacy-evidence-ref",
+        audit_completion_verified=True,
+        audit_completion_evidence_ref="legacy-audit-ref",
+        annual_return_filing_status_verified=True,
+        annual_return_filing_status_evidence_ref="legacy-return-ref",
+        first_auditor_appointed=True,
+        first_auditor_appointment_verified=True,
+        first_auditor_appointment_evidence_ref="legacy-appointment-ref",
+        current_director_count=2,
+        directors_verified=True,
+        directors_verification_evidence_ref="legacy-director-ref",
+        member_count=5,
+        verified_fact_keys=frozenset(),
+    )
+    assert _input_coverage(profile) == 0.0
