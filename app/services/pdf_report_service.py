@@ -348,7 +348,7 @@ def _is_active_confirmed_violation(flag: Any) -> bool:
     if resolved:
         return False
 
-    if not getattr(flag, "conditional_applies", True):
+    if getattr(flag, "conditional_applies", None) is False:
         return False
     return True
 
