@@ -2321,7 +2321,7 @@ class NLCRuleEngine:
                         "operative Articles, transfer class, notice, board powers and "
                         "section 38(7). Board approval is not a universal statutory requirement."
                     ),
-                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                     detail={"transfer_id": transfer.transfer_id},
@@ -3031,7 +3031,7 @@ class NLCRuleEngine:
                     "Registrar approval, certificate of incorporation and Section 88 "
                     "filing receipt; pending status alone does not establish default."
                 ),
-                statutory_basis="Section 11 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={
@@ -3083,7 +3083,7 @@ class NLCRuleEngine:
                     "Registrar filing and any registration requirements; a workflow "
                     "date alone does not establish default."
                 ),
-                statutory_basis="Section 20 and Section 88(1), Companies Act 1994 (Bangladesh)",
+                statutory_basis="Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={
