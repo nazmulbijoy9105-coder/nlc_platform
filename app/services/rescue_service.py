@@ -88,7 +88,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
         if (
             getattr(flag, "resolved", None) is False
-            and getattr(flag, "conditional_applies", None) is not False
+            and getattr(flag, "conditional_applies", None) is True
             and rule_id in PRODUCT_SCORING_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
