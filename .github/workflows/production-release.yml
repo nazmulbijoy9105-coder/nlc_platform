@@ -156,8 +156,12 @@ jobs:
               dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
               conn = await asyncpg.connect(dsn, **args)
               try:
+                  await conn.execute("SET ROLE nlc_migration_owner")
                   branch_id = await conn.fetchval("SELECT current_setting('neon.branch_id', true)")
+                  active_role = await conn.fetchval("SELECT current_user")
                   revision = await conn.fetchval("SELECT version_num FROM public.alembic_version")
+                  if active_role != "nlc_migration_owner":
+                      raise RuntimeError(f"Backup verification did not assume migration owner: {active_role!r}")
                   if branch_id != os.environ["NEON_BACKUP_BRANCH_ID"]:
                       raise RuntimeError(f"Backup connection reached wrong branch: {branch_id!r}")
                   if revision != "0112_runtime_acl_and_alembic_rls":
