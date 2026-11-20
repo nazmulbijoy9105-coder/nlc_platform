@@ -180,6 +180,46 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     if missing:
         raise RuntimeError(f"Canonical identity/evidence migration tables missing: {missing!r}")
 
+    identity_counts = await conn.fetchrow("""
+        SELECT
+            (SELECT count(*) FROM public.legal_rule_identities) AS identities,
+            (SELECT count(*) FROM public.legal_rule_identities
+              WHERE identity_status = 'ACTIVE') AS active_identities,
+            (SELECT count(*) FROM public.legal_rule_aliases) AS aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'UNRESOLVED') AS unresolved_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE resolution_status = 'RESOLVED') AS resolved_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2') AS engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace <> 'NLC_ENGINE_REGISTRY_V2') AS other_source_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+                AND historical_rule_id = 'INC-001') AS inc001_engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_aliases
+              WHERE source_namespace = 'NLC_ENGINE_REGISTRY_V2'
+                AND historical_rule_id = 'INC-002') AS inc002_engine_aliases,
+            (SELECT count(*) FROM public.legal_rule_revisions) AS revisions
+    """)
+    expected_identity_counts = {
+        "identities": 85,
+        "active_identities": 85,
+        "aliases": 85,
+        "unresolved_aliases": 85,
+        "resolved_aliases": 0,
+        "engine_aliases": 85,
+        "other_source_aliases": 0,
+        "inc001_engine_aliases": 1,
+        "inc002_engine_aliases": 0,
+        "revisions": 0,
+    }
+    if dict(identity_counts) != expected_identity_counts:
+        raise RuntimeError(
+            "Canonical engine identities/aliases are incomplete or incorrectly resolved: "
+            f"actual={dict(identity_counts)!r} expected={expected_identity_counts!r}"
+        )
+
     binding_counts = {
         table: await conn.fetchval(f'SELECT count(*) FROM public."{table}"')
         for table in ("compliance_finding_bindings", "compliance_finding_evidence")
@@ -221,6 +261,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "legacy_archive_verified": sorted(before_rules),
         "quarantined_legacy_rules": [dict(row) for row in quarantined],
         "required_identity_evidence_tables": list(required_tables),
+        "canonical_identity_seed_counts": dict(identity_counts),
         "historical_finding_binding_rows_after_migration": binding_counts,
         "score_history_invariants": dict(score_history),
         "scoped_migration_guard_exception_verified": True,
