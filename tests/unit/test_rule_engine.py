@@ -825,6 +825,39 @@ class TestRegisterRules:
         assert_flag_not_triggered(output, "REG-002")
 
 
+    def test_MEM001_ignores_unverified_member_count(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            verified_fact_keys=frozenset(),
+        ))
+        assert_flag_not_triggered(output, "MEM-001")
+
+    def test_MEM001_is_review_only_when_member_count_is_verified_but_duration_is_not(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            verified_fact_keys=frozenset({"member_count"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+    def test_MEM001_six_months_still_requires_member_specific_legal_review(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            below_minimum_members_since=date.today() - timedelta(days=220),
+            company_operating=True,
+            verified_fact_keys=frozenset({
+                "member_count", "below_minimum_members_since", "company_operating",
+            }),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.detail["six_month_threshold_met"] is True
+        assert flag.detail["member_specific_knowledge_verified"] is False
+        assert flag.score_impact == 0
+
 # =============================================================================
 # MODULE: OFFICE (1 rule)
 # =============================================================================
@@ -836,6 +869,7 @@ class TestOfficeRules:
         profile = build_profile(
             registered_office_change_date=date.today() - timedelta(days=60),
             form_vi_filed=False,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "OFF-001")
@@ -844,9 +878,21 @@ class TestOfficeRules:
         profile = build_profile(
             registered_office_change_date=date.today() - timedelta(days=60),
             form_vi_filed=True,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "OFF-001")
+
+    def test_OFF001_unverified_legacy_fields_are_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            registered_office_change_date=date.today() - timedelta(days=60),
+            form_vi_filed=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "OFF-001")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
     def test_OFF001_no_trigger_no_change(self, rule_engine, build_profile):
         profile = build_profile(registered_office_change_date=None)
