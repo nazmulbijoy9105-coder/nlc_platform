@@ -6,14 +6,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 
 def build_rule_outcomes_snapshot(
     active_legal_rules: Iterable[Any],
     flags: Iterable[Any],
+    applicability_results: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     rules = list(active_legal_rules)
+    applicability_results = applicability_results or {}
     findings_by_rule: dict[str, list[dict[str, Any]]] = {}
     for flag in flags:
         state = getattr(flag, "state", None)
@@ -41,6 +43,12 @@ def build_rule_outcomes_snapshot(
             else "NOT_EVALUATED"
         )
         verified_at = getattr(rule, "verified_at", None)
+        applicability = dict(applicability_results.get(rule.rule_id, {}))
+        applicability_status = str(applicability.get("status", "UNKNOWN")).upper()
+        if applicability_status not in {"APPLICABLE", "NOT_APPLICABLE", "UNKNOWN"}:
+            raise ValueError(
+                f"Invalid applicability status for {rule.rule_id}: {applicability_status!r}"
+            )
         snapshot.append({
             "rule_id": rule.rule_id,
             "rule_version": rule.rule_version,
@@ -49,6 +57,12 @@ def build_rule_outcomes_snapshot(
             "verified_by": rule.verified_by,
             "verified_at": verified_at.isoformat() if verified_at else None,
             "outcome_state": state,
+            "applicability_status": applicability_status,
+            "applicability_reason": applicability.get(
+                "reason", "NO_EXPLICIT_APPLICABILITY_RESULT"
+            ),
+            "applicability_policy_version": applicability.get("policy_version"),
+            "applicability_fact_evidence": applicability.get("fact_evidence", []),
             "assessment_source": (
                 "ENGINE_FINDING" if findings
                 else "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE"
@@ -72,6 +86,10 @@ def build_rule_outcomes_snapshot(
             "verified_by": None,
             "verified_at": None,
             "outcome_state": state,
+            "applicability_status": "UNKNOWN",
+            "applicability_reason": "RULE_NOT_IN_ACTIVE_CATALOGUE",
+            "applicability_policy_version": None,
+            "applicability_fact_evidence": [],
             "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
             "findings": findings,
         })
