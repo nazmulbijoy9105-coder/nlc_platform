@@ -71,6 +71,20 @@ async def _database_parity() -> dict:
             )
         if result.get("identity_archive_rows", 0) < 1:
             raise RuntimeError("No legacy identity archive rows were preserved.")
+        expected_identity_counts = {
+            "canonical_identity_rows": 85,
+            "canonical_alias_rows": 85,
+            "unresolved_alias_rows": 85,
+            "resolved_alias_rows": 0,
+            "canonical_revision_rows": 0,
+        }
+        actual_identity_counts = {
+            key: result.get(key) for key in expected_identity_counts
+        }
+        if actual_identity_counts != expected_identity_counts:
+            raise RuntimeError(
+                f"Production canonical identity counts mismatch: {actual_identity_counts!r}"
+            )
         if result.get("historical_finding_binding_rows") != 0:
             raise RuntimeError("Historical findings were unexpectedly rebound.")
         if result.get("historical_finding_evidence_rows") != 0:
