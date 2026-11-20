@@ -38,8 +38,8 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.2"
-ILRMF_VERSION = "2.2"
+RULE_ENGINE_VERSION = "2.3"
+ILRMF_VERSION = "2.3"
 
 # ═══════════════════════════════════════════════════════════════════════
 # ENUMERATIONS
@@ -453,6 +453,9 @@ class CompanyProfile:
     audit_committee_established: bool | None = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
+    # Internal trust metadata populated only from verified, document-backed CompanyFact rows.
+    # It is not a user-writable CompanyProfile field and never inferred from legacy DB booleans.
+    verified_fact_keys: frozenset[str] = field(default_factory=frozenset)
     # Production evaluation binds every emitted rule to the LegalRule catalogue.
     # Direct pure-engine tests may omit this snapshot; service evaluations must set it.
     catalogue_binding_required: bool = False
@@ -802,23 +805,55 @@ _COVERAGE_FIELDS: dict[str, float] = {
 
 
 def _input_coverage(company) -> float:
-    """Weighted completeness of selected company-profile input fields.
+    """Weighted completeness of evidence-backed company-profile inputs.
 
-    This is NOT the fraction of statutory rules evaluated or verified. It is
-    an input-data completeness indicator only. Tri-state booleans (None=
-    unknown, True/False=known) count as known when False; director count is
-    counted only when independently RJSC-verified.
+    This is NOT the fraction of statutory rules evaluated or verified. Legacy
+    profile values and user assertions do not count as verified inputs. A field
+    counts only when its dedicated reviewer/evidence gate is satisfied or it
+    appears in the internal verified document-backed fact allowlist.
     """
+    verified = set(getattr(company, "verified_fact_keys", ()) or ())
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
+
+    def has_verified_value(field_name: str) -> bool:
+        if field_name in verified:
+            return True
+        if field_name == "last_agm_date":
+            return (
+                getattr(company, "agm_history_verified", False) is True
+                and bool(getattr(company, "agm_history_evidence_ref", None))
+            )
+        if field_name == "last_audit_signed_date":
+            return (
+                getattr(company, "audit_completion_verified", False) is True
+                and bool(getattr(company, "audit_completion_evidence_ref", None))
+            )
+        if field_name == "last_return_filed_year":
+            return (
+                getattr(company, "annual_return_filing_status_verified", False) is True
+                and bool(getattr(company, "annual_return_filing_status_evidence_ref", None))
+            )
+        if field_name == "first_auditor_appointed":
+            return (
+                getattr(company, "first_auditor_appointment_verified", False) is True
+                and bool(getattr(company, "first_auditor_appointment_evidence_ref", None))
+            )
+        if field_name == "current_director_count":
+            return (
+                getattr(company, "directors_verified", False) is True
+                and bool(getattr(company, "directors_verification_evidence_ref", None))
+            )
+        return False
+
     for field_name, weight in _COVERAGE_FIELDS.items():
         value = getattr(company, field_name, None)
-        if field_name == "current_director_count":
-            # NLC's own director rows are not proof of the RJSC-verified count.
-            if getattr(company, "directors_verified", False) is not True:
+        if value is None or not has_verified_value(field_name):
+            continue
+        if field_name in {"member_count", "current_director_count"}:
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 continue
-        if value is not None:
-            known_weight += weight
+        known_weight += weight
     return min(1.0, known_weight / total_weight)
 
 
@@ -1112,30 +1147,49 @@ class NLCRuleEngine:
                 detail={"applicability_evidence_ref": c.section150_applicability_evidence_ref},
             ))
 
-        if c.trade_license_obtained is False:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if c.trade_license_obtained is False and "trade_license_obtained" in verified:
             self._add_flag(ComplianceFlag(
                 rule_id="TL-001",
-                flag_code="TRADE_LICENSE_NOT_OBTAINED",
+                flag_code="TRADE_LICENSE_VERIFIED_ABSENT",
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Trade License not obtained from City Corporation/Municipality.",
+                description=(
+                    "An authorized document-backed fact was verified as showing "
+                    "that the required trade licence has not been obtained. Confirm "
+                    "the competent City Corporation or Paurashava and applicable "
+                    "business-activity scope."
+                ),
                 statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-                detail={"trade_license": False},
+                state=RuleState.VERIFIED_ABSENT,
+                eval_state="VIOLATION",
+                detail={"trade_license": False, "verified_fact_key": "trade_license_obtained"},
             ))
-        elif c.trade_license_expiry and c.trade_license_expiry < self.today:
+        elif (
+            c.trade_license_obtained is True
+            and "trade_license_obtained" in verified
+            and c.trade_license_expiry is not None
+            and "trade_license_expiry" in verified
+            and c.trade_license_expiry < self.today
+        ):
             days_expired = (self.today - c.trade_license_expiry).days
             sev = Severity.RED if days_expired > 90 else Severity.YELLOW
             imp = 10 if days_expired > 90 else 5
             self._add_flag(ComplianceFlag(
                 rule_id="TL-002",
-                flag_code="TRADE_LICENSE_EXPIRED",
+                flag_code="TRADE_LICENSE_VERIFIED_EXPIRED",
                 severity=sev,
                 score_impact=imp,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Trade License expired {days_expired} days ago. Must renew by 31 March annually.",
+                description=(
+                    f"The verified trade licence expired {days_expired} days ago. "
+                    "Confirm the current local-authority renewal rules and any grace period."
+                ),
                 statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-                detail={"expired_days": days_expired},
+                state=RuleState.NON_COMPLIANT,
+                eval_state="VIOLATION",
+                detail={"expired_days": days_expired, "verified_fact_keys": ["trade_license_obtained", "trade_license_expiry"]},
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2272,87 +2326,105 @@ class NLCRuleEngine:
     # MODULE 7: STATUTORY REGISTERS
     # ───────────────────────────────────────────────────────────────────
     def _run_register_rules(self, c: CompanyProfile) -> None:
-        aliases = {
-            "register_of_members": "members", "register_of_directors": "directors",
-            "register_of_share_transfers": "transfers", "register_of_charges": "charges",
-            "register_of_debenture_holders": "debentures",
-            "minutes_book_agm": "minutes_agm", "minutes_book_board": "minutes_board",
+        """Evaluate only register facts whose absence is explicitly verified.
+
+        The legacy maintained_registers array is an unattributed profile field.
+        It is not evidence that a statutory register does not exist.
+        """
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        register_fields = {
+            "members": "register_of_members_maintained",
+            "directors": "register_of_directors_maintained",
+            "charges": "register_of_charges_maintained",
+            "minutes_agm": "minutes_book_agm_maintained",
+            "minutes_board": "minutes_book_board_maintained",
         }
-        normalized = {aliases.get(r, r) for r in c.maintained_registers}
-        missing = [r for r in REQUIRED_REGISTERS if r not in normalized]
-        core_missing = [r for r in CORE_REGISTERS if r not in normalized]
-        non_core_missing = [r for r in missing if r not in CORE_REGISTERS]
-        
-        if non_core_missing and not core_missing:
+        verified_missing = {
+            register_name: field_name
+            for register_name, field_name in register_fields.items()
+            if field_name in verified and getattr(c, field_name, None) is False
+        }
+        core_names = {"members", "charges", "minutes_agm", "minutes_board"}
+        core_missing = sorted(core_names.intersection(verified_missing))
+        non_core_missing = sorted(set(verified_missing) - core_names)
+
+        if non_core_missing:
+            # The generic director-register inventory signal needs a separate
+            # proposition/evidence review; do not turn it into a scored breach.
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
-                flag_code="STATUTORY_REGISTER_INCOMPLETE",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="STATUTORY_REGISTER_REVIEW_REQUIRED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
+                description=(
+                    "A verified register-status fact requires review of the exact "
+                    "register duty, company scope, Articles and statutory source. "
+                    "This aggregate signal is not a confirmed statutory breach."
+                ),
                 statutory_basis=(
                     "Companies Act 1994 (Bangladesh) and applicable Articles; "
-                    "individual register duties require their own statutory mapping"
+                    "individual register duties require separate mapping"
                 ),
-                detail={"missing": non_core_missing}
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"verified_missing_registers": non_core_missing},
             ))
 
         if core_missing:
-            # Section 115(1) requires the internal directors' register;
-            # Section 115(2) separately requires the prescribed Registrar return
-            # and change notification (Form XII). DIR-001 evaluates the filing
-            # duty only; filing status does not prove the internal register exists.
-            severity = Severity.RED  # legal: REG-002 downgraded BLACK -> RED
-
-            # Categorize missing items by legal obligation type
-            internal_registers = []
-            for r in core_missing:
-                if r in ("members", "charges", "minutes_agm", "minutes_board"):
-                    internal_registers.append(r)
-
             parts = []
-            if "members" in internal_registers:
-                parts.append("Members register (Sec 34 — internal)")
-            if "charges" in internal_registers:
-                parts.append("Charges register (Sec 174 — internal)")
-            if "minutes_agm" in internal_registers or "minutes_board" in internal_registers:
-                parts.append("Meeting minutes (Sec 89 — internal)")
+            if "members" in core_missing:
+                parts.append("Members register (Section 34 — internal)")
+            if "charges" in core_missing:
+                parts.append("Charges register (Section 174 — internal)")
+            if "minutes_agm" in core_missing or "minutes_board" in core_missing:
+                parts.append("Meeting minutes (Section 89 — internal)")
 
             self._add_flag(ComplianceFlag(
                 rule_id="REG-002",
-                flag_code="CORE_REGISTERS_MISSING",
-                severity=severity,
+                flag_code="CORE_REGISTERS_VERIFIED_ABSENT",
+                severity=Severity.RED,
                 score_impact=12,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=(
-                    f"Core statutory records missing: {', '.join(core_missing)}. "
+                    "Verified absence of core statutory records: "
+                    f"{', '.join(core_missing)}. "
                     f"Legal basis: {'; '.join(parts)}. "
-                    f"Director particulars/Form XII are evaluated separately by DIR-001 "
-                    f"under Section 115; they are not inferred from the internal "
-                    f"register inventory. Each missing internal record is assessed "
-                    f"independently."
+                    "Only the individually verified document-backed register facts "
+                    "are included; legacy register inventories and missing uploads "
+                    "do not establish absence."
                 ),
                 statutory_basis="Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+                state=RuleState.VERIFIED_ABSENT,
+                eval_state="VIOLATION",
                 detail={
                     "missing_core": core_missing,
-                    "internal_registers": internal_registers,
-                    "rjsc_filings": [],
-                    "director_filing_rule_id": "DIR-001",
+                    "verified_fact_keys": sorted(verified_missing.values()),
                     "obligation_types_distinguished": True,
-                }
+                },
             ))
 
-        if c.register_location != "registered_office":
+        # Section 34(2) permits a notified alternative location. A verified
+        # non-office location is therefore a review prompt, not an automatic breach.
+        if (
+            "register_location" in verified
+            and c.register_location != "registered_office"
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="REG-003",
-                flag_code="REGISTERS_NOT_AT_REGISTERED_OFFICE",
-                severity=Severity.YELLOW,
-                score_impact=3,
+                flag_code="REGISTER_LOCATION_REQUIRES_NOTICE_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Registers at '{c.register_location}', not registered office. Section 34(2): must be at registered office.",
+                description=(
+                    "Verified register location differs from the registered office. "
+                    "Check Board authority, the alternative-location notice and the "
+                    "statutory inspection requirements before determining compliance."
+                ),
                 statutory_basis="Section 34(2), Companies Act 1994 (Bangladesh)",
-                detail={"location": c.register_location}
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"location": c.register_location},
             ))
 
     # ───────────────────────────────────────────────────────────────────
