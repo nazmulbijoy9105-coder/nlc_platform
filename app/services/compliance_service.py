@@ -528,7 +528,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             select(Company.id).where(Company.id == company_id).with_for_update()
         )
         now = datetime.now(UTC)
-        today = date.today()
+        today = business_date_today()
         score = output.score_breakdown.final_score
         risk_band_value = getattr(output.score_breakdown.risk_band, 'value', output.score_breakdown.risk_band)
         risk_band = RiskBand(risk_band_value)
@@ -1094,7 +1094,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             return None
 
         flag.flag_status = FlagStatus.RESOLVED
-        flag.resolved_date = date.today()
+        flag.resolved_date = business_date_today()
         flag.resolved_by = resolved_by
         flag.resolution_notes = resolution_notes
         self.db.add(flag)
