@@ -272,10 +272,15 @@ def upgrade():
     # Permit only the non-login migration owner to verify the immutable archive.
     # Runtime and audit roles retain no table privileges or RLS policy.
     op.execute(f"""
-        CREATE POLICY legal_rule_identity_archive_migration_read
-        ON public.{ARCHIVE_TABLE}
-        FOR SELECT TO nlc_migration_owner
-        USING (current_user = 'nlc_migration_owner')
+        DO $policy$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN
+                EXECUTE 'CREATE POLICY legal_rule_identity_archive_migration_read '
+                    || 'ON public.{ARCHIVE_TABLE} FOR SELECT TO nlc_migration_owner '
+                    || 'USING (current_user = ''nlc_migration_owner'')';
+            END IF;
+        END
+        $policy$
     """)
     op.execute(
         f"REVOKE ALL PRIVILEGES ON TABLE public.{ARCHIVE_TABLE} "
