@@ -63,7 +63,7 @@ def _profile(**overrides):
             "company_type", "incorporation_date", "current_director_count",
             "is_private_subsidiary_of_public_company", "member_count",
             "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
-            "first_auditor_appointed", "annual_return_filed",
+            "first_auditor_appointed", "annual_return_filed", "annual_return_content_complete",
             "agm_held_this_cycle", "members_present_at_agm", "agm_quorum_required",
         }),
         "agm_count": 1,
