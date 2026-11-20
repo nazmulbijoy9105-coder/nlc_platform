@@ -1501,8 +1501,15 @@ class TestUntestedRules:
             "TAX-002",
         )
 
-    def test_REG003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(register_location="other_office")), "REG-003")
+    def test_REG003_is_review_only_for_verified_alternative_location(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            register_location="other_office",
+            verified_fact_keys=frozenset({"register_location"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-003")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
     def test_CAP003_triggers(self, rule_engine, build_profile):
         profile = build_profile(capital_reduction_pending=True, capital_reduction_court_order_obtained=False)
