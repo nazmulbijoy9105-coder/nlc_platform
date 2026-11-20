@@ -19,6 +19,8 @@ def test_unattributed_legacy_profile_values_do_not_count_as_verified_coverage():
     profile = CompanyProfile(
         company_id="coverage-test",
         company_name="Coverage Test Ltd",
+        company_type="PRIVATE_LIMITED",
+        incorporation_date=date(2020, 1, 1),
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 12, 31),
         last_return_filed_year=2025,
@@ -39,13 +41,23 @@ def test_unattributed_legacy_profile_values_do_not_count_as_verified_coverage():
 
 def test_verified_document_facts_count_toward_score_coverage():
     keys = frozenset({
+        "company_type",
+        "incorporation_date",
         "last_agm_date",
         "last_audit_signed_date",
         "last_return_filed_year",
         "first_auditor_appointed",
+        "annual_return_filed",
+        "trade_license_obtained",
+        "trade_license_expiry",
         "tin_obtained",
         "current_director_count",
         "member_count",
+        "register_of_members_maintained",
+        "register_of_directors_maintained",
+        "register_of_charges_maintained",
+        "minutes_book_agm_maintained",
+        "minutes_book_board_maintained",
     })
     profile = CompanyProfile(
         company_id="coverage-test",
@@ -54,9 +66,17 @@ def test_verified_document_facts_count_toward_score_coverage():
         last_audit_signed_date=date(2025, 12, 31),
         last_return_filed_year=2025,
         first_auditor_appointed=True,
+        annual_return_filed=True,
+        trade_license_obtained=True,
+        trade_license_expiry=date(2027, 1, 1),
         tin_obtained=True,
         current_director_count=2,
         member_count=5,
+        register_of_members_maintained=True,
+        register_of_directors_maintained=True,
+        register_of_charges_maintained=True,
+        minutes_book_agm_maintained=True,
+        minutes_book_board_maintained=True,
         verified_fact_keys=keys,
     )
 
@@ -119,5 +139,37 @@ def test_legacy_verification_flags_do_not_count_without_fresh_fact_keys():
         directors_verification_evidence_ref="legacy-director-ref",
         member_count=5,
         verified_fact_keys=frozenset(),
+    )
+    assert _input_coverage(profile) == 0.0
+
+
+def test_zero_member_or_director_count_is_a_verified_coverage_input():
+    profile = CompanyProfile(
+        company_id="coverage-test",
+        company_name="Coverage Test Ltd",
+        company_type="PRIVATE_LIMITED",
+        incorporation_date=date(2020, 1, 1),
+        current_director_count=0,
+        member_count=0,
+        verified_fact_keys=frozenset({"company_type", "incorporation_date", "current_director_count", "member_count"}),
+    )
+    assert _input_coverage(profile) > 0.0
+
+
+def test_company_classification_and_incorporation_date_are_mandatory_for_score_coverage():
+    profile = CompanyProfile(
+        company_id="coverage-test",
+        company_name="Coverage Test Ltd",
+        last_agm_date=date(2025, 6, 1),
+        last_audit_signed_date=date(2025, 12, 31),
+        last_return_filed_year=2025,
+        first_auditor_appointed=True,
+        tin_obtained=True,
+        current_director_count=2,
+        member_count=5,
+        verified_fact_keys=frozenset({
+            "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
+            "first_auditor_appointed", "tin_obtained", "current_director_count", "member_count",
+        }),
     )
     assert _input_coverage(profile) == 0.0
