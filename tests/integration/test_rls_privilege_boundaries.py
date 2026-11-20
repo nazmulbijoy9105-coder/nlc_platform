@@ -146,3 +146,193 @@ async def test_staff_membership_policies_are_scoped_and_admin_write_is_explicit(
     )
     assert "company_user_access_scoped_read" in by_name
     assert "nlc_can_access_company" in by_name["company_user_access_scoped_read"].qual
+
+
+@pytest.mark.asyncio
+async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenant(
+    db, db_company, db_other_company
+):
+    from sqlalchemy import delete, select, update
+
+    from app.models.company import Company, CompanyUserAccess
+
+    client = _user(UserRole.CLIENT_DIRECTOR, "tenant-a-client")
+    await set_admin_context(db)
+    db.add(client)
+    db.add(CompanyUserAccess(
+        user_id=client.id,
+        company_id=db_company.id,
+        can_edit=True,
+        can_view_financials=True,
+        is_active=True,
+    ))
+    await db.flush()
+
+    await set_rls_context(db, str(client.id))
+    visible = await db.execute(
+        select(Company.id).where(Company.id == db_other_company.id)
+    )
+    assert visible.scalar_one_or_none() is None
+
+    changed = await db.execute(
+        update(Company)
+        .where(Company.id == db_other_company.id)
+        .values(company_name="ATTACKER MODIFIED")
+    )
+    assert changed.rowcount == 0
+
+    deleted = await db.execute(
+        delete(Company).where(Company.id == db_other_company.id)
+    )
+    assert deleted.rowcount == 0
+
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(
+                text("""
+                    INSERT INTO public.company_user_access
+                        (id, company_id, user_id, can_edit,
+                         can_view_financials, is_active)
+                    VALUES
+                        (:id, :company_id, :user_id, true, true, true)
+                """),
+                {
+                    "id": uuid.uuid4(),
+                    "company_id": db_other_company.id,
+                    "user_id": client.id,
+                },
+            )
+
+
+@pytest.mark.asyncio
+async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company):
+    from fastapi import HTTPException
+    from sqlalchemy import delete
+
+    from app.core.dependencies import TokenData, require_company_access
+    from app.models.company import CompanyUserAccess
+
+    client = _user(UserRole.CLIENT_DIRECTOR, "revoked-client")
+    await set_admin_context(db)
+    db.add(client)
+    membership = CompanyUserAccess(
+        user_id=client.id,
+        company_id=db_company.id,
+        can_edit=True,
+        can_view_financials=True,
+        is_active=True,
+    )
+    db.add(membership)
+    await db.flush()
+
+    # The JWT still contains the old company id; the database membership is revoked.
+    await db.execute(
+        delete(CompanyUserAccess).where(
+            CompanyUserAccess.user_id == client.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
+    )
+    await db.flush()
+    await set_rls_context(db, str(client.id))
+    token = TokenData(
+        user_id=str(client.id),
+        email=client.email,
+        role=UserRole.CLIENT_DIRECTOR.value,
+        company_ids=[str(db_company.id)],
+    )
+    with pytest.raises(HTTPException) as exc:
+        await require_company_access()(
+            company_id=db_company.id,
+            token=token,
+            db=db,
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_forged_user_identity_and_jwt_role_escalation_fail_closed(db):
+    from fastapi import HTTPException
+
+    from app.core.dependencies import TokenData, require_company_access, require_roles
+
+    client = _user(UserRole.CLIENT_DIRECTOR, "real-client")
+    await set_admin_context(db)
+    db.add(client)
+    await db.flush()
+
+    # A forged subject has no corresponding active database identity.
+    forged_id = uuid.uuid4()
+    await set_rls_context(db, str(forged_id))
+    forged = TokenData(
+        user_id=str(forged_id),
+        email="forged@nlctest.com",
+        role=UserRole.CLIENT_DIRECTOR.value,
+        company_ids=[],
+    )
+    with pytest.raises(HTTPException) as missing:
+        await require_company_access()(
+            company_id=uuid.uuid4(),
+            token=forged,
+            db=db,
+        )
+    assert missing.value.status_code == 401
+
+    # A signed JWT claiming SUPER_ADMIN cannot override the database role.
+    await set_rls_context(db, str(client.id))
+    escalated = TokenData(
+        user_id=str(client.id),
+        email=client.email,
+        role=UserRole.SUPER_ADMIN.value,
+        company_ids=[],
+    )
+    with pytest.raises(HTTPException) as role_error:
+        await require_roles(UserRole.SUPER_ADMIN)(token=escalated, db=db)
+    assert role_error.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_score_history_is_not_mutable_by_application_role(db, db_company):
+    from datetime import UTC, date, datetime
+
+    from app.models.compliance import ComplianceScoreHistory
+    from app.models.enums import RiskBand
+
+    await set_admin_context(db)
+    history = ComplianceScoreHistory(
+        id=uuid.uuid4(),
+        company_id=db_company.id,
+        score=85,
+        risk_band=RiskBand.GREEN,
+        snapshot_month=date(2026, 11, 1),
+        calculated_at=datetime.now(UTC),
+        score_hash="a" * 64,
+        engine_version="security-cert-test",
+    )
+    db.add(history)
+    await db.flush()
+
+    # The runtime application role must have no UPDATE or DELETE privilege.
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(
+                text("UPDATE public.compliance_score_history SET score=1 WHERE id=:id"),
+                {"id": history.id},
+            )
+    with pytest.raises(DBAPIError):
+        async with db.begin_nested():
+            await db.execute(
+                text("DELETE FROM public.compliance_score_history WHERE id=:id"),
+                {"id": history.id},
+            )
+
+    trigger = await db.execute(
+        text("""
+            SELECT EXISTS (
+                SELECT 1 FROM pg_trigger
+                WHERE tgrelid='public.compliance_score_history'::regclass
+                  AND tgname='trg_compliance_score_history_append_only'
+                  AND NOT tgisinternal
+            )
+        """)
+    )
+    assert trigger.scalar_one() is True
