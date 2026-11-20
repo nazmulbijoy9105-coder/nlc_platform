@@ -1750,7 +1750,7 @@ The NBR's current site separately lists Finance Act 2026 (6 July 2026), the auth
 
 ## Release rule
 
-Do not populate `approved_rule_ids`, do not set `score_eligible: true`, and do not set `LEGAL_SCORE_RELEASED = true` merely because this docket is complete. Only independent counsel's rule-specific signed decisions plus passing tests and canonical parity can authorise a later release. Any unresolved TBD, unavailable authoritative source, unknown scope or unverified evidence keeps the rule NOT_EVALUATED.
+This docket governs statutory legal verification, not the separate product-scoring switch. Do not populate `approved_rule_ids` or set `score_eligible: true` without independent counsel's rule-specific signed decisions, source dossiers and passing tests. `LEGAL_SCORE_RELEASED` may be true for the separately approved deterministic NLC product risk metric; that switch does not populate `VERIFIED_RULE_IDS`, approve any legal rule, authorise legal opinions, enable statutory deadlines/rescue/BLACK overrides, or certify compliance. Any unresolved TBD, unavailable authoritative source, unknown scope or unverified evidence keeps that rule NOT_EVALUATED and excluded from legal-verification claims.
 
 
 ## Primary-source research update — 7 November 2026

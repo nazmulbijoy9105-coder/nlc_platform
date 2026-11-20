@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Deep legal citation audit v2 - NLC rule engine vs Companies Act 1994 (BD).
-Ground truth: rule-map v1.0 + user-verified mappings (migrations 0007/0010/0029/0030, cb306ac).
-Run: python tools/legal_citation_audit.py   (exit 1 = violations found)
-Scans live declarations in app/, canonical_architecture/. tests/ (fixtures) and alembic/ (history) excluded.
-Citations matched as plain substrings over the FULL declaration block (description + statutory_basis).
+"""Read-only citation-anchor audit for NLC's Bangladesh Companies Act rule declarations.
+
+This checks that selected runtime rule IDs cite the current candidate section
+anchors recorded in the maintained legal-basis inventory. It is a technical
+consistency check, NOT independent legal verification or counsel approval.
+Run: python tools/legal_citation_audit.py (exit 1 = anchor mismatch)
+Scans runtime declarations in app/ and canonical_architecture/.
+Historical migrations and tool fixtures are excluded.
 """
 import sys
 from pathlib import Path
@@ -18,25 +21,27 @@ EXPECTED = {
     "OFF-001": ["Section 77"],
     "AGM-001": ["Section 81"],
     "AGM-002": ["Section 81"],
-    "AR-001":  ["Section 36"],
+    "AGM-005": ["Section 85(2)(b)"],
+    "AGM-006": ["Section 89"],
+    "AR-001": ["Section 36"],
     "AUD-001": ["Section 210(6)"],
     "AUD-002": ["Section 183"],
     "AUD-005": ["Section 210(3)"],
     "ACC-002": ["Section 190"],
-    "DIR-001": ["Section 90"],
-    "DIR-002": ["Section 93"],
-    "DIR-004": ["Section 109", "Section 110"],
-    "REG-001": ["Section 34"],
-    "REG-002": ["Sections 34-36", "Section 89"],
-    "SH-001":  ["Section 151", "Form XV"],
-    "SH-002":  ["Section 158"],
-    "CAP-001": ["Section 53", "Section 56"],
+    "DIR-001": ["Section 115"],
+    "DIR-002": ["Section 115"],
+    "DIR-004": ["Section 115"],
+    "DIR-007": ["Section 93(2)", "Section 92"],
+    "REG-002": ["Sections 34, 89, 174"],
+    "SH-001": ["Section 151", "Form XV"],
+    "SH-002": ["Section 158"],
+    "CAP-001": ["Sections 53, 54 and 56"],
     "CAP-002": ["Section 159", "Section 159(1)"],
-    "CAP-003": ["Section 150"],
-    "CHG-001": ["Section 159"],
-    "DEF-001": ["Section 118(6)", "Section 182(9)"],
+    "CAP-003": ["Sections 59-60"],
+    "CHG-001": ["Section 172"],
+    "DEF-001": ["Section 94"],
     "MEM-001": ["Section 222"],
-    "TR-001":  ["Section 38"],
+    "TR-001": ["Section 38"],
     "TL-001": ["City Corporation", "Paurashava"],
     "TL-002": ["City Corporation", "Paurashava"],
 }
@@ -73,7 +78,7 @@ def main():
     fails = warns = passes = 0
     print("=" * 78)
     print(" DEEP LEGAL CITATION AUDIT v2 - NLC RULE ENGINE")
-    print(" Statute: Companies Act 1994 (Bangladesh) - ground truth v1.0 (synced)")
+    print(" Statute: Companies Act 1994 (Bangladesh) - candidate anchors; legal approval separate")
     print("=" * 78)
     for p in iter_py():
         text = p.read_text(encoding="utf-8", errors="replace")
