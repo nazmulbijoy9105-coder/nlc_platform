@@ -544,7 +544,7 @@ REQUIRED_REGISTERS = [
 # Director particulars are an RJSC filing event under Section 115, not an
 # internal register inferred from maintained_registers. DIR-001 evaluates
 # Form XII separately when a director appointment/change event exists.
-CORE_REGISTERS = ["members", "charges", "minutes_agm"]
+CORE_REGISTERS = ["members", "charges", "minutes_agm", "minutes_board"]
 
 # Product-owner-authorized BLACK override allowlist. A BLACK label alone is
 # never sufficient: the rule must also be in the product scoring allowlist and
