@@ -173,7 +173,8 @@ def verified_document_fact_keys(facts: Any, *, as_of: date) -> frozenset[str]:
             fact.verification_status, "value", fact.verification_status
         )
         if (
-            trust_level == FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED.value
+            not is_internal_profile_fact_key(fact.fact_key)
+            and trust_level == FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED.value
             and verification_status == FactVerificationStatus.VERIFIED.value
             and fact_freshness_status(fact.fact_key, fact.observed_on, as_of)
             in {"FRESH", "NOT_TIME_LIMITED"}
