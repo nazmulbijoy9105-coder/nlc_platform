@@ -35,7 +35,11 @@ class CompanyFactService:
         normalized = fact_key.strip()
         allowed = {
             item.name for item in fields(CompanyProfile)
-        } - {"company_id", "company_name"}
+        } - {
+            "company_id", "company_name", "verified_fact_keys",
+            "catalogue_binding_required", "catalogue_rule_versions",
+            "catalogue_rule_active",
+        }
         if normalized not in allowed:
             raise HTTPException(
                 status_code=422,
