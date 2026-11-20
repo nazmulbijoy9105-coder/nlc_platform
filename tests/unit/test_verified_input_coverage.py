@@ -86,7 +86,14 @@ def test_only_verified_trade_license_absence_can_emit_scored_finding():
 
 
 def test_internal_trust_metadata_cannot_be_asserted_as_a_company_fact():
-    for key in ("verified_fact_keys", "catalogue_rule_active", "catalogue_rule_versions"):
+    for key in (
+        "verified_fact_keys", "catalogue_rule_active", "catalogue_rule_versions",
+        "moa_aoa_verified", "moa_aoa_evidence_ref",
+        "first_auditor_appointment_verified", "agm_history_verified",
+        "annual_return_filing_status_verified", "directors_verified",
+        "subsidiary_status_verified", "section150_applicability_verified",
+        "labour_license_status_verified", "event_verified", "filing_status_verified",
+    ):
         with pytest.raises(HTTPException) as exc:
             CompanyFactService._normalize_fact_key(key)
         assert exc.value.status_code == 422
