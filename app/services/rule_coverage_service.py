@@ -67,6 +67,7 @@ async def collect_company_rule_coverage(
     snapshot = (
         latest_run.rule_outcomes_snapshot
         if latest_run is not None
+        and str(latest_run.evaluation_status).upper() in {"COMPLETED", "NOT_RELEASED"}
         and isinstance(latest_run.rule_outcomes_snapshot, list)
         else None
     )
@@ -79,6 +80,7 @@ async def collect_company_rule_coverage(
     return {
         "company_id": str(company_id),
         "evaluation_run_id": str(latest_run.id) if latest_run else None,
+        "evaluation_status": latest_run.evaluation_status if latest_run else None,
         "evaluation_calculated_at": (
             latest_run.calculated_at.isoformat() if latest_run else None
         ),
