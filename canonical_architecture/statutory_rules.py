@@ -642,7 +642,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "legal_domain": "Corporate",
         "law": "Unresolved location proposition; Companies Act 1994 (Bangladesh)",
         "requirement": "A verified profile location differs from the registered office. The cited Section 34(2) is a penalty provision, not a location authority. Do not infer a breach; confirm the operative location requirement, any alternative-location notice and the Articles from current primary sources.",
-        "provision": "UNRESOLVED — Section 34(2) is not relied on as location authority; primary-source/counsel review required",
+        "provision": "UNVERIFIED CANDIDATE — UNRESOLVED: Section 34(2) is not relied on as location authority; primary-source/counsel review required",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
