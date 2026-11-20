@@ -264,6 +264,18 @@ def upgrade() -> None:
                 'nlc_app_role', 'nlc_migration_owner', 'SET'
             ) AS migration_role_isolated,
             (
+                SELECT position(
+                    'nlc_migration_user' IN pg_get_functiondef(
+                        'public.nlc_require_legal_rule_version_snapshot()'::regprocedure
+                    )
+                ) > 0
+                AND position(
+                    'nlc_migration_owner' IN pg_get_functiondef(
+                        'public.nlc_require_legal_rule_version_snapshot()'::regprocedure
+                    )
+                ) > 0
+            ) AS legal_rule_migration_guard_scoped,
+            (
                 SELECT count(*) = 7 AND bool_and(
                     c.relrowsecurity AND c.relforcerowsecurity
                 )
