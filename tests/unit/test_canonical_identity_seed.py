@@ -12,14 +12,14 @@ def test_canonical_identity_seed_matches_exact_85_rule_engine_registry():
         / "0116_canonical_rule_identity_registry.py"
     ).read_text(encoding="utf-8")
     match = re.search(
-        r"WITH engine_rule_ids\\(rule_id\\) AS \\(\\s*VALUES(?P<values>.*?)"
-        r"\\)\\s*INSERT INTO public\\.legal_rule_identities",
+        r"WITH engine_rule_ids\(rule_id\) AS \(\s*VALUES(?P<values>.*?)"
+        r"\)\s*INSERT INTO public\.legal_rule_identities",
         migration,
         flags=re.DOTALL,
     )
     assert match is not None, "0116 must contain the deterministic engine identity seed."
 
-    seeded_ids = re.findall(r"\\('([A-Z]+-\\d+)'\\)", match.group("values"))
+    seeded_ids = re.findall(r"\('([A-Z]+-\d+)'\)", match.group("values"))
     assert len(seeded_ids) == 85
     assert len(set(seeded_ids)) == 85
     assert set(seeded_ids) == set(STATUTORY_RULE_REGISTRY)
