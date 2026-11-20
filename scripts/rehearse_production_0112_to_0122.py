@@ -176,6 +176,16 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     if missing:
         raise RuntimeError(f"Canonical identity/evidence migration tables missing: {missing!r}")
 
+    binding_counts = {
+        table: await conn.fetchval(f'SELECT count(*) FROM public."{table}"')
+        for table in ("compliance_finding_bindings", "compliance_finding_evidence")
+    }
+    if any(binding_counts.values()):
+        raise RuntimeError(
+            "Identity/evidence migrations unexpectedly backfilled historical findings: "
+            f"{binding_counts!r}"
+        )
+
     score_history = await conn.fetchrow(
         "SELECT c.relrowsecurity AS rls, c.relforcerowsecurity AS force_rls, "
         "EXISTS (SELECT 1 FROM pg_trigger t WHERE t.tgrelid=c.oid "
@@ -207,6 +217,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "legacy_archive_verified": sorted(before_rules),
         "quarantined_legacy_rules": [dict(row) for row in quarantined],
         "required_identity_evidence_tables": list(required_tables),
+        "historical_finding_binding_rows_after_migration": binding_counts,
         "score_history_invariants": dict(score_history),
         "scoped_migration_guard_exception_verified": True,
         "migration_role_boundary": dict(role_boundary),
