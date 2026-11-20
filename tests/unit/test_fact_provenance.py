@@ -130,6 +130,8 @@ def test_current_status_fact_freshness_is_rule_key_specific():
     assert fact_freshness_status("register_of_members_maintained", today - timedelta(days=91), today) == "STALE"
     assert fact_freshness_status("last_agm_date", today - timedelta(days=900), today) == "NOT_TIME_LIMITED"
     assert fact_freshness_status("member_count", today + timedelta(days=1), today) == "FUTURE_DATED"
+    assert fact_freshness_status("unclassified_fact_key", today - timedelta(days=365), today) == "FRESH"
+    assert fact_freshness_status("unclassified_fact_key", today - timedelta(days=366), today) == "STALE"
 
 
 def test_only_fresh_verified_document_facts_authorize_scoring():
