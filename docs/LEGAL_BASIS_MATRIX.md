@@ -12,7 +12,7 @@ Rule corpus: **85** ILRMF rules (engine ↔ seed ID + statutory_basis parity)
 
 This matrix is a technical inventory of candidate legal anchors and internal rule-policy defaults. It is not a legal opinion, statutory compliance certificate, or counsel approval register. Engine/seed parity proves only that two code representations agree; it does not prove that either representation states current law correctly.
 
- > **Release and legal-status note (2026-11-06):** `LEGAL_SCORE_RELEASED = False`. All 85 rules remain subject to individual independent Bangladesh-qualified counsel review. The internal source-check allowlist is not legal approval. Severity, deduction, BLACK override and deadline defaults are product-policy proposals, not statutory consequences. Unknown applicability, incomplete evidence, missing current source or unresolved amendment chronology must remain `NOT_EVALUATED`.
+  > **Release and legal-status note (2026-11-20):** product scoring is enabled by the separate `LEGAL_SCORE_RELEASED` deployment switch and the 85-rule product-owner allowlist. This is a product risk metric only. `VERIFIED_RULE_IDS` remains empty and all 85 statutory rule approvals remain `REVIEW_REQUIRED`; no rule is represented as independently counsel-verified. Severity, deduction, BLACK override and deadline defaults are NLC product policy, not statutory consequences. Unknown applicability, incomplete evidence, missing current source or unresolved amendment chronology must remain `NOT_EVALUATED`.
 
 | Rule ID | Rule Name | Statutory Basis (engine) | Severity | Score | Black | Status |
 |---------|-----------|--------------------------|----------|-------|-------|--------|
