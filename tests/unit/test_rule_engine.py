@@ -440,9 +440,21 @@ class TestAnnualReturnRules:
         profile = build_profile(
             annual_return_filed=True,
             annual_return_content_complete=False,
+            verified_fact_keys=frozenset({"annual_return_content_complete"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-004")
+
+    def test_AR004_unverified_content_flag_is_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            annual_return_filed=True,
+            annual_return_content_complete=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "AR-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
     def test_AR004_no_trigger_when_complete(self, rule_engine, build_profile):
         profile = build_profile(
@@ -1511,9 +1523,66 @@ class TestUntestedRules:
         assert flag.eval_state == "UNKNOWN"
         assert flag.score_impact == 0
 
+    def test_structural_change_dates_are_review_only_not_overdue_findings(self, rule_engine, build_profile):
+        profile = build_profile(
+            name_change_pending=True,
+            name_change_date=date.today() - timedelta(days=120),
+            name_change_sr_passed=False,
+            object_clause_change_pending=True,
+            object_clause_change_date=date.today() - timedelta(days=120),
+            aoa_alteration_pending=True,
+            aoa_alteration_date=date.today() - timedelta(days=120),
+            verified_fact_keys=frozenset({
+                "name_change_pending", "name_change_date",
+                "object_clause_change_pending", "object_clause_change_date",
+                "aoa_alteration_pending", "aoa_alteration_date",
+            }),
+        )
+        output = rule_engine.evaluate(profile)
+        for rule_id in ("STR-001", "STR-002", "STR-003"):
+            flag = next(flag for flag in output.flags if flag.rule_id == rule_id)
+            assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+            assert flag.eval_state == "UNKNOWN"
+            assert flag.score_impact == 0
+
+    def test_unverified_structural_change_dates_do_not_emit_flags(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            name_change_pending=True,
+            name_change_date=date.today() - timedelta(days=120),
+            object_clause_change_pending=True,
+            object_clause_change_date=date.today() - timedelta(days=120),
+            aoa_alteration_pending=True,
+            aoa_alteration_date=date.today() - timedelta(days=120),
+            verified_fact_keys=frozenset(),
+        ))
+        for rule_id in ("STR-001", "STR-002", "STR-003"):
+            assert_flag_not_triggered(output, rule_id)
+
     def test_CAP003_triggers(self, rule_engine, build_profile):
         profile = build_profile(capital_reduction_pending=True, capital_reduction_court_order_obtained=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "CAP-003")
+
+    def test_CAP004_unverified_special_resolution_status_is_not_scored(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=30),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+    def test_CAP004_scores_only_verified_resolution_and_filing_absence(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=30),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset({"special_resolution_date", "special_resolution_filed"}),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 8
 
     def test_DEF001_triggers(self, rule_engine, build_profile):
         # Issue 1 fix: DEF-001 now requires actual disqualification details, not just the bool flag.
