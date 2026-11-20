@@ -64,6 +64,8 @@ jobs:
             echo "::error::Production release is permitted only from main."
             exit 1
           fi
+          API_URL="${API_URL%/}"
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
 
       - name: Verify production branch, preserved backup and Render target
         shell: bash
@@ -171,8 +173,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts-pre-migration-health.json
-          jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts-pre-migration-health.json >/dev/null
+          mkdir -p artifacts
+          curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
+          jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
 
       - name: Apply and verify production migrations 0112 through 0122
         shell: bash
