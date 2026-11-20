@@ -65,6 +65,7 @@ jobs:
           docker run --rm \
             --entrypoint /bin/sh \
             --env ENVIRONMENT=production \
+            --env NLC_ALEMBIC_METADATA_ONLY=1 \
             --env MIGRATION_DATABASE_URL \
             nlc-api:migration \
             -c 'set -eu; alembic upgrade head; alembic current'
