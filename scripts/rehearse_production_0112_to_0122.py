@@ -197,7 +197,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     )
     if (
         "session_user = 'nlc_migration_user'" not in legal_rule_guard
-        or "current_setting('role', true) = 'nlc_migration_owner'" not in legal_rule_guard
+        or "pg_has_role(session_user, 'nlc_migration_owner', 'SET')" not in legal_rule_guard
     ):
         raise RuntimeError("Legal-rule guard does not recognize only the scoped migration login/owner pair.")
 
