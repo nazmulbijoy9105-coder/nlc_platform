@@ -836,6 +836,7 @@ async def record_product_owner_decision(
                 "ACTIVE" if body.decision == "APPROVED" else "REVOKED"
             ),
             "reviewer_id": str(current_user.id),
+            "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
             "reviewer_role": str(getattr(current_user, "role", "SUPER_ADMIN")),
             "accepted_rule_id": body.rule_id,
             "source_version": source.version_label,
@@ -864,6 +865,7 @@ async def record_product_owner_decision(
         ),
         "product_owner_accepted_at": event.created_at.isoformat(),
         "reviewer_id": str(current_user.id),
+        "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
         "source_version": source.version_label,
         "source_artifact_sha256": source.artifact_sha256,
         "source_artifact_bytes_independently_checked": False,
@@ -941,6 +943,7 @@ async def get_product_release_status(
                 if accepted and rule_event and rule_event.created_at else None
             ),
             "reviewer_id": metadata.get("reviewer_id") if accepted else None,
+            "reviewer_name": metadata.get("reviewer_name") if accepted else None,
             "source_version": metadata.get("source_version") if accepted else None,
             "source_artifact_sha256": metadata.get("source_artifact_sha256") if accepted else None,
             "source_artifact_bytes_independently_checked": (
@@ -991,6 +994,7 @@ async def get_product_release_status(
             "rule_count": latest_version_metadata.get("rule_count"),
             "rule_ids": latest_version_metadata.get("rule_ids"),
             "reviewer_id": str(latest_version_event.actor_id),
+            "reviewer_name": latest_version_metadata.get("reviewer_name"),
             "accepted_at": latest_version_event.created_at.isoformat(),
             "rationale": latest_version_event.reason,
         }
@@ -1113,6 +1117,7 @@ async def accept_product_release_version(
             "rule_ids": [item["rule_id"] for item in manifest],
             "rule_manifest": manifest,
             "reviewer_id": str(current_user.id),
+            "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
             "reviewer_role": str(getattr(current_user, "role", "SUPER_ADMIN")),
             "release_scope": "SCREENED_PRIVATE_BETA",
             "screening_only": True,
@@ -1129,6 +1134,7 @@ async def accept_product_release_version(
         "event_id": str(event.id),
         "event_hash": event.event_hash,
         "reviewer_id": str(current_user.id),
+        "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
         "accepted_at": event.created_at.isoformat(),
         "release_scope": "SCREENED_PRIVATE_BETA",
         "screening_only": True,
