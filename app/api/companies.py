@@ -947,6 +947,17 @@ async def list_company_evaluation_runs(
         )
         outcomes = run.rule_outcomes_snapshot
         provenance = run.fact_provenance_snapshot
+
+        def count_snapshot_values(key: str, default: str) -> dict[str, int]:
+            counts: dict[str, int] = {}
+            if not isinstance(outcomes, list):
+                return counts
+            for item in outcomes:
+                raw = item.get(key) if isinstance(item, dict) else None
+                value = str(raw or default).strip().upper()
+                counts[value] = counts.get(value, 0) + 1
+            return dict(sorted(counts.items()))
+
         items.append({
             "evaluation_run_id": str(run.id),
             "calculated_at": run.calculated_at.isoformat(),
@@ -964,6 +975,11 @@ async def list_company_evaluation_runs(
             "engine_version": run.engine_version,
             "rule_catalogue_count": run.rule_catalogue_count,
             "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
+            # Legacy snapshots without an explicit applicability field remain
+            # UNKNOWN; never derive applicability from outcome or severity.
+            "applicability_state_counts": count_snapshot_values("applicability_state", "UNKNOWN"),
+            "outcome_state_counts": count_snapshot_values("outcome_state", "UNKNOWN"),
+            "verification_status_counts": count_snapshot_values("verification_status", "UNKNOWN"),
             "rule_outcomes_hash": run.rule_outcomes_hash,
             "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
             "score_hash": run.score_hash,
