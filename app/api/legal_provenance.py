@@ -809,6 +809,11 @@ async def record_product_owner_decision(
                 422,
                 "Scoring acceptance requires an explicit source effective_from date.",
             )
+        if source.effective_to and source.effective_to < source.effective_from:
+            raise HTTPException(
+                422,
+                "Scoring acceptance source effective_to cannot precede effective_from.",
+            )
         if not mapping.provision_citation.strip() or not mapping.rationale.strip():
             raise HTTPException(
                 422,
