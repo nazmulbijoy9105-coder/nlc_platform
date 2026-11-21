@@ -75,9 +75,10 @@ class TestBaseline:
         assert output.score_breakdown.final_score == 100
 
     def test_engine_output_has_required_fields(self, rule_engine, compliant_profile):
-        output = rule_engine.evaluate(compliant_profile)
+        today = date.today()
+        output = rule_engine.evaluate(compliant_profile, today=today)
         assert output.company_id == compliant_profile.company_id
-        assert output.evaluation_date == date.today()
+        assert output.evaluation_date == today
         assert output.engine_version is not None
         assert output.score_breakdown is not None
 
@@ -591,10 +592,11 @@ class TestShareholderRules:
         assert_flag_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_at_60_day_limit(self, rule_engine, build_profile):
+        today = date.today()
         profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
             event_reference="ALLOTMENT-TEST-002",
             event_type="ALLOTMENT",
-            event_date=date.today() - timedelta(days=60),
+            event_date=today - timedelta(days=60),
             event_verified=True,
             event_evidence_ref="evidence://allotment/002",
             filing_form="FORM_XV",
@@ -602,7 +604,7 @@ class TestShareholderRules:
             filing_status_verified=True,
             filing_evidence_ref="evidence://rjsc/form-xv-search",
         )])
-        output = rule_engine.evaluate(profile)
+        output = rule_engine.evaluate(profile, today=today)
         assert_flag_not_triggered(output, "SH-001")
 
     def test_SH001_no_trigger_when_filed(self, rule_engine, build_profile):
@@ -1461,10 +1463,11 @@ class TestUntestedRules:
         assert_flag_triggered(rule_engine.evaluate(profile), "SH-003")
 
     def test_SH003_no_trigger_at_15_day_limit(self, rule_engine, build_profile):
+        today = date.today()
         profile = build_profile(share_compliance_events=[ShareComplianceEventEvidence(
             event_reference="CAPITAL-TEST-002",
             event_type="CAPITAL_INCREASE_RESOLUTION",
-            event_date=date.today() - timedelta(days=15),
+            event_date=today - timedelta(days=15),
             event_verified=True,
             event_evidence_ref="evidence://resolution/capital-increase",
             filing_form="FORM_IV",
@@ -1472,7 +1475,7 @@ class TestUntestedRules:
             filing_status_verified=True,
             filing_evidence_ref="evidence://rjsc/form-iv-search",
         )])
-        assert_flag_not_triggered(rule_engine.evaluate(profile), "SH-003")
+        assert_flag_not_triggered(rule_engine.evaluate(profile, today=today), "SH-003")
 
     def test_TAX001_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(tin_obtained=False)), "TAX-001")
