@@ -25,6 +25,7 @@ def test_private_company_positive_listing_flag_is_an_unknown_scope_conflict():
         company_id="BSEC-PRIVATE-2",
         company_name="Private Test Ltd",
         company_type="PRIVATE_LIMITED",
+        verified_fact_keys=frozenset({"company_type"}),
         bsec_listed=True,
     )
     output = NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
