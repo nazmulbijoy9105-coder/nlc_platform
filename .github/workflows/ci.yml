@@ -373,8 +373,7 @@ jobs:
                               CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
                                   NOINHERIT NOREPLICATION NOBYPASSRLS;
                           END IF;
-                          GRANT nlc_migration_owner TO nlc_migrator
-                              WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+                          EXECUTE 'GRANT nlc_migration_owner TO nlc_migrator WITH ADMIN FALSE, INHERIT FALSE, SET TRUE';
                       END
                       $;
                   """)
