@@ -131,6 +131,11 @@ class ProductOwnerDecision(BaseModel):
     deadline_definition_id: UUID | None = None
 
 
+class ProductVersionAcceptanceRequest(BaseModel):
+    version_label: str = Field(min_length=3, max_length=80)
+    reason: str = Field(min_length=10, max_length=2000)
+
+
 class DeadlinePreviewRequest(BaseModel):
     fact_id: UUID
 
@@ -952,6 +957,35 @@ async def get_product_release_status(
         item["rule_id"] for item in rule_statuses
         if item["product_release_status"] == "ACTIVE"
     )
+    latest_version_event = (
+        await db.execute(
+            select(LegalRuleReleaseEvent)
+            .where(
+                LegalRuleReleaseEvent.event_type == "PRODUCT_VERSION_ACCEPTED",
+                LegalRuleReleaseEvent.release_scope == "SCORING",
+                LegalRuleReleaseEvent.decision == "APPROVED",
+            )
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    latest_version_metadata = (
+        latest_version_event.event_metadata
+        if latest_version_event and isinstance(latest_version_event.event_metadata, dict)
+        else {}
+    )
+    accepted_version = None
+    if latest_version_event:
+        accepted_version = {
+            "version_label": latest_version_metadata.get("version_label"),
+            "manifest_sha256": latest_version_metadata.get("manifest_sha256"),
+            "rule_count": latest_version_metadata.get("rule_count"),
+            "rule_ids": latest_version_metadata.get("rule_ids"),
+            "reviewer_id": str(latest_version_event.actor_id),
+            "accepted_at": latest_version_event.created_at.isoformat(),
+            "rationale": latest_version_event.reason,
+        }
+
     return {
         "release_scope": "SCREENED_PRIVATE_BETA",
         "screening_only": True,
@@ -966,8 +1000,128 @@ async def get_product_release_status(
         "accepted_rule_count": len(accepted_ids),
         "accepted_rule_ids": accepted_ids,
         "all_product_rules_accepted": len(accepted_ids) == len(expected_ids),
+        "accepted_product_version": accepted_version,
         "rules": rule_statuses,
         "independent_counsel_verification_is_separate": True,
+    }
+
+
+@router.post(
+    "/product-versions/accept",
+    status_code=201,
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
+)
+async def accept_product_release_version(
+    body: ProductVersionAcceptanceRequest,
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """Append a formal owner acceptance for one fully reconciled 85-rule beta version."""
+    status = await get_product_release_status(db)
+    if not (
+        status["database_rule_id_parity"]
+        and status["database_active_rule_parity"]
+        and status["all_product_rules_accepted"]
+        and status["expected_rule_count"] == 85
+    ):
+        raise HTTPException(
+            409,
+            {
+                "message": "Product version cannot be accepted until all 85 canonical rules are present, active and individually owner-accepted.",
+                "expected_rule_count": status["expected_rule_count"],
+                "database_rule_count": status["database_rule_count"],
+                "missing_database_rule_ids": status["missing_database_rule_ids"],
+                "unexpected_database_rule_ids": status["unexpected_database_rule_ids"],
+                "accepted_rule_count": status["accepted_rule_count"],
+            },
+        )
+
+    manifest = [
+        {
+            "rule_id": item["rule_id"],
+            "reviewer_id": item["reviewer_id"],
+            "source_version": item["source_version"],
+            "source_artifact_sha256": item["source_artifact_sha256"],
+            "provision_citation": item["provision_citation"],
+            "effective_from": item["effective_from"],
+            "effective_to": item["effective_to"],
+            "acceptance_rationale": item["acceptance_rationale"],
+            "product_owner_accepted_at": item["product_owner_accepted_at"],
+        }
+        for item in status["rules"]
+    ]
+    manifest_sha256 = hashlib.sha256(
+        json.dumps(
+            manifest,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    prior_events = (
+        await db.execute(
+            select(LegalRuleReleaseEvent)
+            .where(
+                LegalRuleReleaseEvent.event_type == "PRODUCT_VERSION_ACCEPTED",
+                LegalRuleReleaseEvent.release_scope == "SCORING",
+                LegalRuleReleaseEvent.decision == "APPROVED",
+            )
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+        )
+    ).scalars().all()
+    for prior in prior_events:
+        prior_metadata = prior.event_metadata if isinstance(prior.event_metadata, dict) else {}
+        if prior_metadata.get("version_label") == body.version_label:
+            if prior_metadata.get("manifest_sha256") == manifest_sha256:
+                return {
+                    "state": "ALREADY_ACCEPTED",
+                    "version_label": body.version_label,
+                    "manifest_sha256": manifest_sha256,
+                    "event_id": str(prior.id),
+                    "reviewer_id": str(prior.actor_id),
+                    "accepted_at": prior.created_at.isoformat(),
+                }
+            raise HTTPException(
+                409,
+                "This product version label was already accepted with a different manifest.",
+            )
+
+    event = await _append_event(
+        db,
+        event_type="PRODUCT_VERSION_ACCEPTED",
+        actor_id=current_user.id,
+        reason=body.reason,
+        release_scope="SCORING",
+        decision="APPROVED",
+        metadata={
+            "version_label": body.version_label,
+            "manifest_sha256": manifest_sha256,
+            "rule_count": len(manifest),
+            "rule_ids": [item["rule_id"] for item in manifest],
+            "rule_manifest": manifest,
+            "reviewer_id": str(current_user.id),
+            "reviewer_role": str(getattr(current_user, "role", "SUPER_ADMIN")),
+            "release_scope": "SCREENED_PRIVATE_BETA",
+            "screening_only": True,
+            "legal_advice": False,
+            "independent_legal_verification_unchanged": True,
+        },
+    )
+    return {
+        "state": "ACCEPTED",
+        "version_label": body.version_label,
+        "manifest_sha256": manifest_sha256,
+        "rule_count": len(manifest),
+        "rule_ids": [item["rule_id"] for item in manifest],
+        "event_id": str(event.id),
+        "event_hash": event.event_hash,
+        "reviewer_id": str(current_user.id),
+        "accepted_at": event.created_at.isoformat(),
+        "release_scope": "SCREENED_PRIVATE_BETA",
+        "screening_only": True,
+        "legal_advice": False,
+        "independent_legal_verification_unchanged": True,
     }
 
 
