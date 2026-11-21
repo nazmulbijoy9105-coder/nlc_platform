@@ -130,6 +130,15 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     from app.models.enums import RiskBand
     from app.models.user import User
     from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+    from app.services.subscription_service import SubscriptionService
+
+    async def allow_test_entitlement(self, *, company_id, feature_code):
+        assert feature_code == "compliance_package"
+        return True
+
+    # The route still executes its real membership and entitlement dependency;
+    # this test isolates the tenant boundary from paid-billing fixture setup.
+    monkeypatch.setattr(SubscriptionService, "has_entitlement", allow_test_entitlement)
 
     user_id = uuid.uuid5(uuid.NAMESPACE_DNS, "nlc-test-user-CLIENT_DIRECTOR")
     user = await db_for_user.get(User, user_id)
