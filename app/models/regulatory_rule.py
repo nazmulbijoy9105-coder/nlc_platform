@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.sql import func
 
-from .database import Base  # Fixed import path
+from .base import Base  # Fixed import path
 
 
 class RegulatoryRule(Base):

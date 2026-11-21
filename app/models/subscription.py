@@ -21,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .database import Base
+from .base import Base
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 

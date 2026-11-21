@@ -12,7 +12,7 @@ from typing import TypedDict
 from sqlalchemy import Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .database import Base
+from .base import Base
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 

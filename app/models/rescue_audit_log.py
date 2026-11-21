@@ -13,7 +13,7 @@ from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .database import Base
+from .base import Base
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 

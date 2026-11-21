@@ -1,6 +1,6 @@
 """
 NEUM LEX COUNSEL — ORM LAYER
-database.py — Async SQLAlchemy engine, session factory, Base declaration
+database.py — Async SQLAlchemy engine and session factory
 All DB interactions are async (asyncpg driver).
 AES-256 encryption at rest enforced at PostgreSQL/AWS layer.
 TLS is enforced through verified asyncpg SSL contexts in production.
@@ -15,26 +15,17 @@ from typing import TYPE_CHECKING, Any, cast
 from fastapi import HTTPException, Request
 
 from app.db_url import is_render_runtime, normalize_asyncpg_url
+from app.models.base import Base
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
-    AsyncAttrs,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
-
-# ── BASE ──────────────────────────────────────────────────────────────
-class Base(AsyncAttrs, DeclarativeBase):
-    """
-    Declarative base for all ORM models.
-    AsyncAttrs enables async lazy-loading of relationships.
-    """
-    pass
 
 
 # Alembic needs ORM metadata, not the API's runtime connection pool. This

@@ -87,11 +87,34 @@ class Settings(BaseSettings):
 
     @property
     def ASYNC_APP_DATABASE_URL(self) -> str:
+        """Return the restricted application connection URL.
+
+        Production and Render must never use DATABASE_URL as a runtime
+        fallback because it may hold migration/maintenance privileges.
+        """
+        url = self.APP_DATABASE_URL.strip()
+
+        is_production_runtime = (
+            _RENDER_RUNTIME
+            or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+        )
+
+        if not url:
+            if is_production_runtime:
+                raise RuntimeError(
+                    "APP_DATABASE_URL is required for production runtime access; "
+                    "DATABASE_URL must never be used as a runtime fallback."
+                )
+
+            # Development-only compatibility fallback.
+            url = self.DATABASE_URL.strip()
+
         url = self._runtime_database_url()
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql+asyncpg://", 1)
         if url.startswith("postgresql://"):
             return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
         return url
 
     @property
