@@ -374,6 +374,7 @@ jobs:
                                   NOINHERIT NOREPLICATION NOBYPASSRLS;
                           END IF;
                           EXECUTE 'GRANT nlc_migration_owner TO nlc_migrator WITH ADMIN FALSE, INHERIT FALSE, SET TRUE';
+                          EXECUTE 'GRANT USAGE, CREATE ON SCHEMA public TO nlc_migration_owner';
                       END
                       $;
                   """)
@@ -420,13 +421,13 @@ jobs:
           # migration state left by the first upgrade.
           createdb -h localhost -U nlc_test nlc_test_second
           SECOND_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_second"
-          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
-          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
-          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
           # Re-apply the merged head to prove idempotent upgrade behavior.
-          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
-          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic current
+          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" MIGRATION_DATABASE_URL="$SECOND_DATABASE_URL" alembic current
 
           # Test the forward-only legal-evidence guard on its own isolated
           # revision path. Downgrading a multi-branch merged head to 0076 is
@@ -434,7 +435,7 @@ jobs:
           # unrelated release branches and can cross the guarded revision.
           createdb -h localhost -U nlc_test nlc_test_forward_only_0076
           FORWARD_ONLY_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_forward_only_0076"
-          DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic upgrade 0076_company_charge_evidence
+          DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic upgrade 0076_company_charge_evidence
 
           # Capture the actual version-table rows, not formatted CLI output.
           VERSION_BEFORE="$(DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" python - <<'PY'
@@ -459,7 +460,7 @@ jobs:
           PY
           )"
           test "$VERSION_BEFORE" = "0076_company_charge_evidence"
-          if DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
+          if DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" MIGRATION_DATABASE_URL="$FORWARD_ONLY_DATABASE_URL" alembic downgrade 0075_director_transfer_evidence; then
             echo "ERROR: forward-only legal-evidence migration unexpectedly downgraded"
             exit 1
           fi
@@ -494,7 +495,7 @@ jobs:
           # Apply migrations to a fresh isolated database, first advancing it to
           # revision 0042 and then through head. This validates the forward
           # chain from that revision; it is NOT a restored production snapshot.
-          DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade 0042_dedup_key
+          DATABASE_URL="$BASELINE_DATABASE_URL" MIGRATION_DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade 0042_dedup_key
 
           # Reproduce a legacy production Alembic table: old installs used
           # VARCHAR(32), even though newly-created tables now use VARCHAR(255).
@@ -507,18 +508,18 @@ jobs:
           # the baseline database remains intact for the full forward upgrade.
           createdb -h localhost -U nlc_test nlc_test_missing_table_guard
           GUARD_DATABASE_URL="postgresql+asyncpg://nlc_test@localhost:5432/nlc_test_missing_table_guard"
-          DATABASE_URL="$GUARD_DATABASE_URL" alembic upgrade 0042_dedup_key
+          DATABASE_URL="$GUARD_DATABASE_URL" MIGRATION_DATABASE_URL="$GUARD_DATABASE_URL" alembic upgrade 0042_dedup_key
           DATABASE_URL="$GUARD_DATABASE_URL" python scripts/test_missing_table_recovery.py
 
           # The env.py preflight must widen the legacy column before the next
           # long revision identifier is written.
-          DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
+          DATABASE_URL="$BASELINE_DATABASE_URL" MIGRATION_DATABASE_URL="$BASELINE_DATABASE_URL" alembic upgrade head
           VERSION_COLUMN_TYPE="$(psql -h localhost -U nlc_test -d nlc_test_baseline_0042 -Atc \
             "SELECT format_type(a.atttypid, a.atttypmod) FROM pg_attribute a \
              WHERE a.attrelid = 'public.alembic_version'::regclass \
                AND a.attname = 'version_num' AND NOT a.attisdropped")"
           test "$VERSION_COLUMN_TYPE" = "character varying(255)"
-          CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
+          CURRENT="$(DATABASE_URL="$BASELINE_DATABASE_URL" MIGRATION_DATABASE_URL="$BASELINE_DATABASE_URL" alembic current)"
           printf '%s\n' "$CURRENT"
           HEADS="$(alembic heads)"
           HEAD_COUNT="$(grep -c ' (head)' <<< "$HEADS")"
@@ -557,13 +558,13 @@ jobs:
 
           # Recreate the historical deployed revision using the real migration
           # path, then prove that the canonical branch can continue from it.
-          DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade 0048_articles_verification
-          LEGACY_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
+          DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade 0048_articles_verification
+          LEGACY_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$LEGACY_MARKER"
           grep -q "0048_articles_verification" <<< "$LEGACY_MARKER"
 
-          DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
-          FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
+          DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic upgrade head
+          FINAL_MARKER="$(DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" MIGRATION_DATABASE_URL="$LEGACY_DATABASE_URL" alembic current)"
           printf '%s\n' "$FINAL_MARKER"
           HEAD_REVISION="$(alembic heads | awk 'NR == 1 {print $1}')"
           grep -q "$HEAD_REVISION" <<< "$FINAL_MARKER"
