@@ -26,6 +26,9 @@ LEGACY_REQUIRED_KEYS = frozenset(
         "evaluation_states", "severity", "score_impact", "invariants",
     }
 )
+LEGACY_ALLOWED_KEYS = LEGACY_REQUIRED_KEYS | frozenset(
+    {"applicability_all", "applicability_lt"}
+)
 
 
 def _validate_effective_rule(rule_id: str, rule: registry.StatutoryRule) -> list[str]:
@@ -74,7 +77,7 @@ def _validate_effective_rule(rule_id: str, rule: registry.StatutoryRule) -> list
 def _legacy_contract_errors(rule_id: str, definition: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     missing = LEGACY_REQUIRED_KEYS - set(definition)
-    extra = set(definition) - LEGACY_REQUIRED_KEYS
+    extra = set(definition) - LEGACY_ALLOWED_KEYS
     if missing:
         errors.append(f"missing_keys:{','.join(sorted(missing))}")
     if extra:
