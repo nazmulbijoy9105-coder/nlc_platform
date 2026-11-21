@@ -196,6 +196,28 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     )
     assert foreign_response.status_code in (403, 404), foreign_response.text
 
+    # The live six-state report is company-scoped by the same signed-user
+    # membership dependency. A forged company_ids JWT claim must not widen it.
+    own_coverage = await api_client_as_user.get(
+        f"/api/v1/companies/{company_a.id}/rule-coverage", headers=headers
+    )
+    assert own_coverage.status_code == 200, own_coverage.text
+    coverage_payload = own_coverage.json()
+    assert coverage_payload["company_id"] == str(company_a.id)
+    assert coverage_payload["report"]["validation_status"] == "PASS"
+    assert coverage_payload["report"]["summary"]["registered"] == 85
+    assert coverage_payload["report"]["summary"]["implemented"] == 85
+    assert coverage_payload["report"]["validation_violations"] == []
+    assert (
+        coverage_payload["report"]["states"]["registered"]
+        == coverage_payload["report"]["states"]["implemented"]
+    )
+
+    foreign_coverage = await api_client_as_user.get(
+        f"/api/v1/companies/{company_b.id}/rule-coverage", headers=headers
+    )
+    assert foreign_coverage.status_code in (403, 404), foreign_coverage.text
+
     forged_identity = create_access_token(
         {
             "sub": str(uuid.uuid4()),
