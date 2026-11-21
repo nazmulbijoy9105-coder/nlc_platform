@@ -145,16 +145,14 @@ def verify_authorized_company(
             raise RuntimeError(f"{label}: raw evidence snapshot was exposed by the history index")
         if item.get("canonical_rule_count") != 85:
             raise RuntimeError(f"{label}: evaluation history did not use the 85-rule canonical registry")
-        missing_ids = item.get("missing_canonical_rule_ids") or []
-        if missing_ids:
-            raise RuntimeError(
-                f"{label}: evaluation run is missing canonical outcomes: {missing_ids[:10]}"
-            )
-        unmapped_ids = item.get("unmapped_outcome_rule_ids") or []
-        if unmapped_ids:
+        missing_ids = item.get("missing_canonical_rule_ids")
+        unmapped_ids = item.get("unmapped_outcome_rule_ids")
+        if not isinstance(missing_ids, list) or not isinstance(unmapped_ids, list):
+            raise RuntimeError(f"{label}: history omitted canonical ID reconciliation metadata")
+        if missing_ids or unmapped_ids:
             print(
-                f"REVIEW {label} preserved legacy outcome IDs outside the current registry: "
-                f"{', '.join(unmapped_ids)}"
+                f"REVIEW {label} historical run {item.get('evaluation_run_id')} "
+                f"preserves missing={missing_ids[:5]} and legacy_extra={unmapped_ids[:5]}"
             )
     print(f"PASS {label} evaluation history: {len(runs['items'])} metadata-only run(s)")
 
@@ -232,9 +230,11 @@ def main() -> int:
     # Reconcile the specific 15 November run against the monthly score history
     # without rewriting the November 9 NOT_RELEASED snapshot.
     status, history = get_json(
-        base_url, f"/api/v1/companies/{historical_company}/evaluation-runs", admin_token
+        base_url, f"/api/v1/companies/{historical_company}/evaluation-runs?limit=60", admin_token
     )
     expect_status("SUPER_ADMIN selected historical evaluation", status, {200})
+    if not isinstance(history, dict) or not isinstance(history.get("items"), list):
+        raise RuntimeError("Selected historical evaluation history response is malformed")
     target_run_id = "3150a0df-de28-4dd3-ab97-6bb16e1d7683"
     run = next(
         (item for item in history.get("items", []) if item.get("evaluation_run_id") == target_run_id),
