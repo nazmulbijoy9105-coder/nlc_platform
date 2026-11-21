@@ -62,7 +62,7 @@ FROM runtime-base AS api
 ENV PORT=10000
 EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD-SHELL curl -fsS "http://127.0.0.1:${PORT:-10000}/api/v1/health/live" || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-10000}/api/v1/health/live" || exit 1
 
 # Schema changes are applied by the CI-gated migration step before Render deploy.
 # The API container never receives the privileged migration credential.
