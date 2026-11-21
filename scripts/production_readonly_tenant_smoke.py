@@ -100,10 +100,14 @@ def verify_authorized_company(
     if not isinstance(registered_ids, list) or not isinstance(implemented_ids, list):
         raise RuntimeError(f"{label}: report omitted canonical registered/implemented ID lists")
     if len(registered_ids) != 85 or set(registered_ids) != set(implemented_ids):
-        raise RuntimeError(f"{label}: the 85 canonical IDs do not exactly match engine implementations")
+        raise RuntimeError(
+            f"{label}: the 85 canonical IDs do not exactly match engine implementations"
+        )
     active_ids = states.get("active")
     if not isinstance(active_ids, list) or len(active_ids) != 84 or "INC-001" in set(active_ids):
-        raise RuntimeError(f"{label}: active IDs must contain exactly 84 entries and exclude held INC-001")
+        raise RuntimeError(
+            f"{label}: active IDs must contain exactly 84 entries and exclude held INC-001"
+        )
     if report.get("validation_violations") != []:
         raise RuntimeError(f"{label}: six-state report contains structural violations")
     active_ids = states.get("active")
@@ -125,7 +129,9 @@ def verify_authorized_company(
         if set(applicability_summary) != expected_states:
             raise RuntimeError(f"{label}: applicability report omitted a six-state value")
         if sum(applicability_summary.values()) != 84:
-            raise RuntimeError(f"{label}: applicability counts do not reconcile to 84 active rules")
+            raise RuntimeError(
+                f"{label}: applicability counts do not reconcile to 84 active rules"
+            )
     elif summary.get("applicable") is not None or summary.get("evaluated") is not None:
         raise RuntimeError(f"{label}: run-scoped counts exist without applicability-state detail")
     print(
@@ -144,7 +150,9 @@ def verify_authorized_company(
         if "rule_outcomes_snapshot" in item or "fact_provenance_snapshot" in item:
             raise RuntimeError(f"{label}: raw evidence snapshot was exposed by the history index")
         if item.get("canonical_rule_count") != 85:
-            raise RuntimeError(f"{label}: evaluation history did not use the 85-rule canonical registry")
+            raise RuntimeError(
+                f"{label}: evaluation history did not use the 85-rule canonical registry"
+            )
         missing_ids = item.get("missing_canonical_rule_ids")
         unmapped_ids = item.get("unmapped_outcome_rule_ids")
         if not isinstance(missing_ids, list) or not isinstance(unmapped_ids, list):
@@ -218,7 +226,10 @@ def main() -> int:
             base_url, f"/api/v1/companies/{company}/rule-coverage", admin_token
         )
         expect_status("SUPER_ADMIN six-state report", status, {200})
-        if not isinstance(coverage, dict) or coverage.get("report", {}).get("validation_status") != "PASS":
+        if (
+            not isinstance(coverage, dict)
+            or coverage.get("report", {}).get("validation_status") != "PASS"
+        ):
             raise RuntimeError("SUPER_ADMIN six-state report invariants did not pass")
         status, runs = get_json(
             base_url, f"/api/v1/companies/{company}/evaluation-runs", admin_token
@@ -250,7 +261,9 @@ def main() -> int:
     if (historical_report or {}).get("applicability_summary") != {
         "APPLICABLE": 0, "NOT_APPLICABLE": 0, "UNKNOWN": 84
     }:
-        raise RuntimeError("15 November live funnel must preserve 84 UNKNOWN active-rule applicability states")
+        raise RuntimeError(
+            "15 November live funnel must preserve 84 UNKNOWN active-rule applicability states"
+        )
 
     # Reconcile the specific 15 November run against the monthly score history
     # without rewriting the November 9 NOT_RELEASED snapshot.
@@ -262,11 +275,16 @@ def main() -> int:
         raise RuntimeError("Selected historical evaluation history response is malformed")
     target_run_id = "3150a0df-de28-4dd3-ab97-6bb16e1d7683"
     run = next(
-        (item for item in history.get("items", []) if item.get("evaluation_run_id") == target_run_id),
+        (
+            item for item in history.get("items", [])
+            if item.get("evaluation_run_id") == target_run_id
+        ),
         None,
     )
     if run is None:
-        raise RuntimeError("15 November 2026 historical evaluation is absent from the per-run history")
+        raise RuntimeError(
+            "15 November 2026 historical evaluation is absent from the per-run history"
+        )
     expected_run = {
         "evaluation_status": "COMPLETED",
         "rule_catalogue_count": 86,
@@ -291,15 +309,26 @@ def main() -> int:
     )
     expect_status("SUPER_ADMIN monthly score history", status, {200})
     november_snapshot = next(
-        (item for item in score_history if str(item.get("snapshot_month", "")).startswith("2026-11")),
+        (
+            item for item in score_history
+            if str(item.get("snapshot_month", "")).startswith("2026-11")
+        ),
         None,
     )
     if november_snapshot is None:
         raise RuntimeError("November monthly score-history row is absent")
-    if november_snapshot.get("score") is not None or november_snapshot.get("evaluation_status") != "NOT_EVALUATED":
-        raise RuntimeError("15 November run must not overwrite the 9 November NOT_RELEASED monthly snapshot")
+    if (
+        november_snapshot.get("score") is not None
+        or november_snapshot.get("evaluation_status") != "NOT_EVALUATED"
+    ): 
+        raise RuntimeError(
+            "15 November run must not overwrite the 9 November NOT_RELEASED monthly snapshot"
+        )
 
-    print("PASS production read-only tenant matrix and 15 November historical reconciliation; no mutations were issued")
+    print(
+        "PASS production read-only tenant matrix and 15 November historical reconciliation; "
+        "no mutations were issued"
+    )
     return 0
 
 
