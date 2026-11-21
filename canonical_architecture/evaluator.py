@@ -4,7 +4,7 @@ Order: applicability -> exceptions -> evidence. No I/O, no clock, no randomness.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from .statutory_rules import (
     RuleState, StatutoryRule, STATUTORY_RULE_REGISTRY, evaluate_applicability,
@@ -30,7 +30,7 @@ SCORING_STATES = frozenset({RuleState.NON_COMPLIANT})
 
 
 def evaluate_rule(rule: StatutoryRule,
-                  facts: Mapping[str, bool],
+                  facts: Mapping[str, Any],
                   evidence: Mapping[str, EvidenceStatus]) -> Finding:
     rid = rule.rule_id
     applicability = evaluate_applicability(rule, facts)               # R-003/R-004
