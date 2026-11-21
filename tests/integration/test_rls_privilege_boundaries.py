@@ -181,13 +181,9 @@ async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenan
     )
     assert changed.rowcount == 0
 
-    deleted = await db.execute(
-        delete(Company).where(Company.id == db_other_company.id)
-    )
-    assert deleted.rowcount == 0
-    # The runtime role has no DELETE table privilege on companies. Treat the
-    # database privilege denial as the expected fail-closed result; a zero-row
-    # RLS result alone would not prove the operation is unavailable.
+    # The runtime role has no DELETE table privilege on companies.
+    # Assert the database privilege denial directly; a zero-row RLS result
+    # alone would not prove the operation is unavailable.
     with pytest.raises(DBAPIError):
         async with db.begin_nested():
             await db.execute(
