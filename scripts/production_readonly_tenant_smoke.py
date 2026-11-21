@@ -133,6 +133,19 @@ def verify_authorized_company(
     for item in runs["items"]:
         if "rule_outcomes_snapshot" in item or "fact_provenance_snapshot" in item:
             raise RuntimeError(f"{label}: raw evidence snapshot was exposed by the history index")
+        if item.get("canonical_rule_count") != 85:
+            raise RuntimeError(f"{label}: evaluation history did not use the 85-rule canonical registry")
+        missing_ids = item.get("missing_canonical_rule_ids") or []
+        if missing_ids:
+            raise RuntimeError(
+                f"{label}: evaluation run is missing canonical outcomes: {missing_ids[:10]}"
+            )
+        unmapped_ids = item.get("unmapped_outcome_rule_ids") or []
+        if unmapped_ids:
+            print(
+                f"REVIEW {label} preserved legacy outcome IDs outside the current registry: "
+                f"{', '.join(unmapped_ids)}"
+            )
     print(f"PASS {label} evaluation history: {len(runs['items'])} metadata-only run(s)")
 
     denied_path = f"/api/v1/companies/{denied_company}"
