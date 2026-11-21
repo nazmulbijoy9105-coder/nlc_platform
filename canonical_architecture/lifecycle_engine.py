@@ -94,7 +94,9 @@ class CanonicalLifecycleEngine:
                 if value is None:
                     value = evidence.get(short.lower())
                 value = getattr(value, "value", value)
-                if value is True or value == EvidenceStatus.VERIFIED_PRESENT.value:
+                # A boolean is an assertion, not a verification record. Only an
+                # explicit typed VERIFIED_PRESENT state may satisfy evidence.
+                if value == EvidenceStatus.VERIFIED_PRESENT.value:
                     evidence_statuses[key] = EvidenceStatus.VERIFIED_PRESENT
                 elif value == EvidenceStatus.VERIFIED_ABSENT.value:
                     evidence_statuses[key] = EvidenceStatus.VERIFIED_ABSENT
@@ -104,10 +106,10 @@ class CanonicalLifecycleEngine:
                     evidence_statuses[key] = EvidenceStatus.UNVERIFIED
             return evaluate_rule(rule, applicability_facts, evidence_statuses).state
 
-        if not evidence:
-            return RuleState.UNKNOWN
-        verified = self._evidence_satisfies(rule, evidence)
-        return RuleState.COMPLIANT if verified else RuleState.UNKNOWN
+        # Unkeyed evidence sequences cannot prove that every required evidence
+        # item was verified. Keep the result UNKNOWN until evidence is mapped
+        # to canonical evidence keys and carries an explicit verified state.
+        return RuleState.UNKNOWN
 
     def generate_rescue_plan(self, active_findings: List[str]) -> List[Dict[str, Any]]:
         steps: List[Dict[str, Any]] = []
