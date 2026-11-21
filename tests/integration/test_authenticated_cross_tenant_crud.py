@@ -119,13 +119,27 @@ async def test_signed_app_role_blocks_cross_tenant_select_insert_update_delete(
 
 @pytest.mark.asyncio
 async def test_authenticated_api_uses_database_membership_not_jwt_company_claims(
-    api_client_as_user, db_for_user
+    api_client_as_user, db_for_user, monkeypatch
 ):
     """A signed-in client may read Tenant A but not Tenant B, even if JWT claims B."""
+    import app.api.companies as companies_api
     from app.core.security import create_access_token
     from app.models.company import Company, CompanyUserAccess
+    from app.models.compliance import ComplianceEvaluationRun
     from app.models.database import set_admin_context, set_rls_context
+    from app.models.enums import RiskBand
     from app.models.user import User
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+    from app.services.subscription_service import SubscriptionService
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+    async def allow_test_entitlement(self, *, company_id, feature_code):
+        assert feature_code == "compliance_package"
+        return True
+
+    # The route still executes its real membership and entitlement dependency;
+    # this test isolates the tenant boundary from paid-billing fixture setup.
+    monkeypatch.setattr(SubscriptionService, "has_entitlement", allow_test_entitlement)
 
     user_id = uuid.uuid5(uuid.NAMESPACE_DNS, "nlc-test-user-CLIENT_DIRECTOR")
     user = await db_for_user.get(User, user_id)
@@ -171,6 +185,80 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
         )
     )
     await db_for_user.flush()
+    from datetime import datetime, timedelta, timezone
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    evaluation_at = datetime.now(timezone.utc)
+    db_for_user.add(
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_a.id,
+            score=88,
+            risk_band=RiskBand.GREEN,
+            calculated_at=evaluation_at,
+            engine_version=RULE_ENGINE_VERSION,
+            score_hash="e" * 64,
+            evaluation_status="COMPLETED",
+            trigger_source="TEST",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[{
+                "record_type": "VERIFIED_SOURCE_FACTS",
+                "evidence_ref": "test-evidence://source-001",
+            }],
+            score_breakdown_snapshot={
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "score_reconciles": True,
+                "final_score": 88,
+            },
+            rule_outcomes_snapshot=[
+                {
+                    "rule_id": rule_id,
+                    "applicability_state": "APPLICABLE",
+                    "outcome_state": "COMPLIANT",
+                    "verification_status": "PENDING",
+                }
+                for rule_id in sorted(STATUTORY_RULE_REGISTRY)
+            ],
+            rule_outcomes_hash="f" * 64,
+            rule_catalogue_count=85,
+        )
+    )
+    # A legacy run without applicability_state must remain UNKNOWN. The API
+    # must not infer applicability from its NOT_EVALUATED outcome.
+    db_for_user.add(
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_a.id,
+            score=80,
+            risk_band=RiskBand.YELLOW,
+            calculated_at=evaluation_at - timedelta(days=1),
+            engine_version=RULE_ENGINE_VERSION,
+            score_hash="g" * 64,
+            evaluation_status="COMPLETED",
+            trigger_source="TEST_LEGACY",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
+            score_breakdown_snapshot={
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "score_reconciles": True,
+                "final_score": 80,
+            },
+            rule_outcomes_snapshot=[
+                {
+                    "rule_id": "AUD-001",
+                    "outcome_state": "NOT_EVALUATED",
+                    "verification_status": "PENDING",
+                }
+            ],
+            rule_outcomes_hash="h" * 64,
+            rule_catalogue_count=85,
+        )
+    )
+    await db_for_user.flush()
     await set_rls_context(db_for_user, str(user_id))
 
     # Deliberately claim access to both tenants. The API must consult the
@@ -196,8 +284,6 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     )
     assert foreign_response.status_code in (403, 404), foreign_response.text
 
-    # The live six-state report is company-scoped by the same signed-user
-    # membership dependency. A forged company_ids JWT claim must not widen it.
     own_coverage = await api_client_as_user.get(
         f"/api/v1/companies/{company_a.id}/rule-coverage", headers=headers
     )
@@ -217,6 +303,47 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
         f"/api/v1/companies/{company_b.id}/rule-coverage", headers=headers
     )
     assert foreign_coverage.status_code in (403, 404), foreign_coverage.text
+
+    own_runs = await api_client_as_user.get(
+        f"/api/v1/companies/{company_a.id}/evaluation-runs", headers=headers
+    )
+    assert own_runs.status_code == 200, own_runs.text
+    run_items = own_runs.json()["items"]
+    assert len(run_items) == 2
+    assert run_items[0]["evaluation_status"] == "COMPLETED"
+    assert run_items[0]["score_available"] is True
+    assert run_items[0]["score"] == 88
+    assert run_items[0]["rule_catalogue_count"] == 85
+    assert run_items[0]["catalogue_count_matches_canonical"] is True
+    assert run_items[0]["rule_outcomes_count"] == 85
+    assert run_items[0]["canonical_rule_count"] == 85
+    assert run_items[0]["outcome_rule_ids_count"] == 85
+    assert run_items[0]["missing_canonical_rule_ids"] == []
+    assert run_items[0]["unmapped_outcome_rule_ids"] == []
+    assert run_items[0]["duplicate_outcome_rule_ids"] == []
+    assert run_items[0]["outcome_rule_id_parity"] is True
+    assert run_items[0]["fact_provenance_count"] == 1
+    assert run_items[0]["fact_provenance_record_type_counts"] == {"VERIFIED_SOURCE_FACTS": 1}
+    assert run_items[0]["unattributed_profile_record_count"] == 0
+    assert run_items[0]["evidence_reference_count"] == 1
+    assert run_items[0]["evidence_reference_present"] is True
+    assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 85}
+    assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 85}
+    assert run_items[0]["verification_status_counts"] == {"PENDING": 85}
+    assert run_items[1]["score_available"] is False
+    assert run_items[1]["catalogue_count_matches_canonical"] is True
+    assert run_items[1]["score"] is None
+    assert run_items[1]["outcome_rule_id_parity"] is False
+    assert "canonical registry" in run_items[1]["score_withheld_reason"]
+    assert "No evidence references are bound" in run_items[1]["score_withheld_reason"]
+    assert run_items[1]["applicability_state_counts"] == {"UNKNOWN": 1}
+    assert "rule_outcomes_snapshot" not in run_items[0]
+    assert "fact_provenance_snapshot" not in run_items[0]
+
+    foreign_runs = await api_client_as_user.get(
+        f"/api/v1/companies/{company_b.id}/evaluation-runs", headers=headers
+    )
+    assert foreign_runs.status_code in (403, 404), foreign_runs.text
 
     forged_identity = create_access_token(
         {
