@@ -292,6 +292,11 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["score"] == 88
     assert run_items[0]["rule_catalogue_count"] == 85
     assert run_items[0]["rule_outcomes_count"] == 1
+    assert run_items[0]["canonical_rule_count"] == 85
+    assert run_items[0]["outcome_rule_ids_count"] == 1
+    assert len(run_items[0]["missing_canonical_rule_ids"]) == 84
+    assert run_items[0]["unmapped_outcome_rule_ids"] == []
+    assert run_items[0]["outcome_rule_id_parity"] is False
     assert run_items[0]["fact_provenance_count"] == 1
     assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 1}
     assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 1}
