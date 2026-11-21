@@ -126,3 +126,33 @@ def test_lifecycle_preserves_unknown_for_unstructured_tax_scope():
     assert engine.evaluate_finding(
         "TAX-002", {"DOCUMENTARY_EVIDENCE": True}
     ) is RuleState.UNKNOWN
+
+
+
+def test_lbr001_missing_exception_facts_keep_applicability_unknown():
+    rule = STATUTORY_RULE_REGISTRY["LBR-001"]
+
+    assert evaluate_applicability(
+        rule, {"LABOUR_LICENSE_SCOPE_VERIFIED": True}
+    ) is RuleState.UNKNOWN
+    assert evaluate_applicability(
+        rule,
+        {
+            "LABOUR_LICENSE_SCOPE_VERIFIED": True,
+            "VERIFIED_NON_APPLICABLE_ESTABLISHMENT_CATEGORY": False,
+            "VERIFIED_NO_APPLICABLE_DIRECTION": False,
+        },
+    ) is None
+
+
+def test_verified_lbr001_exception_makes_rule_not_applicable():
+    rule = STATUTORY_RULE_REGISTRY["LBR-001"]
+
+    assert evaluate_applicability(
+        rule,
+        {
+            "LABOUR_LICENSE_SCOPE_VERIFIED": True,
+            "VERIFIED_NON_APPLICABLE_ESTABLISHMENT_CATEGORY": True,
+            "VERIFIED_NO_APPLICABLE_DIRECTION": False,
+        },
+    ) is RuleState.NOT_APPLICABLE
