@@ -6,7 +6,7 @@ Maps each verified rule to:
 - Exceptions (conditions that make the rule NOT_APPLICABLE)
 - Scope limitations (company type, lifecycle stage, etc.)
 
-Based on Companies Act 1994 (Bangladesh) section text.
+These are product-scope predicates, not a certification of legal correctness or a global scoring gate.
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class ApplicabilityRule:
     notes: str = ""
 
 # ═════════════════════════════════════════════════════════════════════
-# APPLICABILITY MODEL — 35 verified rules
+# APPLICABILITY MODEL — 41 declared product-scope policies
 # ═════════════════════════════════════════════════════════════════════
 
 APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {

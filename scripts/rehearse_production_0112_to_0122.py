@@ -76,6 +76,9 @@ async def _connect() -> asyncpg.Connection:
     if identity["current_database"] != DATABASE or identity["project_id"] != PROJECT_ID:
         await conn.close()
         raise RuntimeError(f"Wrong Neon target: {dict(identity)!r}")
+    if identity["branch_id"] != os.environ.get("NLC_REHEARSAL_BRANCH_ID"):
+        await conn.close()
+        raise RuntimeError("Connection does not point to the disposable rehearsal branch.")
     target_branch_id = (
         os.environ.get("NLC_TARGET_BRANCH_ID")
         or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
@@ -331,6 +334,8 @@ async def _audit_view_parity() -> dict[str, Any]:
                 f"Restricted audit view parity failed: revision={result.get('alembic_revision')!r}; "
                 f"failed={failed!r}"
             )
+        if result.get("identity_archive_rows", 0) < 1:
+            raise RuntimeError("Restricted audit view reports no preserved legacy identities.")
         if result.get("identity_archive_rows") != 2:
             raise RuntimeError("Expected exactly the two preserved legacy identity collision records.")
         expected_identity_counts = {
@@ -365,6 +370,8 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
+        if revisions != [START_REVISION]:
+            raise RuntimeError(f"Expected exact production starting revision {START_REVISION}; got {revisions!r}")
         if revisions == [HEAD_REVISION]:
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity

@@ -181,6 +181,10 @@ async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenan
     )
     assert changed.rowcount == 0
 
+    deleted = await db.execute(
+        delete(Company).where(Company.id == db_other_company.id)
+    )
+    assert deleted.rowcount == 0
     # The runtime role has no DELETE table privilege on companies. Treat the
     # database privilege denial as the expected fail-closed result; a zero-row
     # RLS result alone would not prove the operation is unavailable.
@@ -211,6 +215,7 @@ async def test_client_cannot_read_update_delete_or_grant_access_to_another_tenan
 @pytest.mark.asyncio
 async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company):
     from fastapi import HTTPException
+    from sqlalchemy import delete
     from sqlalchemy import update
 
     from app.core.dependencies import TokenData, require_company_access
@@ -230,6 +235,11 @@ async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company
     await db.flush()
 
     # The JWT still contains the old company id; the database membership is revoked.
+    await db.execute(
+        delete(CompanyUserAccess).where(
+            CompanyUserAccess.user_id == client.id,
+            CompanyUserAccess.company_id == db_company.id,
+        )
     # Revoke the membership through the trusted ADMIN service principal.
     # The runtime role intentionally has no DELETE grant on membership rows.
     await db.execute(
@@ -344,3 +354,44 @@ async def test_score_history_is_not_mutable_by_application_role(db, db_company):
         """)
     )
     assert trigger.scalar_one() is True
+
+
+
+@pytest.mark.asyncio
+async def test_every_company_scoped_table_enforces_rls_and_has_a_policy(db):
+    """New tenant tables cannot silently ship without forced RLS."""
+    result = await db.execute(
+        text("""
+            SELECT
+                c.relname AS table_name,
+                c.relrowsecurity AS rls_enabled,
+                c.relforcerowsecurity AS force_rls,
+                count(p.policyname) AS policy_count
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            JOIN pg_attribute a
+              ON a.attrelid = c.oid
+             AND a.attname = 'company_id'
+             AND NOT a.attisdropped
+            LEFT JOIN pg_policies p
+              ON p.schemaname = n.nspname
+             AND p.tablename = c.relname
+            WHERE n.nspname = 'public'
+              AND c.relkind = 'r'
+            GROUP BY c.relname, c.relrowsecurity, c.relforcerowsecurity
+            ORDER BY c.relname
+        """)
+    )
+    rows = result.fetchall()
+    assert rows, "Tenant table inventory must not be empty"
+    violations = [
+        {
+            "table": row.table_name,
+            "rls_enabled": row.rls_enabled,
+            "force_rls": row.force_rls,
+            "policy_count": row.policy_count,
+        }
+        for row in rows
+        if not row.rls_enabled or not row.force_rls or row.policy_count < 1
+    ]
+    assert not violations, f"Tenant tables missing forced RLS/policies: {violations!r}"
