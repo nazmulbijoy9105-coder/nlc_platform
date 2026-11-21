@@ -39,7 +39,7 @@ def test_rule_without_emitted_finding_is_not_evaluated_and_applicability_unknown
     assert rows[0]["assessment_source"] == "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE"
     assert rows[0]["applicability_state"] == "UNKNOWN"
     assert rows[0]["applicability_source"] == "NO_EXPLICIT_ENGINE_DECISION"
-    assert "not proof of non-applicability" in rows[0]["applicability_reason"].lower()
+    assert "not proof of non-applicability" in rows[0]["finding_applicability_reason"].lower()
 
 
 def test_engine_finding_state_and_explicit_applicability_are_preserved():
@@ -141,7 +141,7 @@ def test_applicability_is_included_in_immutable_snapshot_hash():
         applicability_results={"AGM-001": {"status": "UNKNOWN", "reason": "missing fact"}},
     )
     assert hash_rule_outcomes_snapshot(applicable) != hash_rule_outcomes_snapshot(unknown)
-    assert orphan["applicability_state"] == "UNKNOWN"
+    assert unknown[0]["applicability_state"] == "UNKNOWN"
 
 
 def test_emitted_finding_without_explicit_applicability_remains_unknown():
