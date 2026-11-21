@@ -314,6 +314,7 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["score_available"] is True
     assert run_items[0]["score"] == 88
     assert run_items[0]["rule_catalogue_count"] == 85
+    assert run_items[0]["catalogue_count_matches_canonical"] is True
     assert run_items[0]["rule_outcomes_count"] == 85
     assert run_items[0]["canonical_rule_count"] == 85
     assert run_items[0]["outcome_rule_ids_count"] == 85
@@ -330,6 +331,7 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 85}
     assert run_items[0]["verification_status_counts"] == {"PENDING": 85}
     assert run_items[1]["score_available"] is False
+    assert run_items[1]["catalogue_count_matches_canonical"] is True
     assert run_items[1]["score"] is None
     assert run_items[1]["outcome_rule_id_parity"] is False
     assert "canonical registry" in run_items[1]["score_withheld_reason"]
