@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the documented production 0112 schema through 0122 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through 0123 on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -26,8 +26,8 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0122_rls_staff_scope_and_score_history"
-AHEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
     "compliance_score_history",
@@ -52,7 +52,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0122.json")
+REPORT = Path("artifacts/neon-production-0112-to-0123.json")
 
 
 def _url() -> str:
@@ -207,13 +207,13 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
             (SELECT count(*) FROM public.legal_rule_revisions) AS revisions
     """)
     expected_identity_counts = {
-        "identities": 85,
+        "identities": 170,
         "active_identities": 85,
-        "aliases": 85,
-        "unresolved_aliases": 85,
+        "aliases": 169,
+        "unresolved_aliases": 169,
         "resolved_aliases": 0,
         "engine_aliases": 85,
-        "other_source_aliases": 0,
+        "other_source_aliases": 84,
         "empty_alias_ids": 0,
         "inc001_engine_aliases": 1,
         "inc002_engine_aliases": 0,
@@ -328,7 +328,7 @@ async def _audit_view_parity() -> dict[str, Any]:
         )
         failed = [key for key in required_true if result.get(key) is not True]
         actual_revision = result.get("alembic_revision")
-        if actual_revision not in {HEAD_REVISION, AHEAD_REVISION} or failed:
+        if actual_revision not in {HEAD_REVISION, PREVIOUS_REVISION} or failed:
             raise RuntimeError(
                 f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
@@ -343,7 +343,7 @@ async def _audit_view_parity() -> dict[str, Any]:
                 "resolved_alias_rows": 0,
                 "canonical_revision_rows": 0,
             }
-            if actual_revision == HEAD_REVISION
+            if actual_revision == PREVIOUS_REVISION
             else {
                 "canonical_identity_rows": 170,
                 "canonical_alias_rows": 169,
@@ -377,7 +377,7 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions in ([HEAD_REVISION], [AHEAD_REVISION]):
+        if revisions in ([HEAD_REVISION], [PREVIOUS_REVISION]):
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
             # instead of trying to replay the 0112-only migration.
