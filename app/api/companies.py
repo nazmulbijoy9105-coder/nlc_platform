@@ -314,7 +314,7 @@ class FlagResponse(BaseModel):
     resolution_note: str | None
     screening_only: bool = True
     legal_advice: bool = False
-    disclaimer: str = "Finding is a screening prompt only — not a legal conclusion or legal advice."
+    disclaimer: str = "Finding is a screening prompt only — not legal advice or a legal conclusion."
 
 
 class ScoreHistoryEntry(BaseModel):
