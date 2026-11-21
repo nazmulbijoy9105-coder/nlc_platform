@@ -664,43 +664,32 @@ jobs:
       - name: Verify API container starts with expected entrypoint
         run: |
           python - <<'PY'
-          import subprocess
           import json
+          import subprocess
 
           inspect = subprocess.check_output(
               ["docker", "inspect", "nlc-api:ci"], text=True
           )
           data = json.loads(inspect)[0]
           config = data["Config"]
-          entrypoint = config.get("Entrypoint") or []
-          cmd = config.get("Cmd") or []
-          command = entrypoint + cmd
-          expected_tokens = [
-              "uvicorn",
-              "app.main:app",
-              "--host",
-              "0.0.0.0",
-              "--port",
-              "8000",
-          ]
-          # Accept pure uvicorn exec form or the production shell form that
-          # runs alembic upgrade head then exec uvicorn for PID 1 signals.
-          if command == expected_tokens:
-              print("API startup command uses direct Uvicorn exec form")
-          elif (
-              len(command) == 3
-              and command[0] in ("sh", "/bin/sh")
-              and command[1] == "-c"
-              and "alembic upgrade head" in command[2]
-              and "exec uvicorn app.main:app --host 0.0.0.0 --port 8000" in command[2]
-          ):
-              print("API startup command runs migrations then exec uvicorn")
-          elif len(command) >= 6 and command[-6:] == expected_tokens:
-              print("API startup command ends with expected Uvicorn tokens")
-          else:
-              raise SystemExit(f"Unexpected API startup command: {command!r}")
-          PY
+          command = (config.get("Entrypoint") or []) + (config.get("Cmd") or [])
+          if len(command) != 3 or command[0] not in ("sh", "/bin/sh") or command[1] != "-c":
+              raise SystemExit(f"Unexpected API startup command form: {command!r}")
 
+          startup = command[2]
+          required = (
+              "exec uvicorn app.main:app --host 0.0.0.0 --port ",
+              "${PORT:-10000}",
+          )
+          missing = [token for token in required if token not in startup]
+          if missing:
+              raise SystemExit(
+                  f"API startup command must bind to injected Render PORT; missing {missing!r}: {startup!r}"
+              )
+          if "alembic upgrade head" in startup:
+              raise SystemExit("API container must not run privileged Alembic migrations")
+          print("API startup uses exec Uvicorn and injected Render PORT; migrations remain separate")
+          PY
       - name: Verify Fontconfig cache is writable as non-root runtime user
         run: |
           docker run --rm --entrypoint /bin/sh nlc-api:ci -c '

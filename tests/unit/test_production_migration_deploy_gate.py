@@ -4,13 +4,13 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = ROOT / "Dockerfile"
 DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "deploy-vercel-backend.yml"
 
-
 def test_api_container_does_not_run_privileged_alembic_migrations():
     source = DOCKERFILE.read_text(encoding="utf-8")
 
-    assert 'CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]' in source
+    assert "ENV PORT=10000" in source
+    assert "EXPOSE 10000" in source
+    assert 'CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port' in source
     assert "alembic upgrade head" not in source
-
 
 def test_production_migrations_run_before_render_deploy_hook():
     source = DEPLOY_WORKFLOW.read_text(encoding="utf-8")
@@ -22,7 +22,6 @@ def test_production_migrations_run_before_render_deploy_hook():
     assert "MIGRATION_DATABASE_URL is not configured" in source
     assert "docker run --rm" in source
     assert "alembic upgrade head" in source
-
 
 def test_missing_migration_secret_fails_before_any_render_deploy():
     source = DEPLOY_WORKFLOW.read_text(encoding="utf-8")

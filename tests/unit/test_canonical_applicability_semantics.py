@@ -103,22 +103,27 @@ def test_canonical_evaluator_returns_unknown_for_missing_inc005_fact():
 
 
 def test_lifecycle_and_canonical_evaluator_share_inc005_applicability_states():
+    from canonical_architecture.evaluator import EvidenceStatus
+
     engine = CanonicalLifecycleEngine()
+    rule = STATUTORY_RULE_REGISTRY["INC-005"]
+    verified_evidence = {
+        key: EvidenceStatus.VERIFIED_PRESENT for key in rule.evidence_required
+    }
 
     assert engine.evaluate_finding("INC-005", {}) is RuleState.UNKNOWN
     assert engine.evaluate_finding(
-        "INC-005", {"has_foreign_shareholder": False}
+        "INC-005", {}, facts={"has_foreign_shareholder": False}
     ) is RuleState.NOT_APPLICABLE
     assert engine.evaluate_finding(
-        "INC-005",
-        {
-            "has_foreign_shareholder": True,
-            "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD": True,
-            "INC-005:AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE": True,
-            "INC-005:REMITTANCE_IDENTITY_AND_BANK_PROVENANCE": True,
-            "INC-005:CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION": True,
-        },
+        "INC-005", verified_evidence, facts={"has_foreign_shareholder": True}
     ) is RuleState.COMPLIANT
+    # A bare boolean is not a verification record.
+    assert engine.evaluate_finding(
+        "INC-005",
+        {key: True for key in rule.evidence_required},
+        facts={"has_foreign_shareholder": True},
+    ) is RuleState.UNKNOWN
 
 
 def test_lifecycle_preserves_unknown_for_unstructured_tax_scope():
@@ -156,3 +161,140 @@ def test_verified_lbr001_exception_makes_rule_not_applicable():
             "VERIFIED_NO_APPLICABLE_DIRECTION": False,
         },
     ) is RuleState.NOT_APPLICABLE
+
+
+
+def test_inc006_canonical_and_lifecycle_evaluators_have_identical_applicability_results():
+    """Facts and evidence are separate inputs; both paths must agree on INC-006."""
+    rule = STATUTORY_RULE_REGISTRY["INC-006"]
+    engine = CanonicalLifecycleEngine()
+    cases = (
+        ({}, RuleState.UNKNOWN),
+        (
+            {"has_foreign_shareholder": False},
+            RuleState.NOT_APPLICABLE,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+            },
+            RuleState.UNKNOWN,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": "49999",
+            },
+            RuleState.UNKNOWN,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": 50000,
+            },
+            RuleState.NOT_APPLICABLE,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": 49999.99,
+            },
+            RuleState.UNKNOWN,
+        ),
+    )
+
+    for facts, expected in cases:
+        canonical = evaluate_rule(rule, facts, {})
+        lifecycle = engine.evaluate_finding("INC-006", {}, facts=facts)
+        assert canonical.state is expected
+        assert lifecycle is expected
+        assert lifecycle is canonical.state
+
+
+def test_inc006_lifecycle_does_not_treat_applicability_facts_as_evidence():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.evaluate_finding("INC-006", {}, facts=facts) is RuleState.UNKNOWN
+    assert engine.evaluate_finding(
+        "INC-006",
+        {"has_foreign_shareholder": True},
+        facts=facts,
+    ) is RuleState.UNKNOWN
+
+
+def test_inc006_submit_new_evidence_accepts_separate_applicability_facts():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.submit_new_evidence(
+        "INC-006",
+        {},
+        facts=facts,
+        verification_recorded=True,
+    ) is RuleState.UNKNOWN
+
+
+
+def test_inc006_canonical_and_lifecycle_evidence_states_match():
+    from canonical_architecture.evaluator import EvidenceStatus
+
+    rule = STATUTORY_RULE_REGISTRY["INC-006"]
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+    cases = (
+        (EvidenceStatus.VERIFIED_PRESENT, EvidenceStatus.VERIFIED_PRESENT, RuleState.COMPLIANT),
+        (True, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        (False, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("VERIFIED_PRESENT", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("VERIFIED_ABSENT", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("CONFLICTING", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        (EvidenceStatus.VERIFIED_ABSENT, EvidenceStatus.VERIFIED_ABSENT, RuleState.NON_COMPLIANT),
+        (EvidenceStatus.CONFLICTING, EvidenceStatus.CONFLICTING, RuleState.CONTRADICTORY),
+    )
+
+    for lifecycle_value, canonical_value, expected in cases:
+        canonical = evaluate_rule(
+            rule,
+            facts,
+            {"DOCUMENTARY_EVIDENCE": canonical_value},
+        )
+        lifecycle = engine.evaluate_finding(
+            "INC-006",
+            {"DOCUMENTARY_EVIDENCE": lifecycle_value},
+            facts=facts,
+        )
+        assert canonical.state is expected
+        assert lifecycle is expected
+        assert lifecycle is canonical.state
+
+
+def test_inc006_unrelated_fact_in_evidence_mapping_stays_unknown():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.evaluate_finding(
+        "INC-006",
+        {"has_foreign_shareholder": True},
+        facts=facts,
+    ) is RuleState.UNKNOWN
