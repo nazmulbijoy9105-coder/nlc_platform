@@ -320,7 +320,7 @@ def main() -> int:
     if (
         november_snapshot.get("score") is not None
         or november_snapshot.get("evaluation_status") != "NOT_EVALUATED"
-    ): 
+    ):
         raise RuntimeError(
             "15 November run must not overwrite the 9 November NOT_RELEASED monthly snapshot"
         )
