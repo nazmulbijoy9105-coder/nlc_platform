@@ -122,7 +122,8 @@ This addendum supersedes earlier point-in-time counts where they differ. All pro
 
 - `legal_rules`: 86 rows; 84 active; 2 inactive; 86 PENDING; 0 VERIFIED; 0 catalogue rows with non-zero `score_impact`.
 - Inactive rows: `INC-001` (quarantined canonical identity) and `INC-002` (extra inactive historical/duplicate identity). Do not delete or reactivate either row to force count parity.
-- The canonical application registry remains 85 IDs. The six-state report should distinguish 85 registered, 85 implemented and 84 active; the extra inactive `INC-002` is not a canonical rule.
+- The canonical application registry remains 85 IDs. A direct set comparison between all 85 runtime registry IDs and production `legal_rules.rule_id` values found **no missing canonical IDs**; the only extra database ID is inactive `INC-002`. The six-state report should distinguish 85 registered, 85 implemented and 84 active.
+- The 15 November evaluation snapshot contains 86 unique outcome IDs: all 85 canonical IDs plus the extra `INC-002`; missing canonical outcomes = 0; unmapped historical outcome IDs = [`INC-002`]. Preserve this historical outcome for audit, but exclude it from the current canonical registry and active funnel.
 - `legal_rule_aliases`: 85 rows; 0 RESOLVED; 85 UNRESOLVED. All 85 have a mapping-basis note, but 0 have an evidence reference. Do not resolve aliases from name similarity or mapping notes alone.
 - `compliance_finding_bindings`, `compliance_finding_evidence` and `legal_rule_finding_contexts`: 0 rows. Historical findings therefore remain unbound to authenticated rule revisions and evidence manifests.
 
