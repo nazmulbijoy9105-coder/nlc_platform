@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from app.api.legal_provenance import (
     MappingBulkCreate,
     MappingCreate,
+    ProductVersionAcceptanceRequest,
     SourceCreate,
     _source_state,
     _product_owner_acceptance_is_active,
@@ -115,6 +116,36 @@ def test_product_owner_acceptance_requires_complete_immutable_source_snapshot():
         **{**event.__dict__, "event_type": "SOURCE_REGISTERED"}
     )
     assert _product_owner_acceptance_is_active(wrong_event, "AGM-001") is False
+
+
+def test_product_version_acceptance_requires_version_and_reason():
+    request = ProductVersionAcceptanceRequest(
+        version_label="nlc-private-beta-2026.11.22",
+        reason="Accept the reconciled screened-beta product release manifest.",
+    )
+    assert request.version_label == "nlc-private-beta-2026.11.22"
+    with pytest.raises(ValidationError):
+        ProductVersionAcceptanceRequest(
+            version_label="v1",
+            reason="short",
+        )
+
+
+def test_product_version_acceptance_endpoint_is_super_admin_only():
+    from app.api.legal_provenance import router
+    from app.core.dependencies import get_current_user
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/product-versions/accept"
+    )
+    dependencies = route.dependant.dependencies
+    assert get_current_user in {dependency.call for dependency in dependencies}
+    assert any(
+        getattr(dependency.call, "__name__", "") == "role_checker"
+        or "require_roles" in getattr(dependency.call, "__qualname__", "")
+        for dependency in dependencies
+    )
 
 
 def test_product_release_status_endpoint_is_super_admin_only():
