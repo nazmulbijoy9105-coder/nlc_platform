@@ -1043,6 +1043,7 @@ async def accept_product_release_version(
                 "database_rule_count": status["database_rule_count"],
                 "missing_database_rule_ids": status["missing_database_rule_ids"],
                 "unexpected_database_rule_ids": status["unexpected_database_rule_ids"],
+                "inactive_database_rule_ids": status["inactive_database_rule_ids"],
                 "accepted_rule_count": status["accepted_rule_count"],
             },
         )
