@@ -247,7 +247,13 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
                 "score_reconciles": True,
                 "final_score": 80,
             },
-            rule_outcomes_snapshot=[{"rule_id": "AUD-001", "outcome_state": "NOT_EVALUATED", "verification_status": "PENDING"}],
+            rule_outcomes_snapshot=[
+                {
+                    "rule_id": "AUD-001",
+                    "outcome_state": "NOT_EVALUATED",
+                    "verification_status": "PENDING",
+                }
+            ],
             rule_outcomes_hash="h" * 64,
             rule_catalogue_count=85,
         )
