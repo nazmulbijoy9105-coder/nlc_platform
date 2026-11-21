@@ -88,6 +88,7 @@ def test_product_owner_acceptance_requires_complete_immutable_source_snapshot():
         created_at=datetime(2026, 11, 22, tzinfo=timezone.utc),
         event_metadata={
             "reviewer_id": "signed-user-id",
+            "reviewer_name": "Product Owner Reviewer",
             "accepted_rule_id": "AGM-001",
             "source_version": "companies-act-1994-v1",
             "source_artifact_sha256": "a" * 64,
