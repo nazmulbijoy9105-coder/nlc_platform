@@ -131,6 +131,7 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     from app.models.user import User
     from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
     from app.services.subscription_service import SubscriptionService
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
     async def allow_test_entitlement(self, *, company_id, feature_code):
         assert feature_code == "compliance_package"
@@ -203,16 +204,23 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
             black_flags_count=0,
             flags_snapshot=[],
             fact_provenance_snapshot=[{
-                "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
-                "disclosure": "Legacy profile inputs have no source record.",
-                "field_values": {"incorporation_date": "2020-06-20", "moa_aoa_evidence_ref": None},
+                "record_type": "VERIFIED_SOURCE_FACTS",
+                "evidence_ref": "test-evidence://source-001",
             }],
             score_breakdown_snapshot={
                 "scoring_spec_version": SCORING_SPEC_VERSION,
                 "score_reconciles": True,
                 "final_score": 88,
             },
-            rule_outcomes_snapshot=[{"rule_id": "AGM-001", "applicability_state": "APPLICABLE", "outcome_state": "COMPLIANT", "verification_status": "PENDING"}],
+            rule_outcomes_snapshot=[
+                {
+                    "rule_id": rule_id,
+                    "applicability_state": "APPLICABLE",
+                    "outcome_state": "COMPLIANT",
+                    "verification_status": "PENDING",
+                }
+                for rule_id in sorted(STATUTORY_RULE_REGISTRY)
+            ],
             rule_outcomes_hash="f" * 64,
             rule_catalogue_count=85,
         )
@@ -300,20 +308,24 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["score_available"] is True
     assert run_items[0]["score"] == 88
     assert run_items[0]["rule_catalogue_count"] == 85
-    assert run_items[0]["rule_outcomes_count"] == 1
+    assert run_items[0]["rule_outcomes_count"] == 85
     assert run_items[0]["canonical_rule_count"] == 85
-    assert run_items[0]["outcome_rule_ids_count"] == 1
-    assert len(run_items[0]["missing_canonical_rule_ids"]) == 84
+    assert run_items[0]["outcome_rule_ids_count"] == 85
+    assert run_items[0]["missing_canonical_rule_ids"] == []
     assert run_items[0]["unmapped_outcome_rule_ids"] == []
-    assert run_items[0]["outcome_rule_id_parity"] is False
+    assert run_items[0]["duplicate_outcome_rule_ids"] == []
+    assert run_items[0]["outcome_rule_id_parity"] is True
     assert run_items[0]["fact_provenance_count"] == 1
-    assert run_items[0]["fact_provenance_record_type_counts"] == {"UNATTRIBUTED_PROFILE_FIELDS": 1}
-    assert run_items[0]["unattributed_profile_record_count"] == 1
-    assert run_items[0]["evidence_reference_count"] == 0
-    assert run_items[0]["evidence_reference_present"] is False
-    assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 1}
-    assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 1}
-    assert run_items[0]["verification_status_counts"] == {"PENDING": 1}
+    assert run_items[0]["fact_provenance_record_type_counts"] == {"VERIFIED_SOURCE_FACTS": 1}
+    assert run_items[0]["unattributed_profile_record_count"] == 0
+    assert run_items[0]["evidence_reference_count"] == 1
+    assert run_items[0]["evidence_reference_present"] is True
+    assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 85}
+    assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 85}
+    assert run_items[0]["verification_status_counts"] == {"PENDING": 85}
+    assert run_items[1]["score_available"] is False
+    assert run_items[1]["score"] is None
+    assert "No evidence references are bound" in run_items[1]["score_withheld_reason"]
     assert run_items[1]["applicability_state_counts"] == {"UNKNOWN": 1}
 
     foreign_runs = await api_client_as_user.get(
