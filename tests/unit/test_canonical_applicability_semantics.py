@@ -156,3 +156,97 @@ def test_verified_lbr001_exception_makes_rule_not_applicable():
             "VERIFIED_NO_APPLICABLE_DIRECTION": False,
         },
     ) is RuleState.NOT_APPLICABLE
+
+
+
+def test_inc006_canonical_and_lifecycle_evaluators_have_identical_applicability_results():
+    """Facts and evidence are separate inputs; both paths must agree on INC-006."""
+    from canonical_architecture.evaluator import EvidenceStatus
+
+    rule = STATUTORY_RULE_REGISTRY["INC-006"]
+    engine = CanonicalLifecycleEngine()
+    cases = (
+        ({}, RuleState.UNKNOWN),
+        (
+            {"has_foreign_shareholder": False},
+            RuleState.NOT_APPLICABLE,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+            },
+            RuleState.UNKNOWN,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": "49999",
+            },
+            RuleState.UNKNOWN,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": 50000,
+            },
+            RuleState.NOT_APPLICABLE,
+        ),
+        (
+            {
+                "has_foreign_shareholder": True,
+                "bida_registered": True,
+                "remittance_amount_usd": 49999.99,
+            },
+            RuleState.COMPLIANT,
+        ),
+    )
+
+    for facts, expected in cases:
+        canonical = evaluate_rule(
+            rule,
+            facts,
+            {"DOCUMENTARY_EVIDENCE": EvidenceStatus.VERIFIED_PRESENT},
+        )
+        lifecycle = engine.evaluate_finding(
+            "INC-006",
+            {"DOCUMENTARY_EVIDENCE": True},
+            facts=facts,
+        )
+        assert canonical.state is expected
+        assert lifecycle is expected
+        assert lifecycle is canonical.state
+
+
+def test_inc006_lifecycle_does_not_treat_applicability_facts_as_evidence():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.evaluate_finding("INC-006", {}, facts=facts) is RuleState.UNKNOWN
+    assert engine.evaluate_finding(
+        "INC-006",
+        {"DOCUMENTARY_EVIDENCE": True},
+        facts=facts,
+    ) is RuleState.COMPLIANT
+
+
+def test_inc006_submit_new_evidence_accepts_separate_applicability_facts():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.submit_new_evidence(
+        "INC-006",
+        {"DOCUMENTARY_EVIDENCE": True},
+        facts=facts,
+        verification_recorded=True,
+    ) is RuleState.COMPLIANT
