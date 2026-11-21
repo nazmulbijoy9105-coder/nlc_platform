@@ -98,6 +98,31 @@ OUT_OF_SCOPE = {
     "BSEC-004": "BSEC rules and Corporate Governance Code",
 }
 
+# A mapped candidate is not necessarily a legally resolved proposition.
+# These declarations have an explicit reason to remain review-only.
+REVIEW_ONLY = {
+    "REG-001": ("Companies Act 1994 (Bangladesh) and applicable Articles",
+                "Generic register-completeness signal must be split by register type."),
+    "REG-003": ("Unresolved location proposition",
+                "Section 34(2) is not accepted as location authority; no breach is inferred."),
+    "DEF-002": ("Case-specific enabling provision required",
+                "A penalty notice requires the issuing authority and exact enabling provision."),
+    "BNK-001": ("Companies Act 1994 (Bangladesh), Part V",
+                "Exact petition ground and procedural route require case-specific review."),
+    "BNK-002": ("Companies Act 1994 (Bangladesh), Part V",
+                "Voluntary and court-appointed liquidator routes require separate mapping."),
+    "BNK-003": ("Companies Act 1994 (Bangladesh), Part V",
+                "Authenticated operative court order and exact provision require review."),
+    "AGM-007": ("Section 85 and the company Articles",
+                "Adjournment notice depends on the Articles and exact procedural facts."),
+    "DIR-005": ("Section 130",
+                "Section 130 concerns director-interest disclosure, not a generic register duty."),
+    "DIR-006": ("exact register obligation requires counsel verification",
+                "No universal register provision has been established."),
+    "ESC-003": ("NLC internal risk policy",
+                "Internal rescue policy, not a statutory breach or Companies Act consequence."),
+}
+
 FORBIDDEN_IDS = {"INC-002": "duplicate of INC-001; split into OFF-001 (D2)"}
 FORBIDDEN_TEXT = ["210(2A)", "120 days of incorporation",
                   "Directors (Sec 90)", "Charges (Sec 87)", "AGM Minutes (Sec 83)"]
@@ -141,6 +166,13 @@ def main():
                 if rid in FORBIDDEN_IDS:
                     print("FAIL  %-9s forbidden rule id at %s - %s" % (rid, loc, FORBIDDEN_IDS[rid])); fails += 1
                     continue
+                if rid in REVIEW_ONLY:
+                    anchor_text, rationale = REVIEW_ONLY[rid]
+                    if anchor_text.lower() in blob.lower():
+                        print("REVIEW %-9s documented hold at %s - %s" % (rid, loc, rationale)); scopes += 1
+                    else:
+                        print("FAIL  %-9s review-only anchor %r missing at %s" % (rid, anchor_text, loc)); fails += 1
+                    continue
                 if rid in OUT_OF_SCOPE:
                     print("SCOPE %-9s separate statute audit required at %s - %s" % (rid, loc, OUT_OF_SCOPE[rid])); scopes += 1
                     continue
@@ -173,8 +205,10 @@ def main():
         print(("PASS  " if token in eng else "WARN  ") + "[F] %s %s" % (token, "" if token in eng else "- " + note))
         if token not in eng: warns += 1
     print("=" * 78)
-    print(" OUT OF SCOPE: %d (separate statutory audit still required)" % scopes)
-    print(" VERDICT: %d FAIL / %d WARN / %d PASS" % (fails, warns, passes))
+    print(" REVIEW / OUT OF SCOPE: %d (source and counsel review remain open)" % scopes)
+    print(" VERDICT: %d FAIL / %d UNMAPPED / %d CANDIDATE-ANCHOR MATCH" % (fails, warns, passes))
+    print(" LEGAL STATUS: candidate-anchor consistency is not source authentication or counsel approval.")
+    print(" VERIFIED_RULE_IDS and the independent counsel register remain fail-closed.")
     print("=" * 78)
     sys.exit(1 if fails else 0)
 
