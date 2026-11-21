@@ -2547,7 +2547,7 @@ class NLCRuleEngine:
                     "Check Board authority, the alternative-location notice and the "
                     "statutory inspection requirements before determining compliance."
                 ),
-                statutory_basis=("UNRESOLVED — Section 34(2) is a penalty provision, not a location authority; confirm the operative location rule and Articles before any finding"),
+                statutory_basis="Unresolved location proposition; Companies Act 1994 (Bangladesh)",
                 state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                 eval_state="UNKNOWN",
                 detail={"location": c.register_location},
