@@ -117,3 +117,26 @@ def test_alias_overlap_guard_requires_read_committed_isolation():
     assert "current_setting('transaction_isolation')" in source
     assert "READ COMMITTED" in source
     assert "USING ERRCODE = '25000'" in source
+
+def test_inc001_accepts_observed_section11_legacy_tuple_for_quarantine():
+    source = MIGRATION.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    fingerprints_node = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id == "INC001_LEGACY_FINGERPRINTS"
+    )
+
+    fingerprints = ast.literal_eval(fingerprints_node.value)
+
+    observed_legacy_tuple = (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    )
+
+    assert observed_legacy_tuple in fingerprints

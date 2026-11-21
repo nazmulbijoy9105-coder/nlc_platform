@@ -28,6 +28,8 @@ DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
 BASE_REVISION = "0122_rls_staff_scope_and_score_history"
 HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+HEAD_REVISION = "0122_rls_staff_scope_and_score_history"
+AHEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
 HISTORICAL_TABLES = (
     "compliance_flags",
     "compliance_score_history",
@@ -330,9 +332,10 @@ async def _audit_view_parity() -> dict[str, Any]:
             "legal_rule_migration_guard_scoped", "core_tenant_rls_forced",
         )
         failed = [key for key in required_true if result.get(key) is not True]
-        if result.get("alembic_revision") != HEAD_REVISION or failed:
+        actual_revision = result.get("alembic_revision")
+        if actual_revision not in {HEAD_REVISION, AHEAD_REVISION} or failed:
             raise RuntimeError(
-                f"Restricted audit view parity failed: revision={result.get('alembic_revision')!r}; "
+                f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
             )
         if result.get("identity_archive_rows", 0) < 1:
@@ -346,6 +349,23 @@ async def _audit_view_parity() -> dict[str, Any]:
             "resolved_alias_rows": 0,
             "canonical_revision_rows": 0,
         }
+        expected_identity_counts = (
+            {
+                "canonical_identity_rows": 85,
+                "canonical_alias_rows": 85,
+                "unresolved_alias_rows": 85,
+                "resolved_alias_rows": 0,
+                "canonical_revision_rows": 0,
+            }
+            if actual_revision == HEAD_REVISION
+            else {
+                "canonical_identity_rows": 170,
+                "canonical_alias_rows": 169,
+                "unresolved_alias_rows": 169,
+                "resolved_alias_rows": 0,
+                "canonical_revision_rows": 0,
+            }
+        )
         actual_identity_counts = {
             key: result.get(key) for key in expected_identity_counts
         }
@@ -408,6 +428,10 @@ async def main() -> None:
         ))
         revisions = await _alembic_revision(conn)
         if revisions == [HEAD_REVISION]:
+        if revisions in ([HEAD_REVISION], [AHEAD_REVISION]):
+            # A previous one-shot rehearsal may already have migrated this
+            # disposable branch. Revalidate branch-pinned restricted parity
+            # instead of trying to replay the 0112-only migration.
             await conn.close()
             audit_view = await _audit_view_parity()
             report = {
@@ -421,6 +445,7 @@ async def main() -> None:
                 "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
                 "restricted_audit_view_parity": audit_view,
                 "notes": "The isolated branch was already at 0123; no migration was replayed.",
+                "notes": f"The isolated branch was already at {revisions[0]}; no migration was replayed.",
             }
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))

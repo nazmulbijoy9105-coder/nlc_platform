@@ -4,9 +4,11 @@ Order: applicability -> exceptions -> evidence. No I/O, no clock, no randomness.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
-from .statutory_rules import RuleState, StatutoryRule, STATUTORY_RULE_REGISTRY
+from .statutory_rules import (
+    RuleState, StatutoryRule, STATUTORY_RULE_REGISTRY, evaluate_applicability,
+)
 
 
 class EvidenceStatus(str, Enum):
@@ -28,17 +30,15 @@ SCORING_STATES = frozenset({RuleState.NON_COMPLIANT})
 
 
 def evaluate_rule(rule: StatutoryRule,
-                  facts: Mapping[str, bool],
+                  facts: Mapping[str, Any],
                   evidence: Mapping[str, EvidenceStatus]) -> Finding:
     rid = rule.rule_id
-    if rule.applies_if is not None:                                   # R-003
-        if rule.applies_if not in facts:
-            return Finding(rid, RuleState.UNKNOWN, f"applicability fact {rule.applies_if} not provided")
-        if not facts[rule.applies_if]:
-            return Finding(rid, RuleState.NOT_APPLICABLE, f"{rule.applies_if} is false")
-    for ex in rule.exceptions:                                        # R-004
-        if facts.get(ex) is True:
-            return Finding(rid, RuleState.NOT_APPLICABLE, f"exception {ex}")
+    applicability = evaluate_applicability(rule, facts)               # R-003/R-004
+    if applicability is RuleState.UNKNOWN:
+        detail = rule.applicability_notes or "required applicability facts are missing or invalid"
+        return Finding(rid, RuleState.UNKNOWN, f"applicability unresolved: {detail}")
+    if applicability is RuleState.NOT_APPLICABLE:
+        return Finding(rid, RuleState.NOT_APPLICABLE, "applicability predicate is false or an exception applies")
 
     statuses = {e: evidence.get(e, EvidenceStatus.UNVERIFIED) for e in rule.evidence_required}
     absent = [e for e, s in statuses.items() if s is EvidenceStatus.VERIFIED_ABSENT]
