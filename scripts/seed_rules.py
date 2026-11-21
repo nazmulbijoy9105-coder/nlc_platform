@@ -1,4 +1,5 @@
-# SEED-01: This script inserts missing rule IDs only; existing definitions are preserved.
+# SEED-01: This script inserts missing rule IDs only; existing definitions and
+# operator activation decisions (is_active) are preserved.
 # It must NEVER seed based on COUNT(*) < N. Count checks are verification only.
 #!/usr/bin/env python3
 """
@@ -6,7 +7,9 @@ NEUM LEX COUNSEL — Legal Rules Seeder
 scripts/seed_rules.py
 
 Development-only bootstrap utility for the 85-rule ILRMF catalogue.
-Safe to repeat — inserts missing IDs and preserves existing definitions.
+Safe to repeat — inserts missing IDs and preserves existing definitions and
+operator activation decisions. Deactivating a rule is an audited Super Admin
+decision (RulesService workflow); this bootstrap must never re-arm it.
 
 Statutory bases must match app/rule_engine/engine.py.
 ID parity is verified by tests; field-level statutory_basis
@@ -98,8 +101,8 @@ ILRMF_RULES: List[Dict[str, Any]] = [
 
     # MODULE 7: STATUTORY REGISTERS — 3 rules (Sec 34, 83, 87, 90)
     {"rule_id": "REG-001", "rule_name": "Statutory Registers Incomplete", "rule_type": "THRESHOLD", "statutory_basis": "Companies Act 1994 (Bangladesh) and applicable Articles; individual register duties require their own statutory mapping", "description": "Non-core statutory register inventory is incomplete. The Form XII return/notification to RJSC under Section 115(2) is evaluated separately by DIR-001; that filing status does not establish maintenance of the internal directors' register required by Section 115(1), nor does this aggregate inventory prove an individual statutory default.", "rule_condition": {"check_fn": "check_reg_001", "trigger": "len(maintained_registers) < 6", "data_points": ["maintained_registers"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "REG-002", "rule_name": "Core Statutory Registers Missing", "rule_type": "THRESHOLD", "statutory_basis": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)", "description": "Core internal records missing: register of members (Section 34), AGM minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.", "rule_condition": {"check_fn": "check_reg_002", "trigger": "members_register_missing OR charges_register_missing OR minutes_agm_missing", "data_points": ["register_of_members_maintained", "register_of_charges_maintained", "minutes_book_agm_maintained"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
-    {"rule_id": "REG-003", "rule_name": "Registers Not Kept at Registered Office", "rule_type": "THRESHOLD", "statutory_basis": "Section 34(2), Companies Act 1994 (Bangladesh)", "description": "Statutory registers not at registered office. Section 34(2): registers must be at registered office unless RJSC notified of alternative location. Alternative must be in Bangladesh and Board-approved. Registers open to inspection during business hours.", "rule_condition": {"check_fn": "check_reg_003", "trigger": "register_location != registered_office AND alternative_location_notified == False", "data_points": ["register_location", "alternative_location_notified"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
+    {"rule_id": "REG-002", "rule_name": "Core Statutory Registers Missing", "rule_type": "THRESHOLD", "statutory_basis": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)", "description": "Core internal records missing: register of members (Section 34), general and Board meeting minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.", "rule_condition": {"check_fn": "check_reg_002", "trigger": "members_register_missing OR charges_register_missing OR minutes_agm_missing", "data_points": ["register_of_members_maintained", "register_of_charges_maintained", "minutes_book_agm_maintained", "minutes_book_board_maintained"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
+    {"rule_id": "REG-003", "rule_name": "Registers Not Kept at Registered Office", "rule_type": "THRESHOLD", "statutory_basis": "Unresolved location proposition; Companies Act 1994 (Bangladesh)", "description": "A verified profile location differs from the registered office. The cited Section 34(2) is a penalty provision, not a location authority. Do not infer a breach; confirm the operative location requirement, any alternative-location notice and the Articles from current primary sources.", "rule_condition": {"check_fn": "check_reg_003", "trigger": "verified register_location != registered_office", "data_points": ["register_location", "verified_fact_keys"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
 
     # MODULE 8: REGISTERED OFFICE — 1 rule (Sec 77, Form VI, 28 days)
     {"rule_id": "OFF-001", "rule_name": "Change of Registered Office Not Filed Within 28 Days", "rule_type": "DEADLINE", "statutory_basis": "Section 77, Companies Act 1994 (Bangladesh)", "description": "Office change not filed via Form VI within 28 days. Section 77 requires 28-day filing (NOT 30 days). Until filed, old address remains legal registered office. Statutory notices served there are valid.", "rule_condition": {"check_fn": "check_off_001", "trigger": "registered_office_change_date IS NOT NULL AND form_vi_filed == False AND days_since_office_change > 28", "data_points": ["registered_office_change_date", "form_vi_filed"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
@@ -161,7 +164,7 @@ ILRMF_RULES: List[Dict[str, Any]] = [
     {"rule_id": "DIR-007", "rule_name": "Director Consent Not Filed Within 30 Days", "rule_type": "DEADLINE", "statutory_basis": "Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review", "description": "Written consent to act as director must be filed with the Registrar within 30 days after appointment under section 93(2). Distinguish pre-appointment consent under section 92 and reconcile the current RJSC Form IX instructions before assessment.", "rule_condition": {"check_fn": "check_dir_007", "trigger": "director_event_type == APPOINTMENT AND consent_filed == False AND appointment_delay_days > 30", "data_points": ["director_changes", "consent_filed", "consent_filed_date", "consent_verified", "consent_evidence_ref", "consent_verified_at", "consent_verified_by", "appointment_date", "RJSC_form_version"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
     {"rule_id": "DIR-008", "rule_name": "Office of Profit Status Requires Verification", "rule_type": "CONDITIONAL", "statutory_basis": "Section 104, Companies Act 1994 (Bangladesh)", "description": "Review prompt only: verify the exact office held, statutory exclusions, company relationship and whether general-meeting consent was obtained. A profile boolean alone cannot establish breach.", "rule_condition": {"check_fn": "check_dir_008", "trigger": "director_office_of_profit == True", "data_points": ["director_office_of_profit"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
     {"rule_id": "DIR-010", "rule_name": "Managing Director Term Requires Verification", "rule_type": "THRESHOLD", "statutory_basis": "Section 110, Companies Act 1994 (Bangladesh)", "description": "Review prompt only: verify current appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "rule_condition": {"check_fn": "check_dir_010", "trigger": "years_since_md_appointment > 5", "data_points": ["managing_director_appointment_date"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "COMPLIANCE_PACKAGE", "is_black_override": False},
-    {"rule_id": "MEM-001", "rule_name": "Company Operating with Fewer than Minimum Members", "rule_type": "THRESHOLD", "statutory_basis": "Section 222, Companies Act 1994 (Bangladesh)", "description": "Company below minimum members. Section 222: private < 2, public < 7.", "rule_condition": {"check_fn": "check_mem_001", "trigger": "member_count < minimum_members", "data_points": ["member_count"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
+    {"rule_id": "MEM-001", "rule_name": "Company Operating with Fewer than Minimum Members", "rule_type": "THRESHOLD", "statutory_basis": "Section 222, Companies Act 1994 (Bangladesh)", "description": "Section 222 applies only where membership falls below two for a private company or seven for another company and the company carries on business with the reduced membership for more than six months. Personal liability is limited to a member who remained during that period and knew of the shortfall; a headcount alone cannot establish breach or identify a liable member.", "rule_condition": {"check_fn": "check_mem_001", "trigger": "verified member_count < minimum_members AND verified below_minimum_members_since AND verified company_operating == True AND more_than_six_calendar_months AND member_specific_knowledge_review_required", "data_points": ["member_count", "below_minimum_members_since", "company_operating", "verified_fact_keys"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
     {"rule_id": "INC-007", "rule_name": "Business Commenced Without Section 150 Declaration", "rule_type": "CONDITIONAL", "statutory_basis": "Section 150(1) and (6), Companies Act 1994 (Bangladesh)", "description": "Section 150 commencement declaration is not universal: subsection (6) excludes private companies and companies that do not issue a prospectus inviting public subscription. Review only where public-company status, prospectus issue and every section 150 condition are independently verified.", "rule_condition": {"check_fn": "check_inc_007", "trigger": "company_type == PUBLIC_LIMITED AND section150_prospectus_issued == True AND section150_applicability_verified == True AND section150_applicability_evidence_ref IS NOT NULL AND business_commencement_declaration_verified == True AND business_commencement_declaration_evidence_ref IS NOT NULL AND business_commencement_declaration_filed == False", "data_points": ["company_type", "section150_prospectus_issued", "section150_applicability_verified", "section150_applicability_evidence_ref", "business_commencement_declaration_verified", "business_commencement_declaration_evidence_ref", "business_commencement_declaration_filed"]}, "default_severity": "NOT_EVALUATED", "score_impact": 0, "revenue_tier": "STRUCTURED_REGULARIZATION", "is_black_override": False},
 
 ]
@@ -278,13 +281,11 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
             existing = res.fetchone()
 
             if existing:
-                # Catalogue activation is separate from definition changes.
-                # Keep existing rule definitions immutable here, but ensure every
-                # canonical seed ID remains active for deterministic evaluation.
-                await conn.execute(
-                    sa.text("UPDATE legal_rules SET is_active = TRUE, updated_at = :now WHERE rule_id = :rid"),
-                    {"now": now, "rid": rule["rule_id"]},
-                )
+                # Existing rows are fully immutable here — definitions AND the
+                # operator-controlled activation state. Re-arming a disabled
+                # rule would silently reverse an audited Super Admin decision,
+                # and the engine already downgrades findings for inactive
+                # catalogue entries (RULE_INACTIVE → NOT_EVALUATED, 0 pts).
                 actual = dict(existing._mapping)
                 expected = {
                     "rule_name": rule["rule_name"],
@@ -361,7 +362,11 @@ async def seed_rules(dry_run: bool = True, verbose: bool = False) -> int:
         print(f" Done! Inserted: {inserted}, Existing unchanged: {unchanged}, Drift: {drift}")
         print(f" DB active rules: {db_count} (seed expects {EXPECTED_RULE_COUNT})")
         if missing_ids:
-            print("  Missing rule IDs: " + ", ".join(missing_ids))
+            print(
+                "  Inactive or missing rule IDs (operator decisions preserved; "
+                "re-activate via the audited RulesService workflow): "
+                + ", ".join(missing_ids)
+            )
         if extra_ids:
             print("  Extra active rule IDs (do not delete automatically): " + ", ".join(extra_ids))
         if drifted_rules:

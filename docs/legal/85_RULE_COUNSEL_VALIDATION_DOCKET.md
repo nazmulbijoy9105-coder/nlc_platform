@@ -1268,8 +1268,8 @@ This docket expands the source triage into a separate signed-review record for e
 
 ### REG-003 — Registers Not Kept at Registered Office
 
-- **Catalogue anchor:** Section 34(2), Companies Act 1994 (Bangladesh)
-- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — Section 34(2), Companies Act 1994 (Bangladesh)
+- **Catalogue anchor:** Unresolved location proposition; Companies Act 1994 (Bangladesh)
+- **Current canonical provision candidate (unverified):** UNVERIFIED CANDIDATE — UNRESOLVED: Section 34(2) is not relied on as location authority; primary-source/counsel review required
 
 - **Current seed default severity / score impact / BLACK override:** NOT_EVALUATED / 0 / false (fail-closed pending counsel approval)
 - **Catalogue scope:** UNCONFIRMED_REQUIRES_COUNSEL_MAPPING
@@ -1750,7 +1750,7 @@ The NBR's current site separately lists Finance Act 2026 (6 July 2026), the auth
 
 ## Release rule
 
-Do not populate `approved_rule_ids`, do not set `score_eligible: true`, and do not set `LEGAL_SCORE_RELEASED = true` merely because this docket is complete. Only independent counsel's rule-specific signed decisions plus passing tests and canonical parity can authorise a later release. Any unresolved TBD, unavailable authoritative source, unknown scope or unverified evidence keeps the rule NOT_EVALUATED.
+This docket governs statutory legal verification, not the separate product-scoring switch. Do not populate `approved_rule_ids` or set `score_eligible: true` without independent counsel's rule-specific signed decisions, source dossiers and passing tests. `LEGAL_SCORE_RELEASED` may be true for the separately approved deterministic NLC product risk metric; that switch does not populate `VERIFIED_RULE_IDS`, approve any legal rule, authorise legal opinions, enable statutory deadlines/rescue/BLACK overrides, or certify compliance. Any unresolved TBD, unavailable authoritative source, unknown scope or unverified evidence keeps that rule NOT_EVALUATED and excluded from legal-verification claims.
 
 
 ## Primary-source research update — 7 November 2026

@@ -23,6 +23,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.charges import CompanyCharge
+from app.models.compliance import ComplianceEvaluationRun
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
@@ -36,6 +37,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
@@ -905,6 +907,178 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
     return [_score_history_to_response(item) for item in history]
 
 
+@router.get(
+    "/{company_id}/evaluation-runs",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+    summary="List immutable per-evaluation records for an authorised company",
+)
+async def list_company_evaluation_runs(
+    company_id: uuid.UUID,
+    limit: int = Query(default=12, ge=1, le=60),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return a bounded, tenant-scoped index of immutable evaluation runs.
+
+    Monthly score history is a separate append-only snapshot. This endpoint
+    exposes per-run chronology without rewriting a monthly NOT_RELEASED row
+    when a later evaluation completes.
+    """
+    result = await db.execute(
+        select(ComplianceEvaluationRun)
+        .where(ComplianceEvaluationRun.company_id == company_id)
+        .order_by(
+            ComplianceEvaluationRun.calculated_at.desc(),
+            ComplianceEvaluationRun.id.desc(),
+        )
+        .limit(limit)
+    )
+    runs = result.scalars().all()
+    product_score_released = _legal_score_is_released()
+    items = []
+    for run in runs:
+        stored_status = str(run.evaluation_status or "NOT_RELEASED").upper()
+        outcomes = run.rule_outcomes_snapshot
+        provenance = run.fact_provenance_snapshot
+        canonical_rule_ids = set(STATUTORY_RULE_REGISTRY)
+        outcome_rule_id_list = [
+            str(item.get("rule_id")).strip()
+            for item in outcomes
+            if isinstance(item, dict) and item.get("rule_id")
+        ] if isinstance(outcomes, list) else []
+        outcome_rule_ids = set(outcome_rule_id_list)
+        missing_canonical_rule_ids = sorted(canonical_rule_ids - outcome_rule_ids)
+        unmapped_outcome_rule_ids = sorted(outcome_rule_ids - canonical_rule_ids)
+        duplicate_outcome_rule_ids = sorted({
+            rule_id for rule_id in outcome_rule_id_list
+            if outcome_rule_id_list.count(rule_id) > 1
+        })
+        outcome_rule_id_parity = (
+            isinstance(outcomes, list)
+            and len(outcomes) == len(canonical_rule_ids)
+            and outcome_rule_ids == canonical_rule_ids
+            and not duplicate_outcome_rule_ids
+        )
+        catalogue_count_matches_canonical = (
+            run.rule_catalogue_count == len(canonical_rule_ids)
+        )
+
+        def collect_evidence_references(value: object) -> set[str]:
+            references: set[str] = set()
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key.endswith("_evidence_ref") or key in {"evidence_ref", "evidence_refs"}:
+                        if isinstance(child, str) and child.strip():
+                            references.add(child.strip())
+                        elif isinstance(child, list):
+                            references.update(
+                                item.strip() for item in child
+                                if isinstance(item, str) and item.strip()
+                            )
+                        elif isinstance(child, dict):
+                            references.update(collect_evidence_references(child))
+                    else:
+                        references.update(collect_evidence_references(child))
+            elif isinstance(value, list):
+                for child in value:
+                    references.update(collect_evidence_references(child))
+            return references
+
+        provenance_record_type_counts: dict[str, int] = {}
+        if isinstance(provenance, list):
+            for record in provenance:
+                record_type = (
+                    str(record.get("record_type") or "UNCLASSIFIED").strip().upper()
+                    if isinstance(record, dict) else "UNCLASSIFIED"
+                )
+                provenance_record_type_counts[record_type] = (
+                    provenance_record_type_counts.get(record_type, 0) + 1
+                )
+        evidence_reference_count = len(
+            collect_evidence_references(provenance)
+            | collect_evidence_references(outcomes)
+            | collect_evidence_references(run.flags_snapshot)
+        )
+        unattributed_profile_record_count = provenance_record_type_counts.get(
+            "UNATTRIBUTED_PROFILE_FIELDS", 0
+        )
+        score_withheld_reasons: list[str] = []
+        if not product_score_released:
+            score_withheld_reasons.append("Product score release is disabled.")
+        if stored_status != "COMPLETED":
+            score_withheld_reasons.append(f"Stored evaluation status is {stored_status}.")
+        if run.score is None:
+            score_withheld_reasons.append("No stored score is present.")
+        if str(getattr(run.risk_band, "value", run.risk_band)) == "NOT_EVALUATED":
+            score_withheld_reasons.append("Stored risk band is NOT_EVALUATED.")
+        if not catalogue_count_matches_canonical:
+            score_withheld_reasons.append(
+                "Historical catalogue count does not match the 85-ID canonical registry."
+            )
+        if not outcome_rule_id_parity:
+            score_withheld_reasons.append(
+                "Historical outcomes do not exactly match the 85-ID canonical registry."
+            )
+        if unattributed_profile_record_count:
+            score_withheld_reasons.append(
+                "Historical profile facts include unattributed source data."
+            )
+        if evidence_reference_count == 0:
+            score_withheld_reasons.append(
+                "No evidence references are bound to this evaluation snapshot."
+            )
+        score_available = not score_withheld_reasons
+
+        def count_snapshot_values(key: str, default: str) -> dict[str, int]:
+            counts: dict[str, int] = {}
+            if not isinstance(outcomes, list):
+                return counts
+            for item in outcomes:
+                raw = item.get(key) if isinstance(item, dict) else None
+                value = str(raw or default).strip().upper()
+                counts[value] = counts.get(value, 0) + 1
+            return dict(sorted(counts.items()))
+
+        items.append({
+            "evaluation_run_id": str(run.id),
+            "calculated_at": run.calculated_at.isoformat(),
+            "evaluation_status": stored_status,
+            "score_available": score_available,
+            "score": run.score if score_available else None,
+            "risk_band": (
+                getattr(run.risk_band, "value", run.risk_band)
+                if score_available else "NOT_EVALUATED"
+            ),
+            "score_withheld_reason": (
+                "; ".join(score_withheld_reasons) if score_withheld_reasons else None
+            ),
+            "engine_version": run.engine_version,
+            "rule_catalogue_count": run.rule_catalogue_count,
+            "catalogue_count_matches_canonical": catalogue_count_matches_canonical,
+            "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
+            "canonical_rule_count": len(canonical_rule_ids),
+            "outcome_rule_ids_count": len(outcome_rule_ids),
+            "missing_canonical_rule_ids": missing_canonical_rule_ids,
+            "unmapped_outcome_rule_ids": unmapped_outcome_rule_ids,
+            "duplicate_outcome_rule_ids": duplicate_outcome_rule_ids,
+            "outcome_rule_id_parity": outcome_rule_id_parity,
+            # Legacy snapshots without an explicit applicability field remain
+            # UNKNOWN; never derive applicability from outcome or severity.
+            "applicability_state_counts": count_snapshot_values("applicability_state", "UNKNOWN"),
+            "outcome_state_counts": count_snapshot_values("outcome_state", "UNKNOWN"),
+            "verification_status_counts": count_snapshot_values("verification_status", "UNKNOWN"),
+            "rule_outcomes_hash": run.rule_outcomes_hash,
+            "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
+            "fact_provenance_record_type_counts": provenance_record_type_counts,
+            "unattributed_profile_record_count": unattributed_profile_record_count,
+            "evidence_reference_count": evidence_reference_count,
+            "evidence_reference_present": evidence_reference_count > 0,
+            "score_hash": run.score_hash,
+        })
+    return {"company_id": str(company_id), "items": items}
+
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
     # The service returns evidence-review metrics while legal scoring is withheld;
@@ -1157,3 +1331,21 @@ async def verify_company_charge(
     )
     await db.refresh(charge)
     return charge
+
+
+@router.get(
+    "/{company_id}/rule-coverage",
+    summary="Get live six-state rule coverage for an authorised company",
+)
+async def get_company_rule_coverage(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+    _: uuid.UUID = Depends(require_company_access("company_id")),
+):
+    """Return current DB activity and explicit applicability from the latest immutable run."""
+    from app.services.rule_coverage_service import collect_company_rule_coverage
+
+    result = await collect_company_rule_coverage(db, company_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found.")
+    return result

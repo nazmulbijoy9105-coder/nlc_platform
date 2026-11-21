@@ -8,7 +8,9 @@ TLS is enforced through verified asyncpg SSL contexts in production.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import HTTPException, Request
 
@@ -25,93 +27,112 @@ from sqlalchemy.pool import NullPool
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-# ══════════════════════════════════════════════════════════════════════
-# CRITICAL FIX: Use settings to auto-convert postgres:// to postgresql+asyncpg://
-# Render injects postgres:// but asyncpg requires postgresql+asyncpg://
-# ══════════════════════════════════════════════════════════════════════
-_APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
-_MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
-_ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
-# Render always injects RENDER=true. Treat every Render runtime (including
-# preview/staging services) as deployment-grade: never silently fall back to
-# the privileged migration URL because ENVIRONMENT was omitted or mistyped.
-_RENDER_RUNTIME = is_render_runtime(os.environ)
-_PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"} or _RENDER_RUNTIME
-_RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
-if _PRODUCTION_ENVIRONMENT:
-    # A deployment operator must not be able to disable the runtime-role
-    # boundary with an environment override and silently fall back to the
-    # privileged migration URL.
-    if _RLS_ROLE_SETTING is not None and _RLS_ROLE_SETTING.strip().lower() != "true":
-        raise RuntimeError(
-            "REQUIRE_RLS_APP_ROLE cannot be disabled in production; "
-            "the API must use APP_DATABASE_URL as nlc_app_role."
+# ── BASE ──────────────────────────────────────────────────────────────
+class Base(AsyncAttrs, DeclarativeBase):
+    """
+    Declarative base for all ORM models.
+    AsyncAttrs enables async lazy-loading of relationships.
+    """
+    pass
+
+
+# Alembic needs ORM metadata, not the API's runtime connection pool. This
+# mode is accepted only inside the Alembic CLI process and only when a
+# dedicated migration URL is present. It never supplies a runtime engine.
+_ALEMBIC_METADATA_ONLY = (
+    os.environ.get("NLC_ALEMBIC_METADATA_ONLY", "").strip() == "1"
+    and Path(sys.argv[0]).name.lower().startswith("alembic")
+    and bool(
+        os.environ.get("MIGRATION_DATABASE_URL", "").strip()
+        or os.environ.get("DATABASE_URL", "").strip()
+    )
+)
+
+if _ALEMBIC_METADATA_ONLY:
+    DATABASE_URL = ""
+    # Runtime-only names are inert in this process. Keep their static types
+    # opaque here so API dependency annotations remain type-checkable.
+    engine = cast(Any, None)
+    AsyncSessionLocal = cast(Any, None)
+    _REQUIRE_RLS_APP_ROLE = False
+else:
+    # ══════════════════════════════════════════════════════════════════════
+    # Runtime API database configuration. Production always requires the
+    # restricted APP_DATABASE_URL and signed-RLS secret.
+    # ══════════════════════════════════════════════════════════════════════
+    _APP_DATABASE_URL = os.environ.get("APP_DATABASE_URL", "").strip()
+    _MIGRATION_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+    _ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    _RENDER_RUNTIME = is_render_runtime(os.environ)
+    _PRODUCTION_ENVIRONMENT = _ENVIRONMENT in {"prod", "production"} or _RENDER_RUNTIME
+    _RLS_ROLE_SETTING = os.environ.get("REQUIRE_RLS_APP_ROLE")
+    if _PRODUCTION_ENVIRONMENT:
+        if _RLS_ROLE_SETTING is not None and _RLS_ROLE_SETTING.strip().lower() != "true":
+            raise RuntimeError(
+                "REQUIRE_RLS_APP_ROLE cannot be disabled in production; "
+                "the API must use APP_DATABASE_URL as nlc_app_role."
+            )
+        _REQUIRE_RLS_APP_ROLE = True
+    else:
+        _REQUIRE_RLS_APP_ROLE = (
+            (_RLS_ROLE_SETTING or "false").strip().lower() == "true"
         )
-    _REQUIRE_RLS_APP_ROLE = True
-else:
-    _REQUIRE_RLS_APP_ROLE = (
-        (_RLS_ROLE_SETTING or "false").strip().lower() == "true"
+
+    if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
+        raise RuntimeError(
+            "APP_DATABASE_URL is required when REQUIRE_RLS_APP_ROLE=true; "
+            "refusing to run the API with a potentially BYPASSRLS migration role."
+        )
+
+    if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
+        raise RuntimeError(
+            "NLC_RLS_HMAC_SECRET must contain at least 32 characters in production/Render"
+        )
+
+    # DATABASE_URL is a development fallback only. Production RLS checks
+    # above ensure it cannot become the API's privileged migration URL.
+    DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL or APP_DATABASE_URL is empty; refusing to start")
+
+    DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
+        DATABASE_URL,
+        require_tls=_PRODUCTION_ENVIRONMENT,
     )
 
-if _REQUIRE_RLS_APP_ROLE and not _APP_DATABASE_URL:
-    raise RuntimeError(
-        "APP_DATABASE_URL is required when REQUIRE_RLS_APP_ROLE=true; "
-        "refusing to run the API with a potentially BYPASSRLS migration role."
-    )
-
-if _PRODUCTION_ENVIRONMENT and len(os.environ.get("NLC_RLS_HMAC_SECRET", "")) < 32:
-    raise RuntimeError(
-        "NLC_RLS_HMAC_SECRET must contain at least 32 characters in production/Render"
-    )
-
-# AsyncSessionLocal is the runtime application pool. DATABASE_URL remains the
-# privileged connection used by Alembic; APP_DATABASE_URL must be a
-# non-superuser, NOBYPASSRLS role such as nlc_app_role.
-DATABASE_URL = _APP_DATABASE_URL or _MIGRATION_DATABASE_URL
-if not DATABASE_URL:
-    raise RuntimeError('DATABASE_URL or APP_DATABASE_URL is empty; refusing to start')
-
-DATABASE_URL, _DATABASE_SSL_CONTEXT = normalize_asyncpg_url(
-    DATABASE_URL,
-    require_tls=_PRODUCTION_ENVIRONMENT,
-)
-
-# ── CONNECTION ────────────────────────────────────────────────────────
-_testing = os.environ.get("TESTING", "false").lower() == "true"
-
-_connect_args: dict[str, Any] = {
-    "server_settings": {
-        "application_name": "nlc_api",
-        "timezone": "UTC",
+    _testing = os.environ.get("TESTING", "false").lower() == "true"
+    _connect_args: dict[str, Any] = {
+        "server_settings": {
+            "application_name": "nlc_api",
+            "timezone": "UTC",
+        }
     }
-}
-if _DATABASE_SSL_CONTEXT is not None:
-    _connect_args["ssl"] = _DATABASE_SSL_CONTEXT
+    if _DATABASE_SSL_CONTEXT is not None:
+        _connect_args["ssl"] = _DATABASE_SSL_CONTEXT
 
-engine_args: dict[str, Any] = {
-    "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
-    "pool_pre_ping": True,
-    "pool_recycle": 3600,
-    "connect_args": _connect_args,
-}
+    engine_args: dict[str, Any] = {
+        "echo": os.environ.get("SQL_ECHO", "false").lower() == "true",
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "connect_args": _connect_args,
+    }
 
-if not _testing:
-    engine_args.update({
-        "pool_size": int(os.environ.get("DB_POOL_SIZE", "20")),
-        "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "40")),
-    })
-else:
-    engine_args["poolclass"] = NullPool
+    if not _testing:
+        engine_args.update({
+            "pool_size": int(os.environ.get("DB_POOL_SIZE", "20")),
+            "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "40")),
+        })
+    else:
+        engine_args["poolclass"] = NullPool
 
-engine = create_async_engine(DATABASE_URL, **engine_args)
-
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+    engine = create_async_engine(DATABASE_URL, **engine_args)
+    AsyncSessionLocal = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+    )
 
 
 # ── SESSION DEPENDENCY ────────────────────────────────────────────────

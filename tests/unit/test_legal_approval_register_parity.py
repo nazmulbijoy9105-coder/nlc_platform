@@ -68,6 +68,7 @@ def test_product_scoring_can_use_confirmed_facts_without_claiming_counsel_approv
         first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-001",
         first_auditor_appointment_verified_at=date(2026, 11, 1),
         first_auditor_appointment_verified_by="reviewer-1",
+        verified_fact_keys=frozenset({"incorporation_date", "first_auditor_appointed"}),
     )
     output = NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
     matches = [flag for flag in output.flags if flag.rule_id == "AUD-001"]

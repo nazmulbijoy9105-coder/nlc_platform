@@ -215,6 +215,9 @@ jobs:
           mkdir -p artifacts
           python tools/audit_rule_parity.py --no-db --no-api --report-json artifacts/rule-registry-static-parity.json
 
+      - name: Current statutory citation anchor audit
+        run: python tools/legal_citation_audit.py
+
       - name: Upload static rule registry parity report
         if: always()
         uses: actions/upload-artifact@v4
@@ -223,11 +226,36 @@ jobs:
           path: artifacts/rule-registry-static-parity.json
           if-no-files-found: warn
 
+      # Six-state rule coverage funnel (fix-order item 9): registered,
+      # implemented, active, applicable, evaluated, deferred. The CLI fails
+      # the build on any silent state collapse; run-scoped stages
+      # (active/applicable/evaluated) stay injectable for live collection
+      # in production-parity.yml without changing the artifact schema.
+      - name: Six-state rule coverage report
+        run: |
+          mkdir -p artifacts
+          python -m canonical_architecture.coverage_report --output artifacts/rule-coverage-report.json
+
+      - name: Upload six-state rule coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rule-coverage-report
+          path: artifacts/rule-coverage-report.json
+          if-no-files-found: warn
+
       # Live DB/API parity is a separate release gate in production-parity.yml.
       # It must be dispatched after the read-only audit role and API are ready.
 
       - name: Rule verification status check
         run: python scripts/check_rule_verification.py
+
+      # Engine guard tripwire (64d9259 incident + 2026-11-15 born-red drift).
+      # This file lives outside tests/unit, so the coverage job never ran it;
+      # from now on any change to a confirmed-violation gate must keep these
+      # pins green in the same PR.
+      - name: Engine guard tripwire
+        run: python -m pytest tests/test_engine_guards.py -q --tb=short
 
   integration-tests:
     runs-on: ubuntu-latest

@@ -180,6 +180,7 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
         company_id="verified-director-test",
         company_name="Verified Director Test Ltd",
         incorporation_date=date(today.year - 2, 1, 1),
+        verified_fact_keys=frozenset({"company_type", "incorporation_date", "current_director_count"}),
         current_director_count=0,
         directors_verified=True,
         directors_verification_evidence_ref="RJSC-DIRECTORS-001",
@@ -272,8 +273,12 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
     verified = CompanyProfile(
         company_id="coverage-verified",
         company_name="Coverage Test Ltd",
+        company_type="PRIVATE_LIMITED",
+        incorporation_date=date(2020, 1, 1),
         current_director_count=3,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
+        verified_fact_keys=frozenset({"company_type", "incorporation_date", "current_director_count"}),
     )
 
     assert _input_coverage(unverified) == 0.0

@@ -467,9 +467,13 @@ def create_app() -> FastAPI:
     app.include_router(webhooks.router, prefix=f"{API_PREFIX}/webhooks", tags=["Webhooks"])
 
     # ------------------------------------------------------------------
-    # Root redirect
+    # Root service descriptor. HEAD is registered explicitly: FastAPI's
+    # @app.get does not auto-answer HEAD, so platform port-scan probes
+    # (Render "No open ports detected, continuing to scan...") and any
+    # uptime monitor defaulting to HEAD see 405 and retry with GET,
+    # delaying open-port detection on every deploy.
     # ------------------------------------------------------------------
-    @app.get("/", include_in_schema=False)
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
     async def root():
         return {
             "service": "Neum Lex Counsel API",
