@@ -1236,6 +1236,10 @@ class TestSection150Applicability:
             business_commencement_declaration_filed=False,
             business_commencement_declaration_verified=True,
             business_commencement_declaration_evidence_ref="evidence://section150/declaration-status",
+            verified_fact_keys=frozenset({
+                "company_type", "section150_prospectus_issued",
+                "business_commencement_declaration_filed",
+            }),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "INC-007")
