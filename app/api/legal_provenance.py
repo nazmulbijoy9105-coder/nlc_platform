@@ -921,6 +921,13 @@ async def get_product_release_status(
             "product_release_status": "ACTIVE" if accepted else (
                 "REVOKED" if event and event.decision == "REVOKED" else "PENDING_ACCEPTANCE"
             ),
+            # API compatibility for the operational private-beta workflow:
+            # ACTIVE is product-owner acceptance, never independent legal verification.
+            "verification_status": "ACTIVE" if accepted else "PENDING",
+            "verification_basis": "PRODUCT_OWNER_ACCEPTANCE_SCREENING_ONLY",
+            "verified_at": (
+                event.created_at.isoformat() if accepted and event.created_at else None
+            ),
             "reviewer_id": metadata.get("reviewer_id") if accepted else None,
             "source_version": metadata.get("source_version") if accepted else None,
             "source_artifact_sha256": metadata.get("source_artifact_sha256") if accepted else None,
