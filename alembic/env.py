@@ -397,42 +397,6 @@ def do_run_migrations(connection: Connection) -> None:
         context.run_migrations()
 
 
-def prepare_ci_migration_role(connection: Connection) -> None:
-    """Assume the isolated CI schema-owner role; never used by runtime/API."""
-    if os.environ.get("ENVIRONMENT", "").strip().lower() != "test":
-        return
-    session_user, current_user = connection.execute(
-        text("SELECT session_user, current_user")
-    ).one()
-    if session_user != "nlc_migrator" or current_user != "nlc_migrator":
-        raise RuntimeError(
-            "CI migrations must connect as nlc_migrator before assuming "
-            f"nlc_migration_owner; observed {session_user!r}/{current_user!r}."
-        )
-    owner = connection.execute(
-        text("""
-            SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
-                   rolinherit, rolreplication, rolbypassrls
-              FROM pg_roles WHERE rolname = 'nlc_migration_owner'
-        """)
-    ).one_or_none()
-    if owner is None or tuple(owner) != (False, False, False, False, False, False, True):
-        raise RuntimeError("CI nlc_migration_owner role is missing or unsafe.")
-    membership = connection.execute(
-        text("""
-            SELECT admin_option, inherit_option, set_option
-              FROM pg_auth_members
-             WHERE member = (SELECT oid FROM pg_roles WHERE rolname = session_user)
-               AND roleid = (SELECT oid FROM pg_roles WHERE rolname = 'nlc_migration_owner')
-        """)
-    ).one_or_none()
-    if membership is None or tuple(membership) != (False, False, True):
-        raise RuntimeError("CI nlc_migrator requires SET-only membership in nlc_migration_owner.")
-    connection.execute(text("SET ROLE nlc_migration_owner"))
-    if connection.execute(text("SELECT current_user")).scalar_one() != "nlc_migration_owner":
-        raise RuntimeError("CI migration could not assume nlc_migration_owner.")
-
-
 def prepare_production_migration_role(connection: Connection) -> None:
     """Assume the non-login schema-owner role through a least-privilege login.
 
@@ -744,7 +708,6 @@ async def run_async_migrations() -> None:
             try:
                 await connection.execute(text("SET timezone = 'UTC'"))
                 await connection.commit()
-                await connection.run_sync(prepare_ci_migration_role)
                 await connection.run_sync(prepare_production_migration_role)
                 await connection.run_sync(validate_production_migration_role)
                 # This guard is environment-independent and runs before any Alembic
@@ -755,7 +718,7 @@ async def run_async_migrations() -> None:
                 await connection.run_sync(do_run_migrations)
                 await connection.commit()
             finally:
-                if _is_production_migration_environment() or os.environ.get("ENVIRONMENT", "").strip().lower() == "test":
+                if _is_production_migration_environment():
                     # RESET ROLE is essential with pooled PostgreSQL endpoints:
                     # a second Alembic CLI invocation must not inherit the
                     # previous process's elevated current_user state.
