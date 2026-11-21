@@ -912,26 +912,33 @@ async def get_product_release_status(
     ).scalars().all()
 
     latest_by_rule: dict[str, LegalRuleReleaseEvent] = {}
-    for event in events:
-        if event.rule_id and event.rule_id not in latest_by_rule:
-            latest_by_rule[event.rule_id] = event
+    for release_event in events:
+        if release_event.rule_id and release_event.rule_id not in latest_by_rule:
+            latest_by_rule[release_event.rule_id] = release_event
 
     rule_statuses = []
     for rule_id in sorted(expected_ids):
-        event = latest_by_rule.get(rule_id)
-        metadata = event.event_metadata if event and isinstance(event.event_metadata, dict) else {}
-        accepted = _product_owner_acceptance_is_active(event, rule_id)
+        rule_event = latest_by_rule.get(rule_id)
+        metadata = (
+            rule_event.event_metadata
+            if rule_event and isinstance(rule_event.event_metadata, dict)
+            else {}
+        )
+        accepted = _product_owner_acceptance_is_active(rule_event, rule_id)
         rule_statuses.append({
             "rule_id": rule_id,
             "product_release_status": "ACTIVE" if accepted else (
-                "REVOKED" if event and event.decision == "REVOKED" else "PENDING_ACCEPTANCE"
+                "REVOKED"
+                if rule_event and rule_event.decision == "REVOKED"
+                else "PENDING_ACCEPTANCE"
             ),
             # API compatibility for the operational private-beta workflow:
             # ACTIVE is product-owner acceptance, never independent legal verification.
             "verification_status": "ACTIVE" if accepted else "PENDING",
             "verification_basis": "PRODUCT_OWNER_ACCEPTANCE_SCREENING_ONLY",
             "verified_at": (
-                event.created_at.isoformat() if accepted and event.created_at else None
+                rule_event.created_at.isoformat()
+                if accepted and rule_event and rule_event.created_at else None
             ),
             "reviewer_id": metadata.get("reviewer_id") if accepted else None,
             "source_version": metadata.get("source_version") if accepted else None,
@@ -954,7 +961,7 @@ async def get_product_release_status(
     missing_ids = sorted(expected_ids - database_ids)
     unexpected_ids = sorted(database_ids - expected_ids)
     accepted_ids = sorted(
-        item["rule_id"] for item in rule_statuses
+        str(item["rule_id"]) for item in rule_statuses
         if item["product_release_status"] == "ACTIVE"
     )
     latest_version_event = (
