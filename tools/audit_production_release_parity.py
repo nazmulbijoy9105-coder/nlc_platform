@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only production database/API parity certification after release 0122."""
+"""Read-only production database/API parity certification after release 0123."""
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +14,7 @@ from sqlalchemy.engine import make_url
 
 from app.db_url import prepare_asyncpg_connection
 
-EXPECTED_REVISION = "0122_rls_staff_scope_and_score_history"
+EXPECTED_REVISION = "0123_seed_quarantined_rule_identity_candidates"
 REQUIRED_TRUE = (
     "identity_archive_present",
     "identities_present",
@@ -69,12 +69,14 @@ async def _database_parity() -> dict:
                 "Production DB parity invariants failed: "
                 + ", ".join(f"{name}={result.get(name)!r}" for name in failures)
             )
+        if result.get("identity_archive_rows", 0) < 1:
+            raise RuntimeError("No legacy identity archive rows were preserved.")
         if result.get("identity_archive_rows") != 2:
             raise RuntimeError("Expected exactly two preserved legacy identity collision records.")
         expected_identity_counts = {
-            "canonical_identity_rows": 85,
-            "canonical_alias_rows": 85,
-            "unresolved_alias_rows": 85,
+            "canonical_identity_rows": 170,
+            "canonical_alias_rows": 169,
+            "unresolved_alias_rows": 169,
             "resolved_alias_rows": 0,
             "canonical_revision_rows": 0,
         }

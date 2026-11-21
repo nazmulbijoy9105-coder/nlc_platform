@@ -1,17 +1,44 @@
 -- Recurring audit of role memberships involving NLC runtime identities.
--- Configure NEON_ROLE_AUDIT_DATABASE_URL as a protected GitHub Actions secret.
--- This is read-only and must connect to the intended Neon branch/database.
+-- GitHub Actions uses NEON_API_KEY to request a direct, branch-pinned
+-- nlc_ci_audit_role connection URI from the Neon API.
+-- The caller must enforce default_transaction_read_only=on; this script
+-- independently refuses to run unless the active transaction is read-only.
 
 DO $membership_audit$
+DECLARE
+    app_role pg_roles%ROWTYPE;
+    audit_role pg_roles%ROWTYPE;
 BEGIN
+    IF current_setting('transaction_read_only') <> 'on' THEN
+        RAISE EXCEPTION
+            'NLC role membership audit refused: transaction_read_only must be on';
+    END IF;
+
     IF current_setting('server_version_num')::int < 160000 THEN
         RAISE EXCEPTION
             'NLC role membership audit requires PostgreSQL 16+ (pg_auth_members.inherit_option/set_option)';
     END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role')
-       OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
-        RAISE EXCEPTION 'Required NLC runtime role is missing';
+    SELECT * INTO app_role FROM pg_roles WHERE rolname = 'nlc_app_role';
+    SELECT * INTO audit_role FROM pg_roles WHERE rolname = 'nlc_ci_audit_role';
+
+    IF app_role.rolname IS NULL OR audit_role.rolname IS NULL THEN
+        RAISE EXCEPTION 'Required NLC runtime/audit role is missing';
+    END IF;
+
+    IF app_role.rolsuper OR app_role.rolbypassrls
+       OR app_role.rolcreaterole OR app_role.rolcreatedb
+       OR app_role.rolreplication THEN
+        RAISE EXCEPTION
+            'NLC application role has a prohibited elevated role attribute';
+    END IF;
+
+    IF audit_role.rolsuper OR audit_role.rolbypassrls
+       OR audit_role.rolcreaterole OR audit_role.rolcreatedb
+       OR audit_role.rolreplication OR audit_role.rolinherit
+       OR NOT audit_role.rolcanlogin THEN
+        RAISE EXCEPTION
+            'NLC audit role is not configured as a non-inheriting, least-privilege login';
     END IF;
 
     IF EXISTS (
