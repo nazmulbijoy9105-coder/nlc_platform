@@ -256,6 +256,7 @@ def main() -> int:
         "evidence_reference_present": False,
         "score_hash": "6c2f654c5abd5367e28fe9297952aef8c80a6e287598472c5f6e1a06e2faa103",
         "rule_outcomes_hash": "68cb2708a67d5aa8f5472e07cfd5033df9877cbcd69869edd081c43724aa1b1c",
+        "applicability_state_counts": {"UNKNOWN": 86},
     }
     for key, expected in expected_run.items():
         if run.get(key) != expected:
