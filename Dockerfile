@@ -58,10 +58,12 @@ CMD ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info", "--sche
 
 # STAGE 5: api — MUST BE LAST (Render default target)
 FROM runtime-base AS api
-EXPOSE 8000
+# Render injects PORT (default 10000). Keep the local fallback aligned.
+ENV PORT=10000
+EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD curl -fsS http://127.0.0.1:8000/api/v1/health/live || exit 1
+  CMD-SHELL curl -fsS "http://127.0.0.1:${PORT:-10000}/api/v1/health/live" || exit 1
 
 # Schema changes are applied by the CI-gated migration step before Render deploy.
 # The API container never receives the privileged migration credential.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-10000}\""]
