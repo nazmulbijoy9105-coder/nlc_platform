@@ -29,6 +29,7 @@ jobs:
       NLC_PROD_CLIENT_FOREIGN_COMPANY_ID: ${{ vars.NLC_PROD_CLIENT_FOREIGN_COMPANY_ID }}
       NLC_PROD_STAFF_COMPANY_ID: ${{ vars.NLC_PROD_STAFF_COMPANY_ID }}
       NLC_PROD_STAFF_UNASSIGNED_COMPANY_ID: ${{ vars.NLC_PROD_STAFF_UNASSIGNED_COMPANY_ID }}
+      NLC_PROD_HISTORICAL_COMPANY_ID: ${{ vars.NLC_PROD_HISTORICAL_COMPANY_ID }}
     steps:
       - name: Check out approved repository revision
         uses: actions/checkout@v5
