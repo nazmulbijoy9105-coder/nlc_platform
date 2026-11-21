@@ -148,7 +148,7 @@ jobs:
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload production-schema migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0123.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: nlc-production-0112-to-0123-rehearsal
