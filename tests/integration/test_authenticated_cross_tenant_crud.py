@@ -325,8 +325,12 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["verification_status_counts"] == {"PENDING": 85}
     assert run_items[1]["score_available"] is False
     assert run_items[1]["score"] is None
+    assert run_items[1]["outcome_rule_id_parity"] is False
+    assert "canonical registry" in run_items[1]["score_withheld_reason"]
     assert "No evidence references are bound" in run_items[1]["score_withheld_reason"]
     assert run_items[1]["applicability_state_counts"] == {"UNKNOWN": 1}
+    assert "rule_outcomes_snapshot" not in run_items[0]
+    assert "fact_provenance_snapshot" not in run_items[0]
 
     foreign_runs = await api_client_as_user.get(
         f"/api/v1/companies/{company_b.id}/evaluation-runs", headers=headers
