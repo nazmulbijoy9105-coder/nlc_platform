@@ -288,6 +288,7 @@ def main() -> int:
     expected_run = {
         "evaluation_status": "COMPLETED",
         "rule_catalogue_count": 86,
+        "catalogue_count_matches_canonical": False,
         "rule_outcomes_count": 86,
         "canonical_rule_count": 85,
         "missing_canonical_rule_ids": [],
@@ -310,6 +311,7 @@ def main() -> int:
             raise RuntimeError(f"15 November evaluation mismatch for {key}: {run.get(key)!r}")
     withheld_reason = run.get("score_withheld_reason") or ""
     for required_reason in (
+        "catalogue count does not match the 85-ID canonical registry",
         "do not exactly match the 85-ID canonical registry",
         "unattributed source data",
         "No evidence references are bound",
