@@ -758,6 +758,7 @@ LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().l
 
 
 def legal_score_is_released() -> bool:
+    """Release a statutory company score only after every catalogue rule is counsel-verified."""
     """Return whether product scoring is enabled for the product-owner allowlist.
 
     This is a product-release switch, not a legal-verification decision.
@@ -767,6 +768,7 @@ def legal_score_is_released() -> bool:
     return (
         LEGAL_SCORE_RELEASED is True
         and bool(PRODUCT_SCORING_RULE_IDS)
+        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
     )
 
 
@@ -2912,6 +2914,102 @@ class NLCRuleEngine:
         )
 
     def _run_labour_rules(self, c: CompanyProfile) -> None:
+        applicability = self._manufacturing_applicability(c)
+        # A conditional rule must report UNKNOWN when its applicability facts
+        # are missing; silence would make UNKNOWN indistinguishable from N/A.
+        if applicability.state is ApplicabilityState.UNKNOWN:
+            self._add_flag(ComplianceFlag(
+                rule_id="LBR-001",
+                flag_code="FACTORY_LICENSE_APPLICABILITY_UNKNOWN",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Manufacturing/factory status is not established. Confirm the "
+                    "nature and location of the establishment before treating the "
+                    "section 326 factory-licensing rule as applicable or not applicable."
+                ),
+                statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"applicability_state": "UNKNOWN", "reason": applicability.reason},
+            ))
+
+        if applicability.state is ApplicabilityState.APPLICABLE:
+            if c.factory_license_required_by_direction is None:
+                self._add_flag(ComplianceFlag(
+                    rule_id="LBR-001",
+                    flag_code="FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "Manufacturing activity is reported, but no authenticated "
+                        "section 326 Government direction has been identified for "
+                        "this establishment/class. Verify the direction, scope, "
+                        "commencement and exemptions before deciding applicability."
+                    ),
+                    statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"applicability_state": "UNKNOWN", "government_direction_verified": False},
+                ))
+            elif c.factory_license_required_by_direction is True:
+                if c.factory_license_obtained is not True:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-001",
+                        flag_code="FACTORY_LICENSE_STATUS_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "A section 326 direction is reported to require a licence, "
+                            "but licence status is absent or negative. Verify the "
+                            "direction, class, commencement, exemptions and authentic "
+                            "licence search before determining any default."
+                        ),
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"applicability_state": "APPLICABLE_PENDING_SOURCE_VERIFICATION"},
+                    ))
+
+                if c.factory_license_expiry is None:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-002",
+                        flag_code="FACTORY_LICENSE_EXPIRY_STATUS_UNKNOWN",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The reported section 326 licensing requirement has no "
+                            "verified licence-expiry/renewal record. Obtain the licence "
+                            "and any renewal application, extension or replacement "
+                            "instrument before assessing current validity."
+                        ),
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                elif self.today > c.factory_license_expiry:
+                    delay = (self.today - c.factory_license_expiry).days
+                    self._add_flag(ComplianceFlag(
+                        rule_id="LBR-002",
+                        flag_code="FACTORY_LICENSE_EXPIRY_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"Recorded licence expiry is {delay} days in the past. "
+                            "Verify the licence class, section 326 Government direction, "
+                            "five-year/contractor one-year term, renewal application, "
+                            "extension and operative status before finding a breach."
+                        ),
+                        statutory_basis="Bangladesh Labour Act 2006, Section 326, as amended by Act No. 43 of 2026",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+
         # LBR-003 is not gated by manufacturing status: applicability of an
         # existing labour-court order depends on the order's parties and scope.
         if c.labour_court_order_pending:
@@ -3224,6 +3322,10 @@ class NLCRuleEngine:
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
         company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
+        # The Corporate Governance Code is a listed-issuer regime, not a
+        # general private-company duty. For public companies, missing listing
+        # status remains UNKNOWN rather than silently becoming unlisted.
+        if company_type != "PUBLIC_LIMITED":
         # The Corporate Governance Code is not a default private-company
         # obligation. A contradictory positive listing flag on a private or
         # otherwise unsupported legal form is not silently ignored: preserve

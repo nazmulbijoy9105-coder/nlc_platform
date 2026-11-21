@@ -108,6 +108,15 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not confirmed_violation:
             results[index] = {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
             continue
+        if flag.rule_id not in SCORE_DEDUCTION_RULE_IDS:
+            results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
+            continue
+        if flag.rule_id not in VERIFIED_RULE_IDS:
+            results[index] = {"applied": 0, "status": "RULE_NOT_COUNSEL_VERIFIED"}
+            continue
+        if not legal_score_is_released():
+            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+            continue
         if not PRODUCT_SCORING_RULE_IDS:
             results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue

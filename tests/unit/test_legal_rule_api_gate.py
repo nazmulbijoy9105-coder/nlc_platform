@@ -98,6 +98,13 @@ def test_black_override_endpoint_hides_candidates_when_scoring_is_disabled(monke
     monkeypatch.setattr(rules_api, "RulesService", FakeRulesService)
     result = asyncio.run(rules_api.get_black_overrides(current_user=None, db=object()))
 
+    assert len(result) == 1
+    assert result[0].product_scoring_enabled is False
+    assert result[0].default_severity is None
+    assert result[0].score_impact == 0
+    assert result[0].is_active is True
+    assert result[0].is_black_override is False
+    assert result[0].verification_status == "PENDING"
     assert result == []
 
 

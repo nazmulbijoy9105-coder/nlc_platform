@@ -57,6 +57,22 @@ def test_listed_public_company_with_missing_condition_status_gets_review_not_bre
         assert findings[0].score_impact == 0
 
 
+def test_factory_license_rule_is_unknown_when_manufacturing_is_not_established():
+    output = _evaluate(is_manufacturing=None)
+    finding = _flags(output, "LBR-001")[0]
+    assert finding.flag_code == "FACTORY_LICENSE_APPLICABILITY_UNKNOWN"
+    assert finding.eval_state == "UNKNOWN"
+    assert finding.score_impact == 0
+
+
+def test_factory_license_rule_is_unknown_when_government_direction_is_not_known():
+    output = _evaluate(
+        is_manufacturing=True,
+        factory_license_required_by_direction=None,
+        factory_license_obtained=False,
+    )
+    finding = _flags(output, "LBR-001")[0]
+    assert finding.flag_code == "FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN"
 def test_labour_licence_scope_is_unknown_regardless_of_manufacturing_status():
     for manufacturing in (True, False, None):
         output = _evaluate(is_manufacturing=manufacturing)
@@ -82,6 +98,11 @@ def test_labour_licence_direction_is_unknown_after_scope_review():
     assert finding.score_impact == 0
 
 
+def test_factory_license_rule_is_not_applicable_when_direction_confirms_no_licence_required():
+    output = _evaluate(
+        is_manufacturing=True,
+        factory_license_required_by_direction=False,
+        factory_license_obtained=False,
 def test_labour_licence_rule_is_not_applicable_only_after_verified_scope_review():
     output = _evaluate(
         labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
@@ -95,6 +116,10 @@ def test_labour_licence_rule_is_not_applicable_only_after_verified_scope_review(
     assert not _flags(output, "LBR-002")
 
 
+def test_factory_license_missing_expiry_is_not_treated_as_current_or_expired():
+    output = _evaluate(
+        is_manufacturing=True,
+        factory_license_required_by_direction=True,
 def test_labour_licence_missing_printed_expiry_is_unknown():
     output = _evaluate(
         labour_establishment_category="SHOP",
@@ -111,6 +136,7 @@ def test_labour_licence_missing_printed_expiry_is_unknown():
         factory_license_expiry=None,
     )
     finding = _flags(output, "LBR-002")[0]
+    assert finding.flag_code == "FACTORY_LICENSE_EXPIRY_STATUS_UNKNOWN"
     assert finding.flag_code == "LABOUR_LICENSE_EXPIRY_NOT_VERIFIED"
     assert finding.severity is Severity.NOT_EVALUATED
     assert finding.eval_state == "UNKNOWN"

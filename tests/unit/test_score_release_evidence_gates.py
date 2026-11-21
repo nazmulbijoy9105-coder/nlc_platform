@@ -158,6 +158,7 @@ def test_default_runtime_product_release_is_enabled_without_counsel_certificatio
 
 
 
+def test_product_release_requires_counsel_allowlist(monkeypatch):
 def test_explicit_product_release_pause_still_withholds_score(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))

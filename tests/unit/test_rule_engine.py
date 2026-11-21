@@ -1194,6 +1194,16 @@ class TestLabourRules:
         assert not_applicable.reason
         assert unknown.reason
 
+    def test_LBR001_surfaces_unknown_direction_for_confirmed_manufacturing(self, rule_engine, build_profile):
+        profile = build_profile(is_manufacturing=True, factory_license_obtained=False)
+        output = rule_engine.evaluate(profile)
+        finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+        assert finding.flag_code == "FACTORY_LICENSE_GOVERNMENT_DIRECTION_UNKNOWN"
+        assert finding.eval_state == "UNKNOWN"
+        assert finding.score_impact == 0
+
+    @pytest.mark.parametrize("manufacturing_status", [False, None])
+    def test_LBR001_distinguishes_non_manufacturing_from_unknown_status(
     @pytest.mark.parametrize("manufacturing_status", [True, False, None])
     def test_LBR001_requires_verified_establishment_scope_not_manufacturing(
         self, rule_engine, build_profile, manufacturing_status
@@ -1217,6 +1227,22 @@ class TestLabourRules:
             labour_license_scope_verified_by="reviewer",
             factory_license_required_by_direction=False,
         ))
+        if manufacturing_status is None:
+            finding = next(f for f in output.flags if f.rule_id == "LBR-001")
+            assert finding.flag_code == "FACTORY_LICENSE_APPLICABILITY_UNKNOWN"
+            assert finding.eval_state == "UNKNOWN"
+            assert finding.score_impact == 0
+        else:
+            assert_flag_not_triggered(output, "LBR-001")
+
+    def test_LBR002_triggers_only_for_confirmed_manufacturing(self, rule_engine, build_profile):
+        profile = build_profile(
+            is_manufacturing=True,
+            factory_license_obtained=True,
+            factory_license_expiry=date.today() - timedelta(days=30),
+        )
+        output = rule_engine.evaluate(profile)
+        # Licence expiry is not a breach without verified statutory applicability.
         assert_flag_not_triggered(output, "LBR-001")
         assert_flag_not_triggered(output, "LBR-002")
 
@@ -1273,6 +1299,7 @@ class TestLabourRules:
         assert_flag_triggered(output, "LBR-003")
 
     def test_no_labour_flags_when_compliant(self, rule_engine, build_profile):
+        profile = build_profile(is_manufacturing=False)
         profile = build_profile(
             is_manufacturing=False,
             labour_establishment_category="SERVICE_OFFICE_NOT_IN_RULE_354_CATEGORIES",
