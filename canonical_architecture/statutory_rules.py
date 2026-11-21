@@ -8,7 +8,7 @@ Populated with canonical legal data from seed corpus.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 
 class RuleState(str, Enum):
@@ -52,12 +52,17 @@ class StatutoryRule:
     evidence_required: Tuple[str, ...]
     severity: Severity
     score_impact: int
-    applies_if: Optional[str] = None      # company fact that must be True, else NOT_APPLICABLE
+    applies_if: Optional[str] = None      # one required Boolean fact (legacy-compatible)
     exceptions: Tuple[str, ...] = ()      # company facts that, if True, make it NOT_APPLICABLE
+    applies_if_all: Tuple[str, ...] = ()  # all named Boolean facts must be True
+    applies_if_lt: Tuple[Tuple[str, float], ...] = ()  # numeric facts must be below thresholds
+    applicability_unresolved: bool = False  # descriptive scope not yet executable
+    applicability_notes: str = ""
 
     @property
     def evaluation_states(self) -> Tuple[RuleState, ...]:
-        if self.applies_if or self.exceptions:
+        if (self.applies_if or self.applies_if_all or self.applies_if_lt
+                or self.applicability_unresolved or self.exceptions):
             return _BASE_STATES + (RuleState.NOT_APPLICABLE,)
         return _BASE_STATES
 
@@ -117,6 +122,46 @@ if len(STATUTORY_RULE_REGISTRY) != len(_RULES):
     raise RuntimeError("duplicate rule_id in statutory rule registry")
 
 
+def evaluate_applicability(rule: StatutoryRule, facts: Mapping[str, Any]) -> Optional[RuleState]:
+    """Return UNKNOWN/NOT_APPLICABLE when scope cannot be established; None means applicable.
+
+    Applicability is declarative: free-text expressions are never evaluated.
+    For conjunctions, a known-false predicate establishes NOT_APPLICABLE even if
+    another predicate is missing; otherwise any missing/invalid required fact is UNKNOWN.
+    """
+    if rule.applicability_unresolved:
+        return RuleState.UNKNOWN
+
+    for exception in rule.exceptions:
+        if facts.get(exception) is True or facts.get(exception.lower()) is True:
+            return RuleState.NOT_APPLICABLE
+        if exception == "DORMANT_STRIKE_OFF" and facts.get("is_dormant") is True:
+            return RuleState.NOT_APPLICABLE
+
+    missing = []
+    false_conditions = []
+    required = ((rule.applies_if,) if rule.applies_if else ()) + rule.applies_if_all
+    for fact_key in required:
+        value = facts.get(fact_key)
+        if value is None:
+            missing.append(fact_key)
+        elif value is not True:
+            false_conditions.append(fact_key)
+
+    for fact_key, threshold in rule.applies_if_lt:
+        value = facts.get(fact_key)
+        if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+            missing.append(fact_key)
+        elif value >= threshold:
+            false_conditions.append(f"{fact_key} < {threshold:g}")
+
+    if false_conditions:
+        return RuleState.NOT_APPLICABLE
+    if missing:
+        return RuleState.UNKNOWN
+    return None
+
+
 def get_rule(rule_id: str) -> Optional[StatutoryRule]:
     """Retrieve a statutory rule by its ID."""
     return STATUTORY_RULE_REGISTRY.get(rule_id)
@@ -174,7 +219,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "requirement": "No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, foreign-currency-account retention rules and zone-specific exceptions. CONDITIONAL: foreign-shareholder cases only.",
         "provision": "UNVERIFIED CANDIDATE — GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "has_foreign_shareholder == True",
+        "applicability": "has_foreign_shareholder",
         "exceptions": [],
         "evidence_required": [
             "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
@@ -195,6 +240,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "provision": "UNVERIFIED CANDIDATE — BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
+        "applicability_all": ["has_foreign_shareholder", "bida_registered"],
+        "applicability_lt": {"remittance_amount_usd": 50000},
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
@@ -1255,7 +1302,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
 _LEGACY_AUTHORITY = {"Corporate": "RJSC", "Tax": "NBR", "Labour": "LABOUR_DEPT"}  # UNVERIFIED default
 _LEGACY_AUTHORITY_OVERRIDE: Dict[str, str] = {}   # rule_id -> authority; fill after review
 _LEGACY_KEYS = frozenset({"rule_id", "legal_domain", "law", "requirement", "provision",
-    "provision_status", "applicability", "exceptions", "evidence_required",
+    "provision_status", "applicability", "applicability_all", "applicability_lt",
+    "exceptions", "evidence_required",
     "evaluation_states", "severity", "score_impact", "invariants"})
 
 
@@ -1285,13 +1333,43 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
     # DOCUMENTARY_EVIDENCE-only gate silently dropped those three rules and
     # left STATUTORY_RULE_REGISTRY at 82 while the engine exposes 85.
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
-    applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
+    # Only a simple identifier is an executable legacy Boolean fact. Descriptive
+    # applicability text remains visible but fail-closed until a typed contract exists.
+    import re
+    applies_if = None
+    applicability_unresolved = False
+    applicability_notes = ""
+    if applicability != "ALL_ACTIVE_COMPANIES":
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", applicability):
+            applies_if = applicability
+        else:
+            applicability_unresolved = True
+            applicability_notes = applicability
+
+    applies_if_all = d.get("applicability_all", ())
+    if not isinstance(applies_if_all, (list, tuple)) or any(
+        not isinstance(item, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", item)
+        for item in applies_if_all
+    ):
+        raise RuntimeError(f"{key}: applicability_all must contain fact identifiers")
+    applies_if_lt_raw = d.get("applicability_lt", {})
+    if not isinstance(applies_if_lt_raw, dict) or any(
+        not isinstance(fact, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", fact)
+        or isinstance(limit, bool) or not isinstance(limit, (int, float))
+        for fact, limit in applies_if_lt_raw.items()
+    ):
+        raise RuntimeError(f"{key}: applicability_lt must map fact identifiers to numeric limits")
+
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth, tuple(evidence_required),
         Severity(d["severity"]), d["score_impact"],
         applies_if=applies_if,
         exceptions=tuple(exceptions),
+        applies_if_all=tuple(applies_if_all),
+        applies_if_lt=tuple(sorted(applies_if_lt_raw.items())),
+        applicability_unresolved=applicability_unresolved,
+        applicability_notes=applicability_notes,
     )
 
 
@@ -1325,6 +1403,10 @@ def as_dict(rule: StatutoryRule) -> dict:
         "severity": rule.severity,
         "score_impact": rule.score_impact,
         "applies_if": rule.applies_if,
+        "applies_if_all": rule.applies_if_all,
+        "applies_if_lt": rule.applies_if_lt,
+        "applicability_unresolved": rule.applicability_unresolved,
+        "applicability_notes": rule.applicability_notes,
         "exceptions": rule.exceptions,
         "evaluation_states": rule.evaluation_states,
         "invariants": rule.invariants,
