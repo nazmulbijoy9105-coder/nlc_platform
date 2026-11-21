@@ -89,6 +89,35 @@ def verify_authorized_company(
             f"{label}: canonical registry/engine parity is not 85/85 "
             f"(registered={summary.get('registered')}, implemented={summary.get('implemented')})"
         )
+    states = report.get("states") or {}
+    registered_ids = states.get("registered")
+    implemented_ids = states.get("implemented")
+    if not isinstance(registered_ids, list) or not isinstance(implemented_ids, list):
+        raise RuntimeError(f"{label}: report omitted canonical registered/implemented ID lists")
+    if len(registered_ids) != 85 or set(registered_ids) != set(implemented_ids):
+        raise RuntimeError(f"{label}: the 85 canonical IDs do not exactly match engine implementations")
+    if report.get("validation_violations") != []:
+        raise RuntimeError(f"{label}: six-state report contains structural violations")
+    active_ids = states.get("active")
+    applicable_ids = states.get("applicable")
+    evaluated_ids = states.get("evaluated")
+    if active_ids is not None and not set(active_ids).issubset(set(implemented_ids)):
+        raise RuntimeError(f"{label}: active IDs exceed the implemented set")
+    if applicable_ids is not None and (
+        active_ids is None or not set(applicable_ids).issubset(set(active_ids))
+    ):
+        raise RuntimeError(f"{label}: applicable IDs exceed the active set")
+    if evaluated_ids is not None and (
+        applicable_ids is None or not set(evaluated_ids).issubset(set(applicable_ids))
+    ):
+        raise RuntimeError(f"{label}: evaluated IDs exceed the applicable set")
+    applicability_summary = report.get("applicability_summary")
+    if applicability_summary is not None:
+        expected_states = {"APPLICABLE", "NOT_APPLICABLE", "UNKNOWN"}
+        if set(applicability_summary) != expected_states:
+            raise RuntimeError(f"{label}: applicability report omitted a six-state value")
+        if summary.get("active") is not None and sum(applicability_summary.values()) != summary["active"]:
+            raise RuntimeError(f"{label}: applicability counts do not reconcile to active rule count")
     print(
         f"PASS {label} six-state parity: "
         f"registered={summary['registered']}, implemented={summary['implemented']}, "
