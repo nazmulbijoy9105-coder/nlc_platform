@@ -89,6 +89,11 @@ def verify_authorized_company(
             f"{label}: canonical registry/engine parity is not 85/85 "
             f"(registered={summary.get('registered')}, implemented={summary.get('implemented')})"
         )
+    if summary.get("active") != 84:
+        raise RuntimeError(
+            f"{label}: expected 84 active canonical rules with INC-001 held, "
+            f"received active={summary.get('active')}"
+        )
     states = report.get("states") or {}
     registered_ids = states.get("registered")
     implemented_ids = states.get("implemented")
@@ -96,6 +101,9 @@ def verify_authorized_company(
         raise RuntimeError(f"{label}: report omitted canonical registered/implemented ID lists")
     if len(registered_ids) != 85 or set(registered_ids) != set(implemented_ids):
         raise RuntimeError(f"{label}: the 85 canonical IDs do not exactly match engine implementations")
+    active_ids = states.get("active")
+    if not isinstance(active_ids, list) or len(active_ids) != 84 or "INC-001" in set(active_ids):
+        raise RuntimeError(f"{label}: active IDs must contain exactly 84 entries and exclude held INC-001")
     if report.get("validation_violations") != []:
         raise RuntimeError(f"{label}: six-state report contains structural violations")
     active_ids = states.get("active")
@@ -116,8 +124,15 @@ def verify_authorized_company(
         expected_states = {"APPLICABLE", "NOT_APPLICABLE", "UNKNOWN"}
         if set(applicability_summary) != expected_states:
             raise RuntimeError(f"{label}: applicability report omitted a six-state value")
-        if summary.get("active") is not None and sum(applicability_summary.values()) != summary["active"]:
-            raise RuntimeError(f"{label}: applicability counts do not reconcile to active rule count")
+        if sum(applicability_summary.values()) != 84:
+            raise RuntimeError(f"{label}: applicability counts do not reconcile to 84 active rules")
+        if applicability_summary != {"APPLICABLE": 0, "NOT_APPLICABLE": 0, "UNKNOWN": 84}:
+            raise RuntimeError(
+                f"{label}: legacy 15 November run must remain 84 UNKNOWN, "
+                f"not inferred applicable/non-applicable: {applicability_summary}"
+            )
+    else:
+        raise RuntimeError(f"{label}: selected production run omitted applicability state counts")
     print(
         f"PASS {label} six-state parity: "
         f"registered={summary['registered']}, implemented={summary['implemented']}, "
