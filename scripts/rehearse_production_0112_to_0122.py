@@ -30,6 +30,8 @@ BASE_REVISION = "0122_rls_staff_scope_and_score_history"
 HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
 HEAD_REVISION = "0122_rls_staff_scope_and_score_history"
 AHEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
     "compliance_score_history",
@@ -333,7 +335,7 @@ async def _audit_view_parity() -> dict[str, Any]:
         )
         failed = [key for key in required_true if result.get(key) is not True]
         actual_revision = result.get("alembic_revision")
-        if actual_revision not in {HEAD_REVISION, AHEAD_REVISION} or failed:
+        if actual_revision not in {HEAD_REVISION, PREVIOUS_REVISION} or failed:
             raise RuntimeError(
                 f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
@@ -357,7 +359,7 @@ async def _audit_view_parity() -> dict[str, Any]:
                 "resolved_alias_rows": 0,
                 "canonical_revision_rows": 0,
             }
-            if actual_revision == HEAD_REVISION
+            if actual_revision == PREVIOUS_REVISION
             else {
                 "canonical_identity_rows": 170,
                 "canonical_alias_rows": 169,
@@ -429,6 +431,7 @@ async def main() -> None:
         revisions = await _alembic_revision(conn)
         if revisions == [HEAD_REVISION]:
         if revisions in ([HEAD_REVISION], [AHEAD_REVISION]):
+        if revisions in ([HEAD_REVISION], [PREVIOUS_REVISION]):
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
             # instead of trying to replay the 0112-only migration.
