@@ -29,7 +29,7 @@ The production-facing legal release remains fail-closed until the independently 
 
 ## Release invariants
 
-1. `LEGAL_SCORE_RELEASED` remains false unless the complete release policy is satisfied.
+1. `LEGAL_SCORE_RELEASED` controls only the product risk metric and may be true under the separate product-owner release. It does not verify statutory rules. `VERIFIED_RULE_IDS` remains empty until independent rule-specific counsel decisions are recorded.
 2. `VERIFIED_RULE_IDS` remains empty until each rule has a documented independent legal disposition.
 3. `LEGAL_CALENDAR_RELEASED` remains false until the calendar rule corpus is validated.
 4. A candidate severity or internal review signal must not become a customer-facing RED/BLACK legal classification.

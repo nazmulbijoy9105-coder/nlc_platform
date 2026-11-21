@@ -3,9 +3,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from enum import Enum
 from typing import Any
 from uuid import UUID
+
+
+BANGLADESH_TZ = ZoneInfo("Asia/Dhaka")
+
+
+def business_date_today() -> date:
+    """Bangladesh statutory calendar date; persisted timestamps remain UTC."""
+    return datetime.now(BANGLADESH_TZ).date()
 
 
 class _StrEnum(str, Enum):
@@ -83,6 +92,99 @@ class CompanyFact:
         if self.verification_status is FactVerificationStatus.SUPERSEDED:
             return "Supporting document was superseded; use the current fact record."
         return "Based on an authorized upload that has not yet been verified."
+
+
+# NLC internal evidence freshness policy (calendar days from observed_on).
+# These are conservative product controls, not statutory filing deadlines.
+FACT_MAX_AGE_DAYS: dict[str, int] = {
+    "current_director_count": 30,
+    "is_private_subsidiary_of_public_company": 90,
+    "member_count": 30,
+    "company_operating": 30,
+    "name_change_pending": 30,
+    "object_clause_change_pending": 30,
+    "aoa_alteration_pending": 30,
+    "register_of_members_maintained": 90,
+    "register_of_directors_maintained": 90,
+    "register_of_charges_maintained": 90,
+    "minutes_book_agm_maintained": 90,
+    "minutes_book_board_maintained": 90,
+    "register_location": 90,
+    "trade_license_obtained": 90,
+    "trade_license_expiry": 365,
+    "annual_return_filed": 365,
+    "annual_return_content_complete": 365,
+}
+
+
+INTERNAL_PROFILE_FACT_KEYS = frozenset({
+    "verified_fact_keys",
+    "verified_fact_context",
+    "catalogue_binding_required",
+    "catalogue_rule_versions",
+    "catalogue_rule_active",
+})
+
+
+def is_internal_profile_fact_key(fact_key: str) -> bool:
+    """Identify reviewer/system trust metadata that is never a user company fact."""
+    key = fact_key.strip()
+    return (
+        key in INTERNAL_PROFILE_FACT_KEYS
+        or key.startswith("catalogue_")
+        or key.endswith((
+            "_verified",
+            "_verified_at",
+            "_verified_by",
+            "_evidence_ref",
+            "_evidence_reference",
+        ))
+    )
+
+
+FACT_NO_EXPIRY_KEYS = frozenset({
+    # Immutable identifiers / dates. Other historical events require a recent
+    # evidence observation (default 365 days) so newer events cannot be missed.
+    "incorporation_date",
+    "company_registration_number",
+    "tin_obtained",
+})
+
+
+def fact_freshness_max_age_days(fact_key: str) -> int | None:
+    """Return NLC's maximum age; unknown facts default to 365 days, not infinity."""
+    if fact_key in FACT_NO_EXPIRY_KEYS:
+        return None
+    return FACT_MAX_AGE_DAYS.get(fact_key, 365)
+
+
+def fact_freshness_status(fact_key: str, observed_on: date, as_of: date) -> str:
+    """Classify whether a verified document fact is current enough for scoring."""
+    if not isinstance(observed_on, date) or observed_on > as_of:
+        return "FUTURE_DATED"
+    max_age = fact_freshness_max_age_days(fact_key)
+    if max_age is None:
+        return "NOT_TIME_LIMITED"
+    return "FRESH" if (as_of - observed_on).days <= max_age else "STALE"
+
+
+def verified_document_fact_keys(facts: Any, *, as_of: date) -> frozenset[str]:
+    """Only fresh authorized-document-backed VERIFIED facts may authorize scoring."""
+    keys: set[str] = set()
+    for fact in facts:
+        trust_level = getattr(fact.trust_level, "value", fact.trust_level)
+        verification_status = getattr(
+            fact.verification_status, "value", fact.verification_status
+        )
+        if (
+            not is_internal_profile_fact_key(fact.fact_key)
+            and trust_level == FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED.value
+            and verification_status == FactVerificationStatus.VERIFIED.value
+            and fact_freshness_status(fact.fact_key, fact.observed_on, as_of)
+            in {"FRESH", "NOT_TIME_LIMITED"}
+        ):
+            keys.add(fact.fact_key)
+    return frozenset(keys)
 
 
 def _json_safe_fact_value(value: Any) -> Any:

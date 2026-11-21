@@ -24,13 +24,20 @@ import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, text, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
 from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import (
+    business_date_today,
+    fact_freshness_max_age_days,
+    fact_freshness_status,
+    is_internal_profile_fact_key,
+    verified_document_fact_keys,
+)
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.compliance.outcome_status import derive_compliance_outcome
@@ -231,15 +238,25 @@ class ComplianceService(BaseService[ComplianceFlag]):
         ]
         used_facts = []
         profile_field_names = {
-            field.name for field in dataclass_fields(CompanyProfile)
+            field.name
+            for field in dataclass_fields(CompanyProfile)
+            if not is_internal_profile_fact_key(field.name)
         } - {"company_id", "company_name"}
         for fact in current_facts:
             if fact.fact_key in profile_field_names:
                 profile_data[fact.fact_key] = coerce_company_profile_fact_value(fact.fact_key, fact.fact_value)
                 used_facts.append(fact)
-        fact_provenance_snapshot = [
-            fact.provenance_payload() for fact in used_facts
-        ]
+        evaluation_date = getattr(rule_engine, "today", business_date_today())
+        fact_provenance_snapshot = []
+        for fact in used_facts:
+            payload = fact.provenance_payload()
+            payload["freshness_status"] = fact_freshness_status(
+                fact.fact_key, fact.observed_on, evaluation_date
+            )
+            payload["freshness_max_age_days"] = fact_freshness_max_age_days(
+                fact.fact_key
+            )
+            fact_provenance_snapshot.append(payload)
         normalized_profile_data = _company_profile_kwargs(profile_data, CompanyProfile)
         untracked_profile_fields = sorted(
             set(normalized_profile_data)
@@ -264,6 +281,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
             profile = CompanyProfile(**normalized_profile_data)
         except TypeError as exc:
             raise ValueError(f"CompanyProfile assembly failed: {exc}") from exc
+
+        # Only independently verified, authorized document-backed facts can
+        # authorize negative findings from legacy profile booleans. User
+        # assertions and unattributed company-table defaults remain unknown.
+        profile.verified_fact_keys = verified_document_fact_keys(
+            used_facts, as_of=evaluation_date
+        )
+        profile.verified_fact_context = {
+            fact.fact_key: {
+                "document_id": str(fact.document_id) if fact.document_id else None,
+                "source_reference": fact.source_reference,
+            }
+            for fact in used_facts
+            if fact.fact_key in profile.verified_fact_keys
+        }
 
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
@@ -535,7 +567,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             select(Company.id).where(Company.id == company_id).with_for_update()
         )
         now = datetime.now(UTC)
-        today = date.today()
+        today = business_date_today()
         score = output.score_breakdown.final_score
         risk_band_value = getattr(output.score_breakdown.risk_band, 'value', output.score_breakdown.risk_band)
         risk_band = RiskBand(risk_band_value)
@@ -1105,7 +1137,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             return None
 
         flag.flag_status = FlagStatus.RESOLVED
-        flag.resolved_date = date.today()
+        flag.resolved_date = business_date_today()
         flag.resolved_by = resolved_by
         flag.resolution_notes = resolution_notes
         self.db.add(flag)

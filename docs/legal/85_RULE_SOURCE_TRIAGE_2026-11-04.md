@@ -1,5 +1,7 @@
 # 85-rule source triage — 6 November 2026 (updated from 4 November 2026)
 
+> **Historical snapshot, not current source authority.** Several catalogue anchors below were corrected in later runtime changes. Use `docs/legal/STATUTORY_MAPPING_AUDIT_2026-11-20.md` for the 20 November comparison and current candidate anchors. This file remains useful as the first-pass question log; do not copy its older anchors into production code without rechecking current law and current runtime declarations.
+
 ## Status and limitations
 
 This is a **first-pass source triage**, not a completed legal opinion or counsel approval. The 85 IDs below were extracted from the current canonical CSV and matched against `docs/legal/legal_approval_register.yaml`. The approval register contains 85 entries, `approved_rule_ids: []`, and every entry is `REVIEW_REQUIRED / score_eligible: false`. Keep that gate unchanged.

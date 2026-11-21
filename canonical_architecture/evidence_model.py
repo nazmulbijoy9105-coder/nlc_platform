@@ -12,7 +12,7 @@ prima facie evidence.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple
 
 @dataclass(frozen=True)
@@ -86,17 +86,18 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
 
     "REG-001": EvidenceMapping("REG-001",
         (REGISTER_ENTRY,),
-        ("REGISTER_MISSING",),
-        "prima_facie", "S45"),
+        ("REGISTER_STATUS_REVIEW_REQUIRED",),
+        "documentary", "UNRESOLVED"),
     "REG-002": EvidenceMapping("REG-002",
-        ("REGISTER_OF_MEMBERS_ENTRY", "REGISTER_OF_CHARGES_ENTRY", AGM_MINUTES),
+        ("REGISTER_OF_MEMBERS_ENTRY", "REGISTER_OF_CHARGES_ENTRY", AGM_MINUTES,
+         "BOARD_MINUTES_SIGNED_BY_CHAIRMAN"),
         ("MEMBERS_REGISTER_VERIFIED_ABSENT", "CHARGES_REGISTER_VERIFIED_ABSENT",
-         "AGM_MINUTES_VERIFIED_ABSENT"),
+         "AGM_MINUTES_VERIFIED_ABSENT", "BOARD_MINUTES_VERIFIED_ABSENT"),
         "documentary", "S34/S89/S174"),
     "REG-003": EvidenceMapping("REG-003",
-        (REGISTER_ENTRY, "BOARD_RESOLUTION_ON_LOCATION"),
-        ("REGISTER_NOT_AT_REGISTERED_OFFICE",),
-        "documentary", "S34(2)"),
+        (REGISTER_ENTRY, "BOARD_RESOLUTION_ON_LOCATION", "RJSC_NOTICE_ACK"),
+        ("REGISTER_LOCATION_REQUIRES_NOTICE_REVIEW",),
+        "documentary", "UNRESOLVED"),
 
     "OFF-001": EvidenceMapping("OFF-001",
         (FORM_VI, RJSC_FILING_ACK),
@@ -221,9 +222,9 @@ EVIDENCE_REGISTRY: dict[str, EvidenceMapping] = {
         "conclusive", "S150"),
 
     "MEM-001": EvidenceMapping("MEM-001",
-        (REGISTER_ENTRY,),
-        ("MEMBERSHIP_BELOW_MINIMUM",),
-        "prima_facie", "S222"),
+        (REGISTER_ENTRY, "BUSINESS_ACTIVITY_PROOF", "MEMBER_SPECIFIC_KNOWLEDGE_EVIDENCE"),
+        ("MEMBERSHIP_BELOW_MINIMUM", "BUSINESS_OVER_SIX_MONTHS", "MEMBER_REMAINED_AND_KNEW"),
+        "documentary", "S222"),
 
     "TR-001": EvidenceMapping("TR-001",
         (FORM_XVII, "STAMP_DUTY_CERTIFICATE"),

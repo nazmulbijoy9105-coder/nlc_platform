@@ -23,6 +23,7 @@ def test_sample_a_seven_member_private_company_without_verified_articles_is_unkn
     profile = CompanyProfile(
         company_id="sample-a-7-members",
         company_name="Sample A Ltd",
+        verified_fact_keys=frozenset({"agm_held_this_cycle", "members_present_at_agm"}),
         company_type="PRIVATE_LIMITED",
         member_count=7,
         agm_held_this_cycle=True,
@@ -164,6 +165,7 @@ def test_sample_e_verified_rjsc_filing_after_21_days_retains_late_default():
     profile = CompanyProfile(
         company_id="sample-e-late-filed-return",
         company_name="Sample E Late Filed Ltd",
+        verified_fact_keys=frozenset({"last_agm_date", "annual_return_filed"}),
         last_agm_date=date(2026, 6, 1),
         annual_return_filed=True,
         annual_return_filed_date=date(2026, 7, 1),
@@ -188,6 +190,7 @@ def test_sample_e_verified_rjsc_non_filing_after_21_days_is_a_candidate_default(
     profile = CompanyProfile(
         company_id="sample-e-verified-return",
         company_name="Sample E Verified Ltd",
+        verified_fact_keys=frozenset({"last_agm_date", "annual_return_filed"}),
         last_agm_date=date(2026, 6, 30),
         annual_return_filed=False,
         annual_return_filing_status_verified=True,
@@ -210,6 +213,7 @@ def test_sample_f_verified_first_auditor_appointment_after_one_calendar_month():
     profile = CompanyProfile(
         company_id="sample-f-first-auditor",
         company_name="Sample F Ltd",
+        verified_fact_keys=frozenset({"incorporation_date", "first_auditor_appointed"}),
         incorporation_date=date(2026, 1, 31),
         first_auditor_appointed=True,
         first_auditor_appointment_date=date(2026, 3, 2),
