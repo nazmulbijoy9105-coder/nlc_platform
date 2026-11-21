@@ -69,11 +69,13 @@ jobs:
             --data "$payload" "$API/branches")
           branch_id=$(jq -r '.branch.id // empty' <<<"$created")
           endpoint_id=$(jq -r '[.endpoints[]? | select(.type == "read_write") | .id][0] // empty' <<<"$created")
+          if [[ -n "$branch_id" ]]; then
+            echo "branch_id=$branch_id" >> "$GITHUB_OUTPUT"
+          fi
           if [[ -z "$branch_id" || -z "$endpoint_id" ]]; then
-            echo "::error::Neon did not return both the new branch ID and its read-write endpoint ID."
+            echo "::error::Neon did not return both the new branch ID and its read-write endpoint ID; cleanup will still target the created branch."
             exit 1
           fi
-          echo "branch_id=$branch_id" >> "$GITHUB_OUTPUT"
           echo "endpoint_id=$endpoint_id" >> "$GITHUB_OUTPUT"
 
           branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$branch_id")
