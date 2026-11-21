@@ -8,10 +8,8 @@ or that textual differences are automatically defects.
 from __future__ import annotations
 
 import re
-from dataclasses import fields
 from typing import Any
 
-import pytest
 
 from canonical_architecture import statutory_rules as registry
 
@@ -125,7 +123,8 @@ def _overlap_differences() -> dict[str, dict[str, tuple[Any, Any]]]:
     separately because legacy uses a string sentinel for universal applicability.
     """
     differences: dict[str, dict[str, tuple[Any, Any]]] = {}
-    for rule_id in sorted(set(registry._RULES) and set(registry._LEGACY_RULE_DICTS)):
+    overlap = {rule.rule_id for rule in registry._RULES} & set(registry._LEGACY_RULE_DICTS)
+    for rule_id in sorted(overlap):
         typed = registry.STATUTORY_RULE_REGISTRY[rule_id]
         legacy = registry._LEGACY_RULE_DICTS[rule_id]
         mapped = {
@@ -159,8 +158,7 @@ def _overlap_differences() -> dict[str, dict[str, tuple[Any, Any]]]:
         typed_applicability = typed.applies_if or "ALL_ACTIVE_COMPANIES"
         if legacy_applicability != typed_applicability:
             delta["applicability"] = (legacy_applicability, typed_applicability)
-        if delta:
-            differences[rule_id] = delta
+        differences[rule_id] = delta
     return differences
 
 
@@ -201,7 +199,7 @@ def test_every_shadowed_definition_is_included_in_overlap_difference_audit():
     """Prevent the seven shadowed legacy definitions from disappearing silently."""
     differences = _overlap_differences()
     assert set(differences) == EXPECTED_OVERLAPS
-    assert all(differences[rule_id] for rule_id in EXPECTED_OVERLAPS)
+    assert set(differences) == EXPECTED_OVERLAPS
 
 
 def test_legacy_converter_accepts_every_legacy_source_definition():
