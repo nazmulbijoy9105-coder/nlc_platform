@@ -10,8 +10,10 @@ from pydantic import ValidationError
 from app.api.legal_provenance import (
     MappingBulkCreate,
     MappingCreate,
+    ProductVersionAcceptanceRequest,
     SourceCreate,
     _source_state,
+    _product_owner_acceptance_is_active,
 )
 from app.services.legal_deadline_engine import (
     DeadlineRule,
@@ -76,6 +78,91 @@ def test_unknown_rule_id_is_not_silently_reported_as_reconciled():
 
 # Product-owner infrastructure tests. These keep operational approval separate
 # from statutory verification and make provisional arithmetic explicit.
+
+def test_product_owner_acceptance_requires_complete_immutable_source_snapshot():
+    from datetime import datetime, timezone
+
+    event = SimpleNamespace(
+        event_type="PRODUCT_OWNER_APPROVED",
+        decision="APPROVED",
+        created_at=datetime(2026, 11, 22, tzinfo=timezone.utc),
+        event_metadata={
+            "reviewer_id": "signed-user-id",
+            "reviewer_name": "Product Owner Reviewer",
+            "accepted_rule_id": "AGM-001",
+            "source_version": "companies-act-1994-v1",
+            "source_artifact_sha256": "a" * 64,
+            "provision_citation": "Companies Act 1994, section 81",
+            "effective_from": "1994-09-12",
+            "effective_to": None,
+            "mapping_rationale": "Maps the AGM obligation to the cited provision.",
+            "acceptance_rationale": "Accepted for screened private-beta product operation.",
+        },
+    )
+    assert _product_owner_acceptance_is_active(event, "AGM-001") is True
+    assert _product_owner_acceptance_is_active(event, "AGM-002") is False
+
+    incomplete = SimpleNamespace(
+        **{
+            **event.__dict__,
+            "event_metadata": {
+                **event.event_metadata,
+                "source_artifact_sha256": None,
+            },
+        }
+    )
+    assert _product_owner_acceptance_is_active(incomplete, "AGM-001") is False
+
+    wrong_event = SimpleNamespace(
+        **{**event.__dict__, "event_type": "SOURCE_REGISTERED"}
+    )
+    assert _product_owner_acceptance_is_active(wrong_event, "AGM-001") is False
+
+
+def test_product_version_acceptance_requires_version_and_reason():
+    request = ProductVersionAcceptanceRequest(
+        version_label="nlc-private-beta-2026.11.22",
+        reason="Accept the reconciled screened-beta product release manifest.",
+    )
+    assert request.version_label == "nlc-private-beta-2026.11.22"
+    with pytest.raises(ValidationError):
+        ProductVersionAcceptanceRequest(
+            version_label="v1",
+            reason="short",
+        )
+
+
+def test_product_version_acceptance_endpoint_is_super_admin_only():
+    from app.api.legal_provenance import router
+    from app.core.dependencies import get_current_user
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/product-versions/accept"
+    )
+    dependencies = route.dependant.dependencies
+    assert get_current_user in {dependency.call for dependency in dependencies}
+    assert any(
+        getattr(dependency.call, "__name__", "") == "role_checker"
+        or "require_roles" in getattr(dependency.call, "__qualname__", "")
+        for dependency in dependencies
+    )
+
+
+def test_product_release_status_endpoint_is_super_admin_only():
+    from app.api.legal_provenance import router
+
+    route = next(
+        route for route in router.routes
+        if getattr(route, "path", None) == "/legal-provenance/product-release-status"
+    )
+    dependencies = route.dependant.dependencies
+    assert any(
+        getattr(dependency.call, "__name__", "") == "role_checker"
+        or "require_roles" in getattr(dependency.call, "__qualname__", "")
+        for dependency in dependencies
+    )
+
 
 def test_source_reference_state_does_not_claim_artifact_capture():
     reference_only = SimpleNamespace(artifact_sha256=None, artifact_uri=None)

@@ -240,6 +240,10 @@ class CompanyResponse(BaseModel):
     compliance_score: int | None
     band: str | None
     evaluation_status: str = "NOT_EVALUATED"
+    score_label: str = "Screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Screening output only — not legal advice, a legal opinion or a compliance certificate."
     last_evaluated_at: str | None
     director_count: int = 0
     violation_count: int = 0
@@ -289,7 +293,11 @@ class ComplianceSummaryResponse(BaseModel):
     engine_version: str | None = None
     ilrmf_version: str | None = None
     scoring_spec_version: str | None = None
-    disclaimer: str = "Product risk indicator only — not legal advice and not a certification."
+    score_label: str = "Screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    release_scope: str = "SCREENED_PRIVATE_BETA"
+    disclaimer: str = "Screening output only — not legal advice, a legal opinion or a compliance certificate."
 
 
 class FlagResponse(BaseModel):
@@ -304,6 +312,9 @@ class FlagResponse(BaseModel):
     triggered_at: str
     resolved_at: str | None
     resolution_note: str | None
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Finding is a screening prompt only — not legal advice or a legal conclusion."
 
 
 class ScoreHistoryEntry(BaseModel):
@@ -316,6 +327,10 @@ class ScoreHistoryEntry(BaseModel):
     yellow_flags: int
     snapshot_date: str
     evaluation_status: str = "NOT_EVALUATED"
+    score_label: str = "Historical screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Historical screening output only — not legal advice or a compliance certificate."
 
 
 class MessageResponse(BaseModel):
@@ -1076,6 +1091,11 @@ async def list_company_evaluation_runs(
         items.append({
             "evaluation_run_id": str(run.id),
             "calculated_at": run.calculated_at.isoformat(),
+            "score_label": "Screening score",
+            "screening_only": True,
+            "legal_advice": False,
+            "release_scope": "SCREENED_PRIVATE_BETA",
+            "disclaimer": "Screening output only — not legal advice, a legal opinion or a compliance certificate.",
             "evaluation_status": stored_status,
             "score_available": score_available,
             "score": run.score if score_available else None,

@@ -131,6 +131,11 @@ class ProductOwnerDecision(BaseModel):
     deadline_definition_id: UUID | None = None
 
 
+class ProductVersionAcceptanceRequest(BaseModel):
+    version_label: str = Field(min_length=3, max_length=80)
+    reason: str = Field(min_length=10, max_length=2000)
+
+
 class DeadlinePreviewRequest(BaseModel):
     fact_id: UUID
 
@@ -201,6 +206,35 @@ def _source_state(source: LegalSource) -> str:
     # Recording a caller-supplied URI/hash is not proof that the artifact bytes
     # were fetched, checked or placed in immutable storage.
     return "ARTIFACT_REFERENCE_RECORDED" if source.artifact_sha256 else "REFERENCE_ONLY"
+
+
+def _product_owner_acceptance_is_active(
+    event: LegalRuleReleaseEvent | None,
+    rule_id: str,
+) -> bool:
+    """Validate an immutable product-owner acceptance snapshot, not legal verification."""
+    if (
+        event is None
+        or event.event_type != "PRODUCT_OWNER_APPROVED"
+        or event.decision != "APPROVED"
+        or event.created_at is None
+    ):
+        return False
+    metadata = event.event_metadata if isinstance(event.event_metadata, dict) else {}
+    digest = metadata.get("source_artifact_sha256")
+    return bool(
+        metadata.get("reviewer_id")
+        and metadata.get("reviewer_name")
+        and metadata.get("accepted_rule_id") == rule_id
+        and metadata.get("source_version")
+        and isinstance(digest, str)
+        and len(digest) == 64
+        and all(character in "0123456789abcdef" for character in digest)
+        and metadata.get("provision_citation")
+        and metadata.get("effective_from")
+        and metadata.get("mapping_rationale")
+        and metadata.get("acceptance_rationale")
+    )
 
 
 # Curated official-register references. These are references only: no file bytes,
@@ -759,6 +793,33 @@ async def record_product_owner_decision(
     ).scalar_one_or_none()
     if source is None:
         raise HTTPException(404, "Source reference not found")
+
+    # A product-owner acceptance is the private-beta operational release
+    # decision. It must snapshot the exact source identity and legal period.
+    # It is deliberately NOT written to legal_rules.verification_status and
+    # does not assert that source bytes were independently verified.
+    if body.decision == "APPROVED" and body.release_scope == "SCORING":
+        if not source.artifact_sha256 or not source.artifact_uri:
+            raise HTTPException(
+                422,
+                "Scoring acceptance requires a recorded source artifact SHA-256 and artifact URI.",
+            )
+        if source.effective_from is None:
+            raise HTTPException(
+                422,
+                "Scoring acceptance requires an explicit source effective_from date.",
+            )
+        if source.effective_to and source.effective_to < source.effective_from:
+            raise HTTPException(
+                422,
+                "Scoring acceptance source effective_to cannot precede effective_from.",
+            )
+        if not mapping.provision_citation.strip() or not mapping.rationale.strip():
+            raise HTTPException(
+                422,
+                "Scoring acceptance requires an exact provision citation and mapping rationale.",
+            )
+
     event = await _append_event(
         db,
         event_type=(
@@ -777,6 +838,26 @@ async def record_product_owner_decision(
             "source_state": _source_state(source),
             "legal_verification_status_unchanged": True,
             "decision_basis": "AUTHENTICATED_SUPER_ADMIN_PRODUCT_OWNER",
+            "product_release_state": (
+                "ACTIVE" if body.decision == "APPROVED" else "REVOKED"
+            ),
+            "reviewer_id": str(current_user.id),
+            "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
+            "reviewer_role": str(getattr(current_user, "role", "SUPER_ADMIN")),
+            "accepted_rule_id": body.rule_id,
+            "source_version": source.version_label,
+            "source_artifact_sha256": source.artifact_sha256,
+            "source_artifact_uri": source.artifact_uri,
+            "source_artifact_bytes_independently_checked": False,
+            "provision_citation": mapping.provision_citation,
+            "mapping_rationale": mapping.rationale,
+            "effective_from": (
+                source.effective_from.isoformat() if source.effective_from else None
+            ),
+            "effective_to": (
+                source.effective_to.isoformat() if source.effective_to else None
+            ),
+            "acceptance_rationale": body.reason,
         },
     )
     return {
@@ -785,7 +866,287 @@ async def record_product_owner_decision(
         "rule_id": body.rule_id,
         "release_scope": body.release_scope,
         "decision": body.decision,
+        "product_release_status": (
+            "ACTIVE" if body.decision == "APPROVED" else "REVOKED"
+        ),
+        "product_owner_accepted_at": event.created_at.isoformat(),
+        "reviewer_id": str(current_user.id),
+        "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
+        "source_version": source.version_label,
+        "source_artifact_sha256": source.artifact_sha256,
+        "source_artifact_bytes_independently_checked": False,
+        "provision_citation": mapping.provision_citation,
+        "effective_from": source.effective_from.isoformat() if source.effective_from else None,
+        "effective_to": source.effective_to.isoformat() if source.effective_to else None,
+        "acceptance_rationale": body.reason,
         "legal_verification_status": "UNCHANGED",
+    }
+
+
+@router.get(
+    "/product-release-status",
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
+)
+async def get_product_release_status(
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return canonical 85-rule parity and the latest owner acceptance snapshot.
+
+    ACTIVE means accepted for the product's screened private-beta workflow only.
+    It never means independently verified statutory law.
+    """
+    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS
+
+    expected_ids = set(PRODUCT_SCORING_RULE_IDS)
+    rule_rows = (
+        await db.execute(select(LegalRule.rule_id, LegalRule.is_active))
+    ).all()
+    database_ids = {row.rule_id for row in rule_rows}
+    active_ids = {row.rule_id for row in rule_rows if row.is_active}
+    events = (
+        await db.execute(
+            select(LegalRuleReleaseEvent)
+            .where(
+                LegalRuleReleaseEvent.release_scope == "SCORING",
+                LegalRuleReleaseEvent.rule_id.in_(sorted(expected_ids)),
+                LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
+                LegalRuleReleaseEvent.event_type.in_([
+                    "PRODUCT_OWNER_APPROVED",
+                    "PRODUCT_OWNER_REVOKED",
+                ]),
+            )
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+        )
+    ).scalars().all()
+
+    latest_by_rule: dict[str, LegalRuleReleaseEvent] = {}
+    for release_event in events:
+        if release_event.rule_id and release_event.rule_id not in latest_by_rule:
+            latest_by_rule[release_event.rule_id] = release_event
+
+    rule_statuses = []
+    for rule_id in sorted(expected_ids):
+        rule_event = latest_by_rule.get(rule_id)
+        metadata = (
+            rule_event.event_metadata
+            if rule_event and isinstance(rule_event.event_metadata, dict)
+            else {}
+        )
+        accepted = _product_owner_acceptance_is_active(rule_event, rule_id)
+        rule_statuses.append({
+            "rule_id": rule_id,
+            "product_release_status": "ACTIVE" if accepted else (
+                "REVOKED"
+                if rule_event and rule_event.decision == "REVOKED"
+                else "PENDING_ACCEPTANCE"
+            ),
+            # API compatibility for the operational private-beta workflow:
+            # ACTIVE is product-owner acceptance, never independent legal verification.
+            "verification_status": "ACTIVE" if accepted else "PENDING",
+            "verification_basis": "PRODUCT_OWNER_ACCEPTANCE_SCREENING_ONLY",
+            "verified_at": (
+                rule_event.created_at.isoformat()
+                if accepted and rule_event and rule_event.created_at else None
+            ),
+            "reviewer_id": metadata.get("reviewer_id") if accepted else None,
+            "reviewer_name": metadata.get("reviewer_name") if accepted else None,
+            "source_version": metadata.get("source_version") if accepted else None,
+            "source_artifact_sha256": metadata.get("source_artifact_sha256") if accepted else None,
+            "source_artifact_bytes_independently_checked": (
+                metadata.get("source_artifact_bytes_independently_checked", False)
+                if accepted else None
+            ),
+            "provision_citation": metadata.get("provision_citation") if accepted else None,
+            "effective_from": metadata.get("effective_from") if accepted else None,
+            "effective_to": metadata.get("effective_to") if accepted else None,
+            "acceptance_rationale": metadata.get("acceptance_rationale") if accepted else None,
+            "product_owner_accepted_at": (
+                rule_event.created_at.isoformat()
+                if accepted and rule_event and rule_event.created_at else None
+            ),
+            "independent_legal_verification_status": "PENDING",
+            "independent_legal_verified_at": None,
+        })
+
+    missing_ids = sorted(expected_ids - database_ids)
+    unexpected_ids = sorted(database_ids - expected_ids)
+    inactive_ids = sorted(database_ids - active_ids)
+    accepted_ids = sorted(
+        str(item["rule_id"]) for item in rule_statuses
+        if item["product_release_status"] == "ACTIVE"
+    )
+    latest_version_event = (
+        await db.execute(
+            select(LegalRuleReleaseEvent)
+            .where(
+                LegalRuleReleaseEvent.event_type == "PRODUCT_VERSION_ACCEPTED",
+                LegalRuleReleaseEvent.release_scope == "SCORING",
+                LegalRuleReleaseEvent.decision == "APPROVED",
+            )
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    latest_version_metadata = (
+        latest_version_event.event_metadata
+        if latest_version_event and isinstance(latest_version_event.event_metadata, dict)
+        else {}
+    )
+    accepted_version = None
+    if latest_version_event:
+        accepted_version = {
+            "version_label": latest_version_metadata.get("version_label"),
+            "manifest_sha256": latest_version_metadata.get("manifest_sha256"),
+            "rule_count": latest_version_metadata.get("rule_count"),
+            "rule_ids": latest_version_metadata.get("rule_ids"),
+            "reviewer_id": str(latest_version_event.actor_id),
+            "reviewer_name": latest_version_metadata.get("reviewer_name"),
+            "accepted_at": latest_version_event.created_at.isoformat(),
+            "rationale": latest_version_event.reason,
+        }
+
+    return {
+        "release_scope": "SCREENED_PRIVATE_BETA",
+        "screening_only": True,
+        "legal_advice": False,
+        "expected_rule_count": len(expected_ids),
+        "database_rule_count": len(database_ids),
+        "active_database_rule_count": len(active_ids),
+        "database_rule_id_parity": not missing_ids and not unexpected_ids,
+        "database_active_rule_parity": expected_ids.issubset(active_ids),
+        "missing_database_rule_ids": missing_ids,
+        "unexpected_database_rule_ids": unexpected_ids,
+        "active_database_rule_ids": sorted(active_ids),
+        "inactive_database_rule_ids": inactive_ids,
+        "accepted_rule_count": len(accepted_ids),
+        "accepted_rule_ids": accepted_ids,
+        "all_product_rules_accepted": len(accepted_ids) == len(expected_ids),
+        "accepted_product_version": accepted_version,
+        "rules": rule_statuses,
+        "independent_counsel_verification_is_separate": True,
+    }
+
+
+@router.post(
+    "/product-versions/accept",
+    status_code=201,
+    dependencies=[Depends(require_roles("SUPER_ADMIN"))],
+)
+async def accept_product_release_version(
+    body: ProductVersionAcceptanceRequest,
+    db: AsyncSession = Depends(get_db_for_user),
+    current_user=Depends(get_current_user),
+):
+    """Append a formal owner acceptance for one fully reconciled 85-rule beta version."""
+    status = await get_product_release_status(db)
+    if not (
+        status["database_rule_id_parity"]
+        and status["database_active_rule_parity"]
+        and status["all_product_rules_accepted"]
+        and status["expected_rule_count"] == 85
+    ):
+        raise HTTPException(
+            409,
+            {
+                "message": "Product version cannot be accepted until all 85 canonical rules are present, active and individually owner-accepted.",
+                "expected_rule_count": status["expected_rule_count"],
+                "database_rule_count": status["database_rule_count"],
+                "missing_database_rule_ids": status["missing_database_rule_ids"],
+                "unexpected_database_rule_ids": status["unexpected_database_rule_ids"],
+                "inactive_database_rule_ids": status["inactive_database_rule_ids"],
+                "accepted_rule_count": status["accepted_rule_count"],
+            },
+        )
+
+    manifest = [
+        {
+            "rule_id": item["rule_id"],
+            "reviewer_id": item["reviewer_id"],
+            "reviewer_name": item["reviewer_name"],
+            "source_version": item["source_version"],
+            "source_artifact_sha256": item["source_artifact_sha256"],
+            "provision_citation": item["provision_citation"],
+            "effective_from": item["effective_from"],
+            "effective_to": item["effective_to"],
+            "acceptance_rationale": item["acceptance_rationale"],
+            "product_owner_accepted_at": item["product_owner_accepted_at"],
+        }
+        for item in status["rules"]
+    ]
+    manifest_sha256 = hashlib.sha256(
+        json.dumps(
+            manifest,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    prior_events = (
+        await db.execute(
+            select(LegalRuleReleaseEvent)
+            .where(
+                LegalRuleReleaseEvent.event_type == "PRODUCT_VERSION_ACCEPTED",
+                LegalRuleReleaseEvent.release_scope == "SCORING",
+                LegalRuleReleaseEvent.decision == "APPROVED",
+            )
+            .order_by(LegalRuleReleaseEvent.sequence_no.desc())
+        )
+    ).scalars().all()
+    for prior in prior_events:
+        prior_metadata = prior.event_metadata if isinstance(prior.event_metadata, dict) else {}
+        if prior_metadata.get("version_label") == body.version_label:
+            if prior_metadata.get("manifest_sha256") == manifest_sha256:
+                return {
+                    "state": "ALREADY_ACCEPTED",
+                    "version_label": body.version_label,
+                    "manifest_sha256": manifest_sha256,
+                    "event_id": str(prior.id),
+                    "reviewer_id": str(prior.actor_id),
+                    "accepted_at": prior.created_at.isoformat(),
+                }
+            raise HTTPException(
+                409,
+                "This product version label was already accepted with a different manifest.",
+            )
+
+    event = await _append_event(
+        db,
+        event_type="PRODUCT_VERSION_ACCEPTED",
+        actor_id=current_user.id,
+        reason=body.reason,
+        release_scope="SCORING",
+        decision="APPROVED",
+        metadata={
+            "version_label": body.version_label,
+            "manifest_sha256": manifest_sha256,
+            "rule_count": len(manifest),
+            "rule_ids": [item["rule_id"] for item in manifest],
+            "rule_manifest": manifest,
+            "reviewer_id": str(current_user.id),
+            "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
+            "reviewer_role": str(getattr(current_user, "role", "SUPER_ADMIN")),
+            "release_scope": "SCREENED_PRIVATE_BETA",
+            "screening_only": True,
+            "legal_advice": False,
+            "independent_legal_verification_unchanged": True,
+        },
+    )
+    return {
+        "state": "ACCEPTED",
+        "version_label": body.version_label,
+        "manifest_sha256": manifest_sha256,
+        "rule_count": len(manifest),
+        "rule_ids": [item["rule_id"] for item in manifest],
+        "event_id": str(event.id),
+        "event_hash": event.event_hash,
+        "reviewer_id": str(current_user.id),
+        "reviewer_name": str(getattr(current_user, "full_name", "") or "SUPER_ADMIN"),
+        "accepted_at": event.created_at.isoformat(),
+        "release_scope": "SCREENED_PRIVATE_BETA",
+        "screening_only": True,
+        "legal_advice": False,
+        "independent_legal_verification_unchanged": True,
     }
 
 
