@@ -112,3 +112,69 @@ Post-migration policy inventory now shows `company_user_access_admin_write` and 
 4. PR #382 is merged and the exact main SHA has passed CI; migration 0112→0122 is complete, Render is live, and liveness/readiness are green. Continue the full signed-user tenant-isolation matrix; the current RLS evidence is still a spot check.
 5. Obtain an authenticated production response from `GET /api/v1/companies/{company_id}/rule-coverage`, then run a fresh authorized evaluation only after reviewing its applicability and evidence inputs; reconcile the 15 November evaluation with score history.
 6. Complete the remaining 85-rule proposition-by-proposition source and applicability review before making any claim of statutory legal verification.
+
+
+## 21 November 2026 — production re-audit addendum
+
+This addendum supersedes earlier point-in-time counts where they differ. All production queries below were read-only.
+
+### Legal catalogue and canonical identity
+
+- `legal_rules`: 86 rows; 84 active; 2 inactive; 86 PENDING; 0 VERIFIED; 0 catalogue rows with non-zero `score_impact`.
+- Inactive rows: `INC-001` (quarantined canonical identity) and `INC-002` (extra inactive historical/duplicate identity). Do not delete or reactivate either row to force count parity.
+- The canonical application registry remains 85 IDs. A direct set comparison between all 85 runtime registry IDs and production `legal_rules.rule_id` values found **no missing canonical IDs**; the only extra database ID is inactive `INC-002`. The six-state report should distinguish 85 registered, 85 implemented and 84 active.
+- The 15 November evaluation snapshot contains 86 unique outcome IDs: all 85 canonical IDs plus the extra `INC-002`; missing canonical outcomes = 0; unmapped historical outcome IDs = [`INC-002`]. Preserve this historical outcome for audit, but exclude it from the current canonical registry and active funnel.
+- `legal_rule_aliases`: 85 rows; 0 RESOLVED; 85 UNRESOLVED. All 85 have a mapping-basis note, but 0 have an evidence reference. Do not resolve aliases from name similarity or mapping notes alone.
+- `compliance_finding_bindings`, `compliance_finding_evidence` and `legal_rule_finding_contexts`: 0 rows. Historical findings therefore remain unbound to authenticated rule revisions and evidence manifests.
+
+### Historical evaluation and score history
+
+The selected production evaluation is run `3150a0df-de28-4dd3-ab97-6bb16e1d7683`, calculated 15 November 2026 at 05:43:57 UTC:
+
+- Stored status `COMPLETED`; product score 85; risk band RED; engine 2.2; catalogue count 86; outcome count 86.
+- Outcomes: 77 `NOT_EVALUATED`, 4 `UNKNOWN`, 2 `NON_COMPLIANT`, 3 `REQUIRES_LAWYER_JUDGMENT`.
+- None of the 86 legacy outcome objects contains an `applicability_state` key. The absence must be represented as `UNKNOWN`; it must never be inferred from the outcome state.
+- The company has three monthly score-history rows; the newest is 9 November 2026, `NOT_RELEASED`, with a null score. The 15 November per-run evaluation is not a monthly snapshot.
+
+The monthly score-history table is append-only and unique by company/month. Do not overwrite the 9 November `NOT_RELEASED` row with the later evaluation. PR #391 introduces a separate tenant-scoped per-run history endpoint and explicitly defaults legacy missing applicability to `UNKNOWN`; the frontend follow-up displays monthly snapshots and per-run evaluations separately.
+
+### Production RLS negative checks
+
+Using the production runtime role `nlc_app_role`:
+
+- `rolsuper=false`, `rolbypassrls=false`, `rolcreatedb=false`, `rolcreaterole=false`, `rolreplication=false`.
+- RLS is enabled and forced on `companies`, `company_user_access`, `compliance_flags`, `compliance_evaluation_runs`, `compliance_score_history` and `user_activity_logs`.
+- With no signed context, the runtime role sees zero companies and `nlc_current_user_principal()` returns NULL.
+- A fabricated UUID plus invalid signature returns NULL principal and zero visible companies.
+- The literal `ADMIN` sentinel plus invalid signature also returns NULL principal and zero visible companies.
+- The runtime role is denied access to `alembic_version`, consistent with keeping migration metadata outside ordinary application privileges.
+- Render application logs across multiple instances on 18–20 November repeatedly record `db_connectivity_ok runtime_role_verified=True`; the running service passed the same startup role-verification guard.
+
+These are production negative/least-privilege checks. They do not replace a positive signed-user production matrix; the manual GET-only workflow in PR #392 requires dedicated client, legal-staff and super-admin test tokens.
+
+### Candidate-anchor audit disposition
+
+The earlier citation-audit output reported unmapped candidate anchors across 54 rule IDs. The updated audit harness now separates:
+- candidate-anchor consistency checks;
+- explicitly documented review-only propositions (including REG-001, REG-003, DEF-002, BNK-001..003, AGM-007, DIR-005/006 and ESC-003);
+- instruments requiring a separate statute-specific audit.
+
+This is a technical traceability correction, not source authentication. A candidate string in engine code is not proof that the provision is current, operative or applicable. The independent counsel register remains 85 `REVIEW_REQUIRED`, `VERIFIED_RULE_IDS` remains empty, and no rule is promoted by this audit.
+
+REG-003 is expressly unresolved: Companies Act section 34(2) is not accepted as a registered-office-location authority. The engine/seed candidate basis is now recorded as an unresolved location proposition; no breach may be inferred pending primary-source and counsel review.
+
+### Deployment alignment and release hold
+
+At this audit point, Render's live backend commit remains `d86784cd3ee0eaa3de32885dba16bf9314c631da`, while GitHub `main` is `c45d368b6c3287f38b71ddf5aceb0ab45ce6fa65`. Render auto-deploy is disabled. Render service metadata reports an empty `healthCheckPath`, while repository `render.yaml` declares `/api/v1/health/live`; reconcile this dashboard/blueprint discrepancy before final release. Do not trigger production deployment until the approved main commit has passed all required CI, the live signed-user smoke workflow has passed, and the frontend preview/deployment is verified against the matching backend API.
+
+
+### Candidate-anchor CI result — 21 November 2026
+
+CI run [#44848489920](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/44848489920) executed the revised audit harness and reported:
+
+- 0 FAIL
+- 0 UNMAPPED candidate anchors
+- 91 candidate-anchor matches
+- 28 explicit review-only / separate-instrument dispositions
+
+The 54 previously reported unmapped rule IDs are now accounted for by candidate-anchor matches, explicit review-only holds or separate statute-specific audit scope. This closes the **technical unmapped-anchor warnings**. It does not close substantive source review: every counsel approval entry remains `REVIEW_REQUIRED`, source artifacts and effective-date intervals remain to be authenticated, and `VERIFIED_RULE_IDS` remains empty.

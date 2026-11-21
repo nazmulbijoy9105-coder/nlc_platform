@@ -1306,6 +1306,7 @@ def test_rule_evaluator_scores_confirmed_candidate_without_claiming_counsel_appr
         first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-INT-001",
         first_auditor_appointment_verified_at=date(2026, 11, 1),
         first_auditor_appointment_verified_by="integration-reviewer",
+        verified_fact_keys=frozenset({"incorporation_date", "first_auditor_appointed"}),
     )
     output = engine_module.NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
     finding = next(flag for flag in output.flags if flag.rule_id == "AUD-001")

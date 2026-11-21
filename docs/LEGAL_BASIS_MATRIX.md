@@ -78,9 +78,9 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | LBR-003 | Labour Court Order Pending | Labour Act 2006 (Bangladesh), Section 209 | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | MEM-001 | Company Operating with Fewer than Minimum Members | Section 222, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | OFF-001 | Change of Registered Office Not Filed Within 28 Days | Section 77, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| REG-001 | Statutory Registers Incomplete | Section 34, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-001 | Statutory Registers Incomplete | Companies Act 1994 (Bangladesh) and applicable Articles; register-specific provision must be identified | NOT_EVALUATED | 0 | no | REVIEW ONLY — no universal register provision assumed |
 | REG-002 | Core Statutory Registers Missing | Sections 34, 89, 115, 174, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| REG-003 | Registers Not Kept at Registered Office | Section 34(2), Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| REG-003 | Registered-Office Location Proposition | Unresolved location proposition; Section 34(2) is a penalty provision, not a location authority | NOT_EVALUATED | 0 | no | REVIEW ONLY — no breach inferred pending primary-source/counsel review |
 | SH-001 | Share Allotment Not Filed — Form XV | Section 151, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | SH-002 | Share Certificates Not Issued Within 90 Days | Section 158, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | SH-003 | Capital Increase Not Filed — Form IV | Section 56, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |

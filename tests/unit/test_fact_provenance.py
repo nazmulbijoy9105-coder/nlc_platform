@@ -115,3 +115,65 @@ def test_verification_metadata_cannot_be_attached_to_unverified_document():
             verified_by="reviewer-1",
             verified_at=datetime(2026, 11, 12, 9, tzinfo=timezone.utc),
         )
+
+
+
+def test_current_status_fact_freshness_is_rule_key_specific():
+    from datetime import date, timedelta
+
+    from app.compliance.fact_provenance import fact_freshness_status
+
+    today = date(2026, 11, 21)
+    assert fact_freshness_status("member_count", today - timedelta(days=30), today) == "FRESH"
+    assert fact_freshness_status("member_count", today - timedelta(days=31), today) == "STALE"
+    assert fact_freshness_status("register_of_members_maintained", today - timedelta(days=90), today) == "FRESH"
+    assert fact_freshness_status("register_of_members_maintained", today - timedelta(days=91), today) == "STALE"
+    assert fact_freshness_status("last_agm_date", today - timedelta(days=900), today) == "STALE"
+    assert fact_freshness_status("incorporation_date", today - timedelta(days=900), today) == "NOT_TIME_LIMITED"
+    assert fact_freshness_status("member_count", today + timedelta(days=1), today) == "FUTURE_DATED"
+    assert fact_freshness_status("unclassified_fact_key", today - timedelta(days=365), today) == "FRESH"
+    assert fact_freshness_status("unclassified_fact_key", today - timedelta(days=366), today) == "STALE"
+
+
+def test_only_fresh_verified_document_facts_authorize_scoring():
+    from datetime import date, datetime, timedelta, timezone
+
+    from app.compliance.fact_provenance import (
+        CompanyFact,
+        FactTrustLevel,
+        FactVerificationStatus,
+        verified_document_fact_keys,
+    )
+
+    today = date(2026, 11, 21)
+
+    def verified_fact(key: str, observed_on: date) -> CompanyFact:
+        return CompanyFact(
+            fact_key=key,
+            value=5,
+            trust_level=FactTrustLevel.AUTHORIZED_DOCUMENT_BACKED,
+            asserted_by="user-1",
+            observed_on=observed_on,
+            source_reference="document:123",
+            document_id="doc-123",
+            authorized_uploader_id="user-1",
+            uploaded_at=datetime(2026, 11, 20, tzinfo=timezone.utc),
+            verification_status=FactVerificationStatus.VERIFIED,
+            verified_by="reviewer-1",
+            verified_at=datetime(2026, 11, 21, tzinfo=timezone.utc),
+        )
+
+    facts = [
+        verified_fact("member_count", today - timedelta(days=31)),
+        verified_fact("last_agm_date", today - timedelta(days=900)),
+        verified_fact("incorporation_date", today - timedelta(days=900)),
+    ]
+    assert verified_document_fact_keys(facts, as_of=today) == frozenset({"incorporation_date"})
+
+
+def test_business_date_today_uses_a_date_value():
+    from datetime import date
+
+    from app.compliance.fact_provenance import business_date_today
+
+    assert isinstance(business_date_today(), date)

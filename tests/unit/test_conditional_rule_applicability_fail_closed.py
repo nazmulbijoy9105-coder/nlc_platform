@@ -9,6 +9,7 @@ def _evaluate(**overrides):
     profile = CompanyProfile(
         company_id="conditional-applicability-test",
         company_name="Conditional Applicability Test Ltd",
+        verified_fact_keys=frozenset({"company_type"}),
         incorporation_date=date(2020, 1, 1),
         **overrides,
     )

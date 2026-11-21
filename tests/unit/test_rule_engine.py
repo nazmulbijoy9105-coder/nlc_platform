@@ -440,9 +440,37 @@ class TestAnnualReturnRules:
         profile = build_profile(
             annual_return_filed=True,
             annual_return_content_complete=False,
+            verified_fact_keys=frozenset({"annual_return_filed", "annual_return_content_complete"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "AR-004")
+
+    def test_AR004_requires_filing_and_content_facts_from_same_source(self, rule_engine, build_profile):
+        profile = build_profile(
+            annual_return_filed=True,
+            annual_return_content_complete=False,
+            verified_fact_keys=frozenset({"annual_return_filed", "annual_return_content_complete"}),
+            verified_fact_context={
+                "annual_return_filed": {"document_id": "receipt-1", "source_reference": "RJSC-FILING-2026"},
+                "annual_return_content_complete": {"document_id": "return-contents-2", "source_reference": "OTHER-FILING-2025"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "AR-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+
+    def test_AR004_unverified_content_flag_is_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            annual_return_filed=True,
+            annual_return_content_complete=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "AR-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
     def test_AR004_no_trigger_when_complete(self, rule_engine, build_profile):
         profile = build_profile(
@@ -742,31 +770,43 @@ class TestTransferRules:
 
 class TestRegisterRules:
 
-    def test_REG001_triggers_registers_incomplete(self, rule_engine, build_profile):
-        """Non-core register missing while core registers present → REG-001."""
+    def test_REG001_is_review_only_for_verified_non_core_register_absence(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges", "minutes_agm"],
+            register_of_directors_maintained=False,
+            verified_fact_keys=frozenset({"register_of_directors_maintained"}),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "REG-001")
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
-    def test_REG001_no_trigger_all_registers_maintained(self, rule_engine, build_profile):
+    def test_REG001_ignores_unattributed_legacy_register_inventory(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges", "transfers", "debentures", "mortgages"],
+            maintained_registers=["members", "directors", "charges", "minutes_agm"],
+            verified_fact_keys=frozenset(),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "REG-001")
 
-    def test_REG004_triggers_core_register_missing(self, rule_engine, build_profile):
-        """Core statutory register missing → REG-002.
-        
-        
-        """
+    def test_REG002_requires_verified_absence_of_a_core_register(self, rule_engine, build_profile):
         profile = build_profile(
-            maintained_registers=["members", "directors", "charges"]  # missing minutes_agm → triggers REG-002,
+            register_of_members_maintained=False,
+            verified_fact_keys=frozenset({"register_of_members_maintained"}),
         )
         output = rule_engine.evaluate(profile)
-        assert_flag_triggered(output, "REG-002")
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-002")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 12
+
+    def test_REG002_ignores_unattributed_legacy_register_inventory(self, rule_engine, build_profile):
+        profile = build_profile(
+            maintained_registers=[],
+            verified_fact_keys=frozenset(),
+        )
+        output = rule_engine.evaluate(profile)
+        assert_flag_not_triggered(output, "REG-002")
 
 
     def test_REG004_no_trigger_all_core_registers_maintained(self, rule_engine, build_profile):
@@ -801,6 +841,39 @@ class TestRegisterRules:
         assert_flag_not_triggered(output, "REG-002")
 
 
+    def test_MEM001_ignores_unverified_member_count(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            verified_fact_keys=frozenset(),
+        ))
+        assert_flag_not_triggered(output, "MEM-001")
+
+    def test_MEM001_is_review_only_when_member_count_is_verified_but_duration_is_not(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            verified_fact_keys=frozenset({"company_type", "member_count"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+    def test_MEM001_six_months_still_requires_member_specific_legal_review(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            member_count=1,
+            below_minimum_members_since=date.today() - timedelta(days=220),
+            company_operating=True,
+            verified_fact_keys=frozenset({
+                "company_type", "member_count", "below_minimum_members_since", "company_operating",
+            }),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "MEM-001")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.detail["six_month_threshold_met"] is True
+        assert flag.detail["member_specific_knowledge_verified"] is False
+        assert flag.score_impact == 0
+
 # =============================================================================
 # MODULE: OFFICE (1 rule)
 # =============================================================================
@@ -812,6 +885,7 @@ class TestOfficeRules:
         profile = build_profile(
             registered_office_change_date=date.today() - timedelta(days=60),
             form_vi_filed=False,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "OFF-001")
@@ -820,9 +894,36 @@ class TestOfficeRules:
         profile = build_profile(
             registered_office_change_date=date.today() - timedelta(days=60),
             form_vi_filed=True,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_not_triggered(output, "OFF-001")
+
+    def test_OFF001_requires_date_and_form_status_from_same_event(self, rule_engine, build_profile):
+        profile = build_profile(
+            registered_office_change_date=date.today() - timedelta(days=60),
+            form_vi_filed=False,
+            verified_fact_keys=frozenset({"registered_office_change_date", "form_vi_filed"}),
+            verified_fact_context={
+                "registered_office_change_date": {"document_id": "office-change-1", "source_reference": "OFFICE-CHANGE-2026"},
+                "form_vi_filed": {"document_id": "form-vi-2", "source_reference": "OTHER-OFFICE-CHANGE"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "OFF-001")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
+
+    def test_OFF001_unverified_legacy_fields_are_review_only(self, rule_engine, build_profile):
+        profile = build_profile(
+            registered_office_change_date=date.today() - timedelta(days=60),
+            form_vi_filed=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "OFF-001")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
 
     def test_OFF001_no_trigger_no_change(self, rule_engine, build_profile):
         profile = build_profile(registered_office_change_date=None)
@@ -835,6 +936,21 @@ class TestOfficeRules:
 # =============================================================================
 
 class TestCapitalRules:
+
+    def test_CAP004_requires_date_and_filing_status_from_same_resolution(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=40),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset({"special_resolution_date", "special_resolution_filed"}),
+            verified_fact_context={
+                "special_resolution_date": {"document_id": "resolution-1", "source_reference": "SR-2026"},
+                "special_resolution_filed": {"document_id": "filing-2", "source_reference": "OTHER-SR"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
 
     def test_CAP001_triggers_capital_change_no_resolution(self, rule_engine, build_profile):
         """Capital altered without board/member resolution → CAP-001."""
@@ -1120,6 +1236,10 @@ class TestSection150Applicability:
             business_commencement_declaration_filed=False,
             business_commencement_declaration_verified=True,
             business_commencement_declaration_evidence_ref="evidence://section150/declaration-status",
+            verified_fact_keys=frozenset({
+                "company_type", "section150_prospectus_issued",
+                "business_commencement_declaration_filed",
+            }),
         )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "INC-007")
@@ -1489,12 +1609,76 @@ class TestUntestedRules:
             "TAX-002",
         )
 
-    def test_REG003_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(register_location="other_office")), "REG-003")
+    def test_REG003_is_review_only_for_verified_alternative_location(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            register_location="other_office",
+            verified_fact_keys=frozenset({"register_location"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "REG-003")
+        assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+    def test_structural_change_dates_are_review_only_not_overdue_findings(self, rule_engine, build_profile):
+        profile = build_profile(
+            name_change_pending=True,
+            name_change_date=date.today() - timedelta(days=120),
+            name_change_sr_passed=False,
+            object_clause_change_pending=True,
+            object_clause_change_date=date.today() - timedelta(days=120),
+            aoa_alteration_pending=True,
+            aoa_alteration_date=date.today() - timedelta(days=120),
+            verified_fact_keys=frozenset({
+                "name_change_pending", "name_change_date",
+                "object_clause_change_pending", "object_clause_change_date",
+                "aoa_alteration_pending", "aoa_alteration_date",
+            }),
+        )
+        output = rule_engine.evaluate(profile)
+        for rule_id in ("STR-001", "STR-002", "STR-003"):
+            flag = next(flag for flag in output.flags if flag.rule_id == rule_id)
+            assert flag.state == RuleState.REQUIRES_LAWYER_JUDGMENT
+            assert flag.eval_state == "UNKNOWN"
+            assert flag.score_impact == 0
+
+    def test_unverified_structural_change_dates_do_not_emit_flags(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            name_change_pending=True,
+            name_change_date=date.today() - timedelta(days=120),
+            object_clause_change_pending=True,
+            object_clause_change_date=date.today() - timedelta(days=120),
+            aoa_alteration_pending=True,
+            aoa_alteration_date=date.today() - timedelta(days=120),
+            verified_fact_keys=frozenset(),
+        ))
+        for rule_id in ("STR-001", "STR-002", "STR-003"):
+            assert_flag_not_triggered(output, rule_id)
 
     def test_CAP003_triggers(self, rule_engine, build_profile):
         profile = build_profile(capital_reduction_pending=True, capital_reduction_court_order_obtained=False)
         assert_flag_triggered(rule_engine.evaluate(profile), "CAP-003")
+
+    def test_CAP004_unverified_special_resolution_status_is_not_scored(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=30),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset(),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.eval_state == "UNKNOWN"
+        assert flag.score_impact == 0
+
+    def test_CAP004_scores_only_verified_resolution_and_filing_absence(self, rule_engine, build_profile):
+        profile = build_profile(
+            special_resolution_date=date.today() - timedelta(days=30),
+            special_resolution_filed=False,
+            verified_fact_keys=frozenset({"special_resolution_date", "special_resolution_filed"}),
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "CAP-004")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 8
 
     def test_DEF001_triggers(self, rule_engine, build_profile):
         # Issue 1 fix: DEF-001 now requires actual disqualification details, not just the bool flag.
@@ -1554,8 +1738,21 @@ class TestUntestedRules:
         out = rule_engine.evaluate(build_profile(any_director_disqualified=False))
         assert not any(f.rule_id == "DEF-001" for f in out.flags)
 
-    def test_TL001_triggers(self, rule_engine, build_profile):
-        assert_flag_triggered(rule_engine.evaluate(build_profile(trade_license_obtained=False)), "TL-001")
+    def test_TL001_ignores_unverified_legacy_false(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            trade_license_obtained=False, verified_fact_keys=frozenset()
+        ))
+        assert_flag_not_triggered(output, "TL-001")
+
+    def test_TL001_triggers_only_for_verified_absence(self, rule_engine, build_profile):
+        output = rule_engine.evaluate(build_profile(
+            trade_license_obtained=False,
+            verified_fact_keys=frozenset({"trade_license_obtained"}),
+        ))
+        flag = next(flag for flag in output.flags if flag.rule_id == "TL-001")
+        assert flag.state == RuleState.VERIFIED_ABSENT
+        assert flag.eval_state == "VIOLATION"
+        assert flag.score_impact == 5
 
     def test_AGM007_triggers(self, rule_engine, build_profile):
         assert_flag_triggered(rule_engine.evaluate(build_profile(agm_adjourned_without_notice=True)), "AGM-007")
@@ -1630,6 +1827,20 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
         assert output.score_breakdown.risk_band.value == "RED"
+
+    def test_TL002_requires_obtained_and_expiry_facts_from_same_licence(self, rule_engine, build_profile):
+        profile = build_profile(
+            trade_license_obtained=True,
+            trade_license_expiry=date.today() - timedelta(days=100),
+            verified_fact_context={
+                "trade_license_obtained": {"document_id": "licence-1", "source_reference": "LICENCE-2025"},
+                "trade_license_expiry": {"document_id": "licence-2", "source_reference": "LICENCE-2024"},
+            },
+        )
+        flag = next(flag for flag in rule_engine.evaluate(profile).flags if flag.rule_id == "TL-002")
+        assert flag.state == RuleState.UNKNOWN
+        assert flag.score_impact == 0
+
 
     def test_strike_off_risk_flag_escalates_band(self, rule_engine, build_profile):
         profile = build_profile(unfiled_returns_count=2)
