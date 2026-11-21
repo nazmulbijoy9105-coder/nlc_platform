@@ -137,6 +137,9 @@ def _overlap_differences() -> dict[str, dict[str, tuple[Any, Any]]]:
             "severity": registry.Severity(legacy.get("severity")),
             "score_impact": legacy.get("score_impact"),
             "exceptions": tuple(legacy.get("exceptions", ())),
+            "authority": registry._LEGACY_AUTHORITY_OVERRIDE.get(rule_id) or registry._LEGACY_AUTHORITY[legacy.get("legal_domain")],
+            "evaluation_states": tuple(legacy.get("evaluation_states", ())),
+            "invariants": tuple(legacy.get("invariants", ())),
         }
         current = {
             "legal_domain": typed.legal_domain,
@@ -148,6 +151,9 @@ def _overlap_differences() -> dict[str, dict[str, tuple[Any, Any]]]:
             "severity": typed.severity,
             "score_impact": typed.score_impact,
             "exceptions": typed.exceptions,
+            "authority": typed.authority,
+            "evaluation_states": typed.evaluation_states,
+            "invariants": typed.invariants,
         }
         delta = {
             field: (mapped[field], current[field])
@@ -199,7 +205,7 @@ def test_every_shadowed_definition_is_included_in_overlap_difference_audit():
     """Prevent the seven shadowed legacy definitions from disappearing silently."""
     differences = _overlap_differences()
     assert set(differences) == EXPECTED_OVERLAPS
-    assert set(differences) == EXPECTED_OVERLAPS
+    assert all(isinstance(delta, dict) for delta in differences.values())
 
 
 def test_legacy_converter_accepts_every_legacy_source_definition():
