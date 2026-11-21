@@ -99,11 +99,16 @@ def _require_test_migration_url() -> str:
     return TEST_DATABASE_MIGRATION_URL
 
 # Test-only HMAC key. Never use this value in production.
-TEST_RLS_HMAC_SECRET = (
-    "nlc-test-only-hmac-secret-not-for-production-2026"
-)
+# Keep the exact key used by the CI migration/bootstrap step. Replacing
+# it here makes every signed RLS principal unverifiable because PostgreSQL
+# stores the original key in nlc_private.rls_signing_key. Local runs get a
+# deterministic test-only fallback only when no key was supplied.
+TEST_RLS_HMAC_SECRET = os.environ.get(
+    "NLC_RLS_HMAC_SECRET",
+    "nlc-test-only-hmac-secret-not-for-production-2026",
+).strip()
 assert len(TEST_RLS_HMAC_SECRET) >= 32
-os.environ["NLC_RLS_HMAC_SECRET"] = TEST_RLS_HMAC_SECRET
+os.environ.setdefault("NLC_RLS_HMAC_SECRET", TEST_RLS_HMAC_SECRET)
 os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
 
 
