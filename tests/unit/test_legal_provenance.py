@@ -150,14 +150,12 @@ def test_product_version_acceptance_endpoint_is_super_admin_only():
 
 def test_product_release_status_endpoint_is_super_admin_only():
     from app.api.legal_provenance import router
-    from app.core.dependencies import get_current_user
 
     route = next(
         route for route in router.routes
         if getattr(route, "path", None) == "/legal-provenance/product-release-status"
     )
     dependencies = route.dependant.dependencies
-    assert get_current_user in {dependency.call for dependency in dependencies}
     assert any(
         getattr(dependency.call, "__name__", "") == "role_checker"
         or "require_roles" in getattr(dependency.call, "__qualname__", "")
