@@ -37,6 +37,7 @@ from app.rule_engine.engine import (
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
@@ -947,6 +948,14 @@ async def list_company_evaluation_runs(
         )
         outcomes = run.rule_outcomes_snapshot
         provenance = run.fact_provenance_snapshot
+        canonical_rule_ids = set(STATUTORY_RULE_REGISTRY)
+        outcome_rule_ids = {
+            str(item.get("rule_id")).strip()
+            for item in outcomes
+            if isinstance(item, dict) and item.get("rule_id")
+        } if isinstance(outcomes, list) else set()
+        missing_canonical_rule_ids = sorted(canonical_rule_ids - outcome_rule_ids)
+        unmapped_outcome_rule_ids = sorted(outcome_rule_ids - canonical_rule_ids)
 
         def count_snapshot_values(key: str, default: str) -> dict[str, int]:
             counts: dict[str, int] = {}
@@ -975,6 +984,11 @@ async def list_company_evaluation_runs(
             "engine_version": run.engine_version,
             "rule_catalogue_count": run.rule_catalogue_count,
             "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
+            "canonical_rule_count": len(canonical_rule_ids),
+            "outcome_rule_ids_count": len(outcome_rule_ids),
+            "missing_canonical_rule_ids": missing_canonical_rule_ids,
+            "unmapped_outcome_rule_ids": unmapped_outcome_rule_ids,
+            "outcome_rule_id_parity": not missing_canonical_rule_ids and not unmapped_outcome_rule_ids,
             # Legacy snapshots without an explicit applicability field remain
             # UNKNOWN; never derive applicability from outcome or severity.
             "applicability_state_counts": count_snapshot_values("applicability_state", "UNKNOWN"),
