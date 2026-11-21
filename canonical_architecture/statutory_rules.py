@@ -7,6 +7,7 @@ Layer 2: Statutory Rule Registry
 Populated with canonical legal data from seed corpus.
 """
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, Mapping, Optional, Tuple
 
@@ -143,16 +144,21 @@ def evaluate_applicability(rule: StatutoryRule, facts: Mapping[str, Any]) -> Opt
     required = ((rule.applies_if,) if rule.applies_if else ()) + rule.applies_if_all
     for fact_key in required:
         value = facts.get(fact_key)
-        if value is None:
+        if not isinstance(value, bool):
             missing.append(fact_key)
-        elif value is not True:
+        elif value is False:
             false_conditions.append(fact_key)
 
     for fact_key, threshold in rule.applies_if_lt:
         value = facts.get(fact_key)
-        if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+        if value is None or isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             missing.append(fact_key)
-        elif value >= threshold:
+            continue
+        numeric_value = Decimal(str(value))
+        numeric_threshold = Decimal(str(threshold))
+        if not numeric_value.is_finite():
+            missing.append(fact_key)
+        elif numeric_value >= numeric_threshold:
             false_conditions.append(f"{fact_key} < {threshold:g}")
 
     if false_conditions:
