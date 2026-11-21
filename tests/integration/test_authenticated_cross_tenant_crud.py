@@ -175,7 +175,7 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
         )
     )
     await db_for_user.flush()
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
     monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     evaluation_at = datetime.now(timezone.utc)
@@ -199,8 +199,35 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
                 "score_reconciles": True,
                 "final_score": 88,
             },
-            rule_outcomes_snapshot=[{"rule_id": "AGM-001", "applicability_state": "APPLICABLE", "outcome_state": "COMPLIANT"}],
+            rule_outcomes_snapshot=[{"rule_id": "AGM-001", "applicability_state": "APPLICABLE", "outcome_state": "COMPLIANT", "verification_status": "PENDING"}],
             rule_outcomes_hash="f" * 64,
+            rule_catalogue_count=85,
+        )
+    )
+    # A legacy run without applicability_state must remain UNKNOWN. The API
+    # must not infer applicability from its NOT_EVALUATED outcome.
+    db_for_user.add(
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_a.id,
+            score=80,
+            risk_band=RiskBand.YELLOW,
+            calculated_at=evaluation_at - timedelta(days=1),
+            engine_version=RULE_ENGINE_VERSION,
+            score_hash="g" * 64,
+            evaluation_status="COMPLETED",
+            trigger_source="TEST_LEGACY",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[],
+            score_breakdown_snapshot={
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "score_reconciles": True,
+                "final_score": 80,
+            },
+            rule_outcomes_snapshot=[{"rule_id": "AUD-001", "outcome_state": "NOT_EVALUATED", "verification_status": "PENDING"}],
+            rule_outcomes_hash="h" * 64,
             rule_catalogue_count=85,
         )
     )
@@ -250,13 +277,17 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     )
     assert own_runs.status_code == 200, own_runs.text
     run_items = own_runs.json()["items"]
-    assert len(run_items) == 1
+    assert len(run_items) == 2
     assert run_items[0]["evaluation_status"] == "COMPLETED"
     assert run_items[0]["score_available"] is True
     assert run_items[0]["score"] == 88
     assert run_items[0]["rule_catalogue_count"] == 85
     assert run_items[0]["rule_outcomes_count"] == 1
     assert run_items[0]["fact_provenance_count"] == 1
+    assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 1}
+    assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 1}
+    assert run_items[0]["verification_status_counts"] == {"PENDING": 1}
+    assert run_items[1]["applicability_state_counts"] == {"UNKNOWN": 1}
 
     foreign_runs = await api_client_as_user.get(
         f"/api/v1/companies/{company_b.id}/evaluation-runs", headers=headers
