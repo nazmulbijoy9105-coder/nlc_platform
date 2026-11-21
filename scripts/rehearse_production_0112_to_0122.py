@@ -328,7 +328,7 @@ async def _audit_view_parity() -> dict[str, Any]:
         )
         failed = [key for key in required_true if result.get(key) is not True]
         actual_revision = result.get("alembic_revision")
-        if actual_revision not in {HEAD_REVISION, AHEAD_REVISION} or failed:
+        if actual_revision not in {HEAD_REVISION, PREVIOUS_REVISION} or failed:
             raise RuntimeError(
                 f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
