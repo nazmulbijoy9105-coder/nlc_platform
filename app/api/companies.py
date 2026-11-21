@@ -312,6 +312,9 @@ class FlagResponse(BaseModel):
     triggered_at: str
     resolved_at: str | None
     resolution_note: str | None
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Finding is a screening prompt only — not a legal conclusion or legal advice."
 
 
 class ScoreHistoryEntry(BaseModel):
