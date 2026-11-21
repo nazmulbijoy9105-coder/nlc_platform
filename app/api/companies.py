@@ -961,6 +961,9 @@ async def list_company_evaluation_runs(
             and outcome_rule_ids == canonical_rule_ids
             and not duplicate_outcome_rule_ids
         )
+        catalogue_count_matches_canonical = (
+            run.rule_catalogue_count == len(canonical_rule_ids)
+        )
 
         def collect_evidence_references(value: object) -> set[str]:
             references: set[str] = set()
@@ -1010,6 +1013,10 @@ async def list_company_evaluation_runs(
             score_withheld_reasons.append("No stored score is present.")
         if str(getattr(run.risk_band, "value", run.risk_band)) == "NOT_EVALUATED":
             score_withheld_reasons.append("Stored risk band is NOT_EVALUATED.")
+        if not catalogue_count_matches_canonical:
+            score_withheld_reasons.append(
+                "Historical catalogue count does not match the 85-ID canonical registry."
+            )
         if not outcome_rule_id_parity:
             score_withheld_reasons.append(
                 "Historical outcomes do not exactly match the 85-ID canonical registry."
@@ -1049,6 +1056,7 @@ async def list_company_evaluation_runs(
             ),
             "engine_version": run.engine_version,
             "rule_catalogue_count": run.rule_catalogue_count,
+            "catalogue_count_matches_canonical": catalogue_count_matches_canonical,
             "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
             "canonical_rule_count": len(canonical_rule_ids),
             "outcome_rule_ids_count": len(outcome_rule_ids),
