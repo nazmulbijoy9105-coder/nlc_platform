@@ -138,7 +138,7 @@ def evaluate_applicability(rule: StatutoryRule, facts: Mapping[str, Any]) -> Opt
     for exception in rule.exceptions:
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", exception):
             return RuleState.UNKNOWN
-        candidate_keys = (exception, exception.lower())
+        candidate_keys: Tuple[str, ...] = (exception, exception.lower())
         if exception == "DORMANT_STRIKE_OFF":
             candidate_keys += ("is_dormant",)
         present_key = next((key for key in candidate_keys if key in facts), None)
