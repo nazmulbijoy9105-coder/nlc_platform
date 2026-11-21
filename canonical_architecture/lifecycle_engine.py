@@ -93,14 +93,14 @@ class CanonicalLifecycleEngine:
                     value = evidence.get(short)
                 if value is None:
                     value = evidence.get(short.lower())
-                value = getattr(value, "value", value)
-                # A boolean is an assertion, not a verification record. Only an
-                # explicit typed VERIFIED_PRESENT state may satisfy evidence.
-                if value == EvidenceStatus.VERIFIED_PRESENT.value:
+                # Never coerce caller data (including strings or booleans) into
+                # a trusted verification state. The enum instance must be
+                # supplied by the trusted evidence-verification layer.
+                if value is EvidenceStatus.VERIFIED_PRESENT:
                     evidence_statuses[key] = EvidenceStatus.VERIFIED_PRESENT
-                elif value == EvidenceStatus.VERIFIED_ABSENT.value:
+                elif value is EvidenceStatus.VERIFIED_ABSENT:
                     evidence_statuses[key] = EvidenceStatus.VERIFIED_ABSENT
-                elif value == EvidenceStatus.CONFLICTING.value:
+                elif value is EvidenceStatus.CONFLICTING:
                     evidence_statuses[key] = EvidenceStatus.CONFLICTING
                 else:
                     evidence_statuses[key] = EvidenceStatus.UNVERIFIED
