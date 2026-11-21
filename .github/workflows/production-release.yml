@@ -94,6 +94,7 @@ jobs:
           if [[ "$(jq -r '.repo // empty' <<<"$SERVICE")" != "https://github.com/nazmulbijoy9105-coder/nlc_platform" ||
                 "$(jq -r '.branch // empty' <<<"$SERVICE")" != "main" ||
                 "$(jq -r '.type // empty' <<<"$SERVICE")" != "web_service" ||
+                "$(jq -r '.autoDeployTrigger // empty' <<<"$SERVICE")" != "off" ||
                 "$(jq -r '.autoDeploy // empty' <<<"$SERVICE")" != "no" ]]; then
             echo "::error::Render target does not match the expected manual-deploy NLC production service."
             exit 1
