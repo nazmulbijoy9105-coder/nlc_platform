@@ -9,6 +9,7 @@ Populated with canonical legal data from seed corpus.
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+import re
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 
