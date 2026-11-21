@@ -119,13 +119,17 @@ async def test_signed_app_role_blocks_cross_tenant_select_insert_update_delete(
 
 @pytest.mark.asyncio
 async def test_authenticated_api_uses_database_membership_not_jwt_company_claims(
-    api_client_as_user, db_for_user
+    api_client_as_user, db_for_user, monkeypatch
 ):
     """A signed-in client may read Tenant A but not Tenant B, even if JWT claims B."""
+    import app.api.companies as companies_api
     from app.core.security import create_access_token
     from app.models.company import Company, CompanyUserAccess
+    from app.models.compliance import ComplianceEvaluationRun
     from app.models.database import set_admin_context, set_rls_context
+    from app.models.enums import RiskBand
     from app.models.user import User
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
 
     user_id = uuid.uuid5(uuid.NAMESPACE_DNS, "nlc-test-user-CLIENT_DIRECTOR")
     user = await db_for_user.get(User, user_id)
@@ -171,6 +175,36 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
         )
     )
     await db_for_user.flush()
+    from datetime import datetime, timezone
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(companies_api, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    evaluation_at = datetime.now(timezone.utc)
+    db_for_user.add(
+        ComplianceEvaluationRun(
+            id=uuid.uuid4(),
+            company_id=company_a.id,
+            score=88,
+            risk_band=RiskBand.GREEN,
+            calculated_at=evaluation_at,
+            engine_version=RULE_ENGINE_VERSION,
+            score_hash="e" * 64,
+            evaluation_status="COMPLETED",
+            trigger_source="TEST",
+            active_flags_count=0,
+            black_flags_count=0,
+            flags_snapshot=[],
+            fact_provenance_snapshot=[{"fact_key": "company_type", "source": "TEST_FIXTURE"}],
+            score_breakdown_snapshot={
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "score_reconciles": True,
+                "final_score": 88,
+            },
+            rule_outcomes_snapshot=[{"rule_id": "AGM-001", "applicability_state": "APPLICABLE", "outcome_state": "COMPLIANT"}],
+            rule_outcomes_hash="f" * 64,
+            rule_catalogue_count=85,
+        )
+    )
+    await db_for_user.flush()
     await set_rls_context(db_for_user, str(user_id))
 
     # Deliberately claim access to both tenants. The API must consult the
@@ -195,6 +229,39 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
         f"/api/v1/companies/{company_b.id}", headers=headers
     )
     assert foreign_response.status_code in (403, 404), foreign_response.text
+
+    own_coverage = await api_client_as_user.get(
+        f"/api/v1/companies/{company_a.id}/rule-coverage", headers=headers
+    )
+    assert own_coverage.status_code == 200, own_coverage.text
+    coverage_payload = own_coverage.json()
+    assert coverage_payload["company_id"] == str(company_a.id)
+    assert coverage_payload["report"]["validation_status"] == "PASS"
+    assert coverage_payload["report"]["summary"]["registered"] == 85
+    assert coverage_payload["report"]["summary"]["implemented"] == 85
+
+    foreign_coverage = await api_client_as_user.get(
+        f"/api/v1/companies/{company_b.id}/rule-coverage", headers=headers
+    )
+    assert foreign_coverage.status_code in (403, 404), foreign_coverage.text
+
+    own_runs = await api_client_as_user.get(
+        f"/api/v1/companies/{company_a.id}/evaluation-runs", headers=headers
+    )
+    assert own_runs.status_code == 200, own_runs.text
+    run_items = own_runs.json()["items"]
+    assert len(run_items) == 1
+    assert run_items[0]["evaluation_status"] == "COMPLETED"
+    assert run_items[0]["score_available"] is True
+    assert run_items[0]["score"] == 88
+    assert run_items[0]["rule_catalogue_count"] == 85
+    assert run_items[0]["rule_outcomes_count"] == 1
+    assert run_items[0]["fact_provenance_count"] == 1
+
+    foreign_runs = await api_client_as_user.get(
+        f"/api/v1/companies/{company_b.id}/evaluation-runs", headers=headers
+    )
+    assert foreign_runs.status_code in (403, 404), foreign_runs.text
 
     forged_identity = create_access_token(
         {
