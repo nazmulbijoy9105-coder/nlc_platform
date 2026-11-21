@@ -202,7 +202,11 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
             active_flags_count=0,
             black_flags_count=0,
             flags_snapshot=[],
-            fact_provenance_snapshot=[{"fact_key": "company_type", "source": "TEST_FIXTURE"}],
+            fact_provenance_snapshot=[{
+                "record_type": "UNATTRIBUTED_PROFILE_FIELDS",
+                "disclosure": "Legacy profile inputs have no source record.",
+                "field_values": {"incorporation_date": "2020-06-20", "moa_aoa_evidence_ref": None},
+            }],
             score_breakdown_snapshot={
                 "scoring_spec_version": SCORING_SPEC_VERSION,
                 "score_reconciles": True,
@@ -303,6 +307,10 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert run_items[0]["unmapped_outcome_rule_ids"] == []
     assert run_items[0]["outcome_rule_id_parity"] is False
     assert run_items[0]["fact_provenance_count"] == 1
+    assert run_items[0]["fact_provenance_record_type_counts"] == {"UNATTRIBUTED_PROFILE_FIELDS": 1}
+    assert run_items[0]["unattributed_profile_record_count"] == 1
+    assert run_items[0]["evidence_reference_count"] == 0
+    assert run_items[0]["evidence_reference_present"] is False
     assert run_items[0]["applicability_state_counts"] == {"APPLICABLE": 1}
     assert run_items[0]["outcome_state_counts"] == {"COMPLIANT": 1}
     assert run_items[0]["verification_status_counts"] == {"PENDING": 1}
