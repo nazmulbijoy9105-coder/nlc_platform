@@ -17,6 +17,8 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from app.compliance.fact_provenance import business_date_today
+
 from canonical_architecture.scoring_spec import (
     CATEGORY_CAPS,
     SCORING_SPEC_VERSION,
