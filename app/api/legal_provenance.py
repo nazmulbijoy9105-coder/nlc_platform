@@ -961,6 +961,7 @@ async def get_product_release_status(
 
     missing_ids = sorted(expected_ids - database_ids)
     unexpected_ids = sorted(database_ids - expected_ids)
+    inactive_ids = sorted(database_ids - active_ids)
     accepted_ids = sorted(
         str(item["rule_id"]) for item in rule_statuses
         if item["product_release_status"] == "ACTIVE"
@@ -1005,6 +1006,8 @@ async def get_product_release_status(
         "database_active_rule_parity": expected_ids.issubset(active_ids),
         "missing_database_rule_ids": missing_ids,
         "unexpected_database_rule_ids": unexpected_ids,
+        "active_database_rule_ids": sorted(active_ids),
+        "inactive_database_rule_ids": inactive_ids,
         "accepted_rule_count": len(accepted_ids),
         "accepted_rule_ids": accepted_ids,
         "all_product_rules_accepted": len(accepted_ids) == len(expected_ids),
