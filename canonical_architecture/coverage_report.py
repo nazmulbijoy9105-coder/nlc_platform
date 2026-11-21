@@ -40,9 +40,10 @@ Invariants (enforced by :meth:`RuleCoverageReport.validate`, each pinned by
         states, including empty or uncollected ones (no silent state collapse)
 
 Run-scoped stages (active, applicable, evaluated) accept ``None`` meaning "not
-collected in this scope" — the static CI artifact collects corpus stages only;
-live collection can later be injected by the production-parity workflow without
-changing this schema.
+collected in this scope". The live company coverage API collects ``active`` from
+the database catalogue and ``applicable``/``evaluated`` from the latest immutable
+evaluation snapshot. Applicability is explicit and never inferred from a missing
+finding.
 
 The engine parser mirrors the reference extractor in
 ``tests/unit/test_canonical_integrity.py``: rule IDs are read from the same
