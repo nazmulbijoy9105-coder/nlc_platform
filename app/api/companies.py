@@ -957,6 +957,42 @@ async def list_company_evaluation_runs(
         missing_canonical_rule_ids = sorted(canonical_rule_ids - outcome_rule_ids)
         unmapped_outcome_rule_ids = sorted(outcome_rule_ids - canonical_rule_ids)
 
+        def collect_evidence_references(value: object) -> set[str]:
+            references: set[str] = set()
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key.endswith("_evidence_ref") or key in {"evidence_ref", "evidence_refs"}:
+                        if isinstance(child, str) and child.strip():
+                            references.add(child.strip())
+                        elif isinstance(child, list):
+                            references.update(
+                                item.strip() for item in child
+                                if isinstance(item, str) and item.strip()
+                            )
+                        elif isinstance(child, dict):
+                            references.update(collect_evidence_references(child))
+                    else:
+                        references.update(collect_evidence_references(child))
+            elif isinstance(value, list):
+                for child in value:
+                    references.update(collect_evidence_references(child))
+            return references
+
+        provenance_record_type_counts: dict[str, int] = {}
+        if isinstance(provenance, list):
+            for record in provenance:
+                record_type = (
+                    str(record.get("record_type") or "UNCLASSIFIED").strip().upper()
+                    if isinstance(record, dict) else "UNCLASSIFIED"
+                )
+                provenance_record_type_counts[record_type] = (
+                    provenance_record_type_counts.get(record_type, 0) + 1
+                )
+        evidence_reference_count = len(
+            collect_evidence_references(provenance)
+            | collect_evidence_references(outcomes)
+        )
+
         def count_snapshot_values(key: str, default: str) -> dict[str, int]:
             counts: dict[str, int] = {}
             if not isinstance(outcomes, list):
@@ -996,6 +1032,10 @@ async def list_company_evaluation_runs(
             "verification_status_counts": count_snapshot_values("verification_status", "UNKNOWN"),
             "rule_outcomes_hash": run.rule_outcomes_hash,
             "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
+            "fact_provenance_record_type_counts": provenance_record_type_counts,
+            "unattributed_profile_record_count": provenance_record_type_counts.get("UNATTRIBUTED_PROFILE_FIELDS", 0),
+            "evidence_reference_count": evidence_reference_count,
+            "evidence_reference_present": evidence_reference_count > 0,
             "score_hash": run.score_hash,
         })
     return {"company_id": str(company_id), "items": items}
