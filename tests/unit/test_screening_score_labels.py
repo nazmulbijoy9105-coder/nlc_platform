@@ -3,12 +3,13 @@
 from app.api.companies import (
     CompanyResponse,
     ComplianceSummaryResponse,
+    FlagResponse,
     ScoreHistoryEntry,
 )
 
 
 def test_company_score_api_contracts_are_screening_only():
-    for schema in (CompanyResponse, ComplianceSummaryResponse, ScoreHistoryEntry):
+    for schema in (CompanyResponse, ComplianceSummaryResponse, FlagResponse, ScoreHistoryEntry):
         assert schema.model_fields["screening_only"].default is True
         assert schema.model_fields["legal_advice"].default is False
         assert "not legal advice" in schema.model_fields["disclaimer"].default.lower()
