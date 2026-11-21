@@ -14,7 +14,7 @@ This register joins the existing 85-rule workpack to the catalogue, canonical st
 | Source / population | Observed count | Meaning |
 |---|---:|---|
 | Catalogue identities | 85 | Declared 85-rule inventory |
-| Runtime engine rule-ID occurrences | 81 | Identity tokens found in engine source; not proof of branch behaviour |
+| Runtime engine explicit `rule_id=` assignments | 81 | Identity tokens found in engine source; not proof of branch behaviour |
 | Canonical statutory registry dictionary entries | 85 | Literal dictionary-key scan; typed and legacy registry construction may require additional inspection |
 | Typed applicability entries | 41 | Candidate applicability objects |
 | Typed evidence entries | 43 | Candidate evidence objects |
@@ -24,7 +24,7 @@ This register joins the existing 85-rule workpack to the catalogue, canonical st
 | Complete fact-to-evidence mappings | 0 | No complete mapping established |
 | Independently counsel-approved rules | 0 | No rule approved in workpack |
 
-**Important extraction limitation:** The runtime engine scan confirms the 85 rule IDs are represented in `app/rule_engine/engine.py`. It does not yet compare every runtime branch, input field, condition and outcome against the canonical evaluator. The seed trigger is shown only as a seed claim, never represented as the proven runtime trigger. This register makes that missing comparison explicit rather than manufacturing parity.
+**Important extraction limitation:** All 85 catalogue ID strings occur somewhere in `app/rule_engine/engine.py`, but only 81 were found by the explicit `rule_id=` assignment scan; BSEC-001 through BSEC-004 are literal occurrences without a matching assignment under that scan. This is identity-string presence only. It does not establish that each ID has a runtime rule implementation, nor compare every runtime branch, input field, condition and outcome against the canonical evaluator. The seed trigger is shown only as a seed claim, never represented as the proven runtime trigger. This register makes that missing comparison explicit rather than manufacturing parity.
 
 ## 2. Status vocabulary
 
