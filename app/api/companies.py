@@ -23,6 +23,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.charges import CompanyCharge
+from app.models.compliance import ComplianceEvaluationRun
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
@@ -903,6 +904,71 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
     svc = ComplianceService(db)
     history = await svc.get_score_history(company_id=company_id, months=months)
     return [_score_history_to_response(item) for item in history]
+
+
+@router.get(
+    "/{company_id}/evaluation-runs",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+    summary="List immutable per-evaluation records for an authorised company",
+)
+async def list_company_evaluation_runs(
+    company_id: uuid.UUID,
+    limit: int = Query(default=12, ge=1, le=60),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return a bounded, tenant-scoped index of immutable evaluation runs.
+
+    Monthly score history is a separate append-only snapshot. This endpoint
+    exposes per-run chronology without rewriting a monthly NOT_RELEASED row
+    when a later evaluation completes.
+    """
+    result = await db.execute(
+        select(ComplianceEvaluationRun)
+        .where(ComplianceEvaluationRun.company_id == company_id)
+        .order_by(
+            ComplianceEvaluationRun.calculated_at.desc(),
+            ComplianceEvaluationRun.id.desc(),
+        )
+        .limit(limit)
+    )
+    runs = result.scalars().all()
+    product_score_released = _legal_score_is_released()
+    items = []
+    for run in runs:
+        stored_status = str(run.evaluation_status or "NOT_RELEASED").upper()
+        score_available = (
+            product_score_released
+            and stored_status == "COMPLETED"
+            and run.score is not None
+            and str(getattr(run.risk_band, "value", run.risk_band)) != "NOT_EVALUATED"
+        )
+        outcomes = run.rule_outcomes_snapshot
+        provenance = run.fact_provenance_snapshot
+        items.append({
+            "evaluation_run_id": str(run.id),
+            "calculated_at": run.calculated_at.isoformat(),
+            "evaluation_status": stored_status,
+            "score_available": score_available,
+            "score": run.score if score_available else None,
+            "risk_band": (
+                getattr(run.risk_band, "value", run.risk_band)
+                if score_available else "NOT_EVALUATED"
+            ),
+            "score_withheld_reason": (
+                None if score_available else
+                "Product score is not released for this run; stored evidence and outcome records remain available."
+            ),
+            "engine_version": run.engine_version,
+            "rule_catalogue_count": run.rule_catalogue_count,
+            "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
+            "rule_outcomes_hash": run.rule_outcomes_hash,
+            "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
+            "score_hash": run.score_hash,
+        })
+    return {"company_id": str(company_id), "items": items}
 
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
