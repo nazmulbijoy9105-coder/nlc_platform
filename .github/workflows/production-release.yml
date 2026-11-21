@@ -189,7 +189,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          REPORT_PATH=artifacts/neon-production-0112-to-0122.json \
+          REPORT_PATH=artifacts/neon-production-0112-to-0123.json \
             python scripts/rehearse_production_0112_to_0122.py
           mkdir -p artifacts
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
@@ -275,6 +275,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-release-0122-evidence
+          name: nlc-production-release-0123-evidence
           path: artifacts/*.json
           if-no-files-found: warn
