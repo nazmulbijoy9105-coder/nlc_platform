@@ -6,10 +6,10 @@ NLC - Legal Compliance & Rescue Platform
 Layer 2: Statutory Rule Registry
 Populated with canonical legal data from seed corpus.
 """
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-import re
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 
@@ -1349,7 +1349,6 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
     # Only a simple identifier is an executable legacy Boolean fact. Descriptive
     # applicability text remains visible but fail-closed until a typed contract exists.
-    import re
     applies_if = None
     applicability_unresolved = False
     applicability_notes = ""
