@@ -697,6 +697,7 @@ def test_profile_coverage_is_not_mislabelled_as_rule_coverage():
         current_director_count=2,
         directors_verified=False,
         member_count=None,
+        verified_fact_keys=frozenset(),
     )
 
     # Legacy False values and unverified counts do not count as evidenced inputs.
@@ -913,6 +914,7 @@ def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified(
         directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
         member_count=2,
         verified_fact_keys=frozenset({
+            "company_type", "incorporation_date",
             "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
             "first_auditor_appointed", "tin_obtained", "current_director_count",
             "member_count",
