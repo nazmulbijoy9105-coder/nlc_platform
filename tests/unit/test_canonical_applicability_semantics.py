@@ -16,6 +16,7 @@ def test_inc005_uses_a_typed_foreign_shareholder_fact():
     assert evaluate_applicability(rule, {}) is RuleState.UNKNOWN
     assert evaluate_applicability(rule, {"has_foreign_shareholder": False}) is RuleState.NOT_APPLICABLE
     assert evaluate_applicability(rule, {"has_foreign_shareholder": True}) is None
+    assert evaluate_applicability(rule, {"has_foreign_shareholder": "true"}) is RuleState.UNKNOWN
 
 
 def test_inc006_requires_all_three_screening_conditions():
