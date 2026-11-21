@@ -2,6 +2,11 @@ name: Production Read-only Tenant Smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-readonly-tenant-smoke.yml"
+      - "scripts/production_readonly_tenant_smoke.py"
 
 permissions:
   contents: read
