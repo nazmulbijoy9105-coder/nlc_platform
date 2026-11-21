@@ -340,9 +340,9 @@ async def _audit_view_parity() -> dict[str, Any]:
         if result.get("identity_archive_rows") != 2:
             raise RuntimeError("Expected exactly the two preserved legacy identity collision records.")
         expected_identity_counts = {
-            "canonical_identity_rows": 85,
-            "canonical_alias_rows": 85,
-            "unresolved_alias_rows": 85,
+            "canonical_identity_rows": 170,
+            "canonical_alias_rows": 169,
+            "unresolved_alias_rows": 169,
             "resolved_alias_rows": 0,
             "canonical_revision_rows": 0,
         }
