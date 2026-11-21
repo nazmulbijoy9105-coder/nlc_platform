@@ -224,6 +224,7 @@ def _product_owner_acceptance_is_active(
     digest = metadata.get("source_artifact_sha256")
     return bool(
         metadata.get("reviewer_id")
+        and metadata.get("reviewer_name")
         and metadata.get("accepted_rule_id") == rule_id
         and metadata.get("source_version")
         and isinstance(digest, str)
@@ -1056,6 +1057,7 @@ async def accept_product_release_version(
         {
             "rule_id": item["rule_id"],
             "reviewer_id": item["reviewer_id"],
+            "reviewer_name": item["reviewer_name"],
             "source_version": item["source_version"],
             "source_artifact_sha256": item["source_artifact_sha256"],
             "provision_citation": item["provision_citation"],
