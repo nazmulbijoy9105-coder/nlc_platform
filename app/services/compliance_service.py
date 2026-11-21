@@ -24,7 +24,7 @@ import logging
 import uuid
 from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
-from datetime import date, UTC, datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, text, update
 
