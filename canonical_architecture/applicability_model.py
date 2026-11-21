@@ -120,8 +120,15 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "remains liable until Form XII filed."
     ),
     "DIR-007": ApplicabilityRule(
-        "DIR-007", ("ALL",), ("director_appointed",), (),
-        "S93(2): Consent must be filed within 30 days of appointment."
+        "DIR-007",
+        ("UNCONFIRMED_REQUIRES_COUNSEL_MAPPING",),
+        ("director_appointed",),
+        (),
+        "UNRESOLVED — director_appointed is only a candidate event input, not a "
+        "validated applicability or deadline rule. The statutory s.92 / s.93(2) "
+        "mapping and RJSC Form IX instructions require independent reconciliation. "
+        "Do not infer a filing breach, universal company scope or a 30-day deadline "
+        "from this entry. Keep the finding NOT_EVALUATED pending source and counsel review."
     ),
     "DIR-008": ApplicabilityRule(
         "DIR-008", ("ALL",), ("director_holds_office_of_profit",), ("company_consent_given",),
