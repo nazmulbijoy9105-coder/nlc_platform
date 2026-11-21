@@ -121,6 +121,8 @@ jobs:
           REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
           echo "::add-mask::$REHEARSAL_HMAC_SECRET"
 
+          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
+          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
           ready=false
           for attempt in $(seq 1 30); do
             if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
