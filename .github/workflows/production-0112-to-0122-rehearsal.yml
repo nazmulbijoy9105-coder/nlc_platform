@@ -10,6 +10,7 @@ on:
       - "app/models/**"
       - "app/db/**"
       - "app/db_url.py"
+      - "canonical_architecture/statutory_rules.py"
       - "alembic.ini"
       - "requirements.txt"
       - "scripts/rehearse_production_0112_to_0122.py"
