@@ -203,6 +203,34 @@ def _source_state(source: LegalSource) -> str:
     return "ARTIFACT_REFERENCE_RECORDED" if source.artifact_sha256 else "REFERENCE_ONLY"
 
 
+def _product_owner_acceptance_is_active(
+    event: LegalRuleReleaseEvent | None,
+    rule_id: str,
+) -> bool:
+    """Validate an immutable product-owner acceptance snapshot, not legal verification."""
+    if (
+        event is None
+        or event.event_type != "PRODUCT_OWNER_APPROVED"
+        or event.decision != "APPROVED"
+        or event.created_at is None
+    ):
+        return False
+    metadata = event.event_metadata if isinstance(event.event_metadata, dict) else {}
+    digest = metadata.get("source_artifact_sha256")
+    return bool(
+        metadata.get("reviewer_id")
+        and metadata.get("accepted_rule_id") == rule_id
+        and metadata.get("source_version")
+        and isinstance(digest, str)
+        and len(digest) == 64
+        and all(character in "0123456789abcdef" for character in digest)
+        and metadata.get("provision_citation")
+        and metadata.get("effective_from")
+        and metadata.get("mapping_rationale")
+        and metadata.get("acceptance_rationale")
+    )
+
+
 # Curated official-register references. These are references only: no file bytes,
 # amendments, provision interpretation or legal verification are inferred here.
 BD_STARTER_SOURCE_CATALOG: tuple[dict[str, Any], ...] = (
@@ -869,6 +897,10 @@ async def get_product_release_status(
                 LegalRuleReleaseEvent.release_scope == "SCORING",
                 LegalRuleReleaseEvent.rule_id.in_(sorted(expected_ids)),
                 LegalRuleReleaseEvent.decision.in_(["APPROVED", "REVOKED"]),
+                LegalRuleReleaseEvent.event_type.in_([
+                    "PRODUCT_OWNER_APPROVED",
+                    "PRODUCT_OWNER_REVOKED",
+                ]),
             )
             .order_by(LegalRuleReleaseEvent.sequence_no.desc())
         )
@@ -883,26 +915,7 @@ async def get_product_release_status(
     for rule_id in sorted(expected_ids):
         event = latest_by_rule.get(rule_id)
         metadata = event.event_metadata if event and isinstance(event.event_metadata, dict) else {}
-        has_snapshot = all(
-            metadata.get(key)
-            for key in (
-                "reviewer_id",
-                "accepted_rule_id",
-                "source_version",
-                "source_artifact_sha256",
-                "provision_citation",
-                "effective_from",
-                "mapping_rationale",
-                "acceptance_rationale",
-            )
-        )
-        accepted = bool(
-            event
-            and event.event_type == "PRODUCT_OWNER_APPROVED"
-            and event.decision == "APPROVED"
-            and has_snapshot
-            and metadata.get("accepted_rule_id") == rule_id
-        )
+        accepted = _product_owner_acceptance_is_active(event, rule_id)
         rule_statuses.append({
             "rule_id": rule_id,
             "product_release_status": "ACTIVE" if accepted else (
