@@ -26,6 +26,7 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
+BASE_REVISION = "0122_rls_staff_scope_and_score_history"
 HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -209,13 +210,13 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
             (SELECT count(*) FROM public.legal_rule_revisions) AS revisions
     """)
     expected_identity_counts = {
-        "identities": 85,
+        "identities": 170,
         "active_identities": 85,
-        "aliases": 85,
-        "unresolved_aliases": 85,
+        "aliases": 169,
+        "unresolved_aliases": 169,
         "resolved_aliases": 0,
         "engine_aliases": 85,
-        "other_source_aliases": 0,
+        "other_source_aliases": 84,
         "empty_alias_ids": 0,
         "inc001_engine_aliases": 1,
         "inc002_engine_aliases": 0,
@@ -406,12 +407,7 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions != [START_REVISION]:
-            raise RuntimeError(f"Expected exact production starting revision {START_REVISION}; got {revisions!r}")
         if revisions == [HEAD_REVISION]:
-            # A previous one-shot rehearsal may already have migrated this
-            # disposable branch. Revalidate branch-pinned restricted parity
-            # instead of trying to replay the 0112-only migration.
             await conn.close()
             audit_view = await _audit_view_parity()
             report = {
@@ -420,7 +416,7 @@ async def main() -> None:
                 "started_at": started,
                 "finished_at": datetime.now(timezone.utc).isoformat(),
                 "target": identity,
-                "starting_revision": START_REVISION,
+                "starting_revision": BASE_REVISION,
                 "final_revision": revisions,
                 "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
                 "restricted_audit_view_parity": audit_view,
@@ -429,8 +425,63 @@ async def main() -> None:
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
+
+        if revisions == [BASE_REVISION]:
+            before_tables = {
+                table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES
+            }
+            await conn.close()
+            env = os.environ.copy()
+            env["ENVIRONMENT"] = "production"
+            subprocess.run(
+                ["python", "-m", "alembic", "upgrade", "head"],
+                check=True,
+                env=env,
+            )
+            current = subprocess.run(
+                ["python", "-m", "alembic", "current"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            if HEAD_REVISION not in current:
+                raise RuntimeError(f"Alembic did not reach {HEAD_REVISION}: {current!r}")
+            conn = await _connect()
+            final_revisions = await _alembic_revision(conn)
+            if final_revisions != [HEAD_REVISION]:
+                raise RuntimeError(f"Unexpected final Alembic revisions: {final_revisions!r}")
+            after_tables = {
+                table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES
+            }
+            if before_tables != after_tables:
+                raise RuntimeError(
+                    "0123 changed historical finding/score data: "
+                    f"before={before_tables!r}, after={after_tables!r}"
+                )
+            audit_view = await _audit_view_parity()
+            report = {
+                "status": "PASS",
+                "mode": "incremental_0122_to_0123",
+                "started_at": started,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "target": identity,
+                "starting_revision": BASE_REVISION,
+                "final_revision": final_revisions,
+                "alembic_current": current,
+                "historical_table_fingerprints_before": before_tables,
+                "historical_table_fingerprints_after": after_tables,
+                "restricted_audit_view_parity": audit_view,
+                "notes": "Only migration 0123 was applied to the already-rehearsed isolated branch.",
+            }
+            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+            print(json.dumps(report, indent=2, default=str))
+            return
+
         if revisions != [START_REVISION]:
-            raise RuntimeError(f"Expected exact starting revision {START_REVISION} or already-rehearsed {HEAD_REVISION}; got {revisions!r}")
+            raise RuntimeError(
+                f"Expected {START_REVISION}, {BASE_REVISION}, or {HEAD_REVISION}; got {revisions!r}"
+            )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(conn)
         await conn.close()
