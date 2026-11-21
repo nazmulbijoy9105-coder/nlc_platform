@@ -199,8 +199,13 @@ def main() -> int:
     print("PASS production readiness endpoint returned a structured health response")
 
     # Unauthenticated requests must not obtain even a company summary.
-    status, _ = get_json(base_url, f"/api/v1/companies/{client_company}")
-    expect_status("unauthenticated company request", status, {401})
+    for unauthenticated_path, label in (
+        (f"/api/v1/companies/{client_company}", "company"),
+        (f"/api/v1/companies/{client_company}/rule-coverage", "six-state coverage"),
+        (f"/api/v1/companies/{client_company}/evaluation-runs", "evaluation history"),
+    ):
+        status, _ = get_json(base_url, unauthenticated_path)
+        expect_status(f"unauthenticated {label} request", status, {401})
 
     verify_authorized_company(
         base_url=base_url,
