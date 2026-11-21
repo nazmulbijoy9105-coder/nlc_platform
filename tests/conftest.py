@@ -260,6 +260,14 @@ async def test_engine(request):
             pytrace=False,
         )
 
+    # Model the narrowly scoped migration-owner role for owner-level trigger
+    # tests. The isolated CI migration login is a test-cluster superuser; this
+    # one table transfer is confined to the disposable *_test database.
+    async with engine.begin() as owner_connection:
+        await owner_connection.execute(
+            text("ALTER TABLE public.payment_allocations OWNER TO nlc_migration_owner")
+        )
+
     yield engine
     await engine.dispose()
 
