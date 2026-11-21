@@ -60,12 +60,27 @@ class CanonicalLifecycleEngine:
             return True
         return False
 
-    def evaluate_finding(self, rule_id: str, evidence: EvidenceInput) -> RuleState:
+    def evaluate_finding(
+        self,
+        rule_id: str,
+        evidence: EvidenceInput,
+        facts: Mapping[str, Any] | None = None,
+    ) -> RuleState:
+        """Evaluate scope facts separately from evidence.
+
+        Facts are the authoritative applicability input when supplied.
+        For backward compatibility, callers that omit facts retain the
+        historical behaviour where a mapping may contain both facts and
+        evidence keys.
+        """
         rule = self.rule_registry.get(rule_id)
         if rule is None:
             return RuleState.UNKNOWN
-        evidence_map: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
-        applicability = self._applicability_state(rule, evidence_map)
+        legacy_combined_map: Mapping[str, Any] = (
+            evidence if isinstance(evidence, Mapping) else {}
+        )
+        applicability_facts = legacy_combined_map if facts is None else facts
+        applicability = self._applicability_state(rule, applicability_facts)
         if applicability is not None:
             return applicability
         if not evidence:
@@ -103,9 +118,10 @@ class CanonicalLifecycleEngine:
         rule_id: str,
         evidence: EvidenceInput,
         verification_recorded: bool = False,
+        facts: Mapping[str, Any] | None = None,
     ) -> RuleState:
         self._audit("EVIDENCE_SUBMITTED", {"rule_id": rule_id})
-        new_state = self.evaluate_finding(rule_id, evidence)
+        new_state = self.evaluate_finding(rule_id, evidence, facts=facts)
         if new_state is RuleState.COMPLIANT and verification_recorded:
             self._audit("RESCUE_CLOSED", {"rule_id": rule_id, "reason": "Verified compliant"})
         return new_state
