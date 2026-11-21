@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Sequence, Union
 
-from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule
+from canonical_architecture.statutory_rules import (
+    STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule, evaluate_applicability,
+)
 from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
 
@@ -28,16 +30,11 @@ class CanonicalLifecycleEngine:
         """R-020: Record immutable trace of decisions/actions."""
         self.audit_trail.append({"action": action, "details": details})
 
-    def _is_applicable(self, rule: StatutoryRule, evidence: Mapping[str, Any]) -> bool:
-        """Honour applies_if and exceptions (R-004)."""
-        if rule.applies_if and not evidence.get(rule.applies_if):
-            return False
-        for exc in rule.exceptions:
-            if evidence.get(exc) or evidence.get(exc.lower()) or (
-                evidence.get("is_dormant") and exc == "DORMANT_STRIKE_OFF"
-            ):
-                return False
-        return True
+    def _applicability_state(
+        self, rule: StatutoryRule, facts: Mapping[str, Any]
+    ) -> RuleState | None:
+        """Use the same three-state applicability contract as the canonical evaluator."""
+        return evaluate_applicability(rule, facts)
 
     def _evidence_satisfies(self, rule: StatutoryRule, evidence: EvidenceInput) -> bool:
         if isinstance(evidence, Mapping):
@@ -68,8 +65,9 @@ class CanonicalLifecycleEngine:
         if rule is None:
             return RuleState.UNKNOWN
         evidence_map: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
-        if not self._is_applicable(rule, evidence_map):
-            return RuleState.NOT_APPLICABLE
+        applicability = self._applicability_state(rule, evidence_map)
+        if applicability is not None:
+            return applicability
         if not evidence:
             return RuleState.UNKNOWN
         verified = self._evidence_satisfies(rule, evidence)
