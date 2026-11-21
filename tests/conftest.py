@@ -99,8 +99,11 @@ async def test_engine(request):
     Async engine pointing at nlc_test database.
     NullPool ensures no connection leaks between tests.
     """
+    # Use the dedicated local migration/owner identity for ordinary fixture
+    # setup. RLS-specific tests and API requests explicitly SET LOCAL ROLE
+    # nlc_app_role with a signed principal, so this does not weaken those tests.
     engine = create_async_engine(
-        TEST_DATABASE_URL,
+        TEST_DATABASE_MIGRATION_URL,
         echo=False,
         poolclass=NullPool,
     )
