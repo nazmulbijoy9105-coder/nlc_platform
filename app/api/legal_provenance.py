@@ -952,7 +952,8 @@ async def get_product_release_status(
             "effective_to": metadata.get("effective_to") if accepted else None,
             "acceptance_rationale": metadata.get("acceptance_rationale") if accepted else None,
             "product_owner_accepted_at": (
-                event.created_at.isoformat() if accepted and event.created_at else None
+                rule_event.created_at.isoformat()
+                if accepted and rule_event and rule_event.created_at else None
             ),
             "independent_legal_verification_status": "PENDING",
             "independent_legal_verified_at": None,
