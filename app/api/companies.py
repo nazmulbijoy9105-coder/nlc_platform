@@ -940,22 +940,27 @@ async def list_company_evaluation_runs(
     items = []
     for run in runs:
         stored_status = str(run.evaluation_status or "NOT_RELEASED").upper()
-        score_available = (
-            product_score_released
-            and stored_status == "COMPLETED"
-            and run.score is not None
-            and str(getattr(run.risk_band, "value", run.risk_band)) != "NOT_EVALUATED"
-        )
         outcomes = run.rule_outcomes_snapshot
         provenance = run.fact_provenance_snapshot
         canonical_rule_ids = set(STATUTORY_RULE_REGISTRY)
-        outcome_rule_ids = {
+        outcome_rule_id_list = [
             str(item.get("rule_id")).strip()
             for item in outcomes
             if isinstance(item, dict) and item.get("rule_id")
-        } if isinstance(outcomes, list) else set()
+        ] if isinstance(outcomes, list) else []
+        outcome_rule_ids = set(outcome_rule_id_list)
         missing_canonical_rule_ids = sorted(canonical_rule_ids - outcome_rule_ids)
         unmapped_outcome_rule_ids = sorted(outcome_rule_ids - canonical_rule_ids)
+        duplicate_outcome_rule_ids = sorted({
+            rule_id for rule_id in outcome_rule_id_list
+            if outcome_rule_id_list.count(rule_id) > 1
+        })
+        outcome_rule_id_parity = (
+            isinstance(outcomes, list)
+            and len(outcomes) == len(canonical_rule_ids)
+            and outcome_rule_ids == canonical_rule_ids
+            and not duplicate_outcome_rule_ids
+        )
 
         def collect_evidence_references(value: object) -> set[str]:
             references: set[str] = set()
@@ -991,7 +996,33 @@ async def list_company_evaluation_runs(
         evidence_reference_count = len(
             collect_evidence_references(provenance)
             | collect_evidence_references(outcomes)
+            | collect_evidence_references(run.flags_snapshot)
         )
+        unattributed_profile_record_count = provenance_record_type_counts.get(
+            "UNATTRIBUTED_PROFILE_FIELDS", 0
+        )
+        score_withheld_reasons: list[str] = []
+        if not product_score_released:
+            score_withheld_reasons.append("Product score release is disabled.")
+        if stored_status != "COMPLETED":
+            score_withheld_reasons.append(f"Stored evaluation status is {stored_status}.")
+        if run.score is None:
+            score_withheld_reasons.append("No stored score is present.")
+        if str(getattr(run.risk_band, "value", run.risk_band)) == "NOT_EVALUATED":
+            score_withheld_reasons.append("Stored risk band is NOT_EVALUATED.")
+        if not outcome_rule_id_parity:
+            score_withheld_reasons.append(
+                "Historical outcomes do not exactly match the 85-ID canonical registry."
+            )
+        if unattributed_profile_record_count:
+            score_withheld_reasons.append(
+                "Historical profile facts include unattributed source data."
+            )
+        if evidence_reference_count == 0:
+            score_withheld_reasons.append(
+                "No evidence references are bound to this evaluation snapshot."
+            )
+        score_available = not score_withheld_reasons
 
         def count_snapshot_values(key: str, default: str) -> dict[str, int]:
             counts: dict[str, int] = {}
@@ -1014,8 +1045,7 @@ async def list_company_evaluation_runs(
                 if score_available else "NOT_EVALUATED"
             ),
             "score_withheld_reason": (
-                None if score_available else
-                "Product score is not released for this run; stored evidence and outcome records remain available."
+                "; ".join(score_withheld_reasons) if score_withheld_reasons else None
             ),
             "engine_version": run.engine_version,
             "rule_catalogue_count": run.rule_catalogue_count,
@@ -1024,7 +1054,8 @@ async def list_company_evaluation_runs(
             "outcome_rule_ids_count": len(outcome_rule_ids),
             "missing_canonical_rule_ids": missing_canonical_rule_ids,
             "unmapped_outcome_rule_ids": unmapped_outcome_rule_ids,
-            "outcome_rule_id_parity": not missing_canonical_rule_ids and not unmapped_outcome_rule_ids,
+            "duplicate_outcome_rule_ids": duplicate_outcome_rule_ids,
+            "outcome_rule_id_parity": outcome_rule_id_parity,
             # Legacy snapshots without an explicit applicability field remain
             # UNKNOWN; never derive applicability from outcome or severity.
             "applicability_state_counts": count_snapshot_values("applicability_state", "UNKNOWN"),
@@ -1033,7 +1064,7 @@ async def list_company_evaluation_runs(
             "rule_outcomes_hash": run.rule_outcomes_hash,
             "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
             "fact_provenance_record_type_counts": provenance_record_type_counts,
-            "unattributed_profile_record_count": provenance_record_type_counts.get("UNATTRIBUTED_PROFILE_FIELDS", 0),
+            "unattributed_profile_record_count": unattributed_profile_record_count,
             "evidence_reference_count": evidence_reference_count,
             "evidence_reference_present": evidence_reference_count > 0,
             "score_hash": run.score_hash,
