@@ -366,9 +366,17 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     DB session is overridden to use test transaction.
     Celery tasks are mocked to run eagerly (no worker needed).
     """
+    from fastapi import Request
+
     from app.core.dependencies import get_db, get_db_for_user
+    from app.core.security import decode_token
     from app.main import create_app
-    from app.models.database import get_db as auth_get_db
+    from app.models.database import (
+        _set_signed_rls_principal,
+        get_db as auth_get_db,
+        set_auth_context,
+        set_rls_context,
+    )
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -389,13 +397,31 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
 
     app = create_app()
 
-    # Override all DB dependency objects used by the API with the test transaction.
-    async def _override_db():
+    # Preserve the production RLS boundary while reusing the test transaction.
+    # The old blanket override yielded an unscoped session, so authenticated
+    # requests saw no signed principal and returned 401/RLS-denied rows.
+    async def _override_user_db(request: Request):
+        authorization = request.headers.get("authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        payload = decode_token(token, expected_type="access") if token else None
+        principal = (
+            payload.get("sub") or payload.get("user_id")
+            if isinstance(payload, dict)
+            else None
+        )
+        if principal:
+            await set_rls_context(db, str(principal))
+        else:
+            await _set_signed_rls_principal(db, "ANONYMOUS")
         yield db
 
-    app.dependency_overrides[get_db] = _override_db
-    app.dependency_overrides[get_db_for_user] = _override_db
-    app.dependency_overrides[auth_get_db] = _override_db
+    async def _override_auth_db():
+        await set_auth_context(db)
+        yield db
+
+    app.dependency_overrides[get_db] = _override_user_db
+    app.dependency_overrides[get_db_for_user] = _override_user_db
+    app.dependency_overrides[auth_get_db] = _override_auth_db
 
     # Patch Celery tasks to be no-ops
     with patch("app.worker.tasks.evaluate_company_compliance.apply_async", return_value=MagicMock(id="test-task")), \
