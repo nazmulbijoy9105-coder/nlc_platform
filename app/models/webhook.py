@@ -14,7 +14,7 @@ from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .database import Base
+from .base import Base
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
