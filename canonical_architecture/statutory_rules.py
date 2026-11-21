@@ -133,13 +133,20 @@ def evaluate_applicability(rule: StatutoryRule, facts: Mapping[str, Any]) -> Opt
     if rule.applicability_unresolved:
         return RuleState.UNKNOWN
 
+    missing_exceptions = []
     for exception in rule.exceptions:
-        if facts.get(exception) is True or facts.get(exception.lower()) is True:
-            return RuleState.NOT_APPLICABLE
-        if exception == "DORMANT_STRIKE_OFF" and facts.get("is_dormant") is True:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", exception):
+            return RuleState.UNKNOWN
+        candidate_keys = (exception, exception.lower())
+        if exception == "DORMANT_STRIKE_OFF":
+            candidate_keys += ("is_dormant",)
+        present_key = next((key for key in candidate_keys if key in facts), None)
+        if present_key is None or not isinstance(facts[present_key], bool):
+            missing_exceptions.append(exception)
+        elif facts[present_key] is True:
             return RuleState.NOT_APPLICABLE
 
-    missing = []
+    missing = list(missing_exceptions)
     false_conditions = []
     required = ((rule.applies_if,) if rule.applies_if else ()) + rule.applies_if_all
     for fact_key in required:
