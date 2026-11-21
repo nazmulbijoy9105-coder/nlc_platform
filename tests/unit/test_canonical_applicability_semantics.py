@@ -1,6 +1,6 @@
 """Regression tests for the canonical three-state applicability contract."""
 
-from canonical_architecture.evaluator import EvidenceStatus, evaluate_rule
+from canonical_architecture.evaluator import evaluate_rule
 from canonical_architecture.lifecycle_engine import CanonicalLifecycleEngine
 from canonical_architecture.statutory_rules import (
     RuleState,
