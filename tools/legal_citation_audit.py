@@ -44,7 +44,7 @@ EXPECTED = {
     "TR-001": ["Section 38"],
     "TL-001": ["City Corporation", "Paurashava"],
     "TL-002": ["City Corporation", "Paurashava"],
-    "INC-003": ["Section 90(1)", "Section 90(2)"],
+    "INC-003": ["Sections 90(1) and 90(2)"],
     "INC-004": ["Section 56"],
     "INC-007": ["Section 150(1)", "Section 150(6)"],
     "AUD-003": ["Sections 183 and 210"],
@@ -61,9 +61,9 @@ EXPECTED = {
     "TR-005": ["Section 38(7)"],
     "TR-006": ["Sections 34 and 38"],
     "CAP-004": ["Section 88(1)"],
-    "STR-001": ["Section 11", "Section 88(1)"],
+    "STR-001": ["Sections 11 and 88(1)"],
     "STR-002": ["Sections 12, 15-16", "Section 88(1)"],
-    "STR-003": ["Section 20", "Section 88(1)"],
+    "STR-003": ["Sections 20 and 88(1)"],
     "DIR-008": ["Section 104"],
     "DIR-010": ["Section 110"],
     "BOD-001": ["Section 96"],
@@ -74,7 +74,7 @@ EXPECTED = {
     "ESC-001": ["Section 346"],
     "ESC-002": ["Section 346"],
     "ESC-004": ["Section 286"],
-    "ESC-005": ["Sections 195, 197, 199"],
+    "ESC-005": ["Sections 195 and 197"],
 }
 # These rule families are outside the Companies Act anchor audit. They remain
 # subject to their own primary-source and counsel review; SKIP is not PASS.
