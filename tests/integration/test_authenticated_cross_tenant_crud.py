@@ -207,6 +207,11 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     assert coverage_payload["report"]["validation_status"] == "PASS"
     assert coverage_payload["report"]["summary"]["registered"] == 85
     assert coverage_payload["report"]["summary"]["implemented"] == 85
+    assert coverage_payload["report"]["validation_violations"] == []
+    assert (
+        coverage_payload["report"]["states"]["registered"]
+        == coverage_payload["report"]["states"]["implemented"]
+    )
 
     foreign_coverage = await api_client_as_user.get(
         f"/api/v1/companies/{company_b.id}/rule-coverage", headers=headers
