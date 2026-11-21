@@ -23,7 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .database import Base
+from .base import Base
 from .enums import AiModel, DocumentType
 from .mixins import AuditMixin, TimestampMixin, UUIDPrimaryKeyMixin
 

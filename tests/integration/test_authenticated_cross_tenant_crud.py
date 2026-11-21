@@ -284,6 +284,12 @@ async def test_authenticated_api_uses_database_membership_not_jwt_company_claims
     )
     assert foreign_response.status_code in (403, 404), foreign_response.text
 
+    foreign_coverage = await api_client_as_user.get(
+        f"/api/v1/companies/{company_b.id}/compliance/coverage",
+        headers=headers,
+    )
+    assert foreign_coverage.status_code in (403, 404), foreign_coverage.text
+
     own_coverage = await api_client_as_user.get(
         f"/api/v1/companies/{company_a.id}/rule-coverage", headers=headers
     )

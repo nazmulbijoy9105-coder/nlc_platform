@@ -15,6 +15,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.entitlement import require_entitlement
+from app.compliance.live_rule_coverage import load_live_rule_coverage
+from canonical_architecture.coverage_report import CoverageInvariantError
 from app.core.dependencies import (
     Pagination,
     get_current_user,
@@ -659,6 +661,36 @@ async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_cu
         can_view_financials=company.id in financial_ids,
         evaluation_run=evaluation_run,
     )
+
+
+@router.get(
+    "/{company_id}/compliance/coverage",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+    summary="Live six-state rule coverage",
+)
+async def get_company_rule_coverage(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return registered/implemented/active plus explicit run-scoped applicability/evaluation."""
+    try:
+        return await load_live_rule_coverage(db, company_id)
+    except CoverageInvariantError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "RULE_COVERAGE_INVARIANT_FAILURE",
+                "message": str(exc),
+            },
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Live rule coverage could not be collected from the deployed rule engine.",
+        ) from exc
 
 
 @router.get(
@@ -1337,7 +1369,7 @@ async def verify_company_charge(
     "/{company_id}/rule-coverage",
     summary="Get live six-state rule coverage for an authorised company",
 )
-async def get_company_rule_coverage(
+async def get_company_rule_coverage_live_endpoint(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_for_user),
     _: uuid.UUID = Depends(require_company_access("company_id")),

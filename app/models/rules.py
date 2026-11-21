@@ -28,7 +28,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .database import Base
+from .base import Base
 from .enums import RevenueTier, RuleType, SeverityLevel
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
