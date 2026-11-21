@@ -1369,7 +1369,7 @@ async def verify_company_charge(
     "/{company_id}/rule-coverage",
     summary="Get live six-state rule coverage for an authorised company",
 )
-async def get_company_rule_coverage(
+async def get_company_rule_coverage_live_endpoint(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_for_user),
     _: uuid.UUID = Depends(require_company_access("company_id")),
