@@ -262,8 +262,11 @@ def test_inc006_canonical_and_lifecycle_evidence_states_match():
         (EvidenceStatus.VERIFIED_PRESENT, EvidenceStatus.VERIFIED_PRESENT, RuleState.COMPLIANT),
         (True, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
         (False, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
-        ("VERIFIED_ABSENT", EvidenceStatus.VERIFIED_ABSENT, RuleState.NON_COMPLIANT),
-        ("CONFLICTING", EvidenceStatus.CONFLICTING, RuleState.CONTRADICTORY),
+        ("VERIFIED_PRESENT", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("VERIFIED_ABSENT", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("CONFLICTING", EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        (EvidenceStatus.VERIFIED_ABSENT, EvidenceStatus.VERIFIED_ABSENT, RuleState.NON_COMPLIANT),
+        (EvidenceStatus.CONFLICTING, EvidenceStatus.CONFLICTING, RuleState.CONTRADICTORY),
     )
 
     for lifecycle_value, canonical_value, expected in cases:
