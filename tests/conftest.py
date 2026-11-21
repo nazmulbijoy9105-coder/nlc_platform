@@ -36,6 +36,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from fastapi import Request
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url as _make_url
@@ -366,8 +367,6 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     DB session is overridden to use test transaction.
     Celery tasks are mocked to run eagerly (no worker needed).
     """
-    from fastapi import Request
-
     from app.core.dependencies import get_db, get_db_for_user
     from app.core.security import decode_token
     from app.main import create_app
