@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the documented production 0112 schema through 0122 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through 0123 on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -424,7 +424,7 @@ async def main() -> None:
                 "final_revision": revisions,
                 "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
                 "restricted_audit_view_parity": audit_view,
-                "notes": "The isolated branch was already at 0122; no migration was replayed.",
+                "notes": "The isolated branch was already at 0123; no migration was replayed.",
             }
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
