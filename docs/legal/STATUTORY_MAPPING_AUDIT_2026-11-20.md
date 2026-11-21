@@ -147,6 +147,7 @@ Using the production runtime role `nlc_app_role`:
 - A fabricated UUID plus invalid signature returns NULL principal and zero visible companies.
 - The literal `ADMIN` sentinel plus invalid signature also returns NULL principal and zero visible companies.
 - The runtime role is denied access to `alembic_version`, consistent with keeping migration metadata outside ordinary application privileges.
+- Render application logs across multiple instances on 18–20 November repeatedly record `db_connectivity_ok runtime_role_verified=True`; the running service passed the same startup role-verification guard.
 
 These are production negative/least-privilege checks. They do not replace a positive signed-user production matrix; the manual GET-only workflow in PR #392 requires dedicated client, legal-staff and super-admin test tokens.
 
@@ -163,7 +164,7 @@ REG-003 is expressly unresolved: Companies Act section 34(2) is not accepted as 
 
 ### Deployment alignment and release hold
 
-At this audit point, Render's live backend commit remains `d86784cd3ee0eaa3de32885dba16bf9314c631da`, while GitHub `main` is `c45d368b6c3287f38b71ddf5aceb0ab45ce6fa65`. Render auto-deploy is disabled. Do not trigger production deployment until the approved main commit has passed all required CI, the live signed-user smoke workflow has passed, and the frontend preview/deployment is verified against the matching backend API.
+At this audit point, Render's live backend commit remains `d86784cd3ee0eaa3de32885dba16bf9314c631da`, while GitHub `main` is `c45d368b6c3287f38b71ddf5aceb0ab45ce6fa65`. Render auto-deploy is disabled. Render service metadata reports an empty `healthCheckPath`, while repository `render.yaml` declares `/api/v1/health/live`; reconcile this dashboard/blueprint discrepancy before final release. Do not trigger production deployment until the approved main commit has passed all required CI, the live signed-user smoke workflow has passed, and the frontend preview/deployment is verified against the matching backend API.
 
 
 ### Candidate-anchor CI result — 21 November 2026
