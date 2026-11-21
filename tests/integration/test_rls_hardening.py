@@ -1289,8 +1289,16 @@ async def test_canonical_rule_registry_is_signed_read_only_and_not_audit_visible
             {"table": table},
         )
         rows = policies.fetchall()
-        assert len(rows) == 1
-        policy_name, command, roles, expression = rows[0]
+        # A narrowly scoped migration-owner policy may coexist with the
+        # runtime policy. It must never grant the application role access.
+        runtime_rows = [row for row in rows if "nlc_app_role" in row.roles]
+        assert len(runtime_rows) == 1
+        assert all(
+            "nlc_app_role" not in row.roles
+            for row in rows
+            if row not in runtime_rows
+        )
+        policy_name, command, roles, expression = runtime_rows[0]
         assert policy_name == f"{table}_signed_runtime_read"
         assert command == "SELECT"
         assert "nlc_app_role" in roles
