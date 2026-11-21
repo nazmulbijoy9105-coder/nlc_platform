@@ -42,7 +42,7 @@ When product acceptance is absent, `verified_at` is null. When accepted, `verifi
 
 ## Legal changes and supersession
 
-A new amendment, commencement order, correction or source consolidation receives a new source version. Update the affected rule mappings, record a new owner decision for each affected rule, and accept a new product version. Never rewrite a prior source record, owner decision, version-acceptance event or historical score snapshot. The old version remains auditable; new evaluations use the accepted product version only after the new release is accepted.
+A new amendment, commencement order, correction or source consolidation receives a new source version. Update the affected rule mappings, record a new owner decision for each affected rule, and accept a new product version. Never rewrite a prior source record, owner decision, version-acceptance event or historical score snapshot. The old version remains auditable. The version-acceptance endpoint records the immutable release manifest; it does not rewrite or retroactively re-version existing score snapshots.
 
 ## Score and report labelling
 
@@ -50,7 +50,7 @@ Company, compliance, finding, score-history and evaluation-run API responses ide
 
 ## Release limitations
 
-- Product-owner acceptance is sufficient for NLC's screened-beta product operation; it does not change the independent counsel-verification register.
+- Product-owner acceptance is the operational approval record for screened-beta product use. It does not change the independent counsel-verification register or itself alter the existing score-engine release switch.
 - A supplied source hash is recorded exactly but is not proof that the source bytes were independently fetched, authenticated or preserved.
 - This workflow does not automatically create missing statutory rule rows or activate inactive rules. The parity endpoint identifies the exact IDs requiring controlled repair.
 - No production migration or data mutation is part of this workflow.
