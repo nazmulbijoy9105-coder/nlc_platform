@@ -365,8 +365,6 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions != [START_REVISION]:
-            raise RuntimeError(f"Expected exact production starting revision {START_REVISION}; got {revisions!r}")
         if revisions == [HEAD_REVISION]:
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
