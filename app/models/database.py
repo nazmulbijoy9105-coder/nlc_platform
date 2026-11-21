@@ -15,14 +15,13 @@ from typing import TYPE_CHECKING, Any, cast
 from fastapi import HTTPException, Request
 
 from app.db_url import is_render_runtime, normalize_asyncpg_url
+from app.models.base import Base
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
-    AsyncAttrs,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 if TYPE_CHECKING:

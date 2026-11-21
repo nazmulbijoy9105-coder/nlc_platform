@@ -288,6 +288,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
       DATABASE_URL_TEST: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST_MIGRATION: postgresql+asyncpg://nlc_migrator@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: test-secret-key-not-for-production
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
@@ -359,6 +360,9 @@ jobs:
                           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
                               CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
                                   NOINHERIT NOREPLICATION NOBYPASSRLS;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migrator') THEN
+                              CREATE ROLE nlc_migrator LOGIN SUPERUSER;
                           END IF;
                           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
                               CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
