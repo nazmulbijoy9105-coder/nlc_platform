@@ -292,6 +292,10 @@ def main() -> int:
         "canonical_rule_count": 85,
         "missing_canonical_rule_ids": [],
         "unmapped_outcome_rule_ids": ["INC-002"],
+        "duplicate_outcome_rule_ids": [],
+        "outcome_rule_id_parity": False,
+        "score_available": False,
+        "score": None,
         "fact_provenance_count": 1,
         "fact_provenance_record_type_counts": {"UNATTRIBUTED_PROFILE_FIELDS": 1},
         "unattributed_profile_record_count": 1,
@@ -304,6 +308,16 @@ def main() -> int:
     for key, expected in expected_run.items():
         if run.get(key) != expected:
             raise RuntimeError(f"15 November evaluation mismatch for {key}: {run.get(key)!r}")
+    withheld_reason = run.get("score_withheld_reason") or ""
+    for required_reason in (
+        "do not exactly match the 85-ID canonical registry",
+        "unattributed source data",
+        "No evidence references are bound",
+    ):
+        if required_reason not in withheld_reason:
+            raise RuntimeError(
+                f"15 November score was not withheld for required evidence gap: {required_reason}"
+            )
     status, score_history = get_json(
         base_url, f"/api/v1/companies/{historical_company}/score-history", admin_token
     )
