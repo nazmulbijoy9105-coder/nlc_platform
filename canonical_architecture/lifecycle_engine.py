@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Union
 from canonical_architecture.statutory_rules import (
     STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule, evaluate_applicability,
 )
+from canonical_architecture.evaluator import EvidenceStatus, evaluate_rule
 from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
 
@@ -83,10 +84,30 @@ class CanonicalLifecycleEngine:
         applicability = self._applicability_state(rule, applicability_facts)
         if applicability is not None:
             return applicability
+        if isinstance(evidence, Mapping):
+            evidence_statuses: Dict[str, EvidenceStatus] = {}
+            for key in rule.evidence_required:
+                short = key.split(":")[-1] if ":" in key else key
+                value = evidence.get(key)
+                if value is None:
+                    value = evidence.get(short)
+                if value is None:
+                    value = evidence.get(short.lower())
+                value = getattr(value, "value", value)
+                if value is True or value == EvidenceStatus.VERIFIED_PRESENT.value:
+                    evidence_statuses[key] = EvidenceStatus.VERIFIED_PRESENT
+                elif value == EvidenceStatus.VERIFIED_ABSENT.value:
+                    evidence_statuses[key] = EvidenceStatus.VERIFIED_ABSENT
+                elif value == EvidenceStatus.CONFLICTING.value:
+                    evidence_statuses[key] = EvidenceStatus.CONFLICTING
+                else:
+                    evidence_statuses[key] = EvidenceStatus.UNVERIFIED
+            return evaluate_rule(rule, applicability_facts, evidence_statuses).state
+
         if not evidence:
             return RuleState.UNKNOWN
         verified = self._evidence_satisfies(rule, evidence)
-        return RuleState.COMPLIANT if verified else RuleState.NON_COMPLIANT
+        return RuleState.COMPLIANT if verified else RuleState.UNKNOWN
 
     def generate_rescue_plan(self, active_findings: List[str]) -> List[Dict[str, Any]]:
         steps: List[Dict[str, Any]] = []
