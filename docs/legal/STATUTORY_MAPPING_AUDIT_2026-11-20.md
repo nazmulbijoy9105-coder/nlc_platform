@@ -164,3 +164,15 @@ REG-003 is expressly unresolved: Companies Act section 34(2) is not accepted as 
 ### Deployment alignment and release hold
 
 At this audit point, Render's live backend commit remains `d86784cd3ee0eaa3de32885dba16bf9314c631da`, while GitHub `main` is `c45d368b6c3287f38b71ddf5aceb0ab45ce6fa65`. Render auto-deploy is disabled. Do not trigger production deployment until the approved main commit has passed all required CI, the live signed-user smoke workflow has passed, and the frontend preview/deployment is verified against the matching backend API.
+
+
+### Candidate-anchor CI result — 21 November 2026
+
+CI run [#44848489920](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/44848489920) executed the revised audit harness and reported:
+
+- 0 FAIL
+- 0 UNMAPPED candidate anchors
+- 91 candidate-anchor matches
+- 28 explicit review-only / separate-instrument dispositions
+
+The 54 previously reported unmapped rule IDs are now accounted for by candidate-anchor matches, explicit review-only holds or separate statute-specific audit scope. This closes the **technical unmapped-anchor warnings**. It does not close substantive source review: every counsel approval entry remains `REVIEW_REQUIRED`, source artifacts and effective-date intervals remain to be authenticated, and `VERIFIED_RULE_IDS` remains empty.
