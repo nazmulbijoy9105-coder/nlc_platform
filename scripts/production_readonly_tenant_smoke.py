@@ -133,6 +133,12 @@ def main() -> int:
     staff_company = company_id("NLC_PROD_STAFF_COMPANY_ID")
     staff_unassigned = company_id("NLC_PROD_STAFF_UNASSIGNED_COMPANY_ID")
 
+    status, readiness = get_json(base_url, "/api/v1/health/ready")
+    expect_status("production readiness", status, {200})
+    if not isinstance(readiness, dict):
+        raise RuntimeError("Production readiness response is malformed")
+    print("PASS production readiness endpoint returned a structured health response")
+
     # Unauthenticated requests must not obtain even a company summary.
     status, _ = get_json(base_url, f"/api/v1/companies/{client_company}")
     expect_status("unauthenticated company request", status, {401})
