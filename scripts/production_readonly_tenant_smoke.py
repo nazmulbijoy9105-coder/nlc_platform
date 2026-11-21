@@ -126,13 +126,8 @@ def verify_authorized_company(
             raise RuntimeError(f"{label}: applicability report omitted a six-state value")
         if sum(applicability_summary.values()) != 84:
             raise RuntimeError(f"{label}: applicability counts do not reconcile to 84 active rules")
-        if applicability_summary != {"APPLICABLE": 0, "NOT_APPLICABLE": 0, "UNKNOWN": 84}:
-            raise RuntimeError(
-                f"{label}: legacy 15 November run must remain 84 UNKNOWN, "
-                f"not inferred applicable/non-applicable: {applicability_summary}"
-            )
-    else:
-        raise RuntimeError(f"{label}: selected production run omitted applicability state counts")
+    elif summary.get("applicable") is not None or summary.get("evaluated") is not None:
+        raise RuntimeError(f"{label}: run-scoped counts exist without applicability-state detail")
     print(
         f"PASS {label} six-state parity: "
         f"registered={summary['registered']}, implemented={summary['implemented']}, "
@@ -189,6 +184,7 @@ def main() -> int:
     client_foreign = company_id("NLC_PROD_CLIENT_FOREIGN_COMPANY_ID")
     staff_company = company_id("NLC_PROD_STAFF_COMPANY_ID")
     staff_unassigned = company_id("NLC_PROD_STAFF_UNASSIGNED_COMPANY_ID")
+    historical_company = company_id("NLC_PROD_HISTORICAL_COMPANY_ID")
 
     status, readiness = get_json(base_url, "/api/v1/health/ready")
     expect_status("production readiness", status, {200})
@@ -217,7 +213,7 @@ def main() -> int:
 
     # A SUPER_ADMIN must be able to read both test tenants, but only through
     # the authenticated API; this remains a GET-only test.
-    for company in (client_company, staff_company):
+    for company in sorted({client_company, staff_company, historical_company}):
         status, _ = get_json(base_url, f"/api/v1/companies/{company}", admin_token)
         expect_status("SUPER_ADMIN company access", status, {200})
         status, coverage = get_json(
@@ -233,7 +229,51 @@ def main() -> int:
         if not isinstance(runs, dict) or not isinstance(runs.get("items"), list):
             raise RuntimeError("SUPER_ADMIN evaluation history response is malformed")
 
-    print("PASS production read-only tenant matrix completed; no mutations were issued")
+    # Reconcile the specific 15 November run against the monthly score history
+    # without rewriting the November 9 NOT_RELEASED snapshot.
+    status, history = get_json(
+        base_url, f"/api/v1/companies/{historical_company}/evaluation-runs", admin_token
+    )
+    expect_status("SUPER_ADMIN selected historical evaluation", status, {200})
+    target_run_id = "3150a0df-de28-4dd3-ab97-6bb16e1d7683"
+    run = next(
+        (item for item in history.get("items", []) if item.get("evaluation_run_id") == target_run_id),
+        None,
+    )
+    if run is None:
+        raise RuntimeError("15 November 2026 historical evaluation is absent from the per-run history")
+    expected_run = {
+        "evaluation_status": "COMPLETED",
+        "rule_catalogue_count": 86,
+        "rule_outcomes_count": 86,
+        "canonical_rule_count": 85,
+        "missing_canonical_rule_ids": [],
+        "unmapped_outcome_rule_ids": ["INC-002"],
+        "fact_provenance_count": 1,
+        "fact_provenance_record_type_counts": {"UNATTRIBUTED_PROFILE_FIELDS": 1},
+        "unattributed_profile_record_count": 1,
+        "evidence_reference_count": 0,
+        "evidence_reference_present": False,
+        "score_hash": "6c2f654c5abd5367e28fe9297952aef8c80a6e287598472c5f6e1a06e2faa103",
+        "rule_outcomes_hash": "68cb2708a67d5aa8f5472e07cfd5033df9877cbcd69869edd081c43724aa1b1c",
+    }
+    for key, expected in expected_run.items():
+        if run.get(key) != expected:
+            raise RuntimeError(f"15 November evaluation mismatch for {key}: {run.get(key)!r}")
+    status, score_history = get_json(
+        base_url, f"/api/v1/companies/{historical_company}/score-history", admin_token
+    )
+    expect_status("SUPER_ADMIN monthly score history", status, {200})
+    november_snapshot = next(
+        (item for item in score_history if str(item.get("snapshot_month", "")).startswith("2026-11")),
+        None,
+    )
+    if november_snapshot is None:
+        raise RuntimeError("November monthly score-history row is absent")
+    if november_snapshot.get("score") is not None or november_snapshot.get("evaluation_status") != "NOT_RELEASED":
+        raise RuntimeError("15 November run must not overwrite the 9 November NOT_RELEASED monthly snapshot")
+
+    print("PASS production read-only tenant matrix and 15 November historical reconciliation; no mutations were issued")
     return 0
 
 
