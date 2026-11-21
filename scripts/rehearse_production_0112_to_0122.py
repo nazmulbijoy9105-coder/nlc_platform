@@ -26,7 +26,7 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0122_rls_staff_scope_and_score_history"
+HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
 HISTORICAL_TABLES = (
     "compliance_flags",
     "compliance_score_history",
@@ -51,7 +51,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0122.json")
+REPORT = Path("artifacts/neon-production-0112-to-0123.json")
 
 
 def _url() -> str:
@@ -354,6 +354,42 @@ async def _audit_view_parity() -> dict[str, Any]:
             )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
             raise RuntimeError("Restricted audit view reports historical finding backfill.")
+
+        candidate_identity = await audit_conn.fetchrow(
+            "SELECT * FROM audit.canonical_identity_parity"
+        )
+        expected_candidate_identity = {
+            "candidate_identity_rows": 85,
+            "quarantined_candidate_identity_rows": 85,
+            "active_candidate_identity_rows": 0,
+            "candidate_alias_rows": 84,
+            "unresolved_candidate_alias_rows": 84,
+            "resolved_candidate_alias_rows": 0,
+            "candidate_revision_rows": 0,
+        }
+        actual_candidate_identity = dict(candidate_identity) if candidate_identity else {}
+        if actual_candidate_identity != expected_candidate_identity:
+            raise RuntimeError(
+                "Quarantined candidate identity parity failed: "
+                f"actual={actual_candidate_identity!r} "
+                f"expected={expected_candidate_identity!r}"
+            )
+
+        tenant_rls = await audit_conn.fetchrow(
+            "SELECT tenant_rls_inventory_complete, tenant_rls_missing_tables "
+            "FROM audit.tenant_rls_parity"
+        )
+        if (
+            tenant_rls is None
+            or tenant_rls["tenant_rls_inventory_complete"] is not True
+            or tenant_rls["tenant_rls_missing_tables"] != 0
+        ):
+            raise RuntimeError(
+                "Tenant RLS inventory parity failed: "
+                f"{dict(tenant_rls) if tenant_rls else None!r}"
+            )
+        result["candidate_identity_parity"] = actual_candidate_identity
+        result["tenant_rls_parity"] = dict(tenant_rls)
         return result
     finally:
         await audit_conn.close()
