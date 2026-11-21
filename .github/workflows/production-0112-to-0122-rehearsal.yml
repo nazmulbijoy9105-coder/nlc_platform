@@ -1,4 +1,4 @@
-name: Production 0112 to 0122 Neon Migration Rehearsal
+name: Production 0112 to 0123 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nlc-production-0112-0122-rehearsal-r8
+  group: nlc-production-0112-0123-rehearsal-r8
   cancel-in-progress: false
 
 jobs:
@@ -142,14 +142,15 @@ jobs:
           export APP_DATABASE_URL="$APP_URL"
           export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
           export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
+          export NLC_REHEARSAL_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           export NLC_TARGET_BRANCH_ID="$NEON_REHEARSAL_BRANCH_ID"
           python -m py_compile scripts/rehearse_production_0112_to_0122.py
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload production-schema migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0123.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0112-to-0122-rehearsal
-          path: artifacts/neon-production-0112-to-0122.json
+          name: nlc-production-0112-to-0123-rehearsal
+          path: artifacts/neon-production-0112-to-0123.json
           if-no-files-found: error
