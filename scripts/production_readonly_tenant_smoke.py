@@ -227,6 +227,31 @@ def main() -> int:
         if not isinstance(runs, dict) or not isinstance(runs.get("items"), list):
             raise RuntimeError("SUPER_ADMIN evaluation history response is malformed")
 
+    # Verify the selected company's live six-state funnel for its 15 November run.
+    status, historical_coverage = get_json(
+        base_url, f"/api/v1/companies/{historical_company}/rule-coverage", admin_token
+    )
+    expect_status("SUPER_ADMIN selected historical six-state report", status, {200})
+    historical_report = (
+        historical_coverage.get("report")
+        if isinstance(historical_coverage, dict) else None
+    )
+    historical_summary = (historical_report or {}).get("summary") or {}
+    if (
+        historical_summary.get("registered") != 85
+        or historical_summary.get("implemented") != 85
+        or historical_summary.get("active") != 84
+        or historical_summary.get("applicable") != 0
+        or historical_summary.get("evaluated") != 0
+    ):
+        raise RuntimeError(
+            f"15 November live funnel mismatch: {historical_summary}"
+        )
+    if (historical_report or {}).get("applicability_summary") != {
+        "APPLICABLE": 0, "NOT_APPLICABLE": 0, "UNKNOWN": 84
+    }:
+        raise RuntimeError("15 November live funnel must preserve 84 UNKNOWN active-rule applicability states")
+
     # Reconcile the specific 15 November run against the monthly score history
     # without rewriting the November 9 NOT_RELEASED snapshot.
     status, history = get_json(
