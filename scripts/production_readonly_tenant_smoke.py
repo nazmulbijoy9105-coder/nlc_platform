@@ -270,7 +270,7 @@ def main() -> int:
     )
     if november_snapshot is None:
         raise RuntimeError("November monthly score-history row is absent")
-    if november_snapshot.get("score") is not None or november_snapshot.get("evaluation_status") != "NOT_RELEASED":
+    if november_snapshot.get("score") is not None or november_snapshot.get("evaluation_status") != "NOT_EVALUATED":
         raise RuntimeError("15 November run must not overwrite the 9 November NOT_RELEASED monthly snapshot")
 
     print("PASS production read-only tenant matrix and 15 November historical reconciliation; no mutations were issued")
