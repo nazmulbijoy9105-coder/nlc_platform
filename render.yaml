@@ -4,7 +4,7 @@ services:
     runtime: docker
     region: singapore
     plan: free
-    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    dockerCommand: sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-10000}"'
     healthCheckPath: /api/v1/health/ready
     autoDeploy: false
     envVars:
