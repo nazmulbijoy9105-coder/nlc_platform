@@ -235,11 +235,6 @@ async def test_revoked_membership_overrides_stale_jwt_company_ids(db, db_company
     await db.flush()
 
     # The JWT still contains the old company id; the database membership is revoked.
-    await db.execute(
-        delete(CompanyUserAccess).where(
-            CompanyUserAccess.user_id == client.id,
-            CompanyUserAccess.company_id == db_company.id,
-        )
     # Revoke the membership through the trusted ADMIN service principal.
     # The runtime role intentionally has no DELETE grant on membership rows.
     await db.execute(
