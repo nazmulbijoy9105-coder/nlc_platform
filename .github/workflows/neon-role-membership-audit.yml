@@ -55,4 +55,4 @@ jobs:
             exit 1
           fi
           echo "::add-mask::${AUDIT_URL}"
-          psql "${AUDIT_URL}" -X -v ON_ERROR_STOP=1 -f scripts/audit_nlc_role_memberships.sql
+          PGOPTIONS="-c default_transaction_read_only=on" psql "${AUDIT_URL}" -X -v ON_ERROR_STOP=1 -f scripts/audit_nlc_role_memberships.sql
