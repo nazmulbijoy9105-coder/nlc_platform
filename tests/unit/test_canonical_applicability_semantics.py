@@ -103,22 +103,27 @@ def test_canonical_evaluator_returns_unknown_for_missing_inc005_fact():
 
 
 def test_lifecycle_and_canonical_evaluator_share_inc005_applicability_states():
+    from canonical_architecture.evaluator import EvidenceStatus
+
     engine = CanonicalLifecycleEngine()
+    rule = STATUTORY_RULE_REGISTRY["INC-005"]
+    verified_evidence = {
+        key: EvidenceStatus.VERIFIED_PRESENT for key in rule.evidence_required
+    }
 
     assert engine.evaluate_finding("INC-005", {}) is RuleState.UNKNOWN
     assert engine.evaluate_finding(
-        "INC-005", {"has_foreign_shareholder": False}
+        "INC-005", {}, facts={"has_foreign_shareholder": False}
     ) is RuleState.NOT_APPLICABLE
     assert engine.evaluate_finding(
-        "INC-005",
-        {
-            "has_foreign_shareholder": True,
-            "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD": True,
-            "INC-005:AD_BANK_ENCASHMENT_CERTIFICATE_OR_PERMITTED_FC_ACCOUNT_EVIDENCE": True,
-            "INC-005:REMITTANCE_IDENTITY_AND_BANK_PROVENANCE": True,
-            "INC-005:CURRENT_BANGLADESH_BANK_CIRCULAR_VERSION": True,
-        },
+        "INC-005", verified_evidence, facts={"has_foreign_shareholder": True}
     ) is RuleState.COMPLIANT
+    # A bare boolean is not a verification record.
+    assert engine.evaluate_finding(
+        "INC-005",
+        {key: True for key in rule.evidence_required},
+        facts={"has_foreign_shareholder": True},
+    ) is RuleState.UNKNOWN
 
 
 def test_lifecycle_preserves_unknown_for_unstructured_tax_scope():
@@ -254,7 +259,8 @@ def test_inc006_canonical_and_lifecycle_evidence_states_match():
         "remittance_amount_usd": 49999,
     }
     cases = (
-        (True, EvidenceStatus.VERIFIED_PRESENT, RuleState.COMPLIANT),
+        (EvidenceStatus.VERIFIED_PRESENT, EvidenceStatus.VERIFIED_PRESENT, RuleState.COMPLIANT),
+        (True, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
         (False, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
         ("VERIFIED_ABSENT", EvidenceStatus.VERIFIED_ABSENT, RuleState.NON_COMPLIANT),
         ("CONFLICTING", EvidenceStatus.CONFLICTING, RuleState.CONTRADICTORY),
