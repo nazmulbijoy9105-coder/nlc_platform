@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from typing import List
 
 from pydantic import model_validator
@@ -154,8 +155,6 @@ class Settings(BaseSettings):
     max_login_attempts: int = 5
     lockout_minutes: int = 30
     max_page_size: int = 100
-
-from functools import lru_cache
 
 
 @lru_cache
