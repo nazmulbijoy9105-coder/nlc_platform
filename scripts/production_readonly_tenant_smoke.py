@@ -99,12 +99,23 @@ def verify_authorized_company(
     implemented_ids = states.get("implemented")
     if not isinstance(registered_ids, list) or not isinstance(implemented_ids, list):
         raise RuntimeError(f"{label}: report omitted canonical registered/implemented ID lists")
-    if len(registered_ids) != 85 or set(registered_ids) != set(implemented_ids):
+    if (
+        len(registered_ids) != 85
+        or len(set(registered_ids)) != 85
+        or len(implemented_ids) != 85
+        or len(set(implemented_ids)) != 85
+        or set(registered_ids) != set(implemented_ids)
+    ):
         raise RuntimeError(
             f"{label}: the 85 canonical IDs do not exactly match engine implementations"
         )
     active_ids = states.get("active")
-    if not isinstance(active_ids, list) or len(active_ids) != 84 or "INC-001" in set(active_ids):
+    if (
+        not isinstance(active_ids, list)
+        or len(active_ids) != 84
+        or len(set(active_ids)) != 84
+        or "INC-001" in set(active_ids)
+    ):
         raise RuntimeError(
             f"{label}: active IDs must contain exactly 84 entries and exclude held INC-001"
         )
