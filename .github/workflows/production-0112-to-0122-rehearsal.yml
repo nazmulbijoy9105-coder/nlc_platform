@@ -58,7 +58,7 @@ jobs:
           branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
           branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
           branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0123-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
             echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
             exit 1
           fi
