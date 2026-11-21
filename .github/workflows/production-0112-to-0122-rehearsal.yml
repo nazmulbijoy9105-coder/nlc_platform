@@ -1,4 +1,4 @@
-name: Production 0112 to 0122 Neon Migration Rehearsal
+name: Production 0112 to 0123 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -10,8 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nlc-production-0112-0122-rehearsal
-  group: nlc-production-0112-0122-rehearsal-r8
+  group: nlc-production-0112-0123-rehearsal-r8
   cancel-in-progress: false
 
 jobs:
@@ -23,8 +22,6 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: rapid-bonus-26545234
       NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
-      NEON_REHEARSAL_BRANCH_ID: br-late-haze-aoiuu98s
-      NEON_REHEARSAL_ENDPOINT_ID: ep-patient-smoke-ao6q34tu
       NEON_REHEARSAL_BRANCH_ID: br-holy-waterfall-aoghdxa8
       NEON_REHEARSAL_ENDPOINT_ID: ep-wispy-frog-aoibi6pt
       PYTHONPATH: ${{ github.workspace }}
@@ -61,8 +58,7 @@ jobs:
           branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
           branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
           branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r5" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
-          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0122-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
+          if [[ "$branch_name" != "nlc-rehearsal-0112-to-0123-2026-11-20-r8" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
             echo "::error::Refusing to migrate: target is not the pinned isolated child of the production backup."
             exit 1
           fi
@@ -155,6 +151,6 @@ jobs:
         if: always() && hashFiles('artifacts/neon-production-0112-to-0122.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0112-to-0122-rehearsal
-          path: artifacts/neon-production-0112-to-0122.json
+          name: nlc-production-0112-to-0123-rehearsal
+          path: artifacts/neon-production-0112-to-0123.json
           if-no-files-found: error
