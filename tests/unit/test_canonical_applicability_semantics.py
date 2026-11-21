@@ -240,3 +240,52 @@ def test_inc006_submit_new_evidence_accepts_separate_applicability_facts():
         facts=facts,
         verification_recorded=True,
     ) is RuleState.UNKNOWN
+
+
+
+def test_inc006_canonical_and_lifecycle_evidence_states_match():
+    from canonical_architecture.evaluator import EvidenceStatus
+
+    rule = STATUTORY_RULE_REGISTRY["INC-006"]
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+    cases = (
+        (True, EvidenceStatus.VERIFIED_PRESENT, RuleState.COMPLIANT),
+        (False, EvidenceStatus.UNVERIFIED, RuleState.UNKNOWN),
+        ("VERIFIED_ABSENT", EvidenceStatus.VERIFIED_ABSENT, RuleState.NON_COMPLIANT),
+        ("CONFLICTING", EvidenceStatus.CONFLICTING, RuleState.CONTRADICTORY),
+    )
+
+    for lifecycle_value, canonical_value, expected in cases:
+        canonical = evaluate_rule(
+            rule,
+            facts,
+            {"DOCUMENTARY_EVIDENCE": canonical_value},
+        )
+        lifecycle = engine.evaluate_finding(
+            "INC-006",
+            {"DOCUMENTARY_EVIDENCE": lifecycle_value},
+            facts=facts,
+        )
+        assert canonical.state is expected
+        assert lifecycle is expected
+        assert lifecycle is canonical.state
+
+
+def test_inc006_unrelated_fact_in_evidence_mapping_stays_unknown():
+    engine = CanonicalLifecycleEngine()
+    facts = {
+        "has_foreign_shareholder": True,
+        "bida_registered": True,
+        "remittance_amount_usd": 49999,
+    }
+
+    assert engine.evaluate_finding(
+        "INC-006",
+        {"has_foreign_shareholder": True},
+        facts=facts,
+    ) is RuleState.UNKNOWN
