@@ -23,6 +23,7 @@ class ApplicabilityRule:
     notes: str = ""
 
 # ═════════════════════════════════════════════════════════════════════
+# APPLICABILITY MODEL — 41 candidate mappings (not legally verified)
 # APPLICABILITY MODEL — 41 declared product-scope policies
 # ═════════════════════════════════════════════════════════════════════
 
