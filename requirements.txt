@@ -110,7 +110,7 @@ opentelemetry-api==1.45.0
 opt-einsum==3.3.0
 orjson==3.12.0
 packageurl-python==0.17.6
-packaging==26.0
+packaging==26.3
 paddleocr==3.4.0
 paddlepaddle==3.3.0
 paddlex==3.4.2
