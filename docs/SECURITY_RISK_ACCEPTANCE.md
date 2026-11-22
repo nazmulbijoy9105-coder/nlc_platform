@@ -1,13 +1,52 @@
-# Security Risk Acceptance — Known Vulnerabilities
+# Security Remediation Status
 
-## Accepted Risks (as of 2026-11-02)
+Updated: 2026-11-22
 
-| Package | Version | Vulnerability | Risk | Mitigation |
-|---------|---------|--------------|------|------------|
-| starlette | 0.41.3 | Multiple CVEs | Medium | FastAPI 0.115.5 caps at <0.42; upgrade planned |
-| python-jose | 3.5.0 | PYSEC-2026-4298 | Low | No upstream fix; consider PyJWT migration |
-| ecdsa | 0.19.2 | PYSEC-2026-1325 | Low | Used only for legacy JWT verification |
+This document records the remediation state for the dependency and application
+security findings tracked in the security/remediate-12-findings pull request.
 
-## Upgrade Plan
-- Q1 2027: FastAPI 0.118+ + starlette 0.49+ (dedicated sprint)
-- Q2 2027: Migrate python-jose to PyJWT
+## Remediated in this branch
+
+| Finding | Change |
+|---|---|
+| Starlette range-header / related advisories | Upgrade FastAPI to 0.165.0 and Starlette to 1.10.0. The FastAPI release line requires a newer Starlette baseline; retain the exact pins together and verify the resolved dependency graph in CI. |
+| python-jose / ECDSA Minerva | Replace python-jose with PyJWT 2.15.1; update token implementation and the direct token test import; remove the direct ecdsa pin. Token type, expiry, algorithm allow-list, JTI, refresh and temporary-token behavior remain enforced by the application. |
+| Brotli | Upgrade the direct Brotli dependency to 1.2.1. |
+| Pillow | Upgrade Pillow to 13.0.0 for the reported Pillow package advisories. **Residual platform-specific issue:** upstream Pillow 13.0.0 wheels were reported to bundle Brotli 1.2.0 in pillow.libs. The direct Brotli pin does not replace that bundled copy. Do not mark the bundled decoder issue closed until the deployed wheel is verified to contain Brotli 1.2.1 or a later fixed build. |
+| certifi | Upgrade to 2026.11.20. |
+| fsspec | Upgrade to 2026.9.0. |
+| virtualenv | Upgrade to 21.15.11. |
+| GitPython | Upgrade to 3.2.1. |
+| filelock | Upgrade to 4.2.12. |
+
+## Application-level remediation
+
+- Verification subprocess calls use an argument vector, explicitly disable shell
+  interpretation, close inherited file descriptors, disable stdin, and execute
+  only allow-listed scripts resolved inside the trusted scripts directory.
+- The Alembic seed migration binds every inserted value through SQLAlchemy
+  parameters; rule strings are no longer interpolated into SQL.
+- The fallback PDF HTML renderer escapes title and document content before
+  interpolation. The Jinja template path continues to use autoescaping.
+- Deployment curl guidance reads the bearer token from an environment variable
+  instead of embedding a token in the command.
+
+## Findings requiring verification before closure
+
+1. **Pillow's bundled Brotli copy:** inspect the actual wheel installed in the
+   production image. A top-level `brotli==1.2.1` does not patch a private
+   `pillow.libs/libbrotli*` copy.
+2. **Full dependency graph:** run `pip-audit -r requirements.txt` against the
+   resolved production environment and retain the machine-readable report.
+3. **Compatibility:** run the complete backend suite against the upgraded
+   FastAPI/Starlette, filelock, Pillow, and other dependency versions before
+   deployment. Do not deploy this branch based only on successful resolution.
+4. **Defusedxml license classifier:** the reported item is a license-identification
+   finding, not by itself a demonstrated exploitable security vulnerability.
+   Confirm the package's actual license metadata and the project's license policy.
+5. **Tornado open-redirect finding:** verify the exact advisory and affected
+   version range against the resolved 6.5.10 artifact. Do not suppress it without
+   a scanner report showing the advisory is not applicable.
+
+No production deployment, test-suite pass, or clean vulnerability scan is claimed
+by this document. Closure requires recorded CI and production-artifact evidence.
