@@ -3,7 +3,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Optional, cast
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import InvalidTokenError
 
 from app.core.config import settings
 
@@ -54,7 +55,7 @@ def decode_token(token: str, expected_type: str | None = None) -> dict | None:
         if expected_type is not None and payload.get("type") != expected_type:
             return None
         return payload  # type: ignore
-    except JWTError:
+    except InvalidTokenError:
         return None
 
 # TOTP & Temp Token Functions
