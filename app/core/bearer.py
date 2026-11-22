@@ -1,5 +1,5 @@
 # NOTE: do NOT add `from __future__ import annotations` here.
-# FastAPI must resolve the `request: Request` annotation of __call__.
+# FastAPI must resolve the `request: HTTPConnection[State]` annotation of __call__.
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer
 from starlette.datastructures import State
