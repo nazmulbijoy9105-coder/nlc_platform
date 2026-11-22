@@ -1,8 +1,11 @@
+import base64
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Optional, cast
 
 import bcrypt
 import jwt
+from cryptography.fernet import Fernet
 from jwt.exceptions import InvalidTokenError
 
 from app.core.config import settings
@@ -66,10 +69,6 @@ def decode_token(token: str, expected_type: str | None = None) -> dict | None:
 
 
 # TOTP & Temp Token Functions
-import base64
-import os
-
-from cryptography.fernet import Fernet
 
 
 def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
