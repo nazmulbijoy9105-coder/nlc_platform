@@ -86,12 +86,12 @@ REQUIRED_FIELDS = [
 
 # Evidence tables the last audit found empty — audited for row counts.
 EVIDENCE_TABLES = [
-    "evidence_agm",
-    "evidence_auditor",
-    "evidence_capital",
-    "evidence_directors",
-    "evidence_filings",
-    "evidence_shareholders",
+    "agm_notice_evidence",
+    "articles_verifications",
+    "articles_verification_events",
+    "rescue_audit_log",
+    "webhook_endpoints",
+    "webhook_deliveries",
 ]
 
 
@@ -258,9 +258,28 @@ def main():
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     try:
-        # Ensure columns exist (even in dry-run, so we can inspect)
-        add_integrity_columns(cur)
-        conn.commit()
+        # Adding reconciliation metadata is itself a write. In dry-run mode,
+        # refuse to mutate schema and read the cohort only if the columns exist.
+        cur.execute("""
+            SELECT column_name
+              FROM information_schema.columns
+             WHERE table_schema = 'public'
+               AND table_name = 'compliance_score_history'
+        """)
+        existing_columns = {row["column_name"] for row in cur.fetchall()}
+        required_reconciliation_columns = {
+            "integrity_status", "integrity_audited_at",
+            "integrity_missing_fields", "integrity_classification_source",
+        }
+        if not args.dry_run:
+            add_integrity_columns(cur)
+            conn.commit()
+        elif not required_reconciliation_columns.issubset(existing_columns):
+            print(
+                "\nDRY-RUN: reconciliation columns are not installed yet; "
+                "classification can proceed, but no schema changes are permitted.",
+                file=sys.stdout,
+            )
 
         # Fetch all records
         rows, release_col, actual_cols = fetch_records(cur)
@@ -359,7 +378,10 @@ def main():
             print(f"  BROKEN_CHAIN:            {counts['broken_chain']}")
 
         # Write reports
-        out_dir = "/home/z/my-project/download/fixes"
+        out_dir = os.environ.get(
+            "NLC_RECONCILIATION_REPORT_DIR",
+            os.path.join(os.getcwd(), "artifacts", "reconciliation"),
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         json_path = os.path.join(out_dir, "reconciliation_report.json")

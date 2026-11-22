@@ -304,32 +304,17 @@ def test_corpus_static_report_validates_and_counts_85():
     assert set(counts) == {stage.value for stage in CoverageStage}
 
 
-def test_corpus_live_shape_inc001_hold_is_explicit():
-    """Live funnel shape: INC-001 is implemented but activation-held by 0115.
-
-    The hold must carry an explicit reason — an unexplained implemented-but-
-    inactive delta is exactly the silent state collapse this funnel forbids.
-    """
+def test_corpus_live_shape_85_ids_are_active_catalogue_rows():
+    """All 85 catalogue IDs are active rows; scoring remains staged separately."""
     registered = set(STATUTORY_RULE_REGISTRY)
-    active = registered - {"INC-001"}  # 0115 quarantine: INC-001 inactive in the database
+    active = registered
     report = RuleCoverageReport(
         registered=frozenset(registered),
         implemented=frozenset(registered),
         active=frozenset(active),
-        active_hold_reasons={"INC-001": "0115 QUARANTINED_LEGACY_IDENTITY — activation decision pending"},
     )
     report.validate()
-    assert report.summary()["active"] == EXPECTED_CORPUS - 1
-
-    unheld = RuleCoverageReport(
-        registered=frozenset(registered),
-        implemented=frozenset(registered),
-        active=frozenset(active),
-    )
-    with pytest.raises(CoverageInvariantError) as excinfo:
-        unheld.validate()
-    assert "I5" in str(excinfo.value)
-    assert "INC-001" in str(excinfo.value)
+    assert report.summary()["active"] == EXPECTED_CORPUS
 
 
 def test_cli_writes_valid_artifact_and_fails_closed(tmp_path, capsys):

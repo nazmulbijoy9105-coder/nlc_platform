@@ -1,0 +1,1296 @@
+{
+  "audit": "alembic-revision-source-integrity",
+  "base": "0001_initial_schema",
+  "database_checked": false,
+  "head": "0124_restore_85_rule_catalogue_parity",
+  "merge_revision_count": 13,
+  "migration_file_count": 127,
+  "production_schema_checked": false,
+  "revision_count": 127,
+  "revisions": [
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [],
+      "path": "alembic\\versions\\0001_initial_schema.py",
+      "revision": "0001_initial_schema",
+      "sha256": "b4da2857124e313b2439bf0a43a20e9ee3e75f90dbc8ac92c7a163a305f02394"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0001_initial_schema"
+      ],
+      "path": "alembic\\versions\\0002_seed_ilrmf_rules.py",
+      "revision": "0002_seed_ilrmf_rules",
+      "sha256": "041afeac6f284246510567871b8d97685809d30205bdd66186a4ddf9ab76a1d1"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0002_seed_ilrmf_rules"
+      ],
+      "path": "alembic\\versions\\0003_add_reg_004_rule.py",
+      "revision": "0003_add_reg_004_rule",
+      "sha256": "5a356f661517a30be0c7279a8df695aae5a53e04a79ae341b1d36daa0e8c44f6"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0003_add_reg_004_rule"
+      ],
+      "path": "alembic\\versions\\0004_add_v2_compliance_fields.py",
+      "revision": "0004_add_v2_compliance_fields",
+      "sha256": "12a6e948df8ded6bc1a82b394c604e1a6a88573a115940292f83b8d623c10a5a"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0004_add_v2_compliance_fields"
+      ],
+      "path": "alembic\\versions\\0005_add_v3_tax_trade_license_disqualification_fields.py",
+      "revision": "0005_v3_tax_fields",
+      "sha256": "9d93b4a6623c1d446d0438603f463d16bb6191ee7db65dc7898b00fe50b78169"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0005_v3_tax_fields"
+      ],
+      "path": "alembic\\versions\\0006_seed_v3_rules.py",
+      "revision": "0006_seed_v3_rules",
+      "sha256": "0267a75c346f2071d9a2e2b492818b5e3f5b826fc27eaf3ae16823e3d40d224c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0006_seed_v3_rules"
+      ],
+      "path": "alembic\\versions\\0007_fix_tl_inc003_rules.py",
+      "revision": "0007_fix_tl_inc003_rules",
+      "sha256": "b97a03ac8c07944d6b4793be295e6f9f0dcb38043834791cd8de75e5b332f635"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0007_fix_tl_inc003_rules"
+      ],
+      "path": "alembic\\versions\\0008_seed_document_templates.py",
+      "revision": "0008_seed_document_templates",
+      "sha256": "3455aa74e776b1258611a6647d91272016ba761ec9a92d2ba8bbcdfd08a6869d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0008_seed_document_templates"
+      ],
+      "path": "alembic\\versions\\0009_add_template_cols.py",
+      "revision": "0009_add_template_cols",
+      "sha256": "78bafd73a5f41e942fd67675759c20d8b732894c75f4110da5cbb835447ea5a5"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0009_add_template_cols"
+      ],
+      "path": "alembic\\versions\\0010_fix_rule_identities.py",
+      "revision": "0010_fix_rule_identities",
+      "sha256": "008a4a624d96985d2008e8215ba29345a1b1f678d3e45f8511ef5a107dc75ff0"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0010_fix_rule_identities"
+      ],
+      "path": "alembic\\versions\\0011_add_missing_rules.py",
+      "revision": "0011_add_missing_rules",
+      "sha256": "f8903b2479b8892291bebcfd7d50f3c3fa377e36d4426e0ea96af7b111b56537"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0011_add_missing_rules"
+      ],
+      "path": "alembic\\versions\\0012_remove_extra_rules.py",
+      "revision": "0012_remove_extra_rules",
+      "sha256": "6650b5ca908193f8a6c3193d2d5dc21ad600d60b8e9d9c02a07757ae00962f39"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0012_remove_extra_rules"
+      ],
+      "path": "alembic\\versions\\0013_add_bankruptcy_labour_rules.py",
+      "revision": "0013_add_bankruptcy_labour_rules",
+      "sha256": "36c9232b70ab110f83c1507e1f15a9a9c4e9d2650decfc77472cf7ca18247d9c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0013_add_bankruptcy_labour_rules"
+      ],
+      "path": "alembic\\versions\\0014_add_performance_indexes.py",
+      "revision": "0014_add_performance_indexes",
+      "sha256": "857873612965ac4a39326d25724ddd875e462a9c659df10bd621754e5c58ff4d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0014_add_performance_indexes"
+      ],
+      "path": "alembic\\versions\\0015_add_extended_legal_rules.py",
+      "revision": "0015_add_extended_legal_rules",
+      "sha256": "65fb0ee21cc1c523793d69de312635679388b51e316bf5e2f89d636ce23f46ab"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0015_add_extended_legal_rules"
+      ],
+      "path": "alembic\\versions\\0016_add_constraints_indexes.py",
+      "revision": "0016_add_constraints_indexes",
+      "sha256": "75ab01a1b6def7488e9bff2a1a3b4b525890d28fa32e8346f89e706d01eafba2"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0016_add_constraints_indexes"
+      ],
+      "path": "alembic\\versions\\0017_fix_constraints.py",
+      "revision": "0017_fix_constraints",
+      "sha256": "5c2b037f2aa616de64598faa68eb3ca873ef9433e8830ef4921f6843d20c8fea"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0017_fix_constraints"
+      ],
+      "path": "alembic\\versions\\0019_add_rjsc_forms.py",
+      "revision": "0019_add_rjsc_forms",
+      "sha256": "67f121b0a54e77a7a0997a1f0e0fffe56c1e85d067656f306d9f93013b0d76fa"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0019_add_rjsc_forms"
+      ],
+      "path": "alembic\\versions\\0020_add_hash_chain.py",
+      "revision": "0020_add_hash_chain",
+      "sha256": "b0be4762e66ebb98bec8cad7b5a45386eb62628a12cdb997d1419d597e61007c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0020_add_hash_chain"
+      ],
+      "path": "alembic\\versions\\0021_risk_band_not_evaluated.py",
+      "revision": "0021_risk_band_not_evaluated",
+      "sha256": "6ca3620aef78291281191a7bed887a4b8bc7e217fa7f211081d938aabeac2418"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0021_risk_band_not_evaluated"
+      ],
+      "path": "alembic\\versions\\0022_reconcile_rule_corpus.py",
+      "revision": "0022_reconcile_rule_corpus",
+      "sha256": "ec030c38032f9b7e8aedd55e8b6b015133cb2b729c0eef422857dbc62ed25c73"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0022_reconcile_rule_corpus"
+      ],
+      "path": "alembic\\versions\\0023_companies_is_manufacturing.py",
+      "revision": "0023_is_manufacturing",
+      "sha256": "21db19b07391099c3fca64b14a868984f58abe7e8a13f737cb56072b073e38e2"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0023_is_manufacturing"
+      ],
+      "path": "alembic\\versions\\0024_harden_tenant_rls.py",
+      "revision": "0024_harden_tenant_rls",
+      "sha256": "74a9dbea2724ed9f2eb8d8a72892447891cc5958d76725ec87272c5bf49f85ad"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0024_harden_tenant_rls"
+      ],
+      "path": "alembic\\versions\\0025_harden_access_table_rls.py",
+      "revision": "0025_harden_access_table_rls",
+      "sha256": "78ffc53818df16c209155aef3e0fc957927cdbed7a05293619bf634f473a4502"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0025_harden_access_table_rls"
+      ],
+      "path": "alembic\\versions\\0026_reconcile_rule_law.py",
+      "revision": "0026_reconcile_rule_law",
+      "sha256": "5f2ca026c9dba4828c1b18614f6e42457ec81e56c1b6ee9b907574870dd1f59a"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0026_reconcile_rule_law"
+      ],
+      "path": "alembic\\versions\\0027_add_compliance_data_columns.py",
+      "revision": "0027_add_compliance_data_columns",
+      "sha256": "fc0be86a3760bb5960f39492f41ce6a7c137cd8235c5077a74a274c1fe6a036d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0027_add_compliance_data_columns"
+      ],
+      "path": "alembic\\versions\\0028_add_remaining_compliance_fields.py",
+      "revision": "0028_add_remaining_compliance_fields",
+      "sha256": "56e4a2495a5ff440eedd4aad121f351ae6b2566f587c7f3154b43cce806e5c93"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0028_add_remaining_compliance_fields"
+      ],
+      "path": "alembic\\versions\\0029_fix_inc001_inc002_identities.py",
+      "revision": "0029_fix_inc001_inc002_identities",
+      "sha256": "596116b965a5038f9d43a306c24c7a4f4ed5159f99532448b4fe014f6413a981"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0029_fix_inc001_inc002_identities"
+      ],
+      "path": "alembic\\versions\\0030_fix_citation_errors.py",
+      "revision": "0030_fix_citation_errors",
+      "sha256": "f4c8122f21061ce576ef90fe1193aeb32cf8f1a506c310bcf8143985bd79c886"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0030_fix_citation_errors"
+      ],
+      "path": "alembic\\versions\\0031_add_board_accounts_rules.py",
+      "revision": "0031_add_board_accounts_rules",
+      "sha256": "57aa47c1617da1361ecffb2c66552676a07beb11f18c6a657b287bff81241f9b"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0031_add_board_accounts_rules"
+      ],
+      "path": "alembic\\versions\\0032_add_rjsc_columns.py",
+      "revision": "0032_rjsc_cols",
+      "sha256": "f7471f85d3af7e00509b72afc2c8a4bbeb0bbd69bd32971bf1818ec4bac5dc31"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0032_rjsc_cols"
+      ],
+      "path": "alembic\\versions\\0033_reconcile_company_orm_columns.py",
+      "revision": "0033_company_orm",
+      "sha256": "197cb4e9fd037bc076867a07c1c5312d8011ed1b571c1ad2fdcaf159e805a304"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0033_company_orm"
+      ],
+      "path": "alembic\\versions\\0034_compliance_calendar.py",
+      "revision": "0034_compliance_calendar",
+      "sha256": "3e4dcf10c63c7130dfca9b267deb3ceff6e5e8b47367fb61ac637d13f551bbc6"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0034_compliance_calendar"
+      ],
+      "path": "alembic\\versions\\0035_add_verification_status.py",
+      "revision": "0035_verification_status",
+      "sha256": "fe7f26de33f16f2b0f5fb0bb58f6dfc59787db74f75357c51c64b875b813da88"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0035_verification_status"
+      ],
+      "path": "alembic\\versions\\0036_nullable_boolean_columns.py",
+      "revision": "0036_nullable_bools",
+      "sha256": "169a60e60f55ffc22c3c456910844af43e6fd1c3f03fd72c7326e79213072bad"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0036_nullable_bools"
+      ],
+      "path": "alembic\\versions\\0037_add_webhook_tables.py",
+      "revision": "0037_add_webhook_tables",
+      "sha256": "f225c01562ecbeb0f1352364881dc217a2a549189a6420f4d1c2dc1d1198b348"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0037_add_webhook_tables"
+      ],
+      "path": "alembic\\versions\\0038_add_rescue_audit_log.py",
+      "revision": "0038_add_rescue_audit_log",
+      "sha256": "407b81a004573a72e44e72a296821a39b40b234f14e945bf11598494d682c37d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0038_add_rescue_audit_log"
+      ],
+      "path": "alembic\\versions\\0039_add_evaluation_status.py",
+      "revision": "0039_add_evaluation_status",
+      "sha256": "1c761cd9f75b8a6103705a85abfc26be10098865bf0bc4766e3580db59fe2c4f"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0039_add_evaluation_status"
+      ],
+      "path": "alembic\\versions\\0040_engagement_id.py",
+      "revision": "0040_engagement_id",
+      "sha256": "c666c51aad0d46d219d27fcfd1f201dfbd164f2396b1c57a470a91302f6765f9"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0040_engagement_id"
+      ],
+      "path": "alembic\\versions\\0041_rejected_by.py",
+      "revision": "0041_rejected_by",
+      "sha256": "c9d74ca4aa6f03bf9e518b0a3573041312f7186c46305652b08bae568e60f1ef"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0041_rejected_by"
+      ],
+      "path": "alembic\\versions\\0042_dedup_key.py",
+      "revision": "0042_dedup_key",
+      "sha256": "21b55f5ebbe772a313c83522df9f15712453af9ffca88ded7a245d6dd8435709"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0042_dedup_key"
+      ],
+      "path": "alembic\\versions\\0043_reconcile_notification_dedup_key.py",
+      "revision": "0043_reconcile_notification_dedup_key",
+      "sha256": "b45c4fafefbd58739919647dcbe8b3ae77ab427445cc2a5ee371a3145c51a093"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0043_reconcile_notification_dedup_key"
+      ],
+      "path": "alembic\\versions\\20261029_0103_b10c91ac6860_add_rescue_generation_error_to_companies.py",
+      "revision": "b10c91ac6860",
+      "sha256": "d082ee7994e729dd97dca36889d4b3b94f87b523284972a69ece81a19aecbb27"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "b10c91ac6860"
+      ],
+      "path": "alembic\\versions\\0044_webhook_schema_reconcile.py",
+      "revision": "0044_webhook_schema_reconcile",
+      "sha256": "6f7105a21f68d3be4bd8a73197f93048bd77b55244b9f0eb17700bbd445ca833"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0044_webhook_schema_reconcile"
+      ],
+      "path": "alembic\\versions\\0045_agm_held_fields.py",
+      "revision": "0045_agm_held_fields",
+      "sha256": "c44df14b70d34d2be0ec99a2f839e368d81012751656f2c38c789581acf1d18c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0045_agm_held_fields"
+      ],
+      "path": "alembic\\versions\\0047_agm_unknown_defaults.py",
+      "revision": "0047_agm_unknown_defaults",
+      "sha256": "525be09c16ebbb15fb95b0303e562f0d8c278f9d5dd800a9e0930d808d328645"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0045_agm_held_fields"
+      ],
+      "path": "alembic\\versions\\0046_legal_evidence_provenance.py",
+      "revision": "0046_legal_evidence_provenance",
+      "sha256": "04f068bfe808dea353432dc98909a1d965b4345724f04c1f41862963e3666af5"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0046_legal_evidence_provenance",
+        "0047_agm_unknown_defaults"
+      ],
+      "path": "alembic\\versions\\0048_merge_legal_evidence_heads.py",
+      "revision": "0048_merge_legal_evidence_heads",
+      "sha256": "402d96481d83550f49b1b900182673539b75c16c0ebc557423c6682aeaad3b07"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0048_merge_legal_evidence_heads"
+      ],
+      "path": "alembic\\versions\\0049_evaluation_runs_and_identity_rls.py",
+      "revision": "0049_evaluation_runs_and_identity_rls",
+      "sha256": "f41b0572982e19e92e5f8fcd28620634cd0f3b6a1576e41da4a5bf37239b8200"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0049_evaluation_runs_and_identity_rls"
+      ],
+      "path": "alembic\\versions\\0050_signed_rls_identity_hardening.py",
+      "revision": "0050_signed_rls_identity_hardening",
+      "sha256": "3caee57491117164f8c6f23f9d3fa839e64adf0272bb6b6910db83900ab0c3ea"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0050_signed_rls_identity_hardening"
+      ],
+      "path": "alembic\\versions\\0051_nullable_unreleased_score_history.py",
+      "revision": "0051_nullable_unreleased_score_history",
+      "sha256": "5159924006a2b91a2e124f1186a043c57040bc70a8c06685d2e64da02f4733c8"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0051_nullable_unreleased_score_history"
+      ],
+      "path": "alembic\\versions\\0052_invalidate_unreleased_legacy_scores.py",
+      "revision": "0052_invalidate_unreleased_legacy_scores",
+      "sha256": "4484d3de3c6756eee1910a778b99c0b89a04f4556f1d16740d63692fc9ed58b4"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0052_invalidate_unreleased_legacy_scores"
+      ],
+      "path": "alembic\\versions\\0053_agm_minutes_unknown_default.py",
+      "revision": "0053_agm_minutes_unknown_default",
+      "sha256": "e263470063331f79e71ba7cc256d23f04d94d4cdccff416f119d0442f50c14f2"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0053_agm_minutes_unknown_default",
+        "b10c91ac6860"
+      ],
+      "path": "alembic\\versions\\0054_merge_release_heads.py",
+      "revision": "0054_merge_release_heads",
+      "sha256": "9d4e17c43e2b7778cadd189eda1d3bdbc3621b500d594321f666bdb40e05f367"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0054_merge_release_heads"
+      ],
+      "path": "alembic\\versions\\0055_quarantine_unverified_agm_defaults.py",
+      "revision": "0055_quarantine_unverified_agm_defaults",
+      "sha256": "842bcc0a2a0ae093d0553630486365fb55b77733ec4a57efef15813f96e7ac3d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0055_quarantine_unverified_agm_defaults"
+      ],
+      "path": "alembic\\versions\\0056_add_not_evaluated_severity.py",
+      "revision": "0056_add_not_evaluated_severity",
+      "sha256": "28407bd26ab414df595eef0b88ed7481a0600093a760921526c8eb9777c9c17c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0046_legal_evidence_provenance",
+        "0047_agm_unknown_defaults"
+      ],
+      "path": "alembic\\versions\\0048_merge_legal_evidence_and_agm_defaults.py",
+      "revision": "0048_merge_legal_evidence_and_agm_defaults",
+      "sha256": "6472adbd90cfdc9546a6efaa474910a2a5154d26db983bca734fd5a8a07cd200"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0048_merge_legal_evidence_and_agm_defaults"
+      ],
+      "path": "alembic\\versions\\0049_reconcile_company_profile_and_rule_registry.py",
+      "revision": "0049_reconcile_company_profile_and_rule_registry",
+      "sha256": "dfa1556dc0d1674196774c12d8871f4f6beb1df10d27787c554caf29f5902fe1"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0049_reconcile_company_profile_and_rule_registry"
+      ],
+      "path": "alembic\\versions\\0050_add_not_evaluated_severity.py",
+      "revision": "0050_add_not_evaluated_severity",
+      "sha256": "0205ede844c6c7d6ecc8c09ae5132103b03f669a4195b9f20eb86bc34b71cae5"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0050_add_not_evaluated_severity",
+        "b10c91ac6860"
+      ],
+      "path": "alembic\\versions\\0051_merge_release_heads.py",
+      "revision": "0051_merge_release_heads",
+      "sha256": "fd30e2a9cd814d0a534348097e651581cfc917356cc7cc224beb1dd5e185cee8"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0051_merge_release_heads",
+        "0056_add_not_evaluated_severity"
+      ],
+      "path": "alembic\\versions\\0057_merge_final_heads.py",
+      "revision": "0057_merge_final_heads",
+      "sha256": "df281ea5456f23fb07f3ac062f8b9a223997b8bf1c35e54f3a154c004bc3d758"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0057_merge_final_heads"
+      ],
+      "path": "alembic\\versions\\0058_suppress_unreleased_rule_notifications.py",
+      "revision": "0058_suppress_unreleased_rule_notifications",
+      "sha256": "7b6d227c40dc0d8dd726e0701cfa0b2037e6bcaf3c4d2c6c9f8f66671066399f"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0058_suppress_unreleased_rule_notifications"
+      ],
+      "path": "alembic\\versions\\0059_finance_role_separation.py",
+      "revision": "0059_finance_role_separation",
+      "sha256": "b05549169a3f8840a8c7d42522fa079a9a9efbf25af30a65ee7495a8c836620b"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0059_finance_role_separation"
+      ],
+      "path": "alembic\\versions\\0060_financial_billing_core.py",
+      "revision": "0060_financial_billing_core",
+      "sha256": "1d5fa0b6918ce4b647a506dc73a8f72ed6c2696dc00374d40288ec469c00d873"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0060_financial_billing_core"
+      ],
+      "path": "alembic\\versions\\0061_financial_allocation_integrity.py",
+      "revision": "0061_financial_allocation_integrity",
+      "sha256": "0055cfa588a3fc9c79f12d67623dd6f3cd9930b53684b79d6b4c37b14704df38"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0061_financial_allocation_integrity"
+      ],
+      "path": "alembic\\versions\\0062_financial_pending_payment_reservations.py",
+      "revision": "0062_financial_pending_payment_reservations",
+      "sha256": "145aeae86073292b5909cdc5b3505572545634364a9f1231e6fce430ed1113bb"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0062_financial_pending_payment_reservations"
+      ],
+      "path": "alembic\\versions\\0063_financial_review_and_provider_guards.py",
+      "revision": "0063_financial_review_and_provider_guards",
+      "sha256": "c8641fef3ffa4ae8f5c5b0244b8f34c5c9b5d44e06ea29f4cf574e61a2f90dde"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0063_financial_review_and_provider_guards"
+      ],
+      "path": "alembic\\versions\\0064_financial_review_actor_binding.py",
+      "revision": "0064_financial_review_actor_binding",
+      "sha256": "493112d990667b89d494bb18eb1d4c28d455a3b6b74b74a0959a762e6ed8bdb1"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0064_financial_review_actor_binding"
+      ],
+      "path": "alembic\\versions\\0065_rescue_audit_log_restrict_delete.py",
+      "revision": "0065_rescue_audit_log_restrict_delete",
+      "sha256": "cf0b3b36fc762c58cb0a54851fe980704e105cf4a75f4e3449ec1d95de46e215"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0065_rescue_audit_log_restrict_delete"
+      ],
+      "path": "alembic\\versions\\0066_verified_revenue_pipeline.py",
+      "revision": "0066_verified_revenue_pipeline",
+      "sha256": "2b4c4197ee90b34687298a035296a0d126e266750a95827244df5c8ced069f6e"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0066_verified_revenue_pipeline"
+      ],
+      "path": "alembic\\versions\\0067_unique_manual_wallet_references.py",
+      "revision": "0067_unique_manual_wallet_references",
+      "sha256": "b95e43841666fc4505831697302c59d58612df34876f9a709ac358b45576fd36"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0067_unique_manual_wallet_references"
+      ],
+      "path": "alembic\\versions\\0068_repair_aggregate_view_and_revenue_rls.py",
+      "revision": "0068_repair_aggregate_view_and_revenue_rls",
+      "sha256": "970748c02a14f5cbf18b2f3518e6f2be6312e00af2b627f39b93b44df0c6cc5f"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0068_repair_aggregate_view_and_revenue_rls"
+      ],
+      "path": "alembic\\versions\\0069_cross_table_wallet_reference_guard.py",
+      "revision": "0069_cross_table_wallet_reference_guard",
+      "sha256": "ae4ffa46f4ce0266a2414de469a0e23b47729f11fb577c70609b55c37a1127b4"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0069_cross_table_wallet_reference_guard"
+      ],
+      "path": "alembic\\versions\\0070_deferred_invoice_allocation_reconciliation.py",
+      "revision": "0070_deferred_invoice_allocation_reconciliation",
+      "sha256": "2f3f61e57eff40fce4164e3dad8ec0656ef1df02d7e8a2a3596d5d85852d8eb0"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0070_deferred_invoice_allocation_reconciliation"
+      ],
+      "path": "alembic\\versions\\0071_immutable_payment_submission_link.py",
+      "revision": "0071_immutable_payment_submission_link",
+      "sha256": "110774f94837052864da8b9314f1bcbc3327d3e741d86a06360c00628c4f9746"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0071_immutable_payment_submission_link"
+      ],
+      "path": "alembic\\versions\\0072_allocation_mutation_reconciliation.py",
+      "revision": "0072_allocation_mutation_reconciliation",
+      "sha256": "0e017c5def947a32e00531a513b19145e93f336d459bc1413bf6755d700825ed"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0072_allocation_mutation_reconciliation"
+      ],
+      "path": "alembic\\versions\\0073_payment_allocations_append_only.py",
+      "revision": "0073_payment_allocations_append_only",
+      "sha256": "86ff81964e3ed8869d59b1c548b935f77362c12bf3c5a24d5806adf642024f4c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0073_payment_allocations_append_only"
+      ],
+      "path": "alembic\\versions\\0074_legal_release_quarantine.py",
+      "revision": "0074_legal_release_quarantine",
+      "sha256": "adcce5930cd68d2bb8f9f12cbec268ceb7cdf746127a130cfd7db570d4964339"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0074_legal_release_quarantine"
+      ],
+      "path": "alembic\\versions\\0075_director_transfer_evidence.py",
+      "revision": "0075_director_transfer_evidence",
+      "sha256": "85cd2eaf79be565ef834d6b6a13580f2f26ccd11c02218e58743ac557555a379"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0075_director_transfer_evidence"
+      ],
+      "path": "alembic\\versions\\0076_subscription_entitlements.py",
+      "revision": "0076_subscription_entitlements",
+      "sha256": "45795fa4dbe6b611370ef6ccde967193fb8baec7ca5c0c811050e1e98594070e"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0045_agm_held_fields"
+      ],
+      "path": "alembic\\versions\\0046_schema_reconcile_agm.py",
+      "revision": "0046_schema_reconcile_agm",
+      "sha256": "71e0b4bf3d44bde318aceaa79dfb3873162d7221e25ec3483113b060ba6134bd"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0046_schema_reconcile_agm"
+      ],
+      "path": "alembic\\versions\\0047_aud003_review_state.py",
+      "revision": "0047_aud003_review_state",
+      "sha256": "60ce5ed5980595ae72cc77e6e15afff406a306378c8a8f9a29177a25e85f1f92"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0047_aud003_review_state"
+      ],
+      "path": "alembic\\versions\\0048_articles_verification.py",
+      "revision": "0048_articles_verification",
+      "sha256": "28f84a01cfc206f7cecd5f33b7bedf8c4a5278abd8245ac9d88f7ea48618b798"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0076_subscription_entitlements",
+        "0048_articles_verification"
+      ],
+      "path": "alembic\\versions\\0077_merge_legacy_articles_head.py",
+      "revision": "0077_merge_legacy_articles_head",
+      "sha256": "6349503d32455cdb9c5f49cb3c593e10aa1021ec8002541c67db87ef2e935bef"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0077_merge_legacy_articles_head"
+      ],
+      "path": "alembic\\versions\\0078_articles_evidence_signed_rls.py",
+      "revision": "0078_articles_evidence_signed_rls",
+      "sha256": "7ca6bdde532439cccf3fefa9c8c21b701e9cb8414c25cfbd00fbfc0f6f44ed91"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0078_articles_evidence_signed_rls"
+      ],
+      "path": "alembic\\versions\\0079_reconcile_legacy_agm_evidence_types.py",
+      "revision": "0079_reconcile_legacy_agm_evidence_types",
+      "sha256": "d7cb0c3bdb9c251b37cb9e5f12a8f5490cbb7584be5bd990361c251a71e2a3cc"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0079_reconcile_legacy_agm_evidence_types"
+      ],
+      "path": "alembic\\versions\\0080_manual_mobile_wallet_methods.py",
+      "revision": "0080_manual_mobile_wallet_methods",
+      "sha256": "7dc7432156f518721d1abf8e770c3e6ac0229e508ae8015dbbaa6c0a6364e3a5"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0075_director_transfer_evidence"
+      ],
+      "path": "alembic\\versions\\0076_manual_mobile_wallet_methods.py",
+      "revision": "0076_manual_mobile_wallet_methods",
+      "sha256": "98cad99c027b8ec290c5e8c36203374b7e09c1e49b79c1659c7bdbf3d4cbcb78"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0076_manual_mobile_wallet_methods",
+        "0076_subscription_entitlements"
+      ],
+      "path": "alembic\\versions\\0077_merge_0076_release_heads.py",
+      "revision": "0077_merge_0076_release_heads",
+      "sha256": "16879969d74712255e4d0e83fc8ad339cea0adf426515e88585f2d82f10ee365"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0077_merge_0076_release_heads",
+        "0080_manual_mobile_wallet_methods"
+      ],
+      "path": "alembic\\versions\\0081_merge_release_and_articles_wallet_heads.py",
+      "revision": "0081_merge_release_and_articles_wallet_heads",
+      "sha256": "c54229b5a57c660b7514901ec1d670f1a1e3c6a37dcfac9f1a913453781265e0"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0081_merge_release_and_articles_wallet_heads"
+      ],
+      "path": "alembic\\versions\\0082_agm_share_event_provenance.py",
+      "revision": "0082_agm_share_event_provenance",
+      "sha256": "5dda6af4cb12bc375a0470f3790ccea522f5b0ac53d84a6857296d15e009815b"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0075_director_transfer_evidence"
+      ],
+      "path": "alembic\\versions\\0076_company_charge_evidence.py",
+      "revision": "0076_company_charge_evidence",
+      "sha256": "65461e9ca6d7b89ec09cdb70fe6759ad45f26683a8024661bfbecd76e064ee74"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0058_suppress_unreleased_rule_notifications"
+      ],
+      "path": "alembic\\versions\\0059_guard_user_privilege_updates.py",
+      "revision": "0059_guard_user_privilege_updates",
+      "sha256": "84a272b30059cb54ced79f8cc47258aa5ff8eeff604b321b04d86821d8ec8101"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0059_guard_user_privilege_updates",
+        "0076_company_charge_evidence",
+        "0082_agm_share_event_provenance"
+      ],
+      "path": "alembic\\versions\\0083_merge_all_release_heads.py",
+      "revision": "0083_merge_all_release_heads",
+      "sha256": "3e5acc2c463551bfdf31fa606b2c525b1f94e89667df32472be5565d48b7e182"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0083_merge_all_release_heads"
+      ],
+      "path": "alembic\\versions\\0084_install_legal_rule_version_guard.py",
+      "revision": "0084_install_legal_rule_version_guard",
+      "sha256": "59d0549be75249d8c76d89037372a2a2680bacff576f331ef49b71e64a5236d6"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0084_install_legal_rule_version_guard"
+      ],
+      "path": "alembic\\versions\\0085_task_completion_note.py",
+      "revision": "0085_task_completion_note",
+      "sha256": "4af3681fe9c2d07c28a609b2058d5b5c79d354d59d3e93a03929d086ac941d36"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0085_task_completion_note"
+      ],
+      "path": "alembic\\versions\\0086_runtime_role_membership_preflight.py",
+      "revision": "0086_runtime_role_membership_preflight",
+      "sha256": "614488f4fa8c1456a41877d142eba76a4bda8b743f29fe40cbdc691df7301fab"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0086_runtime_role_membership_preflight"
+      ],
+      "path": "alembic\\versions\\0087_legal_staff_company_scope.py",
+      "revision": "0087_legal_staff_company_scope",
+      "sha256": "a74170c46fb23fda36469f74707378ff4c1c38a674b98b8b8e62f7385969d6d0"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0087_legal_staff_company_scope"
+      ],
+      "path": "alembic\\versions\\0088_strict_activity_log_actor_tenant.py",
+      "revision": "0088_strict_activity_log_actor_tenant",
+      "sha256": "10efd445233d56aaa6de5a469d499cee4abc79e7021113bc4fcce0ebb0948e9c"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0088_strict_activity_log_actor_tenant"
+      ],
+      "path": "alembic\\versions\\0089_unique_active_compliance_flags.py",
+      "revision": "0089_unique_active_compliance_flags",
+      "sha256": "80e7e029a8bf2c73485783ff4bacc87747f552df35ec46790aada3f3c031c710"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0089_unique_active_compliance_flags"
+      ],
+      "path": "alembic\\versions\\0090_rule_registry_drift_quarantine.py",
+      "revision": "0090_rule_registry_drift_quarantine",
+      "sha256": "6d84516aa333c4996abd625ce1281a2f3c12e99243605c97d0f6026d3564c3b0"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0090_rule_registry_drift_quarantine"
+      ],
+      "path": "alembic\\versions\\0091_calendar_legal_provenance.py",
+      "revision": "0091_calendar_legal_provenance",
+      "sha256": "d34e1bea98766f92f10f35051960baca64ba116d8373485c4a6b55b58e1899de"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0091_calendar_legal_provenance"
+      ],
+      "path": "alembic\\versions\\0092_rescue_source_rule_ids.py",
+      "revision": "0092_rescue_source_rule_ids",
+      "sha256": "865b0a44d6c8cb917ffec9e6463304b42e1d3fba82294d58b4d2873887e3afeb"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0092_rescue_source_rule_ids"
+      ],
+      "path": "alembic\\versions\\0093_verified_rule_audit_view.py",
+      "revision": "0093_verified_rule_audit_view",
+      "sha256": "287ab2e9100fb17722b19bdb48ec9548faa766550140a90b7e804709f3fd9aaa"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0093_verified_rule_audit_view",
+        "b10c91ac6860"
+      ],
+      "path": "alembic\\versions\\0104_company_fact_provenance.py",
+      "revision": "0104_company_fact_provenance",
+      "sha256": "9e11fa347ba8d2609765d581b4c5b0d0765892a64dad3a153692b7f18f6e84b4"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0104_company_fact_provenance"
+      ],
+      "path": "alembic\\versions\\0105_domain_event_outbox.py",
+      "revision": "0105_domain_event_outbox",
+      "sha256": "87c24debdde24521387a0bbfb986767ee30d87ae3a776ca44376a991866d882b"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0105_domain_event_outbox"
+      ],
+      "path": "alembic\\versions\\0106_domain_event_processing_controls.py",
+      "revision": "0106_domain_event_processing_controls",
+      "sha256": "c5ef0e08c18af6e80c0a4a69e81cf53f1ae5030eaa606b934a53fc07afd8db11"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0046_legal_evidence_provenance",
+        "0047_agm_unknown_defaults"
+      ],
+      "path": "alembic\\versions\\0048_merge_agm_evidence_heads.py",
+      "revision": "0048_merge_agm_evidence_heads",
+      "sha256": "094525142d92389f4092385c231f0aafda66685abe0bfc632e3e27fa33025d29"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0048_merge_agm_evidence_heads",
+        "0106_domain_event_processing_controls"
+      ],
+      "path": "alembic\\versions\\0107_merge_legacy_agm_and_domain_event_heads.py",
+      "revision": "0107_merge_legacy_agm_and_domain_event_heads",
+      "sha256": "eefaab49c311e93cd8e31639dbc2d1fe1de5c0723944fcb64ce921ed9cff5443"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0107_merge_legacy_agm_and_domain_event_heads"
+      ],
+      "path": "alembic\\versions\\0108_audit_legal_rule_registry_inventory.py",
+      "revision": "0108_audit_legal_rule_registry_inventory",
+      "sha256": "0d66b69a8a78bf219fdcd2d6a268716a94324fce17a86bcb167a74ccb571d167"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0108_audit_legal_rule_registry_inventory"
+      ],
+      "path": "alembic\\versions\\0109_product_owner_legal_provenance.py",
+      "revision": "0109_product_owner_legal_provenance",
+      "sha256": "2bdecc743a3cc3e1dbc56386b69229680ac14420116dc1850ae1f87f9540be9a"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0109_product_owner_legal_provenance"
+      ],
+      "path": "alembic\\versions\\0110_legal_provenance_acl.py",
+      "revision": "0110_legal_provenance_acl",
+      "sha256": "1744c03d3be7a41201cfcb766a7f00648f360562fe4a7d4412601c30c0a2e48f"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0110_legal_provenance_acl"
+      ],
+      "path": "alembic\\versions\\0111_rule_outcome_ledger.py",
+      "revision": "0111_rule_outcome_ledger",
+      "sha256": "c1f9b75a2967cc56491bb4fdac6be475227917dc8e3f5c4cd2601cc877912596"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0111_rule_outcome_ledger"
+      ],
+      "path": "alembic\\versions\\0112_runtime_acl_and_alembic_rls.py",
+      "revision": "0112_runtime_acl_and_alembic_rls",
+      "sha256": "4f94147f5a0f207ce98dca8a9ad8343ee9825a755c1a0b220da94858699d4808"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0112_runtime_acl_and_alembic_rls"
+      ],
+      "path": "alembic\\versions\\0113_score_history_append_only.py",
+      "revision": "0113_score_history_append_only",
+      "sha256": "f335a50b5ebaf422d84a82d26e4a87464ecc8e9e7cde6ad84daff8f9bed4a584"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0113_score_history_append_only"
+      ],
+      "path": "alembic\\versions\\0114_annual_return_filing_status_provenance.py",
+      "revision": "0114_annual_return_filing_status_provenance",
+      "sha256": "f872e6096c812b98205822c92dedfc6cd6472c566b7c6b2f3d5d82716e768cf8"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0114_annual_return_filing_status_provenance"
+      ],
+      "path": "alembic\\versions\\0115_rule_identity_collision_reconciliation.py",
+      "revision": "0115_rule_identity_collision_reconciliation",
+      "sha256": "b639ac1c14ec48fa7f6c3499a30d45d502377a97555789ee1d6c3b5facc7fea4"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0115_rule_identity_collision_reconciliation"
+      ],
+      "path": "alembic\\versions\\0116_canonical_rule_identity_registry.py",
+      "revision": "0116_canonical_rule_identity_registry",
+      "sha256": "25fabb1a0351120c4a25d6692c4f098953b3a768a141d99895fb5456ec1938a8"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0116_canonical_rule_identity_registry"
+      ],
+      "path": "alembic\\versions\\0117_canonical_registry_runtime_read.py",
+      "revision": "0117_canonical_registry_runtime_read",
+      "sha256": "81a746cc4485bdbe6be5c35d6a83ef99d39dca6d5ae0de7808759dd5d2b02d50"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0117_canonical_registry_runtime_read"
+      ],
+      "path": "alembic\\versions\\0118_canonical_finding_evidence_binding.py",
+      "revision": "0118_canonical_finding_evidence_binding",
+      "sha256": "50f4952a0565509cf0977e8431f9dd6fa3e8c5e14c517e8ffc6f35a43a05ed6d"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0118_canonical_finding_evidence_binding"
+      ],
+      "path": "alembic\\versions\\0119_finding_payload_digest_verification.py",
+      "revision": "0119_finding_payload_digest_verification",
+      "sha256": "959674fd6dbc6a591090fe649b140cb8757a0c24d3c02bcdc662825ee0855f48"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0119_finding_payload_digest_verification"
+      ],
+      "path": "alembic\\versions\\0120_governed_finding_context_catalog.py",
+      "revision": "0120_governed_finding_context_catalog",
+      "sha256": "e6e6a7f31d322759367629c07236a6cec47516f76243720132577e6a7534837a"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0117_canonical_registry_runtime_read"
+      ],
+      "path": "alembic\\versions\\0118_legal_rule_alias_overlap_guard.py",
+      "revision": "0118_legal_rule_alias_overlap_guard",
+      "sha256": "83aad7a78fdc84555a8d3199de55f247a2b49c4d81236c5b3ff7747e912e3aa6"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0118_legal_rule_alias_overlap_guard",
+        "0120_governed_finding_context_catalog"
+      ],
+      "path": "alembic\\versions\\0121_merge_alias_and_finding_context_heads.py",
+      "revision": "0121_merge_alias_and_finding_context_heads",
+      "sha256": "4363209c1124256c1e35e993cf4b5a248321e49faddbd8653fccc3cd30f393bc"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0121_merge_alias_and_finding_context_heads"
+      ],
+      "path": "alembic\\versions\\0122_rls_staff_scope_and_score_history.py",
+      "revision": "0122_rls_staff_scope_and_score_history",
+      "sha256": "fcec09c5ff8e3f1649c5e6324ad1269410060ed16ad1800b2a1b367543b38755"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0122_rls_staff_scope_and_score_history"
+      ],
+      "path": "alembic\\versions\\0123_seed_quarantined_rule_identity_candidates.py",
+      "revision": "0123_seed_quarantined_rule_identity_candidates",
+      "sha256": "653b6b71b676a9ce941305f5aef309bb591f92775a81cdfd9cf72bc2eaee36af"
+    },
+    {
+      "branch_labels": [],
+      "depends_on": [],
+      "down_revision": [
+        "0123_seed_quarantined_rule_identity_candidates"
+      ],
+      "path": "alembic\\versions\\0124_restore_85_rule_catalogue_parity.py",
+      "revision": "0124_restore_85_rule_catalogue_parity",
+      "sha256": "87bbd7fbe1cb1a8bfd7258455bea2203d8a033e6a6a8d9aed2812991b5d43c06"
+    }
+  ],
+  "unreachable_revisions": [],
+  "unrecognized_migration_files": []
+}

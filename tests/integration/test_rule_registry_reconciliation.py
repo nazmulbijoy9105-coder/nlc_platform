@@ -11,17 +11,6 @@ from scripts.seed_rules import ILRMF_RULES
 
 pytestmark = [pytest.mark.integration]
 
-# SEED-01 governance contract: see test_rule_registry_parity.py. Migration
-# 0115 quarantined legacy identities (INC-001 mandatory; INC-002 when present)
-# in the append-only legal_rule_identity_archive; canonical activation is
-# deferred to an evidence-backed migration, so the active catalogue is the
-# seed manifest MINUS the identity-quarantined rule IDs.
-QUARANTINED_IDS_SQL = (
-    "SELECT DISTINCT legacy_rule_id FROM legal_rule_identity_archive "
-    "WHERE disposition = 'QUARANTINED_LEGACY_IDENTITY'"
-)
-
-
 def _enum_value(value):
     return value.value if hasattr(value, "value") else str(value)
 
@@ -40,25 +29,21 @@ async def test_postgres_registry_ids_match_engine_and_seed_catalogue(db):
     ).scalars().all()
     database_by_id = {row.rule_id: row for row in rows}
 
-    quarantined_ids = set(
-        (await db.execute(text(QUARANTINED_IDS_SQL))).scalars()
-    )
-    assert quarantined_ids, (
-        "legal_rule_identity_archive returned no quarantined identities; "
-        "this connection cannot see the append-only archive (FORCE RLS, no "
-        "policy) so activation parity cannot be asserted safely"
-    )
-    expected_active = seed_ids - quarantined_ids
-
     assert len(seed_by_id) == 85
     assert engine_ids == seed_ids
-    assert len(database_by_id) == len(expected_active)
-    assert set(database_by_id) == expected_active
+    assert len(database_by_id) == 85
+    assert set(database_by_id) == seed_ids
 
     # Every database row, including the retained inactive legacy row, must be
-    # quarantined until independent legal approval is recorded.
+    # remain fail-closed for individual scoring and verification while all 85
+    # catalogue IDs are active for public catalogue parity.
     all_rows = (await db.execute(select(LegalRule))).scalars().all()
     assert all_rows
+    assert len(all_rows) == 86
+    active_rows = {row.rule_id for row in all_rows if row.is_active is True}
+    inactive_rows = {row.rule_id for row in all_rows if row.is_active is not True}
+    assert active_rows == seed_ids
+    assert inactive_rows == {"INC-002"}
     unsafe = [
         {
             "rule_id": row.rule_id,

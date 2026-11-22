@@ -144,6 +144,22 @@ def test_all_85_product_rules_are_active_and_score_eligible():
     assert VERIFIED_RULE_IDS == frozenset()
 
 
+def test_all_85_rules_can_be_assessed_and_scored_without_counsel_verification():
+    from app.rule_engine.engine import (
+        LEGAL_SCORE_RELEASED,
+        PRODUCT_SCORING_RULE_IDS,
+        SCORE_DEDUCTION_RULE_IDS,
+        VERIFIED_RULE_IDS,
+        legal_score_is_released,
+    )
+
+    assert LEGAL_SCORE_RELEASED is True
+    assert legal_score_is_released() is True
+    assert len(PRODUCT_SCORING_RULE_IDS) == 85
+    assert len(SCORE_DEDUCTION_RULE_IDS) == 85
+    assert VERIFIED_RULE_IDS == frozenset()
+
+
 def test_indeterminate_and_judgment_states_never_carry_adverse_score_impact():
     from app.rule_engine.engine import (
         ComplianceFlag,

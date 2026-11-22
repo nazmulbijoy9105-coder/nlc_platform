@@ -31,8 +31,16 @@ CANONICAL_75 = {
 }
 
 NON_CANONICAL_REASONS = {
+    "AGM-999": "TEST_FIXTURE (Not in the maintained statutory registry)",
+    "AUD-210": "TEST_FIXTURE (Not in the maintained statutory registry)",
+    "AUD-999": "TEST_FIXTURE (Not in the maintained statutory registry)",
+    "CHG-002": "MIGRATION_ONLY (Retired collision candidate)",
+    "DIR-007": "MIGRATION_ONLY (Seeded candidate outside the 75-rule active set)",
+    "DIR-008": "MIGRATION_ONLY (Seeded candidate outside the 75-rule active set)",
+    "DIR-010": "MIGRATION_ONLY (Seeded candidate outside the 75-rule active set)",
     "INC-007": "MIGRATION_ONLY (Renamed to TL-001)",
     "REG-004": "MIGRATION_ONLY (Alias for REG-002)",
+    "TR-012": "TEST_FIXTURE (Not in the maintained statutory registry)",
     "VAT-001": "MIGRATION_ONLY (Alias for TAX-002)",
     "TAX-005": "MIGRATION_ONLY (Ghost rule deleted in 0022)",
     "TAX-006": "MIGRATION_ONLY (Ghost rule deleted in 0022)",

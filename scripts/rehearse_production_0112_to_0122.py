@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the documented production 0112 schema through 0123 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through 0124 on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -26,7 +26,7 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+HEAD_REVISION = "0124_restore_85_rule_catalogue_parity"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -52,7 +52,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0123.json")
+REPORT = Path("artifacts/neon-production-0112-to-0124.json")
 
 
 def _url() -> str:
@@ -162,15 +162,36 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         if row["payload_sha256"] != expected_hash:
             raise RuntimeError(f"0115 archive SHA-256 mismatch for {rule_id}.")
 
-    quarantined = await conn.fetch(
+    legacy_rows = await conn.fetch(
         "SELECT rule_id, is_active, default_severity, score_impact, "
         "is_black_override, verification_status FROM public.legal_rules "
         "WHERE rule_id = ANY($1::text[]) ORDER BY rule_id",
         list(before_rules),
     )
-    for row in quarantined:
-        if row["is_active"] or row["default_severity"] != "NOT_EVALUATED" or row["score_impact"] != 0 or row["is_black_override"] or row["verification_status"] != "PENDING":
-            raise RuntimeError(f"Legacy rule was not safely quarantined: {dict(row)!r}")
+    by_rule = {row["rule_id"]: dict(row) for row in legacy_rows}
+    inc001 = by_rule.get("INC-001")
+    if (
+        inc001 is None
+        or not inc001["is_active"]
+        or inc001["default_severity"] != "NOT_EVALUATED"
+        or inc001["score_impact"] != 0
+        or inc001["is_black_override"]
+        or inc001["verification_status"] != "PENDING"
+    ):
+        raise RuntimeError(
+            f"INC-001 85-ID catalogue activation parity failed: {inc001!r}"
+        )
+    inc002 = by_rule.get("INC-002")
+    if inc002 is not None and (
+        inc002["is_active"]
+        or inc002["default_severity"] != "NOT_EVALUATED"
+        or inc002["score_impact"] != 0
+        or inc002["is_black_override"]
+        or inc002["verification_status"] != "PENDING"
+    ):
+        raise RuntimeError(
+            f"Legacy INC-002 row was not safely retired: {inc002!r}"
+        )
 
     required_tables = (
         "legal_rule_identity_archive", "legal_rule_identities", "legal_rule_aliases",
@@ -277,7 +298,7 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "historical_table_fingerprints_before": before_tables,
         "historical_table_fingerprints_after": after_tables,
         "legacy_archive_verified": sorted(before_rules),
-        "quarantined_legacy_rules": [dict(row) for row in quarantined],
+        "legacy_rule_catalogue_states": [dict(row) for row in legacy_rows],
         "required_identity_evidence_tables": list(required_tables),
         "canonical_identity_seed_counts": dict(identity_counts),
         "historical_finding_binding_rows_after_migration": binding_counts,
@@ -318,7 +339,6 @@ async def _audit_view_parity() -> dict[str, Any]:
             "identity_archive_present", "identities_present", "aliases_present",
             "revisions_present", "finding_bindings_present", "finding_evidence_present",
             "finding_contexts_present", "finding_context_reviews_present",
-            "inc001_quarantined", "inc002_quarantined",
             "score_history_rls_forced", "score_history_append_only_trigger",
             "score_history_app_mutation_revoked", "score_history_mutation_policies_absent",
             "users_write_scope_restricted", "users_credential_reads_scoped",
@@ -359,6 +379,12 @@ async def _audit_view_parity() -> dict[str, Any]:
             raise RuntimeError(
                 f"Restricted audit view canonical identity counts mismatch: {actual_identity_counts!r}"
             )
+        if actual_revision == HEAD_REVISION:
+            if result.get("active_legal_rule_rows") != 85:
+                raise RuntimeError(
+                    "0124 requires exactly 85 active catalogue rows "
+                    f"(observed {result.get('active_legal_rule_rows')!r})."
+                )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
             raise RuntimeError("Restricted audit view reports historical finding backfill.")
         return result
