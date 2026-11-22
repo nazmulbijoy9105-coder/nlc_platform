@@ -17,6 +17,9 @@ security findings tracked in the security/remediate-12-findings pull request.
 | fsspec | Upgrade to 2026.9.0. |
 | virtualenv | Upgrade to 21.15.11. |
 | GitPython | Upgrade to 3.2.1. |
+| dnspython | Upgrade to 2.9.2. |
+| pyasn1 | Upgrade to 0.6.5. |
+| soupsieve | Upgrade to 4.1.3. |
 | filelock | Upgrade to 4.2.12. |
 
 ## Application-level remediation
