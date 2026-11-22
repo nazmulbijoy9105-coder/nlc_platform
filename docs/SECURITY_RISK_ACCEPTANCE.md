@@ -44,9 +44,9 @@ security findings tracked in the security/remediate-12-findings pull request.
 4. **Defusedxml license classifier:** the reported item is a license-identification
    finding, not by itself a demonstrated exploitable security vulnerability.
    Confirm the package's actual license metadata and the project's license policy.
-5. **Tornado open-redirect finding:** verify the exact advisory and affected
-   version range against the resolved 6.5.10 artifact. Do not suppress it without
-   a scanner report showing the advisory is not applicable.
+5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
+   affected by the October/November 2026 RedirectHandler open-redirect and related
+   advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
 
 No production deployment, test-suite pass, or clean vulnerability scan is claimed
 by this document. Closure requires recorded CI and production-artifact evidence.
