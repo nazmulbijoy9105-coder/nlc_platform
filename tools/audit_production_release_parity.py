@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only production database/API parity certification after release 0123."""
+"""Read-only production database/API parity certification for the 85-ID catalogue."""
 from __future__ import annotations
 
 import asyncio
@@ -13,8 +13,9 @@ import asyncpg
 from sqlalchemy.engine import make_url
 
 from app.db_url import prepare_asyncpg_connection
+from scripts.seed_rules import ILRMF_RULES
 
-EXPECTED_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+EXPECTED_REVISION = "0124_restore_85_rule_catalogue_parity"
 REQUIRED_TRUE = (
     "identity_archive_present",
     "identities_present",
@@ -24,8 +25,6 @@ REQUIRED_TRUE = (
     "finding_evidence_present",
     "finding_contexts_present",
     "finding_context_reviews_present",
-    "inc001_quarantined",
-    "inc002_quarantined",
     "score_history_rls_forced",
     "score_history_append_only_trigger",
     "score_history_app_mutation_revoked",
@@ -87,6 +86,11 @@ async def _database_parity() -> dict:
             raise RuntimeError(
                 f"Production canonical identity counts mismatch: {actual_identity_counts!r}"
             )
+        if result.get("active_legal_rule_rows") != 85:
+            raise RuntimeError(
+                "Production database must expose exactly 85 active catalogue rows "
+                f"(observed {result.get('active_legal_rule_rows')!r})."
+            )
         if result.get("historical_finding_binding_rows") != 0:
             raise RuntimeError("Historical findings were unexpectedly rebound.")
         if result.get("historical_finding_evidence_rows") != 0:
@@ -121,7 +125,38 @@ def _api_parity() -> dict:
             f"Deployed SHA mismatch: expected {expected_sha}, "
             f"health endpoint reports {payload.get('revision')!r}"
         )
-    return {"http_status": status, **payload, "expected_sha": expected_sha}
+    rules_url = f"{api_url}/api/v1/rules"
+    rules_request = Request(rules_url, headers={"Accept": "application/json"}, method="GET")
+    try:
+        with urlopen(rules_request, timeout=30) as response:
+            rules_status = response.status
+            rules_payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise RuntimeError(f"Rules catalogue endpoint request failed: {exc}") from exc
+    if rules_status != 200 or not isinstance(rules_payload, list):
+        raise RuntimeError(
+            f"Production rules catalogue is invalid: HTTP {rules_status}, {rules_payload!r}"
+        )
+    actual_ids = {
+        item.get("rule_id") for item in rules_payload
+        if isinstance(item, dict) and item.get("rule_id")
+    }
+    expected_ids = {item["rule_id"] for item in ILRMF_RULES}
+    if len(actual_ids) != 85 or actual_ids != expected_ids:
+        raise RuntimeError(
+            "Production /api/v1/rules must return exactly the 85 seed IDs "
+            f"(missing={sorted(expected_ids - actual_ids)!r}, "
+            f"unexpected={sorted(actual_ids - expected_ids)!r})."
+        )
+    if any(item.get("is_active") is not True for item in rules_payload):
+        raise RuntimeError("Production rules endpoint contains inactive catalogue rows.")
+    return {
+        "http_status": status,
+        **payload,
+        "expected_sha": expected_sha,
+        "rules_http_status": rules_status,
+        "rules_id_count": len(actual_ids),
+    }
 
 
 async def main() -> None:

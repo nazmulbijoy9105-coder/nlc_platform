@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0123_seed_quarantined_rule_identity_candidates"
+EXPECTED_HEAD_REVISION = "0124_restore_85_rule_catalogue_parity"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -1008,6 +1008,23 @@ async def main() -> int:
         )
         report["alembic_heads_output"] = _run_command(["alembic", "heads"], env)
 
+        try:
+            report["downgrade_rehearsal_output"] = _run_command(
+                ["alembic", "downgrade", EXPECTED_PRE_IDENTITY_REVISION],
+                env,
+            )
+            report["downgrade_rehearsal"] = "DOWNGRADED"
+        except RuntimeError as exc:
+            if "forward-only" not in str(exc).lower():
+                raise
+            report["downgrade_rehearsal_output"] = str(exc)[-12000:]
+            report["downgrade_rehearsal"] = "EXPECTED_FORWARD_ONLY_BLOCK"
+
+        report["post_downgrade_upgrade_output"] = _run_command(
+            ["alembic", "upgrade", "head"], env
+        )
+        report["downgrade_upgrade_rehearsal"] = "PASS"
+
         conn = await _connect(raw_url, assume_migration_owner=True)
         try:
             after_identity = await _identity(conn)
@@ -1026,6 +1043,23 @@ async def main() -> int:
                     f"Expected one head {EXPECTED_HEAD_REVISION}; observed "
                     f"{after_identity['alembic_versions']!r}."
                 )
+            rule_parity = await conn.fetchrow(
+                """
+                SELECT
+                    count(*) AS catalogue_rows,
+                    count(*) FILTER (WHERE is_active IS TRUE) AS active_rows
+                FROM public.legal_rules
+                """
+            )
+            if (
+                rule_parity["catalogue_rows"] not in {85, 86}
+                or rule_parity["active_rows"] != 85
+            ):
+                raise RuntimeError(
+                    "0124 catalogue parity failed: "
+                    f"{dict(rule_parity)!r}"
+                )
+            report["85_rule_catalogue_parity"] = dict(rule_parity)
             report["post_migration_schema_audit"] = (
                 await _post_migration_schema_audit(conn)
             )
