@@ -217,7 +217,7 @@ class TestAuthenticationDependency:
         from datetime import UTC, datetime, timedelta
 
         from fastapi import HTTPException
-        from jose import jwt
+        import jwt
 
         from app.api.auth import get_current_user
         from app.core.config import settings
