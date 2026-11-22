@@ -1,13 +1,15 @@
 # NOTE: do NOT add `from __future__ import annotations` here.
 # FastAPI must resolve the `request: Request` annotation of __call__.
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer
+from starlette.datastructures import State
+from starlette.requests import HTTPConnection
 
 
 class Bearer401(HTTPBearer):
     """Missing/malformed Authorization header -> 401 (RFC 7235), not 403."""
 
-    async def __call__(self, request: Request):
+    async def __call__(self, request: HTTPConnection[State]):
         try:
             return await super().__call__(request)
         except HTTPException as exc:
