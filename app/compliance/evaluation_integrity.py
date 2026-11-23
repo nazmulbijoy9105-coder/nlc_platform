@@ -90,6 +90,8 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             allowed_sources = {
                 "ENGINE_FINDING",
                 "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+                "IDENTITY_MISMATCH_NOT_ATTRIBUTED",
+                "ENGINE_FINDING_WITH_IDENTITY_CONFLICT",
                 _UNMAPPED_SOURCE,
             }
             if any(item.get("assessment_source") not in allowed_sources for item in outcomes):
@@ -109,6 +111,24 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                         break
                     if source in {"ENGINE_FINDING", _UNMAPPED_SOURCE} and not findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
+                    conflicts = item.get("identity_conflicts", [])
+                    if not isinstance(conflicts, list) or any(
+                        not isinstance(conflict, dict)
+                        or conflict.get("resolution_status") != "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH"
+                        for conflict in conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED")
+                        break
+                    if source == "IDENTITY_MISMATCH_NOT_ATTRIBUTED" and (
+                        findings or not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
+                        break
+                    if source == "ENGINE_FINDING_WITH_IDENTITY_CONFLICT" and (
+                        not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
                         break
 
     outcomes_hash_valid = isinstance(outcomes_hash, str) and bool(
