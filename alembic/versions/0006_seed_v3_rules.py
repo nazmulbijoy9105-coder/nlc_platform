@@ -16,6 +16,7 @@ def upgrade():
         "ALTER TABLE legal_rules "
         "ALTER COLUMN rule_type TYPE VARCHAR(50) USING rule_type::text"
     )
+    op.execute("ALTER TABLE legal_rules ALTER COLUMN rule_type TYPE VARCHAR(50) USING rule_type::text")
     op.execute("DROP TYPE IF EXISTS rule_type")
 
     rules = [
@@ -32,6 +33,9 @@ def upgrade():
         ("CHG-001", "Charge Satisfaction Not Filed", "DEADLINE", "Companies Act 1994, Section 87",
          "Charge satisfaction not filed via Form XIX within 30 days.",
          "YELLOW", 3, "COMPLIANCE_PACKAGE", False),
+         "Unresolved penalty notices. Fine up to Tk 10,000.", "RED", 8, "STRUCTURED_REGULARIZATION", False),
+        ("CHG-001", "Charge Satisfaction Not Filed", "DEADLINE", "Companies Act 1994, Section 87",
+         "Charge satisfaction not filed via Form XIX within 30 days.", "YELLOW", 3, "COMPLIANCE_PACKAGE", False),
         ("STR-001", "Name Change Not Filed", "DEADLINE", "Companies Act 1994, Section 20",
          "Name change not filed with RJSC.", "YELLOW", 3, "COMPLIANCE_PACKAGE", False),
         ("STR-002", "Object Clause Change Not Filed", "DEADLINE", "Companies Act 1994, Section 17",
@@ -41,11 +45,14 @@ def upgrade():
         ("CAP-003", "Capital Reduction Without Court Order", "CONDITIONAL",
          "Companies Act 1994, Section 100", "Capital reduction without court confirmation.",
          "BLACK", 15, "CORPORATE_RESCUE", True),
+        ("CAP-003", "Capital Reduction Without Court Order", "CONDITIONAL", "Companies Act 1994, Section 100",
+         "Capital reduction without court confirmation.", "BLACK", 15, "CORPORATE_RESCUE", True),
         ("INC-007", "Trade License Not Obtained", "DEADLINE", "City Corporation Trade License Act",
          "Trade License not obtained or expired.", "RED", 10, "COMPLIANCE_PACKAGE", False),
     ]
 
     insert_rule = sa.text("""
+    statement = sa.text("""
         INSERT INTO legal_rules (
             rule_id, rule_name, rule_type, statutory_basis, description,
             default_severity, score_impact, revenue_tier, is_black_override, created_at
@@ -85,3 +92,22 @@ def downgrade():
             )
         """)
     )
+        connection.execute(statement, {
+            "rule_id": rule[0],
+            "rule_name": rule[1],
+            "rule_type": rule[2],
+            "statutory_basis": rule[3],
+            "description": rule[4],
+            "default_severity": rule[5],
+            "score_impact": rule[6],
+            "revenue_tier": rule[7],
+            "is_black_override": rule[8],
+        })
+
+
+def downgrade():
+    op.execute("""
+        DELETE FROM legal_rules WHERE rule_id IN
+        ('TAX-003', 'TAX-004', 'DEF-001', 'DEF-002', 'CHG-001',
+         'STR-001', 'STR-002', 'STR-003', 'CAP-003', 'INC-007');
+    """)
