@@ -466,6 +466,7 @@ class CompanyProfile:
     catalogue_binding_required: bool = False
     catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
     catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
+    catalogue_rule_bases: Dict[str, str] = field(default_factory=dict)
 
 @dataclass
 class ScoreBreakdown:
@@ -875,6 +876,7 @@ class NLCRuleEngine:
         self._flags = []
         self._rule_versions = dict(company.catalogue_rule_versions or {})
         self._rule_active = dict(company.catalogue_rule_active or {})
+        self._rule_bases = dict(company.catalogue_rule_bases or {})
         self._catalogue_binding_required = company.catalogue_binding_required is True
         self.today = today or self._default_today or business_date_today()
 
@@ -4584,18 +4586,37 @@ class NLCRuleEngine:
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
-        """Bind each finding to its database catalogue version and activation state."""
+        """Bind findings to the active catalogue and fail closed on identity drift."""
         if self._catalogue_binding_required:
             version = self._rule_versions.get(flag.rule_id)
             active = self._rule_active.get(flag.rule_id)
+            catalogue_basis = self._rule_bases.get(flag.rule_id)
+            basis_translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+            flag_basis = " ".join(
+                str(flag.statutory_basis or "").translate(basis_translation).split()
+            ).casefold()
+            catalogue_basis_normalized = " ".join(
+                str(catalogue_basis or "").translate(basis_translation).split()
+            ).casefold()
+            identity_matches = bool(
+                flag_basis
+                and catalogue_basis_normalized
+                and flag_basis == catalogue_basis_normalized
+            )
             if version is not None:
                 flag.rule_version = str(version)
-            if version is None or active is not True:
+            if version is None or active is not True or not identity_matches:
                 detail = dict(flag.detail or {})
                 detail["rule_catalogue_binding"] = (
-                    "CATALOGUE_ENTRY_MISSING" if version is None else "RULE_INACTIVE"
+                    "CATALOGUE_ENTRY_MISSING"
+                    if version is None
+                    else "RULE_INACTIVE"
+                    if active is not True
+                    else "STATUTORY_BASIS_MISMATCH"
                 )
                 detail["engine_evaluator_version"] = RULE_ENGINE_VERSION
+                detail["engine_flag_statutory_basis"] = flag.statutory_basis
+                detail["catalogue_rule_statutory_basis"] = catalogue_basis
                 flag.detail = detail
                 flag.severity = Severity.NOT_EVALUATED
                 flag.score_impact = 0
@@ -4607,6 +4628,9 @@ class NLCRuleEngine:
                 flag.applicability_reason = (
                     "Rule is inactive or missing from the active database catalogue; "
                     "applicability cannot be established."
+                    if version is None or active is not True
+                    else "Engine finding statutory basis does not match the database catalogue identity; "
+                    "the finding is quarantined and must not be attributed by rule_id alone."
                 )
         self._flags.append(flag)
 
