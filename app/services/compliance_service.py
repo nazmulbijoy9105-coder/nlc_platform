@@ -333,6 +333,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     LegalRule.rule_id,
                     LegalRule.rule_version,
                     LegalRule.is_active,
+                    LegalRule.statutory_basis,
                 ).order_by(LegalRule.rule_id)
             )
         ).all()
@@ -640,7 +641,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
 
         # ── Resolve previously active flags not in current output ──
-        current_rule_ids = {f.rule_id for f in output.flags}
+        persistable_flags = _persistable_output_flags(output.flags)
+        current_rule_ids = {f.rule_id for f in persistable_flags}
         await self.db.execute(
             update(ComplianceFlag)
             .where(
@@ -656,7 +658,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # ── Insert new flags (upsert by company_id + rule_id) ──────
         collected_new_flags: list = []
-        for flag in _persistable_output_flags(output.flags):
+        for flag in persistable_flags:
 
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
@@ -766,7 +768,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 return_score=sb.return_score if score_for_current is not None else None,
                 director_score=sb.director_score if score_for_current is not None else None,
                 shareholding_score=sb.shareholding_score if score_for_current is not None else None,
-                active_flags_count=len(output.flags),
+                active_flags_count=len(persistable_flags),
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,
