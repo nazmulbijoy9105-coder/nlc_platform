@@ -109,17 +109,24 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                     if source == "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE" and findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
                         break
-                    if source in {"ENGINE_FINDING", _UNMAPPED_SOURCE} and not findings:
+                    if source == "ENGINE_FINDING" and not findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
                         break
                     conflicts = item.get("identity_conflicts", [])
                     if not isinstance(conflicts, list) or any(
                         not isinstance(conflict, dict)
                         or conflict.get("resolution_status") != "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH"
-                        or not isinstance(conflict.get("flag_code"), str)
-                        or not conflict.get("flag_code", "").strip()
-                        or "flag_statutory_basis" not in conflict
+                        or not isinstance(conflict.get("binding_reason"), str)
+                        or not conflict.get("binding_reason", "").strip()
+                        or "engine_statutory_basis" not in conflict
                         or "catalogue_statutory_basis" not in conflict
+                        or (
+                            conflict.get("flag_code") is not None
+                            and (
+                                not isinstance(conflict.get("flag_code"), str)
+                                or not conflict.get("flag_code", "").strip()
+                            )
+                        )
                         for conflict in conflicts
                     ):
                         problems.append("RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED")
@@ -127,9 +134,11 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                     if source in {
                         "ENGINE_FINDING",
                         "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
-                        _UNMAPPED_SOURCE,
                     } and conflicts:
                         problems.append("RULE_OUTCOME_SOURCE_CONFLICT_CONTRADICTION")
+                        break
+                    if source == _UNMAPPED_SOURCE and not findings and not conflicts:
+                        problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
                         break
                     if source == "IDENTITY_MISMATCH_NOT_ATTRIBUTED" and (
                         findings or not conflicts
