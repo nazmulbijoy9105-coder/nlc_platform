@@ -4591,9 +4591,12 @@ class NLCRuleEngine:
             version = self._rule_versions.get(flag.rule_id)
             active = self._rule_active.get(flag.rule_id)
             catalogue_basis = self._rule_bases.get(flag.rule_id)
-            flag_basis = " ".join(str(flag.statutory_basis or "").split()).casefold()
+            basis_translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+            flag_basis = " ".join(
+                str(flag.statutory_basis or "").translate(basis_translation).split()
+            ).casefold()
             catalogue_basis_normalized = " ".join(
-                str(catalogue_basis or "").split()
+                str(catalogue_basis or "").translate(basis_translation).split()
             ).casefold()
             identity_matches = bool(
                 flag_basis
