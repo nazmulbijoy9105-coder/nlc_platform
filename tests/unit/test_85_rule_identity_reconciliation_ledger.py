@@ -52,3 +52,30 @@ def test_inc001_and_inc002_are_separately_preserved_as_legacy_identity_cases():
     assert legacy[0]["rule_id"] == "INC-002"
     assert legacy[0]["identity_resolution"] == "QUARANTINED_LEGACY_IDENTITY_REQUIRES_RECORD_LEVEL_REVIEW"
     assert "INC-002" not in {rule["rule_id"] for rule in ILRMF_RULES}
+
+
+def test_ledger_definition_difference_lists_match_the_stored_snapshots():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    fields = ledger["comparison_fields"]
+    field_counts = {}
+    exact_matches = 0
+    differing_rows = 0
+
+    for row in ledger["rules"]:
+        source = row["canonical_source_definition"]
+        production = row["production_legal_rules_definition"]
+        expected_differences = [
+            field for field in fields
+            if _stable(source.get(field)) != _stable(production.get(field))
+        ]
+        assert row["definition_differences"] == expected_differences
+        if expected_differences:
+            differing_rows += 1
+        else:
+            exact_matches += 1
+        for field in expected_differences:
+            field_counts[field] = field_counts.get(field, 0) + 1
+
+    assert ledger["summary"]["exactMatches"] == exact_matches
+    assert ledger["summary"]["differingRows"] == differing_rows
+    assert ledger["summary"]["diffFields"] == field_counts
