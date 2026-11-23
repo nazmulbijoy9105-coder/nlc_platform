@@ -505,6 +505,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         _quarantine_catalogue_conflict_findings(
             output.flags, catalogue_identity_conflicts
         )
+        for provenance_record in fact_provenance_snapshot:
+            if provenance_record.get("record_type") == "LEGAL_RULE_CATALOGUE_SNAPSHOT":
+                provenance_record["identity_conflicts"] = [
+                    catalogue_identity_conflicts[rule_id]
+                    for rule_id in sorted(catalogue_identity_conflicts)
+                ]
 
         from app.compliance.rule_applicability import build_rule_applicability_results
 
