@@ -7,6 +7,7 @@ from scripts.seed_rules import ILRMF_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "docs" / "legal" / "85_rule_identity_definition_reconciliation_2026-11-23.json"
+ORIGINAL_LEDGER_SHA256 = "d8044d42e95be5f72c6fb430d808ec51e532e9c6c3e6e7c5a486f0b5d70baa2e"
 HISTORICAL_RULES_SHA256 = "cd51f59299d5d8ae760459ada6ea758335de1dcce2c4767485f694e5db04165c"
 
 
@@ -16,6 +17,12 @@ def _stable(value):
     if isinstance(value, list):
         return [_stable(item) for item in value]
     return value
+
+
+def _original_payload_sha256(ledger):
+    original = {key: value for key, value in ledger.items() if key != "follow_up_snapshots"}
+    canonical = json.dumps(original, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _latest(ledger):
@@ -46,6 +53,7 @@ def test_original_provenance_and_85_rule_history_are_preserved():
     assert ledger["revision_readiness"]["verified_effective_dated_revisions"] == 0
     assert ledger["runtime_coverage"]["expected_unique_ids"] == 85
     assert ledger["runtime_coverage"]["emitted_unique_ids"] == 85
+    assert _original_payload_sha256(ledger) == ORIGINAL_LEDGER_SHA256
 
 
 def test_follow_up_snapshot_covers_exactly_current_main_85_engine_ids():
