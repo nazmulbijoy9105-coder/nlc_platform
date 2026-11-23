@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "ledger_type": "85_RULE_IDENTITY_AND_DEFINITION_RECONCILIATION",
   "ledger_status": "INITIAL_READ_ONLY_RECONCILIATION_NOT_LEGAL_APPROVAL_OR_DEFINITION_RELEASE",
-  "generated_at_utc": "2026-11-23T16:18:38.850Z",
+  "generated_at_utc": "2026-11-23T16:19:51.624Z",
   "repository": {
     "full_name": "nazmulbijoy9105-coder/nlc_platform",
     "branch": "main",
@@ -117,7 +117,7 @@
       "resolved_candidate_alias_rows": 0,
       "candidate_revision_rows": 0
     },
-    "access_limitation": "nlc_ci_audit_role has no SELECT on public legal-rule, identity, finding or evidence tables; production facts are limited to explicitly granted audit views. Finding-level attribution is not available from this capture."
+    "access_limitation": "nlc_ci_audit_role has no SELECT on public legal-rule, identity, finding or evidence tables; production facts are limited to explicitly granted audit views. Finding-level attribution is not available from this capture. The audit schema exposes only active_legal_rule_ids, canonical_identity_parity, legal_rule_registry_inventory, production_release_parity and tenant_rls_parity; it exposes no row-level identity/alias/archive or historical finding/evidence view. The reported zero finding/evidence binding counts refer only to the new canonical identity layer, not proof that legacy findings or evidence do not exist."
   },
   "comparison": {
     "expected_seed_ids": 85,
@@ -182,7 +182,16 @@
         "provision": "Companies Act 1994, section 9",
         "trigger": "certificate_obtained == False"
       },
-      "disposition": "DISTINCT_CANDIDATE_IDENTITIES; main Section 23 MoA/AoA registration-status verification is not the same proposition as the production certificate-of-incorporation proposition. Production's Section 9 citation is inconsistent with the official Bangla text (Section 9 is MoA formalities; Section 24 addresses certificate issuance and Section 25 conclusiveness). Preserve both source definitions and do not bind historical findings by text ID."
+      "disposition": "DISTINCT_CANDIDATE_IDENTITIES; main Section 23 MoA/AoA registration-status verification is not the same proposition as the production certificate-of-incorporation proposition. Production's Section 9 citation is inconsistent with the official Bangla text (Section 9 is MoA formalities; Section 24 addresses certificate issuance and Section 25 conclusiveness). Preserve both source definitions and do not bind historical findings by text ID.",
+      "production_catalogue_activation": {
+        "is_active": true,
+        "source": "0124_restore_85_rule_catalogue_parity",
+        "live_production_definition": "Certificate of Incorporation Not Obtained; Section 9",
+        "canonical_engine_definition": "MoA/AoA Registration Status Requires Verification; Section 23",
+        "alias_resolution": "NONE",
+        "legal_revision": "NONE",
+        "interpretation": "The active flag restores textual-ID catalogue parity only. It does not resolve the INC-001 identity collision or make the production definition equivalent to the engine definition."
+      }
     },
     "inc002": {
       "production_current": {
@@ -193,7 +202,16 @@
         "is_active": false
       },
       "historical_alternate_fingerprint": "Migration 0115 also accepts a distinct Form III / section 23 trigger variant solely as a quarantine fingerprint for databases that actually contain it.",
-      "disposition": "LEGACY_EXTRA_IDENTITY; production-only Section 11 citation is inconsistent with the official Bangla text (Section 11 concerns company name/change; Section 23 concerns filing/registration of MoA/AoA). The legacy proposition may overlap main INC-001, but the trigger and evidence contract differ. Preserve it outside the canonical 85 and do not merge or reassign historical findings pending individual review."
+      "disposition": "LEGACY_EXTRA_IDENTITY; production-only Section 11 citation is inconsistent with the official Bangla text (Section 11 concerns company name/change; Section 23 concerns filing/registration of MoA/AoA). The legacy proposition may overlap main INC-001, but the trigger and evidence contract differ. Preserve it outside the canonical 85 and do not merge or reassign historical findings pending individual review.",
+      "production_catalogue_activation": {
+        "is_active": false,
+        "source": "0124_restore_85_rule_catalogue_parity",
+        "current_production_definition": "Memorandum and Articles Not Filed; Section 11",
+        "canonical_engine_rule_id_present": false,
+        "candidate_alias_resolution": "NONE",
+        "legal_revision": "NONE",
+        "interpretation": "Legacy row remains preserved but inactive and outside the canonical 85. The Section 11 citation is inconsistent with the official Bangla Act text; possible Section 23 overlap with main INC-001 remains unresolved."
+      }
     },
     "identity_model_note": "Migration 0116 seeds 85 technical NLC_ENGINE_REGISTRY_V2 identities and 85 engine aliases. Migration 0123 adds 85 quarantined candidate identities and 84 unresolved legal_rules aliases, leaving two identity cohorts and no effective-dated revisions. These are separate source namespaces and must not be collapsed by ID-only joins.",
     "legal_source_crosscheck": {
@@ -214,6 +232,41 @@
       "effective_date_status": "NOT_ESTABLISHED",
       "amendment_chain_status": "NOT_COMPLETE",
       "counsel_approval": "NOT_RECORDED"
+    },
+    "identity_cohorts": [
+      {
+        "migration": "0116_canonical_rule_identity_registry",
+        "cohort": "NLC_ENGINE_REGISTRY_V2 technical identity keys",
+        "count": 85,
+        "obligation_key_pattern": "BD:NLC_ENGINE_REGISTRY_V2:{rule_id}",
+        "identity_status": "ACTIVE",
+        "alias_source_namespace": "NLC_ENGINE_REGISTRY_V2",
+        "alias_count": 85,
+        "resolution_status": "UNRESOLVED",
+        "legal_meaning": "Technical source-key identity only. Migration comment explicitly says this does not certify statutory validity, effective dates, scope or historical finding attribution."
+      },
+      {
+        "migration": "0123_seed_quarantined_rule_identity_candidates",
+        "cohort": "NLC_ENGINE_RULE_ID_CANDIDATE",
+        "count": 85,
+        "obligation_key": null,
+        "creation_basis_pattern": "NLC_ENGINE_RULE_ID_CANDIDATE:{rule_id}",
+        "identity_status": "QUARANTINED",
+        "alias_source_namespace": "nlc_platform.legal_rules",
+        "alias_count": 84,
+        "resolution_status": "UNRESOLVED",
+        "exclusions": [
+          "INC-001",
+          "INC-002"
+        ],
+        "legal_meaning": "Candidate identities only. Migration explicitly does not resolve legal equivalence, assign effective dates, create revisions, activate identities, alter legal_rules or rewrite historical findings."
+      }
+    ],
+    "migration_chronology": {
+      "0115": "Archives/quarantines the two legacy collision rows; preserves their payloads and fingerprints.",
+      "0116": "Creates 85 ACTIVE technical registry identities and 85 UNRESOLVED NLC_ENGINE_REGISTRY_V2 aliases; no legal revisions or historical bindings.",
+      "0123": "Creates a second cohort of 85 QUARANTINED candidate identities; creates 84 UNRESOLVED legal_rules aliases and deliberately excludes INC-001 and INC-002.",
+      "0124": "Reactivates all 85 expected legal_rules IDs, including the production legacy INC-001 row, and keeps INC-002 inactive. It does not resolve aliases or create legal_rule_revisions."
     }
   },
   "revision_readiness": {
@@ -253,7 +306,9 @@
     "score_or_verification_state_changed": false,
     "source_workpack_imported_read_only": true,
     "operating_interval_register_imported_read_only": true,
-    "rule_level_effective_dates_assigned": false
+    "rule_level_effective_dates_assigned": false,
+    "historical_findings_or_evidence_changed": false,
+    "historical_record_level_attribution_verified": false
   },
   "rules": [
     {
