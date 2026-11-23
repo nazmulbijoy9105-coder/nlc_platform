@@ -4,7 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from app.compliance.evaluation_integrity import (\n    evaluation_run_chain_problem,\n    evaluation_run_integrity_problems,\n)\nfrom app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
+from app.compliance.evaluation_integrity import (
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
+from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 
 
 class _Result:
