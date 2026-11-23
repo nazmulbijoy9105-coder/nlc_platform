@@ -123,6 +123,48 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     """Compare the complete DB snapshot with every canonical evaluator identity."""
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
+    rows_by_id = {row.rule_id: row for row in catalogue_rows}
+    conflicts: dict[str, dict] = {}
+    for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
+        row = rows_by_id.get(rule_id)
+        engine_basis = getattr(canonical_rule, "law", None)
+        if row is None:
+            reason = "CATALOGUE_ENTRY_MISSING"
+            catalogue_basis = None
+        elif row.is_active is not True:
+            reason = "RULE_INACTIVE"
+            catalogue_basis = row.statutory_basis
+        elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
+            reason = "STATUTORY_BASIS_MISMATCH"
+            catalogue_basis = row.statutory_basis
+        else:
+            continue
+        conflicts[rule_id] = {
+            "rule_id": rule_id,
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": reason,
+            "engine_statutory_basis": engine_basis,
+            "catalogue_statutory_basis": catalogue_basis,
+            "catalogue_rule_version": getattr(row, "rule_version", None) if row else None,
+            "catalogue_is_active": bool(row.is_active) if row else False,
+        }
+
+    for rule_id, row in rows_by_id.items():
+        if rule_id not in STATUTORY_RULE_REGISTRY:
+            conflicts[rule_id] = {
+                "rule_id": rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": (
+                    "RULE_INACTIVE" if row.is_active is not True
+                    else "ENGINE_RULE_DEFINITION_MISSING"
+                ),
+                "engine_statutory_basis": None,
+                "catalogue_statutory_basis": row.statutory_basis,
+                "catalogue_rule_version": row.rule_version,
+                "catalogue_is_active": bool(row.is_active),
+            }
+    return conflicts
+
 
 def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts):
     """Make every finding for a conflicted ID non-scoring and non-actionable."""
@@ -182,48 +224,6 @@ def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts)
             "Catalogue/evaluator identity conflict; this finding is quarantined "
             "and cannot support applicability, scoring or rescue."
         )
-
-    rows_by_id = {row.rule_id: row for row in catalogue_rows}
-    conflicts: dict[str, dict] = {}
-    for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
-        row = rows_by_id.get(rule_id)
-        engine_basis = getattr(canonical_rule, "law", None)
-        if row is None:
-            reason = "CATALOGUE_ENTRY_MISSING"
-            catalogue_basis = None
-        elif row.is_active is not True:
-            reason = "RULE_INACTIVE"
-            catalogue_basis = row.statutory_basis
-        elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
-            reason = "STATUTORY_BASIS_MISMATCH"
-            catalogue_basis = row.statutory_basis
-        else:
-            continue
-        conflicts[rule_id] = {
-            "rule_id": rule_id,
-            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
-            "binding_reason": reason,
-            "engine_statutory_basis": engine_basis,
-            "catalogue_statutory_basis": catalogue_basis,
-            "catalogue_rule_version": getattr(row, "rule_version", None) if row else None,
-            "catalogue_is_active": bool(row.is_active) if row else False,
-        }
-
-    for rule_id, row in rows_by_id.items():
-        if rule_id not in STATUTORY_RULE_REGISTRY:
-            conflicts[rule_id] = {
-                "rule_id": rule_id,
-                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
-                "binding_reason": (
-                    "RULE_INACTIVE" if row.is_active is not True
-                    else "ENGINE_RULE_DEFINITION_MISSING"
-                ),
-                "engine_statutory_basis": None,
-                "catalogue_statutory_basis": row.statutory_basis,
-                "catalogue_rule_version": row.rule_version,
-                "catalogue_is_active": bool(row.is_active),
-            }
-    return conflicts
 
 
 def _applied_score_impacts(flags) -> list[dict]:
