@@ -143,3 +143,39 @@ def test_integrity_rejects_contradictory_identity_conflict_shapes(
 
     problems = evaluation_run_integrity_problems(run)
     assert expected_problem in problems
+
+
+
+def test_integrity_rejects_conflict_rows_missing_explicit_conflict_identity_fields():
+    outcomes = [{
+        "rule_id": "INC-001",
+        "scope_version": "RJSC_SCOPE_2026-11-24.1",
+        "scope_class": "IN_SCOPE_RJSC",
+        "assessment_source": "IDENTITY_MISMATCH_NOT_ATTRIBUTED",
+        "findings": [],
+        "identity_conflicts": [{
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "engine_statutory_basis": "Section 23",
+            "catalogue_statutory_basis": "Section 9",
+        }],
+    }]
+    run = SimpleNamespace(
+        rule_outcomes_snapshot=outcomes,
+        rule_outcomes_hash=hash_rule_outcomes_snapshot(outcomes),
+        score_hash="a" * 64,
+        previous_hash=None,
+        rule_catalogue_count=1,
+        flags_snapshot=[],
+        fact_provenance_snapshot=[],
+        score_breakdown_snapshot={},
+        calculated_at=datetime(2026, 11, 24, tzinfo=timezone.utc),
+        engine_version="2.3",
+        trigger_source="TEST",
+        company_id=uuid4(),
+        score=None,
+        risk_band="NOT_EVALUATED",
+    )
+    problems = evaluation_run_integrity_problems(run)
+    assert "RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED" in problems
+    assert "RJSC_RULE_OUTCOME_SCOPE_COVERAGE_MISMATCH" in problems

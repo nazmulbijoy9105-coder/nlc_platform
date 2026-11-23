@@ -41,6 +41,7 @@ from app.rule_engine.engine import (
 )
 from app.services.company_service import CompanyService
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
@@ -339,6 +340,19 @@ class MessageResponse(BaseModel):
     success: bool = True
 
 
+def _filter_rjsc_active_flags(flags, conflicted_rule_ids):
+    """Suppress out-of-scope, unclassified and identity-conflicted active rows."""
+    from app.services.compliance_service import _has_unresolved_catalogue_binding
+
+    conflicted = set(conflicted_rule_ids or ())
+    return [
+        flag for flag in flags
+        if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+        and flag.rule_id not in conflicted
+        and not _has_unresolved_catalogue_binding(flag)
+    ]
+
+
 def _flag_to_response(flag) -> FlagResponse:
     evaluation_state = getattr(flag, "evaluation_state", "UNKNOWN")
     evaluation_state = getattr(evaluation_state, "value", evaluation_state)
@@ -356,12 +370,16 @@ def _flag_to_response(flag) -> FlagResponse:
     score_eligible = (
         not identity_binding_conflict
         and _legal_score_is_released()
+        and is_rjsc_rule_in_scope(flag.rule_id)
         and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
         and evaluation_state == "VIOLATION"
         and flag_status == "ACTIVE"
         and getattr(flag, "resolved_date", None) is None
     )
-    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
+    legally_verified = (
+        is_rjsc_rule_in_scope(str(flag.rule_id))
+        and flag.rule_id in VERIFIED_RULE_IDS
+    )
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
@@ -513,12 +531,18 @@ def _company_to_response(
         director_count = len(company.directors)
     score_is_current = _evaluation_run_is_current(company, evaluation_run)
     evaluation_status = _company_evaluation_status(company, evaluation_run)
-    violation_count = 0
-    if score_is_current and hasattr(company, "compliance_flags") and company.compliance_flags is not None:
-        violation_count = len([
-            f for f in company.compliance_flags
-            if hasattr(f, "status") and str(f.status) == "ACTIVE"
-        ])
+    from app.services.compliance_service import _has_unresolved_catalogue_binding
+    rjsc_flags = [
+        flag for flag in (getattr(company, "compliance_flags", None) or [])
+        if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+        and not _has_unresolved_catalogue_binding(flag)
+    ]
+    active_rjsc_flags = [
+        flag for flag in rjsc_flags
+        if str(getattr(flag, "flag_status", getattr(flag, "status", "")))
+        in ("ACTIVE", "FlagStatus.ACTIVE")
+    ]
+    violation_count = len(active_rjsc_flags) if score_is_current else 0
 
     def _s(val):
         if val is None:
@@ -550,10 +574,10 @@ def _company_to_response(
         is_fdi_registered=getattr(company, "is_fdi_registered", None),
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
-        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if score_is_current else 0),
-        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if score_is_current else 0),
-        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if score_is_current else 0),
-        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if score_is_current else 0),
+        active_flags=len(active_rjsc_flags) if score_is_current else 0,
+        black_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("BLACK", "Severity.BLACK")) if score_is_current else 0,
+        red_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("RED", "Severity.RED")) if score_is_current else 0,
+        yellow_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("YELLOW", "Severity.YELLOW")) if score_is_current else 0,
         is_manufacturing=getattr(company, "is_manufacturing", None),
         tax_return_filed_for_current_fy=(
             getattr(company, "tax_return_filed_for_current_fy", None)
@@ -928,16 +952,14 @@ async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for
     flags = await svc.get_active_flags(company_id)
     # Hide stale active rows whenever their current catalogue identity cannot
     # be bound. They remain auditable in storage but cannot leak as violations.
-    from app.services.compliance_service import _catalogue_identity_conflicts, _has_unresolved_catalogue_binding
+    from app.services.compliance_service import _catalogue_identity_conflicts
     catalogue_rows = list((
         await db.execute(select(LegalRule).order_by(LegalRule.rule_id))
     ).scalars().all())
     conflicted_rule_ids = set(_catalogue_identity_conflicts(catalogue_rows))
     return [
         _flag_to_response(flag)
-        for flag in flags
-        if flag.rule_id not in conflicted_rule_ids
-        and not _has_unresolved_catalogue_binding(flag)
+        for flag in _filter_rjsc_active_flags(flags, conflicted_rule_ids)
     ]
 
 

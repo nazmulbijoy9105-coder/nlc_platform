@@ -1,25 +1,40 @@
 from types import SimpleNamespace
 
+import pytest
+
 from app.services.compliance_service import (
     _active_catalogue_rule_ids,
+    _current_persistable_rule_ids,
     _has_unresolved_catalogue_binding,
     _persistable_output_flags,
+    _score_blocking_catalogue_conflicts,
 )
 from scripts.seed_rules import ILRMF_RULES
+from canonical_architecture.rjsc_scope import (
+    RJSC_OUT_OF_SCOPE_RULE_IDS,
+    is_rjsc_rule_in_scope,
+)
 
 
-def test_85_rule_catalogue_keeps_84_canonical_active_ids_when_inc001_is_held():
+def test_rjsc_applicability_uses_only_in_scope_active_ids_and_excludes_held_identity():
+    from canonical_architecture.rjsc_scope import RJSC_IN_SCOPE_RULE_IDS
+
     catalogue_rows = [
         SimpleNamespace(rule_id=rule["rule_id"], is_active=True)
         for rule in ILRMF_RULES
     ]
     active_ids = _active_catalogue_rule_ids(catalogue_rows, {"INC-001"})
+    expected_rjsc_ids = {
+        rule["rule_id"] for rule in ILRMF_RULES
+        if rule["rule_id"] in RJSC_IN_SCOPE_RULE_IDS
+    }
 
     assert len(ILRMF_RULES) == 85
-    assert len(active_ids) == 84
-    assert len(set(active_ids)) == 84
+    assert "INC-001" in expected_rjsc_ids
+    assert len(active_ids) == len(expected_rjsc_ids) - 1
+    assert len(set(active_ids)) == len(active_ids)
     assert "INC-001" not in active_ids
-    assert set(active_ids) == {rule["rule_id"] for rule in ILRMF_RULES} - {"INC-001"}
+    assert set(active_ids) == expected_rjsc_ids - {"INC-001"}
 
 
 def test_mismatched_engine_finding_is_not_persisted_over_legacy_rule_identity():
@@ -67,10 +82,15 @@ def test_live_production_catalogue_keeps_inc001_active_and_only_inc002_inactive(
         ))
     active_ids = _active_catalogue_rule_ids(catalogue_rows, set())
 
-    canonical_ids = {rule["rule_id"] for rule in ILRMF_RULES}
+    from canonical_architecture.rjsc_scope import RJSC_IN_SCOPE_RULE_IDS
+
+    canonical_ids = {
+        rule["rule_id"] for rule in ILRMF_RULES
+        if rule["rule_id"] in RJSC_IN_SCOPE_RULE_IDS
+    }
     assert "INC-001" in active_ids
     assert {row.rule_id for row in catalogue_rows if not row.is_active} == {"INC-002"}
-    assert set(active_ids) == canonical_ids - {"INC-002"}
+    assert set(active_ids) == canonical_ids
 
 
 def test_catalogue_identity_conflicts_are_derived_without_engine_findings():
@@ -190,3 +210,154 @@ def test_inactive_canonical_evaluator_identity_blocks_score_release():
 
     assert conflicts[canonical_rule_id]["binding_reason"] == "RULE_INACTIVE"
     assert canonical_rule_id in _score_blocking_catalogue_conflicts(conflicts)
+
+
+
+def test_conflicted_active_flag_is_not_counted_as_current_and_will_be_cleaned_up():
+    conflicted = SimpleNamespace(
+        rule_id="INC-001",
+        detail={"rule_catalogue_binding": "STATUTORY_BASIS_MISMATCH"},
+    )
+    current = SimpleNamespace(
+        rule_id="AGM-001",
+        detail={"rule_catalogue_binding": "MATCHED"},
+    )
+    current_ids = _current_persistable_rule_ids(
+        [conflicted, current],
+        {"INC-001"},
+    )
+
+    assert current_ids == {"AGM-001"}
+    # The persistence query resolves ACTIVE rows whose IDs are not in this set.
+    assert "INC-001" not in current_ids
+
+
+@pytest.mark.parametrize("rule_id", sorted(RJSC_OUT_OF_SCOPE_RULE_IDS))
+def test_any_out_of_scope_catalogue_conflict_is_inert_for_rjsc_release(rule_id):
+    conflicts = {
+        rule_id: {
+            "rule_id": rule_id,
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "catalogue_is_active": True,
+        }
+    }
+    assert _score_blocking_catalogue_conflicts(conflicts) == set()
+
+
+def test_unknown_active_catalogue_conflict_still_fails_closed():
+    conflicts = {
+        "UNKNOWN-999": {
+            "rule_id": "UNKNOWN-999",
+            "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
+            "catalogue_is_active": True,
+        }
+    }
+    assert _score_blocking_catalogue_conflicts(conflicts) == {"UNKNOWN-999"}
+
+
+def test_duplicate_active_catalogue_identity_fails_closed():
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import _catalogue_identity_conflicts
+
+    rows = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=rule.law,
+        )
+        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+    ]
+    duplicate = SimpleNamespace(
+        rule_id=rows[0].rule_id,
+        rule_version="duplicate",
+        is_active=True,
+        statutory_basis=rows[0].statutory_basis,
+    )
+    with pytest.raises(ValueError, match="Duplicate active catalogue rule_id"):
+        _catalogue_identity_conflicts([*rows, duplicate])
+
+
+
+@pytest.mark.parametrize("rule_id", sorted(RJSC_OUT_OF_SCOPE_RULE_IDS))
+def test_out_of_scope_catalogue_row_and_conflict_cannot_change_rjsc_binding_hash_material(rule_id):
+    import hashlib
+    import json
+
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import _rjsc_catalogue_binding_snapshot
+
+    rows = [
+        SimpleNamespace(
+            rule_id=canonical_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=canonical_rule.law,
+            verification_status="PENDING",
+        )
+        for canonical_id, canonical_rule in STATUTORY_RULE_REGISTRY.items()
+        if is_rjsc_rule_in_scope(canonical_id)
+    ]
+    baseline = _rjsc_catalogue_binding_snapshot(rows, {})
+    injected_row = SimpleNamespace(
+        rule_id=rule_id,
+        rule_version="attacker-controlled-version",
+        is_active=True,
+        statutory_basis="Injected non-RJSC statutory basis",
+        verification_status="VERIFIED",
+    )
+    injected_conflict = {
+        rule_id: {
+            "rule_id": rule_id,
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "engine_statutory_basis": "External regulator",
+            "catalogue_statutory_basis": "Injected non-RJSC statutory basis",
+            "catalogue_is_active": True,
+        }
+    }
+    changed = _rjsc_catalogue_binding_snapshot(
+        [*rows, injected_row], injected_conflict
+    )
+    def canonical(value):
+        return json.dumps(
+            value, sort_keys=True, separators=(",", ":")
+        ).encode()
+
+    assert changed == baseline
+    assert hashlib.sha256(canonical(changed)).hexdigest() == hashlib.sha256(
+        canonical(baseline)
+    ).hexdigest()
+
+
+
+@pytest.mark.parametrize("rule_id", sorted(RJSC_OUT_OF_SCOPE_RULE_IDS))
+def test_duplicate_active_out_of_scope_catalogue_rows_are_inert(rule_id):
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import (
+        _active_catalogue_rows_for_rjsc_ledger,
+        _catalogue_identity_conflicts,
+        _score_blocking_catalogue_conflicts,
+    )
+
+    rows = [
+        SimpleNamespace(
+            rule_id=canonical_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=canonical_rule.law,
+        )
+        for canonical_id, canonical_rule in STATUTORY_RULE_REGISTRY.items()
+    ]
+    out_of_scope = SimpleNamespace(
+        rule_id=rule_id,
+        rule_version="duplicate",
+        is_active=True,
+        statutory_basis="External-regulator basis",
+    )
+    duplicated = [*rows, out_of_scope]
+    conflicts = _catalogue_identity_conflicts(duplicated)
+    assert rule_id not in _score_blocking_catalogue_conflicts(conflicts)
+    assert len(_active_catalogue_rows_for_rjsc_ledger(duplicated)) == len(
+        _active_catalogue_rows_for_rjsc_ledger(rows)
+    )
+

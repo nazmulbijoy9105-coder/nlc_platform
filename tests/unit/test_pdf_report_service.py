@@ -663,3 +663,30 @@ def test_endpoint_withholds_pdf_when_latest_run_is_pending_even_if_old_score_is_
 
     assert exc.value.status_code == 409
     assert "latest evaluation run is incomplete" in exc.value.detail
+
+
+
+def test_out_of_scope_flag_cannot_contribute_to_pdf_rjsc_score(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "TAX-001"})
+    )
+    monkeypatch.setattr(
+        report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001", "TAX-001"})
+    )
+    monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+
+    tax_flag = SimpleNamespace(
+        rule_id="TAX-001",
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        flag_status="ACTIVE",
+        resolved=False,
+        conditional_applies=True,
+        severity="BLACK",
+        score_impact=100,
+        score_impact_applied=100,
+    )
+    assert report_module._verified_flag_score([tax_flag]) == (100, False)

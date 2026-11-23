@@ -1821,15 +1821,25 @@ class TestVerdictRegression:
         output = rule_engine.evaluate(profile, today=date(2026, 10, 1))
         assert_flag_triggered(output, "TAX-003")
 
-    def test_product_eligible_red_flag_escalates_band(self, monkeypatch, rule_engine, build_profile):
+    def test_out_of_scope_trade_license_red_finding_cannot_escalate_rjsc_band(
+        self, monkeypatch, rule_engine, build_profile
+    ):
         import app.rule_engine.engine as engine_module
+
         monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
         monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"TL-002"}))
         monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"TL-002"}))
-        profile = build_profile(trade_license_expiry=date.today() - timedelta(days=100))
+        baseline = rule_engine.evaluate(build_profile(company_id="rjsc-scope-invariance-company"))
+        profile = build_profile(
+            company_id="rjsc-scope-invariance-company",
+            trade_license_expiry=date.today() - timedelta(days=100),
+        )
         output = rule_engine.evaluate(profile)
         assert_flag_triggered(output, "TL-002")
-        assert output.score_breakdown.risk_band.value == "RED"
+        assert output.score_breakdown.final_score == baseline.score_breakdown.final_score
+        assert output.score_breakdown.raw_total == baseline.score_breakdown.raw_total
+        assert output.score_breakdown.risk_band == baseline.score_breakdown.risk_band
+        assert output.score_breakdown.score_hash == baseline.score_breakdown.score_hash
 
     def test_TL002_requires_obtained_and_expiry_facts_from_same_licence(self, rule_engine, build_profile):
         profile = build_profile(
