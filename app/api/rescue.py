@@ -272,6 +272,18 @@ async def create_rescue_plan(
     _quarantine_catalogue_conflict_findings(
         engine_output.flags, catalogue_identity_conflicts
     )
+    conflicted_findings = sorted({
+        flag.rule_id for flag in engine_output.flags
+        if flag.rule_id in catalogue_identity_conflicts
+    })
+    if conflicted_findings:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Rescue generation is blocked by unresolved catalogue identity conflicts.",
+                "conflicted_rule_ids": conflicted_findings,
+            },
+        )
 
     if not engine_output.rescue_sequence:
         raise HTTPException(
