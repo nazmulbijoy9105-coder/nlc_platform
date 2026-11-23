@@ -4,7 +4,12 @@ from uuid import uuid4
 
 import pytest
 
-from app.compliance.evaluation_integrity import evaluation_run_chain_problem
+from app.compliance.evaluation_integrity import (
+    calculate_evaluation_score_hash,
+    evaluation_run_chain_problem,
+    evaluation_run_integrity_problems,
+)
+from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 
 
 class _Result:
@@ -79,12 +84,6 @@ async def test_chain_rejects_missing_run_context():
     run = SimpleNamespace(company_id=None, calculated_at=None, previous_hash=None)
     assert await evaluation_run_chain_problem(db, run) == "PREVIOUS_HASH_CHAIN_CONTEXT_MISSING"
 
-
-from app.compliance.evaluation_integrity import (
-    calculate_evaluation_score_hash,
-    evaluation_run_integrity_problems,
-)
-from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 
 
 def _valid_not_released_run():
