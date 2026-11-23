@@ -21211,13 +21211,13 @@
           "revenue_tier",
           "is_black_override"
         ],
-        "exact_definition_match_count": 0,
-        "definition_difference_count": 85,
+        "exact_definition_match_count": 5,
+        "definition_difference_count": 80,
         "per_field_mismatch_counts": {
           "rule_name": 45,
           "statutory_basis": 70,
           "description": 79,
-          "rule_condition": 78,
+          "rule_condition": 61,
           "revenue_tier": 10,
           "rule_type": 12
         }

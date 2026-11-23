@@ -5,6 +5,7 @@ from fastapi import HTTPException
 
 import app.rule_engine.engine as engine_module
 from app.api.rescue import _require_legal_release
+from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
 
 
 def test_rescue_workflow_is_blocked_when_product_scoring_is_disabled(monkeypatch):
@@ -205,3 +206,36 @@ def test_rescue_service_rejects_finding_from_unreleased_rule_id(monkeypatch):
     )
     with pytest.raises(PermissionError, match="released"):
         validate_rescue_engine_output(output, expected_company_id="company-1")
+
+
+
+@pytest.mark.parametrize("rule_id", sorted(RJSC_OUT_OF_SCOPE_RULE_IDS))
+def test_rescue_service_rejects_out_of_scope_rule_even_if_product_allowlisted(monkeypatch, rule_id):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", rule_id})
+    )
+    monkeypatch.setattr(
+        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001", rule_id})
+    )
+    tax_flag = SimpleNamespace(
+        rule_id=rule_id,
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="BLACK",
+        score_impact=100,
+    )
+    output = SimpleNamespace(
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="BLACK", final_score=0),
+        flags=[tax_flag],
+        rescue_sequence=[{"title": "Out-of-scope remediation", "related_rules": [rule_id]}],
+    )
+    with pytest.raises(PermissionError, match="out-of-scope"):
+        validate_rescue_engine_output(output)

@@ -185,8 +185,8 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
 
     assert result["total_active"] == 0
     assert result["black"] == result["red"] == result["yellow"] == 0
-    assert result["pending_review"] == 2
-    assert result["pending_review_flags"] == 2
+    assert result["pending_review"] == 1
+    assert result["pending_review_flags"] == 1
 
 
 def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):
