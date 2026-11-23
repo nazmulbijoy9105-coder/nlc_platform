@@ -272,16 +272,22 @@ async def create_rescue_plan(
     _reconcile_engine_output_identity_conflicts(
         engine_output, catalogue_identity_conflicts
     )
-    conflicted_findings = sorted({
-        flag.rule_id for flag in engine_output.flags
-        if flag.rule_id in catalogue_identity_conflicts
-    })
-    if conflicted_findings:
+    from app.services.compliance_service import _score_blocking_catalogue_conflicts
+
+    # Rescue is a score-derived action. Block it for every unresolved canonical
+    # evaluator/catalogue identity, including conflicts with no emitted finding.
+    conflicted_rule_ids = sorted(
+        _score_blocking_catalogue_conflicts(catalogue_identity_conflicts)
+    )
+    if conflicted_rule_ids:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
-                "message": "Rescue generation is blocked by unresolved catalogue identity conflicts.",
-                "conflicted_rule_ids": conflicted_findings,
+                "message": (
+                    "Rescue generation is blocked by unresolved RJSC catalogue/evaluator "
+                    "identity conflicts, including rules with no emitted finding."
+                ),
+                "conflicted_rule_ids": conflicted_rule_ids,
             },
         )
 
