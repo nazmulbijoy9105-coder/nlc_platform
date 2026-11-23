@@ -21230,14 +21230,26 @@
           "production_definition": "Section 9 certificate-of-incorporation proposition",
           "canonical_engine_definition": "Section 23 MoA/AoA registration-status verification",
           "legacy_archive_rows": 2,
-          "disposition": "DISTINCT_CANDIDATE_IDENTITIES; 0124 reactivated the legacy Section 9 catalogue row after 0115 quarantined it. PR #411 proposes forward-only 0125 to restore quarantine; not yet deployed."
+          "disposition": "DISTINCT_CANDIDATE_IDENTITIES; keep the legacy Section 9 catalogue row active for 85-ID catalogue visibility only. Its PENDING verification and NOT_EVALUATED severity keep it legally unverified and non-scoring. The canonical Section 23 engine candidate remains a separate QUARANTINED identity with no resolved alias or legal revision. Do not rebind historical findings by textual ID.",
+          "catalogue_activation_interpretation": "0124 restores the 85-ID legal_rules catalogue/assessment inventory. is_active is catalogue activation only; it does not assert statutory validity, identity equivalence, independent legal verification, effective-date validity, or scoring eligibility.",
+          "archived_identity_preserved": true,
+          "canonical_candidate_identity_status": "QUARANTINED",
+          "alias_resolution": "UNRESOLVED",
+          "legal_revision": "NONE",
+          "historical_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
+          "required_action": "Preserve this separation. Do not deactivate or rename the catalogue row, and do not resolve the alias until source and historical record-level evidence establish the correct identity."
         },
         "inc002": {
           "production_is_active": false,
           "production_verification_status": "PENDING",
           "production_severity": "NOT_EVALUATED",
           "canonical_engine_id_present": false,
-          "disposition": "PRESERVED_EXTRA_LEGACY_IDENTITY; do not reuse or merge by textual ID."
+          "disposition": "PRESERVED_EXTRA_LEGACY_IDENTITY; keep inactive and outside the canonical 85. Do not reuse, merge, or attribute by textual ID.",
+          "archived_identity_preserved": true,
+          "canonical_identity_id": "NONE",
+          "alias_resolution": "NONE",
+          "legal_revision": "NONE",
+          "historical_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW"
         },
         "canonical_candidate_identity_parity": {
           "candidate_identity_rows": 85,
@@ -21283,7 +21295,15 @@
           "legal_rule_migration_guard_scoped": true,
           "core_tenant_rls_forced": true
         },
-        "historical_attribution": "No historical findings/evidence were rebound. Aggregate finding/evidence binding counts are zero, but protected legacy finding/evidence rows were not directly inspected; record-level attribution remains unverified."
+        "historical_attribution": "No historical findings/evidence were rebound. Aggregate finding/evidence binding counts are zero, but protected legacy finding/evidence rows were not directly inspected; record-level attribution remains unverified.",
+        "identity_cohort_interpretation": {
+          "technical_engine_identity_cohort": "0116: 85 ACTIVE technical source-key identities; ACTIVE here is not legal approval or scoring eligibility.",
+          "canonical_candidate_identity_cohort": "0123: 85 QUARANTINED candidate identities; candidate cohort includes the Section 23 engine INC-001 meaning.",
+          "legacy_catalogue_aliases": "0123: 84 UNRESOLVED legal_rules aliases; INC-001 and INC-002 deliberately excluded.",
+          "rule_catalogue": "0124: 85 maintained engine IDs active as catalogue rows; legacy INC-002 remains inactive and extra. This does not resolve the identity collision.",
+          "release_state": "Production catalogue shows zero VERIFIED legal_rules and zero effective-dated revisions; legal scoring remains closed pending the separate verification/release controls."
+        },
+        "inc001_quarantined_view_interpretation": "audit.production_release_parity.inc001_quarantined is false because it tests the legacy legal_rules catalogue row's is_active flag. It is not the same as canonical candidate identity_status; audit.canonical_identity_parity independently reports all 85 candidate identities QUARANTINED."
       },
       "rules": [
         {
@@ -25716,7 +25736,15 @@
         "No source-workpack entries were imported or rewritten; original source workpack and its prior source links remain preserved above.",
         "No production SQL writes were made; all production reads used nlc_ci_audit_role and audit views.",
         "No scoring, evidence-verification, RLS, tenant-isolation, or append-only controls were changed."
-      ]
+      ],
+      "safety_decision": {
+        "production_database_changed": false,
+        "schema_changed": false,
+        "legacy_catalogue_activation_changed": false,
+        "historical_ids_changed": false,
+        "finding_or_evidence_references_rebound": false,
+        "reason": "Do not apply an additional deactivation migration: 0124 intentionally restores 85-ID catalogue visibility, while independent legal verification and scoring remain closed. Identity separation is maintained in the canonical registry and unresolved aliases."
+      }
     }
   ]
 }
