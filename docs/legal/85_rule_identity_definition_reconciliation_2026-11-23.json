@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "ledger_type": "85_RULE_IDENTITY_AND_DEFINITION_RECONCILIATION",
   "ledger_status": "INITIAL_READ_ONLY_RECONCILIATION_NOT_LEGAL_APPROVAL_OR_DEFINITION_RELEASE",
-  "generated_at_utc": "2026-11-23T16:15:06.880Z",
+  "generated_at_utc": "2026-11-23T16:17:00.622Z",
   "repository": {
     "full_name": "nazmulbijoy9105-coder/nlc_platform",
     "branch": "main",
@@ -135,7 +135,7 @@
         "provision": "Companies Act 1994, section 9",
         "trigger": "certificate_obtained == False"
       },
-      "disposition": "DISTINCT_CANDIDATE_IDENTITIES; keep both source definitions; do not map historical findings from textual ID alone; production catalogue activation is not canonical identity resolution."
+      "disposition": "DISTINCT_CANDIDATE_IDENTITIES; main Section 23 MoA/AoA registration-status verification is not the same proposition as the production certificate-of-incorporation proposition. Production's Section 9 citation is inconsistent with the official Bangla text (Section 9 is MoA formalities; Section 24 addresses certificate issuance and Section 25 conclusiveness). Preserve both source definitions and do not bind historical findings by text ID."
     },
     "inc002": {
       "production_current": {
@@ -146,9 +146,28 @@
         "is_active": false
       },
       "historical_alternate_fingerprint": "Migration 0115 also accepts a distinct Form III / section 23 trigger variant solely as a quarantine fingerprint for databases that actually contain it.",
-      "disposition": "LEGACY_EXTRA_IDENTITY; preserve the production row and archive; exclude from the canonical 85; do not reuse the textual ID or auto-merge it with canonical INC-001."
+      "disposition": "LEGACY_EXTRA_IDENTITY; production-only Section 11 citation is inconsistent with the official Bangla text (Section 11 concerns company name/change; Section 23 concerns filing/registration of MoA/AoA). The legacy proposition may overlap main INC-001, but the trigger and evidence contract differ. Preserve it outside the canonical 85 and do not merge or reassign historical findings pending individual review."
     },
-    "identity_model_note": "Migration 0116 seeds 85 technical NLC_ENGINE_REGISTRY_V2 identities and 85 engine aliases. Migration 0123 adds 85 quarantined candidate identities and 84 unresolved legal_rules aliases, leaving two identity cohorts and no effective-dated revisions. These are separate source namespaces and must not be collapsed by ID-only joins."
+    "identity_model_note": "Migration 0116 seeds 85 technical NLC_ENGINE_REGISTRY_V2 identities and 85 engine aliases. Migration 0123 adds 85 quarantined candidate identities and 84 unresolved legal_rules aliases, leaving two identity cohorts and no effective-dated revisions. These are separate source namespaces and must not be collapsed by ID-only joins.",
+    "legal_source_crosscheck": {
+      "source": "Authentic Bangla text of the Companies Act, 1994, hosted by the Bangladesh Laws portal",
+      "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+      "source_type": "official_primary_statute_text",
+      "crosscheck_only": true,
+      "provisions": {
+        "section_9": "Memorandum formalities: printing, consecutive paragraph numbering, subscriber signatures and witness attestation; it is not the certificate-of-incorporation provision.",
+        "section_11": "Company name and change of name; it is not the MoA/AoA filing provision.",
+        "section_23": "Memorandum and (if any) articles must be filed with the Registrar; registration is addressed in subsection (1).",
+        "section_24": "After registration of the memorandum, the Registrar issues the certificate stating that the company is incorporated (and limited where applicable).",
+        "section_25": "Conclusive effect of the certificate of incorporation."
+      },
+      "inc001_production_consequence": "The production INC-001 citation to section 9 does not support its stated certificate-of-incorporation proposition on the official Bangla text. Section 24 is the direct certificate provision; section 25 addresses conclusiveness. The proposition remains distinct from the main seed's section 23 MoA/AoA registration-status verification, but its exact duty, timing and consequences require primary-source chain review and counsel.",
+      "inc002_production_consequence": "The production INC-002 citation to section 11 does not support its stated MoA/AoA filing proposition on the official Bangla text. Section 23 is the direct filing/registration provision. It may overlap the main seed INC-001 proposition, but differing trigger/evidence contracts prevent automatic merging; preserve it as an unresolved legacy candidate pending rule-specific review.",
+      "legal_status": "PRELIMINARY_TEXTUAL_CROSSCHECK_ONLY",
+      "effective_date_status": "NOT_ESTABLISHED",
+      "amendment_chain_status": "NOT_COMPLETE",
+      "counsel_approval": "NOT_RECORDED"
+    }
   },
   "revision_readiness": {
     "provenance_manifest_records": 85,
