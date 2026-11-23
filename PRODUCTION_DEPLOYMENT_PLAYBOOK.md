@@ -350,7 +350,7 @@ flyctl deploy
 # Set this in your local shell without putting the token in source control:
 # read -s NLC_API_TOKEN && export NLC_API_TOKEN
 # Never paste a live token into a committed script or shell command history.
-: "${NLC_API_TOKEN:?Set NLC_API_TOKEN in your local environment first}"
+: "${NLC_API_TOKEN:?Set NLC_API_TOKEN in your local environment first}" && \
 curl --fail-with-body https://nlc-api.fly.dev/api/v1/companies \
   -H "Authorization: Bearer ${NLC_API_TOKEN}"
 
