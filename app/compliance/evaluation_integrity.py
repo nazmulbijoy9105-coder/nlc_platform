@@ -168,6 +168,31 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
     score_breakdown_snapshot = getattr(run, "score_breakdown_snapshot", None)
     if not isinstance(score_breakdown_snapshot, dict):
         problems.append("SCORE_BREAKDOWN_SNAPSHOT_MISSING")
+    elif getattr(run, "evaluation_status", None) == "NOT_RELEASED":
+        # A withheld evaluation is auditable without fabricating a score.
+        # Keep this envelope deliberately minimal: no deductions, module
+        # scores, raw total, coverage or inferred risk classification.
+        expected_unreleased_fields = {
+            "snapshot_schema_version",
+            "status",
+            "reason",
+            "score",
+            "risk_band",
+            "scoring_data",
+        }
+        if (
+            set(score_breakdown_snapshot) != expected_unreleased_fields
+            or score_breakdown_snapshot.get("snapshot_schema_version") != 1
+            or score_breakdown_snapshot.get("status") != "NOT_RELEASED"
+            or not isinstance(score_breakdown_snapshot.get("reason"), str)
+            or not score_breakdown_snapshot.get("reason")
+            or score_breakdown_snapshot.get("score") is not None
+            or score_breakdown_snapshot.get("risk_band") != "NOT_EVALUATED"
+            or score_breakdown_snapshot.get("scoring_data") != "WITHHELD"
+            or getattr(run, "score", None) is not None
+            or getattr(getattr(run, "risk_band", None), "value", getattr(run, "risk_band", None)) != "NOT_EVALUATED"
+        ):
+            problems.append("UNRELEASED_SCORE_BREAKDOWN_INVALID")
 
     calculated_at = getattr(run, "calculated_at", None)
     engine_version = getattr(run, "engine_version", None)
