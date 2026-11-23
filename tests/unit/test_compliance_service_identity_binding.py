@@ -100,3 +100,38 @@ def test_catalogue_identity_conflicts_are_derived_without_engine_findings():
     assert conflicts["INC-002"]["binding_reason"] in {
         "RULE_INACTIVE", "ENGINE_RULE_DEFINITION_MISSING"
     }
+
+
+def test_catalogue_conflict_quarantines_finding_before_scoring_or_rescue():
+    from app.services.compliance_service import _quarantine_catalogue_conflict_findings
+
+    flag = SimpleNamespace(
+        rule_id="INC-001",
+        detail={},
+        statutory_basis="Section 23",
+        severity="RED",
+        score_impact=10,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        is_black_override=True,
+        conditional_applies=True,
+        applicability_state="APPLICABLE",
+        applicability_reason=None,
+    )
+    conflicts = {
+        "INC-001": {
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "catalogue_statutory_basis": "Section 9",
+        }
+    }
+
+    _quarantine_catalogue_conflict_findings([flag], conflicts)
+
+    assert flag.state == "UNKNOWN"
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity.value == "NOT_EVALUATED"
+    assert flag.score_impact == 0
+    assert flag.is_black_override is False
+    assert flag.conditional_applies is False
+    assert flag.applicability_state == "UNKNOWN"
+    assert flag.detail["rule_catalogue_binding"] == "STATUTORY_BASIS_MISMATCH"
