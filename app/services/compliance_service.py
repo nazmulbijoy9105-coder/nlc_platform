@@ -226,6 +226,24 @@ def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts)
         )
 
 
+def _reconcile_engine_output_identity_conflicts(output, catalogue_identity_conflicts):
+    """Synchronize flags, rescue candidates and dispositions after identity quarantine."""
+    _quarantine_catalogue_conflict_findings(
+        output.flags, catalogue_identity_conflicts
+    )
+    conflicted_ids = set(catalogue_identity_conflicts)
+    output.rescue_sequence = [
+        step for step in (getattr(output, "rescue_sequence", None) or [])
+        if not conflicted_ids.intersection(step.get("related_rules", []))
+    ]
+    from app.rule_engine.engine import NLCRuleEngine
+    output.rescue_dispositions = NLCRuleEngine._build_rescue_dispositions(
+        output.flags,
+        output.score_breakdown,
+        output.rescue_sequence,
+    )
+
+
 def _applied_score_impacts(flags) -> list[dict]:
     """Reconcile every finding to the same versioned score allocation as the engine.
 
@@ -502,8 +520,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         output = engine.evaluate(profile)
 
         # Catalogue identity conflicts remain authoritative even when no finding is emitted.
-        _quarantine_catalogue_conflict_findings(
-            output.flags, catalogue_identity_conflicts
+        _reconcile_engine_output_identity_conflicts(
+            output, catalogue_identity_conflicts
         )
         profile.catalogue_identity_conflicts = catalogue_identity_conflicts
         for provenance_record in fact_provenance_snapshot:
