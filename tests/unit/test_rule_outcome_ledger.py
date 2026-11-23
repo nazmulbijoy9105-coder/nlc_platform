@@ -91,13 +91,13 @@ def test_snapshot_hash_is_stable_and_sensitive_to_state():
     assert hash_rule_outcomes_snapshot(first) != hash_rule_outcomes_snapshot(changed)
 
 
-def test_engine_finding_without_active_catalogue_rule_is_preserved_as_unmapped():
+def test_unknown_rule_id_is_fail_closed_and_never_becomes_an_rjsc_finding():
     rows = build_rule_outcomes_snapshot(
-        [_rule("AGM-001")], [_flag("UNKNOWN-999", "UNKNOWN")]
+        [_rule("AGM-001")], [_flag("UNKNOWN-999", "NON_COMPLIANT")]
     )
-    orphan = next(item for item in rows if item["rule_id"] == "UNKNOWN-999")
-    assert orphan["verification_status"] == "UNMAPPED"
-    assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    agm = next(item for item in rows if item["rule_id"] == "AGM-001")
+    assert agm["findings"] == []
+    assert all(item["rule_id"] != "UNKNOWN-999" for item in rows)
 
 
 
@@ -185,16 +185,19 @@ def test_same_rule_id_with_different_statutory_basis_is_not_attributed_to_catalo
             )
         ],
     )
-    assert len(rows) == 1
-    assert rows[0]["rule_id"] == "INC-001"
-    assert rows[0]["findings"] == []
+    inc001_rows = [row for row in rows if row["rule_id"] == "INC-001"]
+    assert len(inc001_rows) == 1
+    assert inc001_rows[0]["findings"] == []
     assert rows[0]["outcome_state"] == "UNKNOWN"
     assert rows[0]["assessment_source"] == "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
     assert rows[0]["identity_conflicts"] == [
         {
+            "rule_id": "INC-001",
             "flag_code": "INC-001_REVIEW",
             "flag_statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
+            "engine_statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
             "catalogue_statutory_basis": "Section 9, Companies Act 1994 (Bangladesh)",
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
             "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
         }
     ]
@@ -208,3 +211,179 @@ def test_duplicate_active_catalogue_rule_ids_fail_closed():
             [_rule("INC-001"), _rule("INC-001")],
             [],
         )
+
+
+def test_identity_basis_matching_normalizes_case_and_whitespace():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001", statutory_basis="  SECTION   9, Companies Act 1994 ")],
+        [_flag(
+            "INC-001",
+            "UNKNOWN",
+            statutory_basis="section 9, companies act 1994",
+        )],
+    )
+    assert rows[0]["assessment_source"] == "ENGINE_FINDING"
+    assert rows[0]["identity_conflicts"] == []
+
+
+def test_catalogue_identity_conflict_is_preserved_without_engine_finding():
+    conflict = {
+        "rule_id": "INC-001",
+        "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        "binding_reason": "STATUTORY_BASIS_MISMATCH",
+        "engine_statutory_basis": "Section 23",
+        "catalogue_statutory_basis": "Section 9",
+        "catalogue_rule_version": "2.3",
+        "catalogue_is_active": True,
+    }
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001")],
+        [],
+        catalogue_identity_conflicts={"INC-001": conflict},
+    )
+    assert rows[0]["outcome_state"] == "UNKNOWN"
+    assert rows[0]["applicability_status"] == "UNKNOWN"
+    assert rows[0]["assessment_source"] == "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
+    assert rows[0]["findings"] == []
+    assert rows[0]["identity_conflicts"] == [{
+        **conflict,
+        "flag_code": None,
+        "flag_statutory_basis": None,
+    }]
+
+
+def test_inactive_in_scope_catalogue_identity_and_its_flag_are_conflict_only():
+    conflict = {
+        "rule_id": "AGM-001",
+        "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        "binding_reason": "RULE_INACTIVE",
+        "engine_statutory_basis": "Section 81",
+        "catalogue_statutory_basis": "Section 81",
+        "catalogue_rule_version": "legacy",
+        "catalogue_is_active": False,
+    }
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001")],
+        [_flag(
+            "AGM-001",
+            "UNKNOWN",
+            statutory_basis="Section 81",
+        )],
+        applicability_results={
+            "AGM-001": {"status": "APPLICABLE", "reason": "must be ignored"}
+        },
+        catalogue_identity_conflicts={"AGM-001": conflict},
+    )
+    orphan = next(row for row in rows if row["rule_id"] == "AGM-001")
+    assert orphan["scope_class"] == "IN_SCOPE_RJSC"
+    assert orphan["scope_version"]
+    assert orphan["outcome_state"] == "UNKNOWN"
+    assert orphan["applicability_status"] == "UNKNOWN"
+    assert orphan["assessment_source"] == "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED"
+    assert orphan["findings"] == []
+    assert len(orphan["identity_conflicts"]) == 1
+    recorded = orphan["identity_conflicts"][0]
+    assert recorded["flag_code"] == "AGM-001_REVIEW"
+    assert recorded["flag_statutory_basis"] == "Section 81"
+    assert recorded["engine_statutory_basis"] == "Section 81"
+    assert recorded["catalogue_statutory_basis"] == "Section 81"
+
+
+def test_missing_in_scope_catalogue_identity_with_finding_is_not_an_unmapped_violation():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001")],
+        [_flag("AGM-001", "NON_COMPLIANT", statutory_basis="Section 81")],
+    )
+    missing = next(row for row in rows if row["rule_id"] == "AGM-001")
+    assert missing["outcome_state"] == "UNKNOWN"
+    assert missing["assessment_source"] == "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED"
+    assert missing["findings"] == []
+    conflict = missing["identity_conflicts"][0]
+    assert conflict["binding_reason"] == "CATALOGUE_ENTRY_MISSING"
+    assert conflict["flag_code"] == "AGM-001_REVIEW"
+    assert "flag_statutory_basis" in conflict
+    assert "engine_statutory_basis" in conflict
+    assert "catalogue_statutory_basis" in conflict
+
+
+def test_existing_catalogue_conflict_is_merged_with_flag_details_not_duplicated():
+    conflict = {
+        "rule_id": "AGM-001",
+        "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        "binding_reason": "STATUTORY_BASIS_MISMATCH",
+        "engine_statutory_basis": "Section 85",
+        "catalogue_statutory_basis": "Section 81",
+        "catalogue_rule_version": "2.3",
+        "catalogue_is_active": True,
+    }
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001", statutory_basis="Section 81")],
+        [_flag("AGM-001", "UNKNOWN", statutory_basis="Section 85")],
+        catalogue_identity_conflicts={"AGM-001": conflict},
+    )
+    assert rows[0]["assessment_source"] == "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
+    assert rows[0]["findings"] == []
+    assert len(rows[0]["identity_conflicts"]) == 1
+    assert rows[0]["identity_conflicts"][0]["flag_code"] == "AGM-001_REVIEW"
+
+
+
+def test_duplicate_active_out_of_scope_catalogue_rows_collapse_to_one_tombstone():
+    from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
+
+    rule_id = sorted(RJSC_OUT_OF_SCOPE_RULE_IDS)[0]
+    rows = build_rule_outcomes_snapshot(
+        [_rule("AGM-001"), _rule(rule_id), _rule(rule_id)],
+        [],
+    )
+    excluded = [row for row in rows if row["rule_id"] == rule_id]
+    assert len(excluded) == 1
+    assert excluded[0]["assessment_source"] == "OUT_OF_SCOPE"
+    assert excluded[0]["outcome_state"] == "OUT_OF_SCOPE"
+
+
+
+def test_out_of_scope_catalogue_presence_or_absence_cannot_change_outcome_hash():
+    from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
+
+    baseline = build_rule_outcomes_snapshot([_rule("AGM-001")], [])
+    for rule_id in RJSC_OUT_OF_SCOPE_RULE_IDS:
+        injected = build_rule_outcomes_snapshot(
+            [_rule("AGM-001"), _rule(rule_id)],
+            [],
+        )
+        assert injected == baseline
+        assert hash_rule_outcomes_snapshot(injected) == hash_rule_outcomes_snapshot(
+            baseline
+        )
+
+
+
+def test_scope_registry_produces_exactly_one_outcome_for_each_of_85_rule_ids():
+    from canonical_architecture.rjsc_scope import (
+        RJSC_IN_SCOPE_RULE_IDS,
+        RJSC_OUT_OF_SCOPE_RULE_IDS,
+        RJSC_RULE_SCOPE,
+    )
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+    active_rjsc_rules = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            rule_version="2.3",
+            statutory_basis=STATUTORY_RULE_REGISTRY[rule_id].law,
+            verification_status="PENDING",
+            verified_by=None,
+            verified_at=None,
+        )
+        for rule_id in sorted(RJSC_IN_SCOPE_RULE_IDS)
+    ]
+    outcomes = build_rule_outcomes_snapshot(active_rjsc_rules, [])
+
+    assert len(outcomes) == len(RJSC_RULE_SCOPE) == 85
+    assert {row["rule_id"] for row in outcomes} == set(RJSC_RULE_SCOPE)
+    assert sum(row["scope_class"] == "IN_SCOPE_RJSC" for row in outcomes) == 59
+    assert sum(row["scope_class"] == "OUT_OF_SCOPE" for row in outcomes) == 26
+    assert {
+        row["rule_id"] for row in outcomes if row["scope_class"] == "OUT_OF_SCOPE"
+    } == set(RJSC_OUT_OF_SCOPE_RULE_IDS)

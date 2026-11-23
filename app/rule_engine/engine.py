@@ -12,12 +12,20 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from app.compliance.fact_provenance import business_date_today
+
+from canonical_architecture.rjsc_scope import (
+    RJSC_IN_SCOPE_RULE_IDS,
+    assert_rjsc_scope_parity,
+    filter_rjsc_items,
+    is_rjsc_rule_in_scope,
+    rjsc_scope_identity,
+)
 
 from canonical_architecture.scoring_spec import (
     CATEGORY_CAPS,
@@ -467,6 +475,7 @@ class CompanyProfile:
     catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
     catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
     catalogue_rule_bases: Dict[str, str] = field(default_factory=dict)
+    catalogue_identity_conflicts: Dict[str, Dict[str, Any]] = field(default_factory=dict, repr=False)
 
 @dataclass
 class ScoreBreakdown:
@@ -773,9 +782,14 @@ def legal_score_is_released() -> bool:
     Individual statutory findings, deductions and overrides remain subject to
     separate counsel, evidence and applicability gates.
     """
+    try:
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+        assert_rjsc_scope_parity(STATUTORY_RULE_REGISTRY)
+    except Exception:
+        return False
     return (
         LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
+        and bool(PRODUCT_SCORING_RULE_IDS.intersection(RJSC_IN_SCOPE_RULE_IDS))
     )
 
 
@@ -809,11 +823,9 @@ _COVERAGE_FIELDS: dict[str, float] = {
     "last_return_filed_year":   2.0,
     "first_auditor_appointed":  1.0,
     "annual_return_filed":      1.0,
-    # Current statutory licence / tax status.
-    "trade_license_obtained":   1.0,
-    "trade_license_expiry":     1.0,
-    "tin_obtained":             1.0,
-    # Current governance and internal-record position.
+    # RJSC-relevant governance and statutory-record position only.
+    # Tax, VAT, labour, licensing and other external-regulator inputs are
+    # intentionally excluded from RJSC score coverage.
     "current_director_count":   0.5,
     "member_count":             0.5,
     "register_of_members_maintained": 1.0,
@@ -845,6 +857,53 @@ def _input_coverage(company) -> float:
                 continue
         known_weight += weight
     return min(1.0, known_weight / total_weight)
+
+def _rjsc_score_profile_inputs(company: CompanyProfile) -> dict[str, Any]:
+    """Hash only facts and catalogue identity that can affect RJSC scoring.
+
+    Non-RJSC profile fields, verified-fact keys, and catalogue metadata are
+    intentionally excluded. Their raw findings may remain available from the
+    evaluator, but they cannot perturb an RJSC score hash.
+    """
+    payload: dict[str, Any] = {
+        "company_id": company.company_id,
+        "company_name": company.company_name,
+        "company_type": company.company_type,
+        "incorporation_date": company.incorporation_date,
+        "financial_year_end": company.financial_year_end,
+        "coverage_inputs": {
+            field_name: getattr(company, field_name, None)
+            for field_name in _COVERAGE_FIELDS
+        },
+        "verified_fact_keys": sorted(
+            set(getattr(company, "verified_fact_keys", ()) or ())
+            & set(_COVERAGE_FIELDS)
+        ),
+        "catalogue_binding_required": bool(company.catalogue_binding_required),
+    }
+    for field_name in (
+        "catalogue_rule_versions",
+        "catalogue_rule_active",
+        "catalogue_rule_bases",
+        "catalogue_identity_conflicts",
+    ):
+        values = getattr(company, field_name, {}) or {}
+        payload[field_name] = {
+            rule_id: value
+            for rule_id, value in values.items()
+            if is_rjsc_rule_in_scope(str(rule_id))
+        }
+    return payload
+
+
+def _rjsc_scoring_categories() -> set[str]:
+    """Categories that contain at least one in-scope RJSC rule."""
+    return {
+        category
+        for category, (_cap, prefixes) in CATEGORY_CAPS.items()
+        if any(rule_id.startswith(prefixes) for rule_id in RJSC_IN_SCOPE_RULE_IDS)
+    }
+
 
 
 class NLCRuleEngine:
@@ -901,6 +960,10 @@ class NLCRuleEngine:
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
+        # Keep the full evaluator result available for audit and other regulatory
+        # workflows. The RJSC scope registry controls only RJSC decision paths.
+        rjsc_flags = filter_rjsc_items(self._flags)
+
         # Product-owner approval authorizes the product's deterministic risk
         # indicator. Independent counsel verification is tracked separately in
         # VERIFIED_RULE_IDS and MUST NOT suppress product scoring. Preserve an
@@ -925,10 +988,10 @@ class NLCRuleEngine:
         # Coverage is calculated in _calculate_score via _input_coverage(company)
 
         stage = self._determine_lifecycle_stage(company)
-        score = self._calculate_score(self._flags, company)
-        rescue = self._generate_rescue_sequence(company, self._flags, score)
+        score = self._calculate_score(rjsc_flags, company)
+        rescue = self._generate_rescue_sequence(company, rjsc_flags, score)
         rescue_dispositions = self._build_rescue_dispositions(
-            self._flags, score, rescue
+            rjsc_flags, score, rescue
         )
 
         fdi_active = company.has_foreign_shareholder or company.is_fdi_registered
@@ -4108,7 +4171,8 @@ class NLCRuleEngine:
         """Return active, confirmed findings admitted by product release and evidence rules."""
         return [
             flag for flag in flags
-            if not flag.resolved
+            if is_rjsc_rule_in_scope(flag.rule_id)
+            and not flag.resolved
             and flag.conditional_applies
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
@@ -4148,6 +4212,7 @@ class NLCRuleEngine:
         return self._score_from_deductions(self._category_deductions(scored))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
+        flags = filter_rjsc_items(flags)
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
         # One eligibility filter and one category-cap implementation are
@@ -4238,22 +4303,40 @@ class NLCRuleEngine:
             for f in active
         )
         hash_payload = {
-            "company_profile": asdict(company),
+            "company_profile": _rjsc_score_profile_inputs(company),
             "evaluation_date": self.today.isoformat(),
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "scoring_spec_version": SCORING_SPEC_VERSION,
-            "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
-            "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
-            "score_deduction_rule_ids": sorted(SCORE_DEDUCTION_RULE_IDS),
-            "authorized_black_override_rule_ids": sorted(AUTHORIZED_BLACK_OVERRIDE_RULE_IDS),
+            "rjsc_scope": rjsc_scope_identity(),
+            "verified_rule_ids": sorted(
+                rule_id for rule_id in VERIFIED_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "product_scoring_rule_ids": sorted(
+                rule_id for rule_id in PRODUCT_SCORING_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "score_deduction_rule_ids": sorted(
+                rule_id for rule_id in SCORE_DEDUCTION_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "authorized_black_override_rule_ids": sorted(
+                rule_id for rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
+                if key in _rjsc_scoring_categories()
             },
             "profile_coverage_weights": dict(sorted(_COVERAGE_FIELDS.items())),
             "coverage_basis": "WEIGHTED_PROFILE_INPUT_COMPLETENESS",
-            "category_deductions": deductions,
+            "category_deductions": {
+                key: value
+                for key, value in deductions.items()
+                if key in _rjsc_scoring_categories()
+            },
             "legal_score_release_switch": LEGAL_SCORE_RELEASED,
             "legal_score_released": legal_score_is_released(),
             "flags": flag_signatures,
@@ -4308,7 +4391,8 @@ class NLCRuleEngine:
         score: ScoreBreakdown,
         rescue_sequence: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Produce exactly one auditable action/no-action disposition per finding."""
+        """Produce one auditable disposition per in-scope RJSC finding."""
+        flags = filter_rjsc_items(flags)
         step_by_rule: Dict[str, Dict[str, Any]] = {}
         for rescue_step in rescue_sequence:
             for rule_id in rescue_step.get("related_rules", []):
@@ -4322,8 +4406,19 @@ class NLCRuleEngine:
             severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
             step = step_by_rule.get(flag.rule_id)
 
+            detail = getattr(flag, "detail", None)
+            binding_reason = (
+                detail.get("rule_catalogue_binding")
+                if isinstance(detail, dict) else None
+            )
             if getattr(flag, "resolved", False):
                 disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
+            elif binding_reason in {
+                "CATALOGUE_ENTRY_MISSING",
+                "RULE_INACTIVE",
+                "STATUTORY_BASIS_MISMATCH",
+            }:
+                disposition, reason = "BLOCKED", "CATALOGUE_IDENTITY_CONFLICT"
             elif (
                 not getattr(flag, "conditional_applies", True)
                 or state == RuleState.NOT_APPLICABLE.value
@@ -4409,6 +4504,7 @@ class NLCRuleEngine:
         ):
             return []
 
+        flags = filter_rjsc_items(flags)
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"

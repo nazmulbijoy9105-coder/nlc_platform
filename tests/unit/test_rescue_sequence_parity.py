@@ -20,8 +20,8 @@ def controlled_release(monkeypatch):
     # controlled catalogue. This never changes the default-paused test state.
     rule_ids = frozenset({
         "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
-        "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
-        "AR-002", "ESC-001", "AGM-003", "TAX-004",
+        "TR-005", "TR-006", "TR-001", "TR-004",
+        "AR-002", "AGM-003",
     })
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
@@ -29,8 +29,8 @@ def controlled_release(monkeypatch):
         "PRODUCT_SCORING_RULE_IDS",
         frozenset({
             "AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
-            "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
-            "AR-002", "ESC-001", "ESC-003", "AGM-003", "TAX-004",
+            "TR-005", "TR-006", "TR-001", "TR-004",
+            "AR-002", "AGM-003",
         }),
     )
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", engine_module.PRODUCT_SCORING_RULE_IDS)
@@ -78,8 +78,8 @@ def test_each_finding_gets_exactly_one_rescue_disposition(controlled_release):
         _flag("AGM-002", state=RuleState.UNKNOWN),
         _flag("AUD-001", resolved=True),
         _flag("AUD-002", applies=False),
-        _flag("ESC-001", state=RuleState.COMPLIANT),
-        _flag("ESC-003", state=RuleState.NOT_APPLICABLE),
+        _flag("AGM-003", state=RuleState.COMPLIANT),
+        _flag("AR-001", state=RuleState.NOT_APPLICABLE, applies=False),
     ]
 
     result = _dispositions(findings, steps=_seq([findings[0]]))
@@ -138,13 +138,10 @@ def test_red_finding_has_no_rescue_when_company_band_is_below_red(controlled_rel
     assert result[0]["reason"] == "RISK_BAND_BELOW_RESCUE_THRESHOLD"
 
 
-def test_tax004_without_established_quarters_is_waiting_for_evidence(controlled_release):
-    finding = _flag("TAX-004", detail={"quarters": []})
-
-    result = _dispositions([finding], steps=_seq([finding]))
-
-    assert result[0]["disposition"] == "WAITING_EVIDENCE"
-    assert result[0]["reason"] == "MISSED_TAX_QUARTERS_NOT_ESTABLISHED"
+def test_out_of_scope_tax004_never_receives_rjsc_rescue_disposition(controlled_release):
+    finding = _flag("TAX-004", detail={"quarters": ["Q1", "Q2"]})
+    assert _seq([finding]) == []
+    assert _dispositions([finding], steps=[]) == []
 
 
 def test_gate_returns_empty_below_red(controlled_release):
@@ -181,8 +178,8 @@ def test_output_shape_and_metadata_come_from_canonical_registry(controlled_relea
 @pytest.mark.parametrize(
     "rule_id",
     ["AGM-001", "AGM-002", "AUD-001", "AUD-002", "AUD-003",
-     "TR-005", "TR-006", "ESC-002", "TR-001", "TR-004",
-     "AR-002", "ESC-001", "AGM-003"],
+     "TR-005", "TR-006", "TR-001", "TR-004",
+     "AR-002", "AGM-003"],
 )
 def test_registered_actionable_finding_yields_one_step(rule_id, controlled_release):
     steps = _seq([_flag(rule_id)])
@@ -208,15 +205,12 @@ def test_ESC003_is_not_a_score_bearing_rescue_rule(controlled_release):
     assert _seq([_flag("ESC-003")]) == []
 
 
-def test_tax004_quarters_aggregate_and_deduplicate_across_flags(controlled_release):
+def test_tax004_quarters_never_create_rjsc_rescue_steps(controlled_release):
     steps = _seq([
         _flag("TAX-004", detail={"quarters": ["Q1", "Q2"]}),
         _flag("TAX-004", detail={"quarters": ["Q2", "Q4"]}),
     ])
-
-    assert len(steps) == 1
-    assert steps[0]["related_rules"] == ["TAX-004"]
-    assert "Missed quarters: Q1, Q2, Q4." in steps[0]["description"]
+    assert steps == []
 
 
 def test_tax004_without_established_quarters_adds_no_step(controlled_release):
@@ -226,46 +220,44 @@ def test_tax004_without_established_quarters_adds_no_step(controlled_release):
     ]) == []
 
 
-def test_tax004_ignores_quarters_from_resolved_or_inapplicable_flags(controlled_release):
-    steps = _seq([
+def test_out_of_scope_tax004_quarters_are_inert_for_rjsc_rescue(controlled_release):
+    assert _seq([
         _flag("TAX-004", detail={"quarters": ["Q1"]}),
         _flag("TAX-004", resolved=True, detail={"quarters": ["Q2"]}),
         _flag("TAX-004", applies=False, detail={"quarters": ["Q3"]}),
-    ])
-
-    assert len(steps) == 1
-    assert "Missed quarters: Q1." in steps[0]["description"]
-    assert "Q2" not in steps[0]["description"]
-    assert "Q3" not in steps[0]["description"]
+    ]) == []
 
 
 def test_resolved_and_inapplicable_flags_are_ignored(controlled_release):
     assert _seq([
         _flag("AGM-001", resolved=True),
-        _flag("ESC-002", applies=False),
+        _flag("AUD-002", applies=False),
     ]) == []
 
 
 def test_black_findings_sort_before_red_findings(controlled_release):
     steps = _seq([
         _flag("AGM-001"),
-        _flag("ESC-002", severity=Severity.BLACK),
+        _flag("TR-005", severity=Severity.BLACK),
         _flag("AUD-001"),
     ], Severity.BLACK)
 
     assert [step["related_rules"] for step in steps] == [
-        ["ESC-002"], ["AGM-001"], ["AUD-001"]
+        ["TR-005"], ["AGM-001"], ["AUD-001"]
     ]
     assert steps[0]["priority"] == "CRITICAL"
     assert all(step["priority"] == "HIGH" for step in steps[1:])
 
 
-def test_missing_mapping_for_actionable_finding_is_explicit(monkeypatch):
+def test_missing_mapping_for_in_scope_actionable_finding_is_explicit(monkeypatch):
+    from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
+
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"NO-SUCH-RULE"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"NO-SUCH-RULE"}))
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.delitem(STATUTORY_RESCUE_REGISTRY, "AGM-001")
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
-        _seq([_flag("NO-SUCH-RULE")])
+        _seq([_flag("AGM-001")])
 
 def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
@@ -277,3 +269,46 @@ def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkey
     assert result[0]["disposition"] == "REVIEW_REQUIRED"
     assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
+
+
+def test_catalogue_identity_conflict_is_blocked_before_not_applicable_disposition():
+    finding = _flag(
+        "AGM-001",
+        state=RuleState.UNKNOWN,
+        applies=False,
+        detail={"rule_catalogue_binding": "STATUTORY_BASIS_MISMATCH"},
+    )
+    result = _dispositions([finding])
+    assert result[0]["disposition"] == "BLOCKED"
+    assert result[0]["reason"] == "CATALOGUE_IDENTITY_CONFLICT"
+
+
+def test_post_evaluation_identity_reconciliation_removes_rescue_step_and_rebuilds_disposition():
+    from app.services.compliance_service import _reconcile_engine_output_identity_conflicts
+
+    finding = _flag(
+        "AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        detail={},
+    )
+    output = SimpleNamespace(
+        flags=[finding],
+        score_breakdown=SimpleNamespace(risk_band=Severity.RED),
+        rescue_sequence=[{"related_rules": ["AGM-001"], "rescue_id": "RES-AGM-001"}],
+        rescue_dispositions=[],
+    )
+    conflicts = {
+        "AGM-001": {
+            "rule_id": "AGM-001",
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "engine_statutory_basis": "Section 23",
+            "catalogue_statutory_basis": "Section 9",
+        }
+    }
+
+    _reconcile_engine_output_identity_conflicts(output, conflicts)
+
+    assert output.rescue_sequence == []
+    assert output.rescue_dispositions[0]["disposition"] == "BLOCKED"
+    assert output.rescue_dispositions[0]["reason"] == "CATALOGUE_IDENTITY_CONFLICT"

@@ -236,14 +236,60 @@ async def create_rescue_plan(
     # Run the rule engine to generate rescue sequence
     from app.rule_engine import CompanyProfile
     from app.rule_engine.engine import NLCRuleEngine
-    from app.services.compliance_service import _company_profile_kwargs
+    from app.services.compliance_service import (
+        _catalogue_identity_conflicts,
+        _company_profile_kwargs,
+        _reconcile_engine_output_identity_conflicts,
+    )
+    from app.models.rules import LegalRule
+    from sqlalchemy import select
 
     profile_data = await company_svc.build_company_profile(body.company_id)
     if not profile_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company profile data not found")
     profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+
+    # Rescue-plan evaluation must use the same complete catalogue binding as
+    # ordinary compliance evaluation. Never run an unbound rescue profile.
+    catalogue_rows = list((
+        await db.execute(select(LegalRule).order_by(LegalRule.rule_id))
+    ).scalars().all())
+    catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
+    profile.catalogue_binding_required = True
+    profile.catalogue_rule_versions = {
+        row.rule_id: row.rule_version for row in catalogue_rows
+    }
+    profile.catalogue_rule_active = {
+        row.rule_id: bool(row.is_active) for row in catalogue_rows
+    }
+    profile.catalogue_rule_bases = {
+        row.rule_id: row.statutory_basis for row in catalogue_rows
+    }
+    profile.catalogue_identity_conflicts = catalogue_identity_conflicts
+
     engine = NLCRuleEngine()
     engine_output = engine.evaluate(profile)
+    _reconcile_engine_output_identity_conflicts(
+        engine_output, catalogue_identity_conflicts
+    )
+    from app.services.compliance_service import _score_blocking_catalogue_conflicts
+
+    # Rescue is a score-derived action. Block it for every unresolved canonical
+    # evaluator/catalogue identity, including conflicts with no emitted finding.
+    conflicted_rule_ids = sorted(
+        _score_blocking_catalogue_conflicts(catalogue_identity_conflicts)
+    )
+    if conflicted_rule_ids:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": (
+                    "Rescue generation is blocked by unresolved RJSC catalogue/evaluator "
+                    "identity conflicts, including rules with no emitted finding."
+                ),
+                "conflicted_rule_ids": conflicted_rule_ids,
+            },
+        )
 
     if not engine_output.rescue_sequence:
         raise HTTPException(

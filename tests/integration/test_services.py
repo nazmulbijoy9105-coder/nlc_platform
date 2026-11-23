@@ -210,6 +210,42 @@ class TestComplianceService:
         assert isinstance(kpis, dict)
 
     @pytest.mark.asyncio
+    async def test_out_of_scope_flags_do_not_change_evidence_review_dashboard(
+        self, db, db_company, monkeypatch
+    ):
+        import app.rule_engine.engine as engine_module
+        from app.models.compliance import ComplianceFlag
+        from app.models.enums import FlagStatus, RevenueTier, SeverityLevel
+        from app.services.compliance_service import ComplianceService
+
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+        service = ComplianceService(db)
+        before = await service.get_dashboard_kpis()
+
+        db.add(ComplianceFlag(
+            company_id=db_company.id,
+            rule_id="TAX-001",
+            rule_version="1.0",
+            flag_code="OUT_OF_SCOPE_TAX_TEST",
+            statutory_basis="Income-tax law; not an RJSC obligation",
+            severity=SeverityLevel.BLACK,
+            score_impact=100,
+            revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+            evaluation_state="NON_COMPLIANT",
+            flag_status=FlagStatus.ACTIVE,
+            triggered_date=date.today(),
+            description="Test-only out-of-scope finding",
+            detail={},
+        ))
+        await db.flush()
+
+        after = await service.get_dashboard_kpis()
+        assert after["dashboard_mode"] == "EVIDENCE_REVIEW"
+        assert after["active_review_items"] == before["active_review_items"]
+        assert after["companies_with_review_items"] == before["companies_with_review_items"]
+        assert after["evaluation_state_counts"] == before["evaluation_state_counts"]
+
+    @pytest.mark.asyncio
     async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
         import app.rule_engine.engine as engine_module
@@ -267,7 +303,9 @@ class TestComplianceService:
             score_impact=10,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
             description="Controlled evidence review fixture",
-            statutory_basis="Test fixture only",
+            # Match the migrated AGM-001 catalogue identity so this test
+            # exercises release redaction, not the separate identity-conflict gate.
+            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )

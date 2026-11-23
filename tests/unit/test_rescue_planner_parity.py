@@ -58,7 +58,6 @@ PARITY_CASES = [
     (["AGM-002"], Severity.RED),
     (["AUD-001"], Severity.RED),
     (["TR-005"], Severity.RED),
-    (["ESC-002"], Severity.BLACK),
     (["AGM-001", "AUD-001", "TR-005"], Severity.BLACK),
 ]
 
@@ -86,3 +85,9 @@ def test_engine_and_canonical_produce_same_step_count(rule_ids, band):
         f"Step count mismatch for {rule_ids}: "
         f"engine={len(engine_steps)}, canonical={len(canonical_steps)}"
     )
+
+
+
+@pytest.mark.parametrize("rule_id", ["ESC-001", "ESC-002", "TAX-004", "BSEC-001", "LBR-001"])
+def test_out_of_scope_rule_never_enters_rjsc_rescue_plan(rule_id):
+    assert _engine_steps([_flag(rule_id)], Severity.BLACK) == []

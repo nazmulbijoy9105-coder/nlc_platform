@@ -125,6 +125,22 @@ def test_follow_up_definition_difference_counts_match_the_stored_snapshots():
     assert snapshot["summary"]["rules_with_exact_definition_match"] == exact_matches
     assert snapshot["summary"]["rules_with_any_definition_difference"] == differing_rows
     assert snapshot["summary"]["per_field_mismatch_counts"] == field_counts
+    # The follow-up and top-level consumer comparison blocks must agree with
+    # the per-rule rows; neither may retain stale aggregate parity counts.
+    comparison = snapshot["comparison"]
+    assert comparison["exact_definition_match_count"] == exact_matches
+    assert comparison["definition_difference_count"] == differing_rows
+    assert comparison["per_field_mismatch_counts"] == field_counts
+
+    top_level_comparison = ledger["comparison"]
+    assert top_level_comparison["rules_with_exact_definition_match"] == exact_matches
+    assert top_level_comparison["rules_with_any_definition_difference"] == differing_rows
+    assert top_level_comparison["per_field_mismatch_counts"] == {
+        field: field_counts.get(field, 0) for field in fields
+    }
+    assert exact_matches == 5
+    assert differing_rows == 80
+    assert field_counts["rule_condition"] == 61
 
 
 def test_catalogue_activation_is_not_misrepresented_as_identity_or_legal_approval():
