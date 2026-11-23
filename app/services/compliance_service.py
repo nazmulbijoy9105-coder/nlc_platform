@@ -831,7 +831,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         flags_snapshot = jsonable_encoder(flags_snapshot)
         sb = output.score_breakdown
-        score_breakdown_snapshot = None if score_for_current is None else {
+        score_breakdown_snapshot = (
+            {
+                "snapshot_schema_version": 1,
+                "status": "NOT_RELEASED",
+                "reason": (
+                    "LEGAL_SCORE_RELEASE_GATE_CLOSED"
+                    if not legal_score_is_released()
+                    else "INSUFFICIENT_EVIDENCE_FOR_SCORE"
+                ),
+                "score": None,
+                "risk_band": "NOT_EVALUATED",
+                "scoring_data": "WITHHELD",
+            }
+            if score_for_current is None
+            else {
             "engine_version": engine_version,
             "scoring_spec_version": SCORING_SPEC_VERSION,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
@@ -912,7 +926,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "yellow": sb.yellow_flag_count,
                 "green": sb.green_flag_count,
             },
-        }
+        })
         # Persist the active catalogue and each rule's emitted engine finding.
         # Rules with no emitted finding remain NOT_EVALUATED, never COMPLIANT.
         from app.compliance.rule_outcome_ledger import (
