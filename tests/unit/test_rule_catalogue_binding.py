@@ -17,6 +17,7 @@ def _profile(**overrides):
         "catalogue_binding_required": True,
         "catalogue_rule_versions": {"BOD-001": "3.4"},
         "catalogue_rule_active": {"BOD-001": True},
+        "catalogue_rule_bases": {"BOD-001": "Section 96, Companies Act 1994 (Bangladesh)"},
     }
     values.update(overrides)
     return CompanyProfile(**values)
@@ -50,3 +51,28 @@ def test_missing_catalogue_entry_is_suppressed_fail_closed():
     assert finding.severity == Severity.NOT_EVALUATED
     assert finding.state == RuleState.UNKNOWN
     assert finding.score_impact == 0
+
+
+
+def test_statutory_basis_mismatch_is_quarantined_even_when_rule_id_is_active():
+    output = NLCRuleEngine(today=date(2026, 11, 15)).evaluate(
+        _profile(
+            catalogue_rule_bases={
+                "BOD-001": "Section 9, Companies Act 1994 (Bangladesh)"
+            }
+        )
+    )
+    finding = next(flag for flag in output.flags if flag.rule_id == "BOD-001")
+    assert finding.detail["rule_catalogue_binding"] == "STATUTORY_BASIS_MISMATCH"
+    assert finding.detail["engine_flag_statutory_basis"] == (
+        "Section 96, Companies Act 1994 (Bangladesh)"
+    )
+    assert finding.detail["catalogue_rule_statutory_basis"] == (
+        "Section 9, Companies Act 1994 (Bangladesh)"
+    )
+    assert finding.severity == Severity.NOT_EVALUATED
+    assert finding.state == RuleState.UNKNOWN
+    assert finding.eval_state == "UNKNOWN"
+    assert finding.score_impact == 0
+    assert finding.is_black_override is False
+    assert finding.conditional_applies is False

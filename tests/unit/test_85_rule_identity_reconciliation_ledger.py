@@ -1,4 +1,5 @@
 """Integrity tests for the preserved 85-rule ledger and current production follow-up."""
+import hashlib
 import json
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from scripts.seed_rules import ILRMF_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "docs" / "legal" / "85_rule_identity_definition_reconciliation_2026-11-23.json"
+HISTORICAL_RULES_SHA256 = "cd51f59299d5d8ae760459ada6ea758335de1dcce2c4767485f694e5db04165c"
 
 
 def _stable(value):
@@ -30,6 +32,15 @@ def test_original_provenance_and_85_rule_history_are_preserved():
     assert ledger["repository"]["commit"] == "b06495678eb564eea52f44c3bafd174d7180f7df"
     assert len(ledger["rules"]) == 85
     assert len(ledger["rules"]) == len({row["rule_id"] for row in ledger["rules"]})
+    historical_payload = json.dumps(
+        ledger["rules"],
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    assert hashlib.sha256(historical_payload.encode("utf-8")).hexdigest() == (
+        HISTORICAL_RULES_SHA256
+    )
     assert ledger["revision_readiness"]["source_workpack_records"] == 85
     assert ledger["revision_readiness"]["operating_interval_records"] == 85
     assert ledger["revision_readiness"]["verified_effective_dated_revisions"] == 0
