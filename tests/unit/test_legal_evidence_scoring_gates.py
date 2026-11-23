@@ -107,7 +107,7 @@ def test_unapproved_black_override_is_excluded_before_override_semantics(monkeyp
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     result = _applied_score_impacts([flag])
 
-    assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
+    assert result == [{"applied": 0, "status": "NO_SCORING_CATEGORY"}]
 
 
 def test_compliance_service_persists_exact_deduplicated_category_allocations(monkeypatch):
@@ -1311,11 +1311,9 @@ def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
 
 def test_customer_score_components_reconcile_with_per_finding_api_allocations(monkeypatch):
     rule_impacts = [
-        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
-        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
-        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
-        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
-        ("FX-001", 10), ("ESC-001", 15),
+        ("AGM-001", 30), ("AUD-001", 25), ("AR-002", 20),
+        ("DIR-001", 25), ("SH-001", 20), ("CAP-001", 15),
+        ("OFF-001", 10), ("REG-001", 10),
     ]
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
@@ -1386,7 +1384,7 @@ def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
     )
     applied = _applied_score_impacts([excluded, unknown])
     assert applied == [
-        {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"},
+        {"applied": 0, "status": "NO_SCORING_CATEGORY"},
         {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"},
     ]
 
@@ -1396,11 +1394,9 @@ def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
     from canonical_architecture.scoring_spec import allocate_flag_deductions
 
     rule_impacts = [
-        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
-        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
-        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
-        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
-        ("FX-001", 10), ("ESC-001", 15),
+        ("AGM-001", 30), ("AUD-001", 25), ("AR-002", 20),
+        ("DIR-001", 25), ("SH-001", 20), ("CAP-001", 15),
+        ("OFF-001", 10), ("REG-001", 10),
     ]
     applied = allocate_flag_deductions(rule_impacts)
     monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", frozenset(
@@ -1456,3 +1452,20 @@ def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
     applied = _applied_score_impacts(flags)
     assert applied[0] == {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"}
     assert applied[1] == {"applied": 30, "status": "APPLIED"}
+
+
+
+def test_known_out_of_scope_rule_is_explicitly_excluded_from_rjsc_score_allocation():
+    flag = SimpleNamespace(
+        rule_id="TAX-001",
+        state=RuleState.NON_COMPLIANT,
+        resolved=False,
+        conditional_applies=True,
+        eval_state="VIOLATION",
+        severity=Severity.RED,
+        is_black_override=False,
+        score_impact=100,
+    )
+    assert _applied_score_impacts([flag]) == [
+        {"applied": 0, "status": "OUT_OF_SCOPE_RJSC_ASSESSMENT"}
+    ]

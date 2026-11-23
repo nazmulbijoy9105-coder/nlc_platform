@@ -42,6 +42,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         VERIFIED_RULE_IDS,
         legal_score_is_released,
     )
+    from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
 
     if not legal_score_is_released():
         raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
@@ -76,6 +77,8 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         rule_id = getattr(flag, "rule_id", None)
         if not isinstance(rule_id, str) or not rule_id.strip():
             continue
+        if not is_rjsc_rule_in_scope(rule_id):
+            continue
         flags_by_rule.setdefault(rule_id, []).append(flag)
 
         state_value = getattr(flag, "state", None)
@@ -89,6 +92,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if (
             getattr(flag, "resolved", None) is False
             and getattr(flag, "conditional_applies", None) is True
+            and is_rjsc_rule_in_scope(rule_id)
             and rule_id in PRODUCT_SCORING_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
@@ -118,6 +122,10 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if len(step_rules) != len(related):
             raise ValueError("Rescue action contains duplicate rule references.")
         for rule_id in step_rules:
+            if not is_rjsc_rule_in_scope(rule_id):
+                raise PermissionError(
+                    "RJSC rescue actions cannot reference out-of-scope or unclassified rules."
+                )
             if (
                 rule_id in PRODUCT_SCORING_RULE_IDS
                 and rule_id not in VERIFIED_RULE_IDS

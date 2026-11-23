@@ -85,7 +85,7 @@ def test_verified_document_facts_count_toward_score_coverage():
     assert _input_coverage(profile) == 1.0
 
 
-def test_only_verified_trade_license_absence_can_emit_scored_finding():
+def test_verified_trade_license_absence_is_raw_only_not_part_of_rjsc_score():
     engine = NLCRuleEngine(today=date(2026, 11, 21))
     legacy = CompanyProfile(
         company_id="trade-license-test",
@@ -93,7 +93,8 @@ def test_only_verified_trade_license_absence_can_emit_scored_finding():
         trade_license_obtained=False,
         verified_fact_keys=frozenset(),
     )
-    assert not any(flag.rule_id == "TL-001" for flag in engine.evaluate(legacy).flags)
+    legacy_output = engine.evaluate(legacy)
+    assert not any(flag.rule_id == "TL-001" for flag in legacy_output.flags)
 
     verified = CompanyProfile(
         company_id="trade-license-test",
@@ -101,10 +102,14 @@ def test_only_verified_trade_license_absence_can_emit_scored_finding():
         trade_license_obtained=False,
         verified_fact_keys=frozenset({"trade_license_obtained"}),
     )
-    flag = next(flag for flag in engine.evaluate(verified).flags if flag.rule_id == "TL-001")
+    verified_output = engine.evaluate(verified)
+    flag = next(flag for flag in verified_output.flags if flag.rule_id == "TL-001")
     assert flag.state == RuleState.VERIFIED_ABSENT
     assert flag.eval_state == "VIOLATION"
     assert flag.score_impact == 5
+    assert verified_output.score_breakdown.final_score == legacy_output.score_breakdown.final_score
+    assert verified_output.score_breakdown.raw_total == legacy_output.score_breakdown.raw_total
+    assert verified_output.score_breakdown.score_hash == legacy_output.score_breakdown.score_hash
 
 
 def test_internal_trust_metadata_cannot_be_asserted_as_a_company_fact():

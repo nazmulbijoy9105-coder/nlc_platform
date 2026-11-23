@@ -21184,13 +21184,13 @@
         "current_main_seed_rules": 85,
         "production_inventory_rows": 86,
         "production_only_legacy_rows": 1,
-        "rules_with_any_definition_difference": 85,
-        "rules_with_exact_definition_match": 0,
+        "rules_with_any_definition_difference": 80,
+        "rules_with_exact_definition_match": 5,
         "per_field_mismatch_counts": {
           "rule_name": 45,
           "statutory_basis": 70,
           "description": 79,
-          "rule_condition": 78,
+          "rule_condition": 61,
           "revenue_tier": 10,
           "rule_type": 12
         },
@@ -21211,13 +21211,13 @@
           "revenue_tier",
           "is_black_override"
         ],
-        "exact_definition_match_count": 0,
-        "definition_difference_count": 85,
+        "exact_definition_match_count": 5,
+        "definition_difference_count": 80,
         "per_field_mismatch_counts": {
           "rule_name": 45,
           "statutory_basis": 70,
           "description": 79,
-          "rule_condition": 78,
+          "rule_condition": 61,
           "revenue_tier": 10,
           "rule_type": 12
         }
@@ -21316,7 +21316,7 @@
             "description": "MoA/AoA registration is governed by section 23. Non-production in NLC records is not proof of non-registration or invalidity; verify the RJSC registration record, certified copies, incorporation date and amendments.",
             "rule_condition": {
               "check_fn": "check_inc_001",
-              "trigger": "moa_aoa_verified == true AND moa_aoa_evidence_ref IS NOT NULL AND moa_aoa_filed == false",
+              "trigger": "moa_aoa_verified == True AND moa_aoa_evidence_ref IS NOT NULL AND moa_aoa_filed == False",
               "data_points": [
                 "moa_aoa_filed",
                 "moa_aoa_verified",
@@ -21477,7 +21477,7 @@
             "description": "No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, foreign-currency-account retention rules and zone-specific exceptions. CONDITIONAL: foreign-shareholder cases only.",
             "rule_condition": {
               "check_fn": "check_inc_005",
-              "trigger": "has_foreign_shareholder == true AND encashment_certificate_uploaded == false",
+              "trigger": "has_foreign_shareholder == True AND encashment_certificate_uploaded == False",
               "data_points": [
                 "has_foreign_shareholder",
                 "encashment_certificate_uploaded"
@@ -21514,8 +21514,7 @@
           },
           "different_fields": [
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -21531,7 +21530,7 @@
             "description": "Reported initial-establishment remittance below the USD 50,000 reference amount is an internal screening prompt only. Verify the current BIDA guideline, applicant category, date, exceptions and supporting bank evidence. No statutory breach or work-permit refusal is inferred. CONDITIONAL: foreign-shareholder and BIDA-registered cases only.",
             "rule_condition": {
               "check_fn": "check_inc_006",
-              "trigger": "has_foreign_shareholder == true AND remittance_amount_usd < 50000 AND bida_registered == true",
+              "trigger": "has_foreign_shareholder == True AND remittance_amount_usd < 50000 AND bida_registered == True",
               "data_points": [
                 "remittance_amount_usd",
                 "bida_registered"
@@ -21569,8 +21568,7 @@
           "different_fields": [
             "rule_name",
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -21586,7 +21584,7 @@
             "description": "First auditor not appointed by the Board within one calendar month of incorporation. Section 210(6): the Board shall appoint the first auditor within one month of the date of registration. 'One month' means a calendar month (not a fixed 30 days). Company cannot produce compliant accounts for the first AGM until an auditor is appointed.",
             "rule_condition": {
               "check_fn": "check_aud_001",
-              "trigger": "first_auditor_appointed == false AND past_first_auditor_deadline == true",
+              "trigger": "first_auditor_appointed == False AND past_first_auditor_deadline == True",
               "data_points": [
                 "first_auditor_appointed",
                 "incorporation_date"
@@ -21637,7 +21635,7 @@
             "description": "Audit/accounts not ready for presentation at the AGM. Section 183 governs the balance sheet and profit-and-loss or income-and-expenditure account to be laid before the AGM. Do not describe this fact alone as automatically invalidating every resolution.",
             "rule_condition": {
               "check_fn": "check_aud_002",
-              "trigger": "agm_held == true AND audit_complete == false",
+              "trigger": "agm_held == True AND audit_complete == False",
               "data_points": [
                 "agm_held",
                 "audit_complete",
@@ -21692,7 +21690,7 @@
             "description": "AGM recorded without completed audit. This requires review of the actual accounts, auditor appointment and applicable exceptions. It is not automatically a statutory BLACK classification or a finding of fraud.",
             "rule_condition": {
               "check_fn": "check_aud_003",
-              "trigger": "agm_held == true AND audit_complete == false AND audit_completion_verified == true",
+              "trigger": "agm_held == True AND audit_complete == False AND audit_completion_verified == True",
               "data_points": [
                 "agm_held",
                 "audit_complete",
@@ -21748,7 +21746,7 @@
             "description": "Auditor reappointment or appointment at the AGM must be assessed under Section 210(3), using verified AGM minutes and appointment records.",
             "rule_condition": {
               "check_fn": "check_aud_004",
-              "trigger": "agm_held == true AND auditor_reappointed_at_agm == false",
+              "trigger": "agm_held == True AND auditor_reappointed_at_agm == False",
               "data_points": [
                 "agm_held",
                 "auditor_reappointed_at_agm"
@@ -21783,8 +21781,7 @@
           },
           "different_fields": [
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -21800,7 +21797,7 @@
             "description": "First AGM must be held within 18 calendar months of incorporation. Calculate with calendar-month arithmetic; do not use a fixed-day approximation.",
             "rule_condition": {
               "check_fn": "check_agm_001",
-              "trigger": "agm_history_verified == true AND agm_count == 0 AND today > add_calendar_months(incorporation_date, 18)",
+              "trigger": "agm_history_verified == True AND agm_count == 0 AND today > add_calendar_months(incorporation_date, 18)",
               "data_points": [
                 "agm_history_verified",
                 "incorporation_date",
@@ -21854,7 +21851,7 @@
             "description": "A subsequent AGM must be held in each Gregorian calendar year and no more than 15 months after the preceding AGM, subject to the first-AGM proviso where the first AGM is held in the incorporation year and a verified Registrar extension within the statutory limit.",
             "rule_condition": {
               "check_fn": "check_agm_002",
-              "trigger": "agm_history_verified == true AND agm_held_this_cycle == false AND today > subsequent_agm_deadline(last_agm_date, incorporation_date, agm_count, verified_extension)",
+              "trigger": "agm_history_verified == True AND agm_held_this_cycle == False AND today > subsequent_agm_deadline(last_agm_date, incorporation_date, agm_count, verified_extension)",
               "data_points": [
                 "agm_history_verified",
                 "incorporation_date",
@@ -21913,7 +21910,7 @@
             "description": "AGM notice was shorter than the statutory notice period. Shorter notice may be valid with written consent of all members entitled to attend and vote. Do not classify as defective unless absence of the required consent is verified.",
             "rule_condition": {
               "check_fn": "check_agm_003",
-              "trigger": "notice_interval_below_21_days AND short_notice_consent_verified == true AND short_notice_consent_obtained == false",
+              "trigger": "notice_interval_below_21_days AND short_notice_consent_verified == True AND short_notice_consent_obtained == False",
               "data_points": [
                 "notice_sent_date",
                 "agm_date",
@@ -21970,7 +21967,7 @@
             "description": "No notice date is recorded before the AGM. A defect is confirmed only where written short-notice consent from all members entitled to attend and vote is verified absent; otherwise legal status remains unknown.",
             "rule_condition": {
               "check_fn": "check_agm_004",
-              "trigger": "agm_scheduled_date_reached AND notice_sent_date IS NULL AND short_notice_consent_verified == true AND short_notice_consent_obtained == false",
+              "trigger": "agm_scheduled_date_reached AND notice_sent_date IS NULL AND short_notice_consent_verified == True AND short_notice_consent_obtained == False",
               "data_points": [
                 "agm_scheduled_date",
                 "notice_sent_date",
@@ -22026,7 +22023,7 @@
             "description": "AGM held but the applicable quorum was not met. Under the default in Section 85(2)(b), a private company with not more than six members requires two members present; a private company with more than six members requires three; other companies require five members personally present. The Articles may provide otherwise and must be checked before a final determination.",
             "rule_condition": {
               "check_fn": "check_agm_005",
-              "trigger": "agm_held == true AND members_present < quorum_required",
+              "trigger": "agm_held == True AND members_present < quorum_required",
               "data_points": [
                 "agm_held",
                 "members_present_at_agm",
@@ -22080,7 +22077,7 @@
             "description": "Review prompt only: the record indicates minutes may be absent, but the minute book and contemporaneous records have not been independently verified.",
             "rule_condition": {
               "check_fn": "check_agm_006",
-              "trigger": "agm_held == true AND agm_minutes_prepared == false",
+              "trigger": "agm_held == True AND agm_minutes_prepared == False",
               "data_points": [
                 "agm_held",
                 "agm_minutes_prepared"
@@ -22116,8 +22113,7 @@
           "different_fields": [
             "rule_name",
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -22133,7 +22129,7 @@
             "description": "Schedule X (Annual Return) not filed within 21 days of AGM. Section 36 requires the annual summary of share capital and list of members/directors within 21 days. Every officer in default is personally liable to fine for each day of continuing default.",
             "rule_condition": {
               "check_fn": "check_ar_001",
-              "trigger": "annual_return_filed == false AND days_since_agm > 21 AND unfiled_returns_count == 1",
+              "trigger": "annual_return_filed == False AND days_since_agm > 21 AND unfiled_returns_count == 1",
               "data_points": [
                 "annual_return_filed",
                 "last_agm_date",
@@ -22293,7 +22289,7 @@
             "description": "Annual Return filed but missing required attachments: audited financial statements, directors list, members list, or secretary's certificate. Incomplete filing does not satisfy Section 36; company remains in default.",
             "rule_condition": {
               "check_fn": "check_ar_004",
-              "trigger": "annual_return_filed == true AND annual_return_content_complete == false",
+              "trigger": "annual_return_filed == True AND annual_return_content_complete == False",
               "data_points": [
                 "annual_return_filed",
                 "annual_return_content_complete"
@@ -22328,8 +22324,7 @@
           },
           "different_fields": [
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -22451,7 +22446,7 @@
             "description": "A delay exceeding 365 days is an NLC internal escalation threshold only. The underlying Form XII particulars filing duty is under section 115(2) (14 days); do not infer a separate continuing offence, daily penalty, personal liability or invalid board resolutions without a distinct provision and case-specific evidence.",
             "rule_condition": {
               "check_fn": "check_dir_003",
-              "trigger": "form_xii_filed == false AND director_filing_delay_days > 365",
+              "trigger": "form_xii_filed == False AND director_filing_delay_days > 365",
               "data_points": [
                 "director_changes",
                 "form_xii_filed",
@@ -22567,7 +22562,7 @@
             "description": "Section 151 requires a company having share capital to file the return of allotment and prescribed supporting documents within 60 days after allotment, subject to any Registrar extension granted under the section.",
             "rule_condition": {
               "check_fn": "check_sh_001",
-              "trigger": "last_allotment_date IS NOT NULL AND form_xv_filed == false AND days_since_allotment > 60",
+              "trigger": "last_allotment_date IS NOT NULL AND form_xv_filed == False AND days_since_allotment > 60",
               "data_points": [
                 "last_allotment_date",
                 "form_xv_filed"
@@ -22600,9 +22595,7 @@
             "is_active": true,
             "verification_status": "PENDING"
           },
-          "different_fields": [
-            "rule_condition"
-          ],
+          "different_fields": [],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
           "effective_dated_revision": "NOT_CREATED_SOURCE_AND_EFFECTIVE_DATE_REVIEW_REQUIRED"
@@ -22617,7 +22610,7 @@
             "description": "Section 158 requires share certificates within 90 days after allotment or registration of transfer. This rule currently models allotment date only; transfer-registration events must be added before complete coverage can be claimed.",
             "rule_condition": {
               "check_fn": "check_sh_002",
-              "trigger": "share_certificates_issued == false AND last_allotment_date IS NOT NULL AND days_since_allotment > 90",
+              "trigger": "share_certificates_issued == False AND last_allotment_date IS NOT NULL AND days_since_allotment > 90",
               "data_points": [
                 "share_certificates_issued",
                 "last_allotment_date"
@@ -22650,9 +22643,7 @@
             "is_active": true,
             "verification_status": "PENDING"
           },
-          "different_fields": [
-            "rule_condition"
-          ],
+          "different_fields": [],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
           "effective_dated_revision": "NOT_CREATED_SOURCE_AND_EFFECTIVE_DATE_REVIEW_REQUIRED"
@@ -22667,7 +22658,7 @@
             "description": "RJSC guidance identifies Form IV notice of increase of share capital under Section 56 as due within 15 days; confirm the exact statutory trigger, company scope and current form before assessing a default.",
             "rule_condition": {
               "check_fn": "check_sh_003",
-              "trigger": "capital_increase_date IS NOT NULL AND form_iv_filed == false AND days_since_capital_increase > 15",
+              "trigger": "capital_increase_date IS NOT NULL AND form_iv_filed == False AND days_since_capital_increase > 15",
               "data_points": [
                 "capital_increase_date",
                 "form_iv_filed"
@@ -22719,7 +22710,7 @@
             "description": "Section 38(3) requires a proper transfer instrument duly stamped and executed by transferor and transferee, together with the relevant share/debenture certificate, subject to the statutory lost-instrument/indemnity exception. A missing upload is not proof of absence or automatic invalidity.",
             "rule_condition": {
               "check_fn": "check_tr_001",
-              "trigger": "instrument_recorded == false OR form_117_filed == false",
+              "trigger": "instrument_recorded == False OR form_117_filed == False",
               "data_points": [
                 "share_transfers",
                 "instrument_recorded",
@@ -22773,7 +22764,7 @@
             "description": "Verify the instrument category, execution facts, current Stamp Act 1899 Schedule I rate, amendments, exemption/adjudication and authenticated payment evidence. Do not infer inadmissibility, invalidity or unenforceable title from a missing receipt.",
             "rule_condition": {
               "check_fn": "check_tr_002",
-              "trigger": "stamp_duty_applicability_verified == true AND stamp_duty_paid == false",
+              "trigger": "stamp_duty_applicability_verified == True AND stamp_duty_paid == False",
               "data_points": [
                 "share_transfers",
                 "stamp_duty_applicability_verified",
@@ -22829,7 +22820,7 @@
             "description": "Section 38(7) preserves the company's power under its Articles to refuse registration. Board approval is not a universal statutory requirement; verify the operative Articles, transfer class, notices, refusal and remedies. Do not declare the transfer void or title absent automatically.",
             "rule_condition": {
               "check_fn": "check_tr_003",
-              "trigger": "aoa_transfer_restriction == true AND articles_clause_evidence_ref IS NOT NULL AND board_approved == false",
+              "trigger": "aoa_transfer_restriction == True AND articles_clause_evidence_ref IS NOT NULL AND board_approved == False",
               "data_points": [
                 "share_transfers",
                 "board_approved",
@@ -22885,7 +22876,7 @@
             "description": "Section 38(4) concerns notice of refusal: where the company refuses registration, it must notify both transferor and transferee within 30 days after the instrument is lodged. This rule does not create a universal two-month register-update deadline; verify the actual refusal and dispatch evidence.",
             "rule_condition": {
               "check_fn": "check_tr_004",
-              "trigger": "registration_refused == true AND refusal_notice_sent == false AND instrument_lodged_date IS NOT NULL AND days_since_lodgement > 30",
+              "trigger": "registration_refused == True AND refusal_notice_sent == False AND instrument_lodged_date IS NOT NULL AND days_since_lodgement > 30",
               "data_points": [
                 "share_transfers",
                 "registration_refused",
@@ -22942,7 +22933,7 @@
             "description": "Reported registration despite an Articles restriction requires case-specific review under section 38(7), the Articles, notices, registration record and remedies. The section preserves a power to refuse registration; it does not automatically make every restricted transfer void ab initio.",
             "rule_condition": {
               "check_fn": "check_tr_005",
-              "trigger": "transfer_registered == true AND aoa_transfer_restriction == true AND board_approved == false",
+              "trigger": "transfer_registered == True AND aoa_transfer_restriction == True AND board_approved == False",
               "data_points": [
                 "share_transfers",
                 "transfer_registered",
@@ -22998,7 +22989,7 @@
             "description": "Two or more transfer-record review signals require document and Articles reconciliation. The composite is an internal review prompt, not a statutory breach, invalidity or title finding.",
             "rule_condition": {
               "check_fn": "check_tr_006",
-              "trigger": "is_irregular == true AND irregularity_count >= 2",
+              "trigger": "is_irregular == True AND irregularity_count >= 2",
               "data_points": [
                 "share_transfers",
                 "is_irregular"
@@ -23034,8 +23025,7 @@
           "different_fields": [
             "rule_name",
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -23209,7 +23199,7 @@
             "description": "Office change not filed via Form VI within 28 days. Section 77 requires 28-day filing (NOT 30 days). Until filed, old address remains legal registered office. Statutory notices served there are valid.",
             "rule_condition": {
               "check_fn": "check_off_001",
-              "trigger": "registered_office_change_date IS NOT NULL AND form_vi_filed == false AND days_since_office_change > 28",
+              "trigger": "registered_office_change_date IS NOT NULL AND form_vi_filed == False AND days_since_office_change > 28",
               "data_points": [
                 "registered_office_change_date",
                 "form_vi_filed"
@@ -23244,8 +23234,7 @@
           },
           "different_fields": [
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -23261,7 +23250,7 @@
             "description": "Verify the specific alteration type and Articles authority under section 53. Section 54 addresses specified consolidation/conversion/subdivision notices; increase of registered share capital is separately governed by section 56. Do not assume a special resolution without checking the Act and Articles.",
             "rule_condition": {
               "check_fn": "check_cap_001",
-              "trigger": "capital_increase_event_verified == true AND capital_increase_date IS NOT NULL AND capital_increase_resolution == false",
+              "trigger": "capital_increase_event_verified == True AND capital_increase_date IS NOT NULL AND capital_increase_resolution == False",
               "data_points": [
                 "capital_increase_event_verified",
                 "capital_increase_date",
@@ -23317,7 +23306,7 @@
             "description": "Review-only until the executed charge instrument, verified creation date, Section 159 registrability and RJSC Form XVIII filing status/date are evidenced. Missing evidence is UNKNOWN; a late filing requires legal review of any Registrar extension and its effect.",
             "rule_condition": {
               "check_fn": "check_cap_002",
-              "trigger": "verified registrable_under_s159 == true AND verified creation_date AND verified form_xviii_filed == false AND today > creation_date + 21 days; verified filed_date_after_deadline == REQUIRES_LAWYER_JUDGMENT",
+              "trigger": "verified registrable_under_s159 == True AND verified creation_date AND verified form_xviii_filed == False AND today > creation_date + 21 days; verified filed_date_after_deadline == REQUIRES_LAWYER_JUDGMENT",
               "data_points": [
                 "charge_creation_date",
                 "creation_date_evidence_ref",
@@ -23374,7 +23363,7 @@
             "description": "A pending capital-reduction workflow without verified court-confirmation evidence requires lawyer review. A pending workflow alone does not prove an unlawful completed reduction.",
             "rule_condition": {
               "check_fn": "check_cap_003",
-              "trigger": "capital_reduction_pending == true AND capital_reduction_court_order_obtained == false",
+              "trigger": "capital_reduction_pending == True AND capital_reduction_court_order_obtained == False",
               "data_points": [
                 "capital_reduction_pending",
                 "capital_reduction_court_order_obtained"
@@ -23428,7 +23417,7 @@
             "description": "Copy of a special or extraordinary resolution must be filed with RJSC within 15 days under Section 88(1). This filing duty does not by itself determine whether every underlying transaction is valid or complete.",
             "rule_condition": {
               "check_fn": "check_cap_004",
-              "trigger": "special_resolution_date IS NOT NULL AND form_viii_filed == false AND days_since_resolution > 15",
+              "trigger": "special_resolution_date IS NOT NULL AND form_viii_filed == False AND days_since_resolution > 15",
               "data_points": [
                 "special_resolution_date",
                 "form_viii_filed"
@@ -23480,7 +23469,7 @@
             "description": "Review prompt only: verify legal entity and taxpayer identity, return-filing duty under section 166, registration under section 261 and any proof-of-return requirement under section 264. A profile boolean is not authenticated evidence of a breach.",
             "rule_condition": {
               "check_fn": "check_tax_001",
-              "trigger": "tin_obtained == false",
+              "trigger": "tin_obtained == False",
               "data_points": [
                 "tin_obtained",
                 "tin_number"
@@ -23516,8 +23505,7 @@
           "different_fields": [
             "rule_name",
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -23533,7 +23521,7 @@
             "description": "Review prompt only. Verify rolling 12-month taxable turnover, mandatory-registration categories and taxpayer activity. Above BDT 30 lakh up to BDT 50 lakh may require turnover-tax enlistment; above BDT 50 lakh may require VAT registration. Verify the 30-day application period and effective date before any breach finding.",
             "rule_condition": {
               "check_fn": "check_tax_002",
-              "trigger": "vat_registered == false AND reported_annual_turnover_bdt > 3000000",
+              "trigger": "vat_registered == False AND reported_annual_turnover_bdt > 3000000",
               "data_points": [
                 "vat_registered",
                 "annual_turnover_bdt"
@@ -23643,7 +23631,7 @@
             "description": "Review prompt only: verify the statutory grounds, Registrar notice, service, procedural stage, appeal, restoration and current register status. A filing backlog or unverified list indicator is not proof that strike-off is imminent or has occurred.",
             "rule_condition": {
               "check_fn": "check_esc_002",
-              "trigger": "unfiled_returns_count >= 3 OR rjsc_strike_off_notice_date IS NOT NULL OR on_rjsc_strike_off_list == true",
+              "trigger": "unfiled_returns_count >= 3 OR rjsc_strike_off_notice_date IS NOT NULL OR on_rjsc_strike_off_list == True",
               "data_points": [
                 "unfiled_returns_count",
                 "rjsc_strike_off_notice_date",
@@ -23699,7 +23687,7 @@
             "description": "Internal BLACK escalation and rescue workflow. A BLACK classification, score threshold and rescue deadline are NLC policy decisions, not statutory consequences. Policy-owner approval is required.",
             "rule_condition": {
               "check_fn": "check_esc_003",
-              "trigger": "pre_override_score <= 29 OR has_black_override == true",
+              "trigger": "pre_override_score <= 29 OR has_black_override == True",
               "data_points": [
                 "pre_override_score",
                 "has_black_override",
@@ -23738,8 +23726,7 @@
           },
           "different_fields": [
             "statutory_basis",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -23755,7 +23742,7 @@
             "description": "Review prompt only: verify the applicable Articles, meeting resolution, adjournment terms, notice method and exact statutory consequence before classifying a breach.",
             "rule_condition": {
               "check_fn": "check_agm_007",
-              "trigger": "agm_adjourned_without_notice == true",
+              "trigger": "agm_adjourned_without_notice == True",
               "data_points": [
                 "agm_adjourned_without_notice"
               ]
@@ -23800,7 +23787,7 @@
             "description": "No verified record establishes whether the retiring auditor was reappointed or a statutory exception applied. Evidence-status only; no 120-day deadline.",
             "rule_condition": {
               "check_fn": "check_aud_005",
-              "trigger": "agm_held_this_cycle == true AND auditor_reappointed_at_agm IS NULL",
+              "trigger": "agm_held_this_cycle == True AND auditor_reappointed_at_agm IS NULL",
               "data_points": [
                 "agm_held_this_cycle",
                 "auditor_reappointed_at_agm"
@@ -23846,7 +23833,7 @@
             "description": "Reported company winding-up petition. Verify the Companies Act petition, grounds, court, case number, service, current status, withdrawal/dismissal/stay and authenticated court record. Do not conflate corporate winding-up with personal bankruptcy.",
             "rule_condition": {
               "check_fn": "check_bnk_001",
-              "trigger": "winding_up_petition_filed == true",
+              "trigger": "winding_up_petition_filed == True",
               "data_points": [
                 "winding_up_petition_filed"
               ]
@@ -23891,7 +23878,7 @@
             "description": "Reported liquidator appointment. Verify whether the appointment arises from a court winding-up order, voluntary winding-up or another statutory route; obtain the appointment instrument and confirm the appointee’s authority and current status.",
             "rule_condition": {
               "check_fn": "check_bnk_002",
-              "trigger": "liquidator_appointed == true",
+              "trigger": "liquidator_appointed == True",
               "data_points": [
                 "liquidator_appointed"
               ]
@@ -23936,7 +23923,7 @@
             "description": "Reported court winding-up order. Verify the authenticated order, operative date, court jurisdiction, appeal/stay, correction, suspension or discharge, and current liquidation status.",
             "rule_condition": {
               "check_fn": "check_bnk_003",
-              "trigger": "court_ordered_winding_up == true",
+              "trigger": "court_ordered_winding_up == True",
               "data_points": [
                 "court_ordered_winding_up"
               ]
@@ -23981,7 +23968,7 @@
             "description": "Review prompt only: verify the exact BSEC financial-reporting instrument, listed issuer class, reporting period and due date; this is not Corporate Governance Code Condition 8.",
             "rule_condition": {
               "check_fn": "check_bsec_001",
-              "trigger": "bsec_listed == true AND bsec_quarterly_report_filed == false",
+              "trigger": "bsec_listed == True AND bsec_quarterly_report_filed == False",
               "data_points": [
                 "bsec_listed",
                 "bsec_quarterly_report_filed"
@@ -24028,7 +24015,7 @@
             "description": "Review prompt only: Condition 9 requires annual corporate-governance compliance certification by a practicing professional accountant or secretary other than the statutory auditor, with disclosure in the annual report. Verify listed-issuer scope, certifier eligibility, AGM appointment and evidence.",
             "rule_condition": {
               "check_fn": "check_bsec_002",
-              "trigger": "bsec_listed == true AND cg_certificate_obtained == false",
+              "trigger": "bsec_listed == True AND cg_certificate_obtained == False",
               "data_points": [
                 "bsec_listed",
                 "cg_certificate_obtained"
@@ -24076,7 +24063,7 @@
             "description": "Review prompt only: verify Condition 1 board size, independent-director ratio, eligibility and appointment process. The 2024 amendment adds at least one female independent director; BSEC's 26 July 2026 register lists a further extension, reported to 31 December 2026. Verify the original notice and any later direction before applying a deadline.",
             "rule_condition": {
               "check_fn": "check_bsec_003",
-              "trigger": "bsec_listed == true AND board_independent_director == false",
+              "trigger": "bsec_listed == True AND board_independent_director == False",
               "data_points": [
                 "bsec_listed",
                 "board_independent_director"
@@ -24123,7 +24110,7 @@
             "description": "Review prompt only: verify Condition 5 audit committee composition, independent director, financial literacy, quorum, meetings, duties and listed-issuer scope. Do not infer non-compliance from a single profile boolean.",
             "rule_condition": {
               "check_fn": "check_bsec_004",
-              "trigger": "bsec_listed == true AND audit_committee_established == false",
+              "trigger": "bsec_listed == True AND audit_committee_established == False",
               "data_points": [
                 "bsec_listed",
                 "audit_committee_established"
@@ -24170,7 +24157,7 @@
             "description": "Review-only. Confirm that the charge is registrable under s.159, authenticate satisfaction and its date, and verify RJSC filing status/date before assessing the 21-day s.172(1) duty. Missing evidence is UNKNOWN; a late Form XXVIII filing requires review of any Registrar extension and its legal effect.",
             "rule_condition": {
               "check_fn": "check_chg_001",
-              "trigger": "verified charge.satisfied == true AND verified registrable_under_s159 == true AND verified satisfaction_filed == false AND satisfaction_date + 21 days < today; verified filed_date_after_deadline == REQUIRES_LAWYER_JUDGMENT",
+              "trigger": "verified charge.satisfied == True AND verified registrable_under_s159 == True AND verified satisfaction_filed == False AND satisfaction_date + 21 days < today; verified filed_date_after_deadline == REQUIRES_LAWYER_JUDGMENT",
               "data_points": [
                 "charges",
                 "registrability_evidence_ref",
@@ -24317,7 +24304,7 @@
             "description": "Review prompt only: Section 130 concerns disclosure of a director's interest in a company contract or arrangement; it does not by itself establish this generic register obligation. Verify the actual duty, Articles and documentary evidence.",
             "rule_condition": {
               "check_fn": "check_dir_005",
-              "trigger": "register_of_directors_interests == false",
+              "trigger": "register_of_directors_interests == False",
               "data_points": [
                 "register_of_directors_interests"
               ]
@@ -24369,7 +24356,7 @@
             "description": "Review prompt only: no universal register-of-contracts duty has been established for this generic rule. Verify the exact statutory provision, company Articles, contract category and evidence.",
             "rule_condition": {
               "check_fn": "check_dir_006",
-              "trigger": "register_of_contracts == false",
+              "trigger": "register_of_contracts == False",
               "data_points": [
                 "register_of_contracts"
               ]
@@ -24414,7 +24401,7 @@
             "description": "Reported voluntary winding-up resolution. Verify the statutory ground, resolution, applicable solvency declaration, liquidator appointment, creditor process and current status under Part V; no automatic BLACK classification.",
             "rule_condition": {
               "check_fn": "check_esc_004",
-              "trigger": "voluntary_winding_up == true",
+              "trigger": "voluntary_winding_up == True",
               "data_points": [
                 "voluntary_winding_up"
               ]
@@ -24459,7 +24446,7 @@
             "description": "Reported company investigation. Verify the Government inspector appointment under section 195 or 197, the scope of any section 199 related-entity investigation, authenticated order, parties and current status. An inquiry is not itself a finding of liability.",
             "rule_condition": {
               "check_fn": "check_esc_005",
-              "trigger": "investigation_order == true",
+              "trigger": "investigation_order == True",
               "data_points": [
                 "investigation_order"
               ]
@@ -24504,7 +24491,7 @@
             "description": "Foreign exchange violation detected under FE Regulation Act 1947.",
             "rule_condition": {
               "check_fn": "check_fx_001",
-              "trigger": "foreign_exchange_violation == true",
+              "trigger": "foreign_exchange_violation == True",
               "data_points": [
                 "foreign_exchange_violation"
               ]
@@ -24548,7 +24535,7 @@
             "description": "Review prompt only: verify the actual establishment category, Rule 354 scope, any operative Government direction, authentic DIFE licence status and the unresolved renewal-term interaction between amended section 326 and rule 355. Manufacturing status alone is not the licensing predicate.",
             "rule_condition": {
               "check_fn": "check_lbr_001",
-              "trigger": "labour_license_scope_verified == true AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == true AND labour_license_status_verified == true AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == false",
+              "trigger": "labour_license_scope_verified == True AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == True AND labour_license_status_verified == True AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == False",
               "data_points": [
                 "labour_establishment_category",
                 "labour_license_scope_verified",
@@ -24604,7 +24591,7 @@
             "description": "Use the expiry date printed on a verified licence. Do not calculate a renewal term from issue date until counsel reconciles amended section 326(1)(b), rule 355(2), contractor status and transitional treatment.",
             "rule_condition": {
               "check_fn": "check_lbr_002",
-              "trigger": "labour_license_scope_verified == true AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == true AND labour_license_status_verified == true AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == true AND factory_license_expiry IS NOT NULL AND factory_license_expiry < today",
+              "trigger": "labour_license_scope_verified == True AND labour_license_scope_evidence_ref IS NOT NULL AND labour_license_scope_verified_at IS NOT NULL AND labour_license_scope_verified_by IS NOT NULL AND factory_license_required_by_direction == True AND labour_license_status_verified == True AND labour_license_status_evidence_ref IS NOT NULL AND labour_license_status_verified_at IS NOT NULL AND labour_license_status_verified_by IS NOT NULL AND factory_license_obtained == True AND factory_license_expiry IS NOT NULL AND factory_license_expiry < today",
               "data_points": [
                 "labour_license_scope_verified",
                 "labour_license_scope_evidence_ref",
@@ -24659,7 +24646,7 @@
             "description": "Review prompt only: verify certified order, parties, company identity, service, operative directions, appeal/revision and stay before finding non-compliance.",
             "rule_condition": {
               "check_fn": "check_lbr_003",
-              "trigger": "labour_court_order_pending == true",
+              "trigger": "labour_court_order_pending == True",
               "data_points": [
                 "labour_court_order_pending"
               ]
@@ -24704,7 +24691,7 @@
             "description": "Name change under Section 11; copy of special resolution to RJSC within 15 days under Section 88(1). Further name-change certificate/registration steps must be separately verified.",
             "rule_condition": {
               "check_fn": "check_str_001",
-              "trigger": "name_change_pending == true AND days_since_name_change > 15",
+              "trigger": "name_change_pending == True AND days_since_name_change > 15",
               "data_points": [
                 "name_change_pending",
                 "name_change_date"
@@ -24749,7 +24736,7 @@
             "description": "MoA object-clause alteration: Sections 12 and 15-16 may require court confirmation/registration; copy of special resolution is filed under Section 88(1) within 15 days. Do not treat the 15-day copy filing as completion of court confirmation.",
             "rule_condition": {
               "check_fn": "check_str_002",
-              "trigger": "object_clause_change_pending == true AND days_since_object_change > 15",
+              "trigger": "object_clause_change_pending == True AND days_since_object_change > 15",
               "data_points": [
                 "object_clause_change_pending",
                 "object_clause_change_date"
@@ -24794,7 +24781,7 @@
             "description": "AoA alteration under Section 20; special-resolution copy filed within 15 days under Section 88(1). Verify any further registration step.",
             "rule_condition": {
               "check_fn": "check_str_003",
-              "trigger": "aoa_alteration_pending == true AND days_since_aoa_alteration > 15",
+              "trigger": "aoa_alteration_pending == True AND days_since_aoa_alteration > 15",
               "data_points": [
                 "aoa_alteration_pending",
                 "aoa_alteration_date"
@@ -24839,7 +24826,7 @@
             "description": "For non-individual taxpayers, verify the s.170(2) deadline: 15th day of ninth month after income-year end, but not earlier than the following 15 September; check holiday roll-forward, extensions and taxpayer classification.",
             "rule_condition": {
               "check_fn": "check_tax_003",
-              "trigger": "tax_return_filed_for_current_fy == false AND past_deadline",
+              "trigger": "tax_return_filed_for_current_fy == False AND past_deadline",
               "data_points": [
                 "tax_return_filed_for_current_fy",
                 "last_tax_return_filed"
@@ -24893,7 +24880,7 @@
             "description": "Review prompt only: s.154(1) threshold is BDT 10 lakh after Finance Act 2026 s.87; s.156 retains a separate BDT 6 lakh new-assessee threshold in the current Act text. Verify s.155 A-B computation, source deductions, four instalments, s.155(5) estimates, exclusions, holiday adjustment and payment evidence.",
             "rule_condition": {
               "check_fn": "check_tax_004",
-              "trigger": "advance_tax_missed == true",
+              "trigger": "advance_tax_missed == True",
               "data_points": [
                 "advance_tax_q1_paid",
                 "advance_tax_q2_paid",
@@ -24947,7 +24934,7 @@
             "description": "Trade License not obtained from City Corporation/Municipality.",
             "rule_condition": {
               "check_fn": "check_tl_001",
-              "trigger": "trade_license_obtained == false",
+              "trigger": "trade_license_obtained == False",
               "data_points": [
                 "trade_license_obtained"
               ]
@@ -25043,7 +25030,7 @@
             "description": "Review prompt only: verify the applicable section 64 version, tax period, taxpayer class, due date, holiday rule, extension and filing evidence.",
             "rule_condition": {
               "check_fn": "check_vat_002",
-              "trigger": "vat_registered == true",
+              "trigger": "vat_registered == True",
               "data_points": [
                 "vat_registered",
                 "last_vat_return_filed"
@@ -25097,7 +25084,7 @@
             "description": "Review prompt only: no universal annual return obligation is assumed; identify the taxpayer-specific operative Act/Rule/SRO before assessing a filing default.",
             "rule_condition": {
               "check_fn": "check_vat_003",
-              "trigger": "vat_registered == true AND vat_annual_return_filed_for_fy == false",
+              "trigger": "vat_registered == True AND vat_annual_return_filed_for_fy == False",
               "data_points": [
                 "vat_registered",
                 "vat_annual_return_filed_for_fy"
@@ -25201,7 +25188,7 @@
             "description": "Review prompt only: verify notice to each director then in Bangladesh, service, address, dispatch/receipt evidence and any applicable Articles before a breach finding.",
             "rule_condition": {
               "check_fn": "check_bod_002",
-              "trigger": "board_meeting_notice_given == false",
+              "trigger": "board_meeting_notice_given == False",
               "data_points": [
                 "board_meeting_notice_given"
               ]
@@ -25234,8 +25221,7 @@
           },
           "different_fields": [
             "rule_name",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -25251,7 +25237,7 @@
             "description": "Review prompt only: verify minute book, subsequent approval/signature, custody and inspection records; missing upload alone does not establish non-creation.",
             "rule_condition": {
               "check_fn": "check_bod_003",
-              "trigger": "board_minutes_prepared == false",
+              "trigger": "board_minutes_prepared == False",
               "data_points": [
                 "board_minutes_prepared"
               ]
@@ -25284,8 +25270,7 @@
           },
           "different_fields": [
             "rule_name",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -25301,7 +25286,7 @@
             "description": "AGM held but balance sheet and P&L not presented. Section 183.",
             "rule_condition": {
               "check_fn": "check_acc_001",
-              "trigger": "financial_statements_presented == false",
+              "trigger": "financial_statements_presented == False",
               "data_points": [
                 "financial_statements_presented"
               ]
@@ -25332,9 +25317,7 @@
             "is_active": true,
             "verification_status": "PENDING"
           },
-          "different_fields": [
-            "rule_condition"
-          ],
+          "different_fields": [],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
           "effective_dated_revision": "NOT_CREATED_SOURCE_AND_EFFECTIVE_DATE_REVIEW_REQUIRED"
@@ -25349,7 +25332,7 @@
             "description": "Balance sheet not filed within 30 days of AGM. Section 190.",
             "rule_condition": {
               "check_fn": "check_acc_002",
-              "trigger": "financial_statements_filed == false AND days_since_agm > 30",
+              "trigger": "financial_statements_filed == False AND days_since_agm > 30",
               "data_points": [
                 "financial_statements_filed"
               ]
@@ -25380,9 +25363,7 @@
             "is_active": true,
             "verification_status": "PENDING"
           },
-          "different_fields": [
-            "rule_condition"
-          ],
+          "different_fields": [],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
           "effective_dated_revision": "NOT_CREATED_SOURCE_AND_EFFECTIVE_DATE_REVIEW_REQUIRED"
@@ -25397,7 +25378,7 @@
             "description": "Proper books of account not maintained. Section 181.",
             "rule_condition": {
               "check_fn": "check_acc_003",
-              "trigger": "books_of_account_kept == false",
+              "trigger": "books_of_account_kept == False",
               "data_points": [
                 "books_of_account_kept"
               ]
@@ -25428,9 +25409,7 @@
             "is_active": true,
             "verification_status": "PENDING"
           },
-          "different_fields": [
-            "rule_condition"
-          ],
+          "different_fields": [],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
           "effective_dated_revision": "NOT_CREATED_SOURCE_AND_EFFECTIVE_DATE_REVIEW_REQUIRED"
@@ -25445,7 +25424,7 @@
             "description": "Written consent to act as director must be filed with the Registrar within 30 days after appointment under section 93(2). Distinguish pre-appointment consent under section 92 and reconcile the current RJSC Form IX instructions before assessment.",
             "rule_condition": {
               "check_fn": "check_dir_007",
-              "trigger": "director_event_type == APPOINTMENT AND consent_filed == false AND appointment_delay_days > 30",
+              "trigger": "director_event_type == APPOINTMENT AND consent_filed == False AND appointment_delay_days > 30",
               "data_points": [
                 "director_changes",
                 "consent_filed",
@@ -25503,7 +25482,7 @@
             "description": "Review prompt only: verify the exact office held, statutory exclusions, company relationship and whether general-meeting consent was obtained. A profile boolean alone cannot establish breach.",
             "rule_condition": {
               "check_fn": "check_dir_008",
-              "trigger": "director_office_of_profit == true",
+              "trigger": "director_office_of_profit == True",
               "data_points": [
                 "director_office_of_profit"
               ]
@@ -25536,8 +25515,7 @@
           },
           "different_fields": [
             "rule_name",
-            "description",
-            "rule_condition"
+            "description"
           ],
           "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
           "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -25602,7 +25580,7 @@
             "description": "Section 222 applies only where membership falls below two for a private company or seven for another company and the company carries on business with the reduced membership for more than six months. Personal liability is limited to a member who remained during that period and knew of the shortfall; a headcount alone cannot establish breach or identify a liable member.",
             "rule_condition": {
               "check_fn": "check_mem_001",
-              "trigger": "verified member_count < minimum_members AND verified below_minimum_members_since AND verified company_operating == true AND more_than_six_calendar_months AND member_specific_knowledge_review_required",
+              "trigger": "verified member_count < minimum_members AND verified below_minimum_members_since AND verified company_operating == True AND more_than_six_calendar_months AND member_specific_knowledge_review_required",
               "data_points": [
                 "member_count",
                 "below_minimum_members_since",
@@ -25654,7 +25632,7 @@
             "description": "Section 150 commencement declaration is not universal: subsection (6) excludes private companies and companies that do not issue a prospectus inviting public subscription. Review only where public-company status, prospectus issue and every section 150 condition are independently verified.",
             "rule_condition": {
               "check_fn": "check_inc_007",
-              "trigger": "company_type == PUBLIC_LIMITED AND section150_prospectus_issued == true AND section150_applicability_verified == true AND section150_applicability_evidence_ref IS NOT NULL AND business_commencement_declaration_verified == true AND business_commencement_declaration_evidence_ref IS NOT NULL AND business_commencement_declaration_filed == false",
+              "trigger": "company_type == PUBLIC_LIMITED AND section150_prospectus_issued == True AND section150_applicability_verified == True AND section150_applicability_evidence_ref IS NOT NULL AND business_commencement_declaration_verified == True AND business_commencement_declaration_evidence_ref IS NOT NULL AND business_commencement_declaration_filed == False",
               "data_points": [
                 "company_type",
                 "section150_prospectus_issued",
@@ -33592,7 +33570,7 @@
         ],
         "legal_source_review_notes": {
           "REG002": "Current seed separates internal statutory records under sections 34, 89 and 174 from Form XII/director particulars under section 115. Section 89(1) requires written minutes of both general and directors' meetings; section 89(4) specifically requires the general-meeting minutes books at the registered office. The fact inventory now includes Board minutes. Preserve the separate legal propositions: do not extend section 89(4)'s location rule to Board minutes without a separate authority. Authenticate the Bangla text and map each record/evidence type before release.",
-          "REG003": "Section 34(2) is a penalty provision, not a location provision. Candidate location provisions are section 41(1) for the register of members/index, section 89(4) for general-meeting minutes, and section 174(1) for the register of charges. Section 89(1) covers Board-meeting minutes but section 89(4)'s registered-office location language is limited to general-meeting minutes; no Board-minute location rule is asserted here. The generic register_location fact does not identify which register is involved; retain review-only status and infer no breach.",
+          "REG003": "Section 34(2) is a penalty provision, not a location provision. Candidate location provisions are section 41(1) for the register of members/index, Section 89(4) for general-meeting minutes, and section 174(1) for the register of charges. Section 89(1) covers Board-meeting minutes but section 89(4)'s registered-office location language is limited to general-meeting minutes; no Board-minute location rule is asserted here. The generic register_location fact does not identify which register is involved; retain review-only status and infer no breach.",
           "LBR001": "The official consolidated Labour Act text for section 326(1)(b), as amended by Act No. 43 of 2026, states a five-year renewal period for covered licences and a one-year period for contractor-organisation licences. The DPP Gazette records Act No. 43 on 10 April 2026; the Act is stated to come into force at once. The original 2015 Labour Rules Gazette (SRO 291-Law/2015, 15 September 2015) contains rules 354-355; SRO 53-Law/2026 (16 February 2026) inserts rules 226A onward and does not amend rules 354-355. Rule 355(2)'s 30 June financial-year validity language therefore remains a text-level conflict requiring counsel/authority confirmation. The original 2015 DPP Gazette PDF fetch timed out; its authentic Bangla text was not independently retrieved in this pass.",
           "MEM001": "Official Companies Act section 222 supports the current seed's two/seven member thresholds, more-than-six-month operating period, and member-specific knowledge/continued-membership condition. The Companies Act's source record lists publication on 12 September 1994 and commencement on 1 December 1994 as a candidate base date; section 223 provides that the authentic Bangla text prevails. The prior workpack claim is stale; current seed wording is a stronger candidate but remains subject to complete amendment-chain and counsel review."
         },

@@ -85,6 +85,287 @@ def _has_rescue_output(output) -> bool:
     return bool(rescue_plan or rescue_sequence)
 
 
+def _has_unresolved_catalogue_binding(flag) -> bool:
+    """True when a finding has no valid active catalogue binding."""
+    detail = getattr(flag, "detail", None)
+    return (
+        isinstance(detail, dict)
+        and detail.get("rule_catalogue_binding") in {
+            "CATALOGUE_ENTRY_MISSING",
+            "RULE_INACTIVE",
+            "STATUTORY_BASIS_MISMATCH",
+        }
+    )
+
+
+def _persistable_output_flags(flags):
+    """Never overwrite a legacy catalogue finding with a mismatched engine identity."""
+    return [flag for flag in flags if not _has_unresolved_catalogue_binding(flag)]
+
+
+def _current_persistable_rule_ids(flags, identity_mismatch_rule_ids):
+    """IDs retained as current only when their finding has a valid catalogue identity."""
+    conflicted_ids = set(identity_mismatch_rule_ids or ())
+    return {
+        flag.rule_id
+        for flag in _persistable_output_flags(flags)
+        if flag.rule_id not in conflicted_ids
+    }
+
+
+def _active_catalogue_rule_ids(catalogue_rows, identity_mismatch_rule_ids):
+    """Return only active RJSC-scoped IDs with no unresolved identity conflict."""
+    from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
+
+    conflicted = set(identity_mismatch_rule_ids or ())
+    return [
+        row.rule_id
+        for row in catalogue_rows
+        if (
+            bool(row.is_active)
+            and is_rjsc_rule_in_scope(row.rule_id)
+            and row.rule_id not in conflicted
+        )
+    ]
+
+
+def _active_catalogue_rows_for_rjsc_ledger(catalogue_rows):
+    """Return active RJSC rules only; external catalogue rows are hash-inert."""
+    from canonical_architecture.rjsc_scope import RJSC_RULE_SCOPE, is_rjsc_rule_in_scope
+
+    by_id: dict[str, LegalRule] = {}
+    for row in catalogue_rows:
+        if row.is_active is not True:
+            continue
+        rule_id = str(row.rule_id)
+        if rule_id not in RJSC_RULE_SCOPE:
+            raise ValueError(
+                f"Active catalogue rule is absent from the RJSC scope registry: {rule_id}"
+            )
+        if not is_rjsc_rule_in_scope(rule_id):
+            continue
+        if rule_id in by_id:
+            raise ValueError(
+                f"Duplicate active catalogue rule_id cannot be persisted: {rule_id}"
+            )
+        by_id[rule_id] = row
+    return [by_id[rule_id] for rule_id in sorted(by_id)]
+
+
+
+def _normalise_statutory_basis(value) -> str | None:
+    """Use the same conservative normalization as the engine catalogue binder."""
+    translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+    normalized = " ".join(str(value or "").translate(translation).split()).casefold()
+    return normalized or None
+
+
+def _rjsc_catalogue_binding_snapshot(catalogue_rows, catalogue_identity_conflicts):
+    """Return hash material that cannot vary with classified out-of-scope rows."""
+    from canonical_architecture.rjsc_scope import (
+        RJSC_OUT_OF_SCOPE_RULE_IDS,
+        RJSC_SCOPE_VERSION,
+        RJSC_RULE_SCOPE,
+        is_rjsc_rule_in_scope,
+    )
+
+    catalogue_identity_conflicts = catalogue_identity_conflicts or {}
+    rules = [
+        {
+            "rule_id": row.rule_id,
+            "rule_version": row.rule_version,
+            "is_active": bool(row.is_active),
+            "statutory_basis": row.statutory_basis,
+            "verification_status": row.verification_status,
+        }
+        for row in sorted(catalogue_rows, key=lambda item: item.rule_id)
+        if is_rjsc_rule_in_scope(row.rule_id)
+    ]
+    relevant_conflicts = [
+        catalogue_identity_conflicts[rule_id]
+        for rule_id in sorted(catalogue_identity_conflicts or {})
+        if (
+            is_rjsc_rule_in_scope(rule_id)
+            or (
+                rule_id not in RJSC_RULE_SCOPE
+                and catalogue_identity_conflicts[rule_id].get("catalogue_is_active") is True
+            )
+        )
+    ]
+    return {
+        "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
+        "assessment_scope": "RJSC_ONLY",
+        "scope_version": RJSC_SCOPE_VERSION,
+        "rules": rules,
+        "out_of_scope_rule_ids": sorted(RJSC_OUT_OF_SCOPE_RULE_IDS),
+        "identity_conflicts": relevant_conflicts,
+        "disclosure": (
+            "This snapshot binds only RJSC-in-scope finding metadata and activation. "
+            "Out-of-scope rules are represented by the immutable scope registry and "
+            "cannot affect the RJSC evaluation hash. This does not prove statutory "
+            "correctness or independent counsel approval."
+        ),
+    }
+
+
+def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
+    """Compare the complete DB snapshot with every canonical evaluator identity."""
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+    from canonical_architecture.rjsc_scope import RJSC_RULE_SCOPE, is_rjsc_rule_in_scope
+
+    rows_by_id: dict[str, LegalRule] = {}
+    for row in catalogue_rows:
+        existing = rows_by_id.get(row.rule_id)
+        if existing is not None and existing.is_active is True and row.is_active is True:
+            if is_rjsc_rule_in_scope(row.rule_id) or row.rule_id not in RJSC_RULE_SCOPE:
+                raise ValueError(
+                    f"Duplicate active catalogue rule_id cannot be bound: {row.rule_id}"
+                )
+            # Duplicate rows for a classified OUT_OF_SCOPE ID are inert.
+            continue
+        if existing is None or row.is_active is True:
+            rows_by_id[row.rule_id] = row
+    conflicts: dict[str, dict] = {}
+    for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
+        row = rows_by_id.get(rule_id)
+        engine_basis = getattr(canonical_rule, "law", None)
+        if row is None:
+            reason = "CATALOGUE_ENTRY_MISSING"
+            catalogue_basis = None
+        elif row.is_active is not True:
+            reason = "RULE_INACTIVE"
+            catalogue_basis = row.statutory_basis
+        elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
+            reason = "STATUTORY_BASIS_MISMATCH"
+            catalogue_basis = row.statutory_basis
+        else:
+            continue
+        conflicts[rule_id] = {
+            "rule_id": rule_id,
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": reason,
+            "engine_statutory_basis": engine_basis,
+            "catalogue_statutory_basis": catalogue_basis,
+            "catalogue_rule_version": getattr(row, "rule_version", None) if row else None,
+            "catalogue_is_active": bool(row.is_active) if row else False,
+        }
+
+    for rule_id, row in rows_by_id.items():
+        if rule_id not in STATUTORY_RULE_REGISTRY:
+            conflicts[rule_id] = {
+                "rule_id": rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": (
+                    "RULE_INACTIVE" if row.is_active is not True
+                    else "ENGINE_RULE_DEFINITION_MISSING"
+                ),
+                "engine_statutory_basis": None,
+                "catalogue_statutory_basis": row.statutory_basis,
+                "catalogue_rule_version": row.rule_version,
+                "catalogue_is_active": bool(row.is_active),
+            }
+    return conflicts
+
+
+def _score_blocking_catalogue_conflicts(catalogue_identity_conflicts):
+    """Block on in-scope identity conflicts and unknown active catalogue IDs.
+
+    Explicitly OUT_OF_SCOPE rules are retained for audit but can never alter an
+    RJSC score-release decision. Unknown active IDs fail closed.
+    """
+    from canonical_architecture.rjsc_scope import RJSC_RULE_SCOPE, is_rjsc_rule_in_scope
+
+    blocking = set()
+    for rule_id, conflict in (catalogue_identity_conflicts or {}).items():
+        if rule_id in RJSC_RULE_SCOPE:
+            if is_rjsc_rule_in_scope(rule_id):
+                blocking.add(rule_id)
+            # A classified OUT_OF_SCOPE rule is deliberately inert here.
+            continue
+        if conflict.get("catalogue_is_active") is True:
+            blocking.add(rule_id)
+    return blocking
+
+
+def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts):
+    """Make every finding for a conflicted ID non-scoring and non-actionable."""
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.rule_engine.engine import RuleState, Severity
+
+    for flag in flags:
+        if flag.rule_id not in STATUTORY_RULE_REGISTRY:
+            catalogue_identity_conflicts.setdefault(flag.rule_id, {
+                "rule_id": flag.rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
+                "engine_statutory_basis": getattr(flag, "statutory_basis", None),
+                "catalogue_statutory_basis": None,
+                "catalogue_rule_version": None,
+                "catalogue_is_active": False,
+            })
+        detail = dict(getattr(flag, "detail", None) or {})
+        binding_reason = detail.get("rule_catalogue_binding")
+        if (
+            not catalogue_identity_conflicts.get(flag.rule_id)
+            and binding_reason in {
+                "CATALOGUE_ENTRY_MISSING",
+                "RULE_INACTIVE",
+                "STATUTORY_BASIS_MISMATCH",
+            }
+        ):
+            catalogue_identity_conflicts[flag.rule_id] = {
+                "rule_id": flag.rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": binding_reason,
+                "engine_statutory_basis": detail.get(
+                    "engine_flag_statutory_basis",
+                    getattr(flag, "statutory_basis", None),
+                ),
+                "catalogue_statutory_basis": detail.get(
+                    "catalogue_rule_statutory_basis"
+                ),
+                "catalogue_rule_version": getattr(flag, "rule_version", None),
+                "catalogue_is_active": binding_reason != "RULE_INACTIVE",
+            }
+        conflict = catalogue_identity_conflicts.get(flag.rule_id)
+        if not conflict:
+            continue
+        detail["rule_catalogue_binding"] = conflict["binding_reason"]
+        detail["engine_flag_statutory_basis"] = getattr(flag, "statutory_basis", None)
+        detail["catalogue_rule_statutory_basis"] = conflict.get("catalogue_statutory_basis")
+        flag.detail = detail
+        flag.severity = Severity.NOT_EVALUATED
+        flag.score_impact = 0
+        flag.state = RuleState.UNKNOWN
+        flag.eval_state = "UNKNOWN"
+        flag.is_black_override = False
+        flag.conditional_applies = False
+        flag.applicability_state = "UNKNOWN"
+        flag.applicability_reason = (
+            "Catalogue/evaluator identity conflict; this finding is quarantined "
+            "and cannot support applicability, scoring or rescue."
+        )
+
+
+def _reconcile_engine_output_identity_conflicts(output, catalogue_identity_conflicts):
+    """Synchronize flags, rescue candidates and dispositions after identity quarantine."""
+    _quarantine_catalogue_conflict_findings(
+        output.flags, catalogue_identity_conflicts
+    )
+    conflicted_ids = set(catalogue_identity_conflicts)
+    output.rescue_sequence = [
+        step for step in (getattr(output, "rescue_sequence", None) or [])
+        if not conflicted_ids.intersection(step.get("related_rules", []))
+    ]
+    from app.rule_engine.engine import NLCRuleEngine
+    output.rescue_dispositions = NLCRuleEngine._build_rescue_dispositions(
+        output.flags,
+        output.score_breakdown,
+        output.rescue_sequence,
+    )
+
+
 def _applied_score_impacts(flags) -> list[dict]:
     """Reconcile every finding to the same versioned score allocation as the engine.
 
@@ -94,15 +375,30 @@ def _applied_score_impacts(flags) -> list[dict]:
     """
     from app.rule_engine.engine import (
         AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
-        PRODUCT_SCORING_RULE_IDS,
         SCORE_DEDUCTION_RULE_IDS,
         RuleState,
         legal_score_is_released,
+    )
+    from canonical_architecture.rjsc_scope import (
+        RJSC_RULE_SCOPE,
+        is_rjsc_rule_in_scope,
     )
 
     results: list[dict] = [{} for _ in flags]
     eligible: list[tuple[int, str, int, str | None]] = []
     for index, flag in enumerate(flags):
+        rule_id = str(getattr(flag, "rule_id", ""))
+        if not is_rjsc_rule_in_scope(rule_id):
+            status = (
+                "OUT_OF_SCOPE_RJSC_ASSESSMENT"
+                if rule_id in RJSC_RULE_SCOPE
+                else "NO_SCORING_CATEGORY"
+            )
+            results[index] = {"applied": 0, "status": status}
+            continue
+        if not legal_score_is_released():
+            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
+            continue
         state = getattr(flag, "state", None)
         active = not getattr(flag, "resolved", False) and getattr(flag, "conditional_applies", True)
         if not active:
@@ -115,18 +411,12 @@ def _applied_score_impacts(flags) -> list[dict]:
         if not confirmed_violation:
             results[index] = {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"}
             continue
-        if not PRODUCT_SCORING_RULE_IDS:
-            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-            continue
         # Match NLCRuleEngine._eligible_scoring_flags exactly. The engine's
         # deterministic deduction catalogue is SCORE_DEDUCTION_RULE_IDS;
         # PRODUCT_SCORING_RULE_IDS controls public catalogue visibility, not
         # whether an already-scored finding is allocated in the audit ledger.
         if flag.rule_id not in SCORE_DEDUCTION_RULE_IDS:
             results[index] = {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
-            continue
-        if not legal_score_is_released():
-            results[index] = {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
             continue
         severity_value = getattr(
             getattr(flag, "severity", None),
@@ -300,15 +590,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
-        catalogue_rows = (
+        catalogue_rows = list((
             await self.db.execute(
-                select(
-                    LegalRule.rule_id,
-                    LegalRule.rule_version,
-                    LegalRule.is_active,
-                ).order_by(LegalRule.rule_id)
+                select(LegalRule).order_by(LegalRule.rule_id)
             )
-        ).all()
+        ).scalars().all())
+        catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
         profile.catalogue_rule_versions = {
             row.rule_id: row.rule_version for row in catalogue_rows
@@ -316,36 +603,57 @@ class ComplianceService(BaseService[ComplianceFlag]):
         profile.catalogue_rule_active = {
             row.rule_id: bool(row.is_active) for row in catalogue_rows
         }
-        catalogue_binding = {
-            "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
-            "rules": [
-                {
-                    "rule_id": row.rule_id,
-                    "rule_version": row.rule_version,
-                    "is_active": bool(row.is_active),
-                }
-                for row in catalogue_rows
-            ],
-            "disclosure": (
-                "This snapshot binds finding metadata and activation to the "
-                "database catalogue. It does not prove statutory correctness "
-                "or independent counsel approval."
-            ),
+        profile.catalogue_rule_bases = {
+            row.rule_id: row.statutory_basis for row in catalogue_rows
         }
+        # Rescue-plan and ordinary evaluation paths consume the same immutable
+        # binding object; no alternate profile may silently run unbound.
+        profile.catalogue_identity_conflicts = catalogue_identity_conflicts
+        catalogue_binding = _rjsc_catalogue_binding_snapshot(
+            catalogue_rows, catalogue_identity_conflicts
+        )
         fact_provenance_snapshot.append(catalogue_binding)
 
-        # Applicability is a separate, run-scoped assessment. Only verified,
-        # document-backed CompanyFact records may satisfy scope predicates.
-        # Missing policies/facts remain UNKNOWN; findings are never used to
-        # infer applicability and this result does not gate scoring or activation.
-        from app.compliance.rule_applicability import build_rule_applicability_results
-
+        # Prepare verified fact inputs before evaluation. Applicability is built
+        # after engine evaluation so an identity collision can be excluded from
+        # the canonical active-rule set before any applicability is attributed.
         verified_fact_records = {}
         for fact in current_facts:
             fact_record = fact.to_fact_record()
             if fact_record.is_verified_document_fact():
                 verified_fact_records[fact.fact_key] = fact_record
-        active_rule_ids = [row.rule_id for row in catalogue_rows if bool(row.is_active)]
+
+        # ── Step 2: Run rule engine ────────────────────────────────
+        # Explicit injection supports deterministic tests and controlled
+        # evaluation runs. Production callers retain the canonical engine.
+        engine = rule_engine if rule_engine is not None else get_rule_engine()
+        output = engine.evaluate(profile)
+        from canonical_architecture.rjsc_scope import filter_rjsc_items
+        output.flags = filter_rjsc_items(output.flags)
+
+        # Catalogue identity conflicts remain authoritative even when no finding is emitted.
+        _reconcile_engine_output_identity_conflicts(
+            output, catalogue_identity_conflicts
+        )
+        profile.catalogue_identity_conflicts = catalogue_identity_conflicts
+        scoped_catalogue_binding = _rjsc_catalogue_binding_snapshot(
+            catalogue_rows, catalogue_identity_conflicts
+        )
+        for provenance_record in fact_provenance_snapshot:
+            if provenance_record.get("record_type") == "LEGAL_RULE_CATALOGUE_SNAPSHOT":
+                provenance_record["identity_conflicts"] = (
+                    scoped_catalogue_binding["identity_conflicts"]
+                )
+
+        from app.compliance.rule_applicability import build_rule_applicability_results
+
+        identity_mismatch_rule_ids = set(catalogue_identity_conflicts) | {
+            flag.rule_id for flag in output.flags
+            if _has_unresolved_catalogue_binding(flag)
+        }
+        active_rule_ids = _active_catalogue_rule_ids(
+            catalogue_rows, identity_mismatch_rule_ids
+        )
         applicability_results = build_rule_applicability_results(
             active_rule_ids, verified_fact_records
         )
@@ -362,18 +670,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 and str(fact.id) not in already_snapshotted_fact_ids
             ):
                 fact_provenance_snapshot.append(fact.provenance_payload())
-
-        # ── Step 2: Run rule engine ────────────────────────────────
-        # Explicit injection supports deterministic tests and controlled
-        # evaluation runs. Production callers retain the canonical engine.
-        engine = rule_engine if rule_engine is not None else get_rule_engine()
-        output = engine.evaluate(profile)
         risk_band_value = getattr(
             output.score_breakdown.risk_band,
             "value",
             output.score_breakdown.risk_band,
         )
-        score_is_released = legal_score_is_released() and risk_band_value != "NOT_EVALUATED"
+        score_blocking_identity_conflicts = _score_blocking_catalogue_conflicts(
+            catalogue_identity_conflicts
+        )
+        score_is_released = (
+            legal_score_is_released()
+            and risk_band_value != "NOT_EVALUATED"
+            and not score_blocking_identity_conflicts
+        )
         public_risk_band = risk_band_value if score_is_released else "NOT_EVALUATED"
         api_score = output.score_breakdown.final_score if score_is_released else None
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
@@ -383,6 +692,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
             applicability_results=applicability_results,
+            catalogue_snapshot=catalogue_rows,
+            catalogue_identity_conflicts=catalogue_identity_conflicts,
         )
 
         logger.info(
@@ -457,7 +768,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ],
                 }
                 for index, f in enumerate(output.flags)
-                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(f)
             ],
             "review_findings": [
                 {
@@ -468,6 +779,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
                     ),
                     "review_status": applied_impacts[index]["status"],
+                    "identity_binding_status": (
+                        (getattr(flag, "detail", None) or {}).get("rule_catalogue_binding")
+                        if _has_unresolved_catalogue_binding(flag)
+                        else "MATCHED_CATALOGUE_IDENTITY"
+                    ),
                     "message": (
                         "No statutory conclusion is issued. Evidence review is required. Product scoring "
                         "release is not independent legal verification, legal advice or certification."
@@ -475,7 +791,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "score_impact_applied": 0,
                 }
                 for index, flag in enumerate(output.flags)
-                if not (
+                if _has_unresolved_catalogue_binding(flag) or not (
                     score_is_released
                     and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 )
@@ -496,7 +812,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "scoring_status": applied_impacts[index]["status"],
                 }
                 for index, flag in enumerate(output.flags)
-                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(flag)
             ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
@@ -543,11 +859,17 @@ class ComplianceService(BaseService[ComplianceFlag]):
         trigger_source: str,
         fact_provenance_snapshot: list[dict] | None = None,
         applicability_results: dict[str, dict] | None = None,
+        catalogue_snapshot: list[LegalRule] | None = None,
+        catalogue_identity_conflicts: dict[str, dict] | None = None,
     ) -> ComplianceEvaluationRun:
         """
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
         """
+        from canonical_architecture.rjsc_scope import (
+            RJSC_SCOPE_VERSION,
+            filter_rjsc_items,
+        )
         from app.rule_engine.engine import (
             CATEGORY_CAPS,
             _COVERAGE_FIELDS,
@@ -556,6 +878,27 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
 
         fact_provenance_snapshot = fact_provenance_snapshot or []
+        # Defence in depth: persistence accepts only findings explicitly admitted
+        # by the same versioned scope registry used by the evaluator.
+        output.flags = filter_rjsc_items(output.flags)
+        from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
+        scoped_rescue_sequence = []
+        for step in (output.rescue_sequence or []):
+            if not isinstance(step, dict):
+                continue
+            related_rules = [
+                rule_id for rule_id in (step.get("related_rules") or [])
+                if is_rjsc_rule_in_scope(str(rule_id))
+            ]
+            if related_rules:
+                scoped_step = dict(step)
+                scoped_step["related_rules"] = related_rules
+                scoped_rescue_sequence.append(scoped_step)
+        output.rescue_sequence = scoped_rescue_sequence
+        from app.rule_engine.engine import NLCRuleEngine
+        output.rescue_dispositions = NLCRuleEngine._build_rescue_dispositions(
+            output.flags, output.score_breakdown, output.rescue_sequence
+        )
         engine_version = str(getattr(output, "engine_version", "") or "").strip()
         if not engine_version or engine_version.lower() == "unknown":
             raise ValueError("Evaluation cannot be persisted without a concrete engine version.")
@@ -579,11 +922,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Defense in depth: persistence independently enforces the
         # product-controlled release switch; a provisional engine band cannot
         # publish a numeric score while product scoring is disabled.
-        if not legal_score_is_released():
+        score_blocking_identity_conflicts = _score_blocking_catalogue_conflicts(
+            catalogue_identity_conflicts or {}
+        )
+        if not legal_score_is_released() or score_blocking_identity_conflicts:
             risk_band = RiskBand.NOT_EVALUATED
         score_for_current = (
             score
-            if legal_score_is_released() and risk_band != RiskBand.NOT_EVALUATED
+            if (
+                legal_score_is_released()
+                and not score_blocking_identity_conflicts
+                and risk_band != RiskBand.NOT_EVALUATED
+            )
             else None
         )
 
@@ -599,7 +949,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
 
         # ── Resolve previously active flags not in current output ──
-        current_rule_ids = {f.rule_id for f in output.flags}
+        identity_mismatch_rule_ids = set(catalogue_identity_conflicts or {})
+        persistable_flags = [
+            flag for flag in _persistable_output_flags(output.flags)
+            if flag.rule_id not in identity_mismatch_rule_ids
+        ]
+        current_rule_ids = _current_persistable_rule_ids(
+            output.flags, identity_mismatch_rule_ids
+        )
         await self.db.execute(
             update(ComplianceFlag)
             .where(
@@ -615,7 +972,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # ── Insert new flags (upsert by company_id + rule_id) ──────
         collected_new_flags: list = []
-        for flag in output.flags:
+        for flag in persistable_flags:
 
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
@@ -725,7 +1082,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 return_score=sb.return_score if score_for_current is not None else None,
                 director_score=sb.director_score if score_for_current is not None else None,
                 shareholding_score=sb.shareholding_score if score_for_current is not None else None,
-                active_flags_count=len(output.flags),
+                active_flags_count=len(persistable_flags),
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,
@@ -768,6 +1125,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 getattr(flag, "flag_code", None), {}
             )
             flags_snapshot.append({
+                "scope_version": RJSC_SCOPE_VERSION,
                 "rule_id": flag.rule_id,
                 "severity": severity_value,
                 "rescue_disposition": rescue_disposition.get("disposition"),
@@ -790,6 +1148,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         sb = output.score_breakdown
         score_breakdown_snapshot = None if score_for_current is None else {
             "engine_version": engine_version,
+            "rjsc_scope_version": RJSC_SCOPE_VERSION,
             "scoring_spec_version": SCORING_SPEC_VERSION,
             "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
             "score_hash": sb.score_hash,
@@ -877,15 +1236,24 @@ class ComplianceService(BaseService[ComplianceFlag]):
             hash_rule_outcomes_snapshot,
         )
 
-        catalogue_result = await self.db.execute(
-            select(LegalRule).where(LegalRule.is_active.is_(True)).order_by(LegalRule.rule_id)
+        # Persist against the exact catalogue rows used to bind the engine.
+        # Never reload here: a concurrent catalogue edit must not rewrite this run.
+        if catalogue_snapshot is None:
+            catalogue_result = await self.db.execute(
+                select(LegalRule).order_by(LegalRule.rule_id)
+            )
+            catalogue_rows_for_ledger = list(catalogue_result.scalars().all())
+        else:
+            catalogue_rows_for_ledger = catalogue_snapshot
+        active_legal_rules = _active_catalogue_rows_for_rjsc_ledger(
+            catalogue_rows_for_ledger
         )
-        active_legal_rules = list(catalogue_result.scalars().all())
         rule_outcomes_snapshot = jsonable_encoder(
             build_rule_outcomes_snapshot(
                 active_legal_rules,
                 output.flags,
                 applicability_results=applicability_results,
+                catalogue_identity_conflicts=catalogue_identity_conflicts or {},
             )
         )
         rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
@@ -906,7 +1274,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         black_flags = (
             output.score_breakdown.black_flag_count
-            if legal_score_is_released() else 0
+            if score_for_current is not None else 0
         )
         evaluation_run = ComplianceEvaluationRun(
             id=uuid.uuid4(),
@@ -926,7 +1294,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
             score_breakdown_snapshot=score_breakdown_snapshot,
             rule_outcomes_snapshot=rule_outcomes_snapshot,
             rule_outcomes_hash=rule_outcomes_hash,
-            rule_catalogue_count=len(active_legal_rules),
+            rule_catalogue_count=sum(
+                1 for outcome in rule_outcomes_snapshot
+                if outcome.get("assessment_source") not in {
+                    "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
+                    "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED",
+                }
+            ),
         )
         self.db.add(evaluation_run)
 
@@ -1090,18 +1464,22 @@ class ComplianceService(BaseService[ComplianceFlag]):
             VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
+        from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
         score_released = legal_score_is_released()
         product_severities = [
             str(getattr(severity, "value", severity)).upper()
             for rule_id, severity in rows
-            if score_released and rule_id in PRODUCT_SCORING_RULE_IDS
+            if score_released and is_rjsc_rule_in_scope(rule_id)
+            and rule_id in PRODUCT_SCORING_RULE_IDS
         ]
         pending_review_count = sum(
-            1 for rule_id, _severity in rows if rule_id not in VERIFIED_RULE_IDS
+            1 for rule_id, _severity in rows
+            if is_rjsc_rule_in_scope(rule_id) and rule_id not in VERIFIED_RULE_IDS
         )
         not_evaluated_count = sum(
             1 for rule_id, _ in rows
-            if not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS
+            if is_rjsc_rule_in_scope(rule_id)
+            and (not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS)
         )
         black_count = product_severities.count("BLACK")
         red_count = product_severities.count("RED")
@@ -1231,6 +1609,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             SCORING_SPEC_VERSION,
             legal_score_is_released,
         )
+        from canonical_architecture.rjsc_scope import RJSC_IN_SCOPE_RULE_IDS
 
         scope = ""
         params = {}
@@ -1269,6 +1648,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
+                     AND cf.rule_id = ANY(CAST(:rjsc_rule_ids AS text[]))
                     WHERE c.is_active IS TRUE
                     """
                     + scope
@@ -1277,7 +1657,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ORDER BY cf.evaluation_state
                     """
                 ),
-                params,
+                {**params, "rjsc_rule_ids": sorted(RJSC_IN_SCOPE_RULE_IDS)},
             )
             rows = review_result.mappings().all()
             state_counts = {
@@ -1293,11 +1673,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     JOIN compliance_flags AS cf
                       ON cf.company_id = c.id
                      AND cf.flag_status = 'ACTIVE'
+                     AND cf.rule_id = ANY(CAST(:rjsc_rule_ids AS text[]))
                     WHERE c.is_active IS TRUE
                     """
                     + scope
                 ),
-                params,
+                {**params, "rjsc_rule_ids": sorted(RJSC_IN_SCOPE_RULE_IDS)},
             )
             companies_with_review_items = int(company_result.scalar_one() or 0)
 

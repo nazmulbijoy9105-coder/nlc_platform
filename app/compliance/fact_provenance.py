@@ -123,6 +123,7 @@ INTERNAL_PROFILE_FACT_KEYS = frozenset({
     "catalogue_binding_required",
     "catalogue_rule_versions",
     "catalogue_rule_active",
+    "catalogue_rule_bases",
 })
 
 
