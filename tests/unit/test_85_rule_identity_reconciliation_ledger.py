@@ -198,3 +198,26 @@ def test_primary_source_candidates_are_linked_without_promoting_them_to_effectiv
     for row in rebase["rules"]:
         assert row["operating_interval"]["from"] is None
         assert row["operating_interval"]["to_exclusive"] is None
+
+
+def test_four_workpack_discrepancies_are_individually_classified_without_legal_release():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    rebase = _latest(ledger)["source_workpack_rebase"]
+    claims = rebase["current_main_statutory_claims"]
+    dispositions = rebase["individual_discrepancy_dispositions"]
+
+    assert set(claims) == {"REG-002", "REG-003", "LBR-001", "MEM-001"}
+    assert set(dispositions) == set(claims)
+    assert all(claim["provision_status"] == "RECONCILE" for claim in claims.values())
+    assert all(claim["severity"] == "NOT_EVALUATED" for claim in claims.values())
+    assert all(claim["score_impact"] == 0 for claim in claims.values())
+
+    assert "Section 34(2) is a penalty provision" in claims["REG-003"]["requirement"]
+    assert "Do not infer a breach" in claims["REG-003"]["requirement"]
+    assert "unresolved renewal-term interaction" in claims["LBR-001"]["requirement"]
+    assert "more than six months" in claims["MEM-001"]["requirement"]
+    assert "knew of the shortfall" in claims["MEM-001"]["requirement"]
+    assert all(
+        item["production_definition_change"] == "NOT_AUTHORIZED"
+        for item in dispositions.values()
+    )
