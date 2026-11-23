@@ -800,13 +800,16 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Defense in depth: persistence independently enforces the
         # product-controlled release switch; a provisional engine band cannot
         # publish a numeric score while product scoring is disabled.
-        if not legal_score_is_released() or catalogue_identity_conflicts:
+        score_blocking_identity_conflicts = _score_blocking_catalogue_conflicts(
+            catalogue_identity_conflicts or {}
+        )
+        if not legal_score_is_released() or score_blocking_identity_conflicts:
             risk_band = RiskBand.NOT_EVALUATED
         score_for_current = (
             score
             if (
                 legal_score_is_released()
-                and not catalogue_identity_conflicts
+                and not score_blocking_identity_conflicts
                 and risk_band != RiskBand.NOT_EVALUATED
             )
             else None
