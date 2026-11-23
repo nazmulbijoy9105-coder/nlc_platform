@@ -469,8 +469,14 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "rule_id": row.rule_id,
                     "rule_version": row.rule_version,
                     "is_active": bool(row.is_active),
+                    "statutory_basis": row.statutory_basis,
+                    "verification_status": row.verification_status,
                 }
                 for row in catalogue_rows
+            ],
+            "identity_conflicts": [
+                catalogue_identity_conflicts[rule_id]
+                for rule_id in sorted(catalogue_identity_conflicts)
             ],
             "disclosure": (
                 "This snapshot binds finding metadata and activation to the "
