@@ -166,6 +166,23 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     return conflicts
 
 
+def _score_blocking_catalogue_conflicts(catalogue_identity_conflicts):
+    """Only unresolved canonical identities or active orphan rows block release.
+
+    A deliberately inactive legacy catalogue row is preserved in the audit
+    ledger, but it is not an evaluator identity and must not globally block
+    unrelated RJSC scoring.
+    """
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+    canonical_ids = set(STATUTORY_RULE_REGISTRY)
+    return {
+        rule_id
+        for rule_id, conflict in catalogue_identity_conflicts.items()
+        if rule_id in canonical_ids or conflict.get("catalogue_is_active") is True
+    }
+
+
 def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts):
     """Make every finding for a conflicted ID non-scoring and non-actionable."""
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
@@ -561,10 +578,23 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "value",
             output.score_breakdown.risk_band,
         )
+        score_blocking_identity_conflicts = _score_blocking_catalogue_conflicts(
+            catalogue_identity_conflicts
+        ) | {
+            flag.rule_id for flag in output.flags
+            if _has_unresolved_catalogue_binding(flag)
+            and (
+                flag.rule_id in __import__(
+                    "canonical_architecture.statutory_rules",
+                    fromlist=["STATUTORY_RULE_REGISTRY"],
+                ).STATUTORY_RULE_REGISTRY
+                or flag.rule_id not in catalogue_identity_conflicts
+            )
+        }
         score_is_released = (
             legal_score_is_released()
             and risk_band_value != "NOT_EVALUATED"
-            and not identity_mismatch_rule_ids
+            and not score_blocking_identity_conflicts
         )
         public_risk_band = risk_band_value if score_is_released else "NOT_EVALUATED"
         api_score = output.score_breakdown.final_score if score_is_released else None
