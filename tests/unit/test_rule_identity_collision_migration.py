@@ -140,3 +140,40 @@ def test_inc001_accepts_observed_section11_legacy_tuple_for_quarantine():
     )
 
     assert observed_legacy_tuple in fingerprints
+
+
+def test_0125_requarantines_only_the_archived_legacy_inc001_catalogue_row():
+    migration = ROOT / "alembic" / "versions" / "0125_requarantine_legacy_inc001_catalogue_row.py"
+    source = migration.read_text(encoding="utf-8")
+    values = _revision_values(source)
+
+    assert values == {
+        "revision": "0125_requarantine_legacy_inc001_catalogue_row",
+        "down_revision": "0124_restore_85_rule_catalogue_parity",
+    }
+    for marker in (
+        "legacy:INC-001:preserved-original-definition",
+        "Certificate of Incorporation Not Obtained",
+        "Section 9, Companies Act 1994 (Bangladesh)",
+        "certificate_obtained == False",
+        "FOR UPDATE",
+        "SET is_active = FALSE",
+        "default_severity",
+        "NOT_EVALUATED",
+        "verification_status",
+        "PENDING",
+        "forward-only",
+    ):
+        assert marker in source
+
+    # The repair must not rewrite a definition or any historical reference.
+    for forbidden in (
+        "SET rule_id",
+        "SET rule_name",
+        "SET statutory_basis",
+        "SET rule_condition",
+        "UPDATE public.compliance_flags",
+        "UPDATE public.compliance_evaluation_runs",
+        "DELETE FROM",
+    ):
+        assert forbidden not in source
