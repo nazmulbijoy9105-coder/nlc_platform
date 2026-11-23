@@ -264,6 +264,6 @@ def test_inactive_catalogue_identity_is_preserved_as_unmapped_conflict():
     )
     orphan = next(row for row in rows if row["rule_id"] == "INC-002")
     assert orphan["outcome_state"] == "UNKNOWN"
-    assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    assert orphan["assessment_source"] == "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED"
     assert orphan["findings"] == []
     assert orphan["identity_conflicts"] == [conflict]
