@@ -83,7 +83,10 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
 
             catalogue_count = sum(
                 1 for item in outcomes
-                if item.get("assessment_source") != _UNMAPPED_SOURCE
+                if item.get("assessment_source") not in {
+                    _UNMAPPED_SOURCE,
+                    "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED",
+                }
             )
             if getattr(run, "rule_catalogue_count", None) != catalogue_count:
                 problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
@@ -93,6 +96,7 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                 "IDENTITY_MISMATCH_NOT_ATTRIBUTED",
                 "ENGINE_FINDING_WITH_IDENTITY_CONFLICT",
                 _UNMAPPED_SOURCE,
+                "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED",
             }
             if any(item.get("assessment_source") not in allowed_sources for item in outcomes):
                 problems.append("RULE_OUTCOME_SOURCE_UNRECOGNIZED")
@@ -137,8 +141,13 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                     } and conflicts:
                         problems.append("RULE_OUTCOME_SOURCE_CONFLICT_CONTRADICTION")
                         break
-                    if source == _UNMAPPED_SOURCE and not findings and not conflicts:
+                    if source == _UNMAPPED_SOURCE and not findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
+                    if source == "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED" and (
+                        findings or not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
                         break
                     if source == "IDENTITY_MISMATCH_NOT_ATTRIBUTED" and (
                         findings or not conflicts
