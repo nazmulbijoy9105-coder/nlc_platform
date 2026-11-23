@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "generated_at": "2026-11-23",
-  "purpose": "Per-rule identity and definition reconciliation ledger. Comparison is technical/source parity only; it is not a legal opinion, statutory verification, identity attribution, evidence sufficiency determination, or scoring release.",
+  "purpose": "Per-rule identity and definition reconciliation ledger. Technical source parity only; not legal verification, identity attribution, evidence sufficiency, or scoring release.",
   "sources": {
     "current_main_commit": "7fa78ce19d501f2991aed7d25d7572d6a4996cd5",
     "current_main_file": "scripts/seed_rules.py",
@@ -9,7 +9,7 @@
     "production_branch": "br-purple-fog-aodj8s04",
     "production_migration_revision": "0124_restore_85_rule_catalogue_parity",
     "production_inventory_view": "audit.legal_rule_registry_inventory",
-    "production_inventory_scope": "public.legal_rules projection; does not expose canonical identity rows or archived payloads"
+    "production_inventory_scope": "Projection of public.legal_rules; does not expose canonical identity rows or archived payloads."
   },
   "comparison_fields": [
     "rule_name",
@@ -26,15 +26,16 @@
     "rows": 85,
     "productionRows": 86,
     "extraLegacyRows": 1,
+    "exactMatches": 0,
+    "differingRows": 85,
     "diffFields": {
       "rule_name": 45,
       "statutory_basis": 70,
       "description": 79,
-      "rule_condition": 85,
+      "rule_condition": 78,
       "revenue_tier": 10,
       "rule_type": 12
-    },
-    "exactMatches": 0
+    }
   },
   "rules": [
     {
@@ -192,7 +193,6 @@
         "rule_name",
         "statutory_basis",
         "description",
-        "rule_condition",
         "revenue_tier"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
@@ -956,7 +956,6 @@
         "rule_name",
         "statutory_basis",
         "description",
-        "rule_condition",
         "revenue_tier"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
@@ -1010,7 +1009,6 @@
         "rule_name",
         "statutory_basis",
         "description",
-        "rule_condition",
         "revenue_tier"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
@@ -1116,8 +1114,7 @@
       },
       "definition_differences": [
         "statutory_basis",
-        "description",
-        "rule_condition"
+        "description"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
       "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -1170,8 +1167,7 @@
       },
       "definition_differences": [
         "statutory_basis",
-        "description",
-        "rule_condition"
+        "description"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
       "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -2363,7 +2359,6 @@
         "rule_name",
         "statutory_basis",
         "description",
-        "rule_condition",
         "revenue_tier"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
@@ -4323,8 +4318,7 @@
       },
       "definition_differences": [
         "rule_name",
-        "description",
-        "rule_condition"
+        "description"
       ],
       "identity_resolution": "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW",
       "historical_finding_attribution": "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW",
@@ -4469,9 +4463,9 @@
     }
   ],
   "unresolved_global_blockers": [
-    "INC-001: migration 0124 reactivated the legacy Section 9 catalogue row after migration 0115 quarantined the collision; canonical engine meaning is Section 23 registration-status verification. Do not alias or attribute by textual ID.",
+    "INC-001: migration 0124 reactivated the legacy Section 9 catalogue row after migration 0115 quarantined the collision; current engine meaning is Section 23 registration-status verification. Do not alias or attribute by textual ID.",
     "INC-002: legacy ID exists outside the canonical 85-key engine manifest; preserve as a separate historical identity and do not reuse the ID.",
-    "Production audit role cannot read legal_rule_identity_archive, legal_rule_identities, compliance_flags or historical finding tables directly; no elevated access was attempted.",
+    "The audit role cannot read legal_rule_identity_archive, legal_rule_identities, compliance_flags or historical finding tables directly; no elevated access was attempted.",
     "Production audit aggregates show zero legal_rule_revisions, zero resolved aliases, zero finding bindings and zero evidence bindings. These counts do not establish absence of legacy findings or evidence references.",
     "No source-linked, effective-dated legal revisions are approved or created by this ledger."
   ]
