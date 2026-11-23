@@ -580,17 +580,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         score_blocking_identity_conflicts = _score_blocking_catalogue_conflicts(
             catalogue_identity_conflicts
-        ) | {
-            flag.rule_id for flag in output.flags
-            if _has_unresolved_catalogue_binding(flag)
-            and (
-                flag.rule_id in __import__(
-                    "canonical_architecture.statutory_rules",
-                    fromlist=["STATUTORY_RULE_REGISTRY"],
-                ).STATUTORY_RULE_REGISTRY
-                or flag.rule_id not in catalogue_identity_conflicts
-            )
-        }
+        )
         score_is_released = (
             legal_score_is_released()
             and risk_band_value != "NOT_EVALUATED"
