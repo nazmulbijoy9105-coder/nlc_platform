@@ -4322,8 +4322,19 @@ class NLCRuleEngine:
             severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
             step = step_by_rule.get(flag.rule_id)
 
+            detail = getattr(flag, "detail", None)
+            binding_reason = (
+                detail.get("rule_catalogue_binding")
+                if isinstance(detail, dict) else None
+            )
             if getattr(flag, "resolved", False):
                 disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
+            elif binding_reason in {
+                "CATALOGUE_ENTRY_MISSING",
+                "RULE_INACTIVE",
+                "STATUTORY_BASIS_MISMATCH",
+            }:
+                disposition, reason = "BLOCKED", "CATALOGUE_IDENTITY_CONFLICT"
             elif (
                 not getattr(flag, "conditional_applies", True)
                 or state == RuleState.NOT_APPLICABLE.value
