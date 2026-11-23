@@ -14,11 +14,17 @@ def _stable(value):
         return {key: _stable(value[key]) for key in sorted(value)}
     if isinstance(value, list):
         return [_stable(item) for item in value]
-    if isinstance(value, str):
-        # The Python seed and JSON ledger serialise boolean literals with
-        # different casing. Normalise only whole-word literals, not prose.
-        return re.sub(r"\b(True|False)\b", lambda m: m.group(1).lower(), value)
     return value
+
+
+def _with_lowercase_trigger_booleans(definition):
+    # The Python seed and JSON ledger serialise boolean literals with different
+    # casing. Normalise only the rule_condition trigger, never descriptions.
+    condition = dict(definition["rule_condition"])
+    condition["trigger"] = re.sub(
+        r"\b(True|False)\b", lambda m: m.group(1).lower(), condition["trigger"]
+    )
+    return {**definition, "rule_condition": condition}
 
 
 def _latest(ledger):
@@ -63,7 +69,9 @@ def test_follow_up_preserves_each_definition_and_leaves_identity_unresolved():
 
     for row in snapshot["rules"]:
         rule_id = row["rule_id"]
-        assert _stable(row["main_definition"]) == _stable(seed[rule_id])
+        assert _stable(_with_lowercase_trigger_booleans(row["main_definition"])) == _stable(
+            _with_lowercase_trigger_booleans(seed[rule_id])
+        )
         assert row["production_definition"]["rule_id"] == rule_id
         assert row["identity_resolution"] == "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW"
         assert row["historical_finding_attribution"] == "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW"
