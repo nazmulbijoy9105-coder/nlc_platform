@@ -42,6 +42,11 @@ from app.services.pdf_render import (
 from app.services.rescue_service import RescueService
 from canonical_architecture.scoring_spec import allocate_flag_deductions
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
+from canonical_architecture.rjsc_scope import (
+    RJSC_IN_SCOPE_RULE_IDS,
+    RJSC_RULE_SCOPE,
+    is_rjsc_rule_in_scope,
+)
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.svg"
@@ -162,7 +167,10 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
     def verified_severity(flag):
-        if getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS:
+        if (
+            not is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            or getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS
+        ):
             return None
         return getattr(
             getattr(flag, "severity", None),
@@ -316,7 +324,10 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 def _legal_score_is_released() -> bool:
     """Mirror the product-owner scoring switch; legal review is disclosed separately."""
-    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
+    return (
+        LEGAL_SCORE_RELEASED is True
+        and bool(PRODUCT_SCORING_RULE_IDS.intersection(RJSC_IN_SCOPE_RULE_IDS))
+    )
 
 
 def _is_active_confirmed_violation(flag: Any) -> bool:
@@ -326,6 +337,9 @@ def _is_active_confirmed_violation(flag: Any) -> bool:
     evaluation_state/flag_status/resolved_date. Missing classification fails
     closed instead of defaulting to a violation.
     """
+    if not is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", ""))):
+        return False
+
     evaluation_state = getattr(
         flag, "evaluation_state", getattr(flag, "eval_state", "UNKNOWN")
     )
@@ -580,6 +594,11 @@ def _render_review_queue(flags: Any) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
+    scope_row = RJSC_RULE_SCOPE.get(str(rule_id))
+    if scope_row is None:
+        return "Not classified in the RJSC scope registry"
+    if not is_rjsc_rule_in_scope(str(rule_id)):
+        return "Not included in the RJSC assessment scope"
     if not _legal_score_is_released():
         return "Not evaluated — product score release disabled"
     if rule_id not in SCORE_DEDUCTION_RULE_IDS:
@@ -689,11 +708,13 @@ def build_compliance_report_html(
         band = company.current_risk_band or "NOT_EVALUATED"
         review_flags = [
             flag for flag in (flags or [])
-            if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
+            if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            and getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
         ]
         flags = [
             flag for flag in (flags or [])
-            if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
+            if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            and getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
         ]
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"

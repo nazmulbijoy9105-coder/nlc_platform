@@ -1,4 +1,5 @@
 """Integrity tests for the preserved 85-rule ledger and current production follow-up."""
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -7,6 +8,8 @@ from scripts.seed_rules import ILRMF_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 LEDGER = ROOT / "docs" / "legal" / "85_rule_identity_definition_reconciliation_2026-11-23.json"
+ORIGINAL_LEDGER_SHA256 = "d8044d42e95be5f72c6fb430d808ec51e532e9c6c3e6e7c5a486f0b5d70baa2e"
+HISTORICAL_RULES_SHA256 = "cd51f59299d5d8ae760459ada6ea758335de1dcce2c4767485f694e5db04165c"
 
 
 def _stable(value):
@@ -25,6 +28,10 @@ def _with_lowercase_trigger_booleans(definition):
         r"\b(True|False)\b", lambda m: m.group(1).lower(), condition["trigger"]
     )
     return {**definition, "rule_condition": condition}
+def _original_payload_sha256(ledger):
+    original = {key: value for key, value in ledger.items() if key != "follow_up_snapshots"}
+    canonical = json.dumps(original, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _latest(ledger):
@@ -41,11 +48,21 @@ def test_original_provenance_and_85_rule_history_are_preserved():
     assert ledger["repository"]["commit"] == "b06495678eb564eea52f44c3bafd174d7180f7df"
     assert len(ledger["rules"]) == 85
     assert len(ledger["rules"]) == len({row["rule_id"] for row in ledger["rules"]})
+    historical_payload = json.dumps(
+        ledger["rules"],
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    assert hashlib.sha256(historical_payload.encode("utf-8")).hexdigest() == (
+        HISTORICAL_RULES_SHA256
+    )
     assert ledger["revision_readiness"]["source_workpack_records"] == 85
     assert ledger["revision_readiness"]["operating_interval_records"] == 85
     assert ledger["revision_readiness"]["verified_effective_dated_revisions"] == 0
     assert ledger["runtime_coverage"]["expected_unique_ids"] == 85
     assert ledger["runtime_coverage"]["emitted_unique_ids"] == 85
+    assert _original_payload_sha256(ledger) == ORIGINAL_LEDGER_SHA256
 
 
 def test_follow_up_snapshot_covers_exactly_current_main_85_engine_ids():
@@ -119,6 +136,22 @@ def test_follow_up_definition_difference_counts_match_the_stored_snapshots():
     assert snapshot["summary"]["rules_with_exact_definition_match"] == exact_matches
     assert snapshot["summary"]["rules_with_any_definition_difference"] == differing_rows
     assert snapshot["summary"]["per_field_mismatch_counts"] == field_counts
+    # The follow-up and top-level consumer comparison blocks must agree with
+    # the per-rule rows; neither may retain stale aggregate parity counts.
+    comparison = snapshot["comparison"]
+    assert comparison["exact_definition_match_count"] == exact_matches
+    assert comparison["definition_difference_count"] == differing_rows
+    assert comparison["per_field_mismatch_counts"] == field_counts
+
+    top_level_comparison = ledger["comparison"]
+    assert top_level_comparison["rules_with_exact_definition_match"] == exact_matches
+    assert top_level_comparison["rules_with_any_definition_difference"] == differing_rows
+    assert top_level_comparison["per_field_mismatch_counts"] == {
+        field: field_counts.get(field, 0) for field in fields
+    }
+    assert exact_matches == 5
+    assert differing_rows == 80
+    assert field_counts["rule_condition"] == 61
 
 
 def test_catalogue_activation_is_not_misrepresented_as_identity_or_legal_approval():

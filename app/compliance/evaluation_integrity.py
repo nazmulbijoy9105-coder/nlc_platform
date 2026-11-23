@@ -16,6 +16,12 @@ from sqlalchemy import select
 from app.models.compliance import ComplianceEvaluationRun
 from app.compliance.rule_outcome_ledger import hash_rule_outcomes_snapshot
 
+from canonical_architecture.rjsc_scope import (
+    RJSC_RULE_SCOPE,
+    RJSC_SCOPE_VERSION,
+    is_rjsc_rule_in_scope,
+)
+
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _UNMAPPED_SOURCE = "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
 
@@ -80,17 +86,44 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             rule_ids = [item["rule_id"] for item in outcomes]
             if len(rule_ids) != len(set(rule_ids)):
                 problems.append("RULE_OUTCOME_IDS_DUPLICATED")
+            # New-format snapshots must carry one consistent versioned scope
+            # identity on every catalogue row. Historical pre-scope runs remain
+            # readable, but cannot be silently upgraded to this scope version.
+            scoped_rows = [
+                item for item in outcomes
+                if "scope_class" in item or "scope_version" in item
+            ]
+            if scoped_rows:
+                if len(scoped_rows) != len(outcomes) or any(
+                    item.get("scope_version") != RJSC_SCOPE_VERSION
+                    or item.get("scope_class") != (
+                        "IN_SCOPE_RJSC"
+                        if is_rjsc_rule_in_scope(item["rule_id"])
+                        else "OUT_OF_SCOPE"
+                    )
+                    for item in outcomes
+                ):
+                    problems.append("RJSC_SCOPE_IDENTITY_MISMATCH")
+                if set(rule_ids) != set(RJSC_RULE_SCOPE):
+                    problems.append("RJSC_RULE_OUTCOME_SCOPE_COVERAGE_MISMATCH")
 
             catalogue_count = sum(
                 1 for item in outcomes
-                if item.get("assessment_source") != _UNMAPPED_SOURCE
+                if item.get("assessment_source") not in {
+                    _UNMAPPED_SOURCE,
+                    "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED",
+                }
             )
             if getattr(run, "rule_catalogue_count", None) != catalogue_count:
                 problems.append("RULE_CATALOGUE_COUNT_MISMATCH")
             allowed_sources = {
                 "ENGINE_FINDING",
                 "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+                "IDENTITY_MISMATCH_NOT_ATTRIBUTED",
+                "ENGINE_FINDING_WITH_IDENTITY_CONFLICT",
                 _UNMAPPED_SOURCE,
+                "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED",
+                "OUT_OF_SCOPE",
             }
             if any(item.get("assessment_source") not in allowed_sources for item in outcomes):
                 problems.append("RULE_OUTCOME_SOURCE_UNRECOGNIZED")
@@ -104,11 +137,67 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                 for item in outcomes:
                     source = item.get("assessment_source")
                     findings = item["findings"]
+                    if source == "OUT_OF_SCOPE":
+                        if (
+                            item.get("scope_class") != "OUT_OF_SCOPE"
+                            or not item.get("scope_version")
+                            or item.get("outcome_state") != "OUT_OF_SCOPE"
+                            or findings
+                            or item.get("identity_conflicts")
+                        ):
+                            problems.append("RJSC_OUT_OF_SCOPE_OUTCOME_MALFORMED")
+                            break
+                        continue
                     if source == "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE" and findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
                         break
-                    if source in {"ENGINE_FINDING", _UNMAPPED_SOURCE} and not findings:
+                    if source == "ENGINE_FINDING" and not findings:
                         problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
+                    conflicts = item.get("identity_conflicts", [])
+                    if not isinstance(conflicts, list) or any(
+                        not isinstance(conflict, dict)
+                        or conflict.get("resolution_status") != "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH"
+                        or not isinstance(conflict.get("binding_reason"), str)
+                        or not conflict.get("binding_reason", "").strip()
+                        or "flag_code" not in conflict
+                        or "flag_statutory_basis" not in conflict
+                        or "engine_statutory_basis" not in conflict
+                        or "catalogue_statutory_basis" not in conflict
+                        or (
+                            conflict.get("flag_code") is not None
+                            and (
+                                not isinstance(conflict.get("flag_code"), str)
+                                or not conflict.get("flag_code", "").strip()
+                            )
+                        )
+                        for conflict in conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED")
+                        break
+                    if source in {
+                        "ENGINE_FINDING",
+                        "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+                    } and conflicts:
+                        problems.append("RULE_OUTCOME_SOURCE_CONFLICT_CONTRADICTION")
+                        break
+                    if source == _UNMAPPED_SOURCE and not findings:
+                        problems.append("RULE_OUTCOME_SOURCE_FINDINGS_CONTRADICTION")
+                        break
+                    if source == "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED" and (
+                        findings or not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
+                        break
+                    if source == "IDENTITY_MISMATCH_NOT_ATTRIBUTED" and (
+                        findings or not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
+                        break
+                    if source == "ENGINE_FINDING_WITH_IDENTITY_CONFLICT" and (
+                        not findings or not conflicts
+                    ):
+                        problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
                         break
 
     outcomes_hash_valid = isinstance(outcomes_hash, str) and bool(
