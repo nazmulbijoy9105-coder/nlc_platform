@@ -1,11 +1,11 @@
 """
-NLC Engine Rule Introspection — replaces regex parser with runtime extraction.
+NLC Engine Rule Introspection — 85-rule runtime extraction.
 
 Runs the engine with multiple test profiles designed to trigger every rule.
 Extracts actual severity, score_impact, is_black_override, and statutory_basis
 for each rule_id at runtime. Compares against seed_rules.py.
 
-This is the proper "75 = 75 = 75" proof that the regex parser couldn't provide.
+This is the proper "85 = 85 = 85" proof that the regex parser couldn't provide.
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import date, timedelta
 from app.rule_engine.engine import (
     CompanyProfile, NLCRuleEngine, Severity,
-    ShareTransfer, ChargeEvent, DirectorChange,
+    ShareTransfer, ChargeEvent, DirectorChange, ShareComplianceEventEvidence,
 )
 from scripts.seed_rules import ILRMF_RULES
 
@@ -260,6 +260,236 @@ profiles = {
     ),
 }
 
+# Additional scenarios cover evidence-gated and event-based rules.
+profiles.update({
+    "accounts_agm_board": make_base(
+        company_id="R-ACC",
+        agm_count=1,
+        agm_history_verified=True,
+        agm_history_evidence_ref="agm-history-certified-extract",
+        agm_history_verified_at=today - timedelta(days=10),
+        agm_history_verified_by="reviewer-1",
+        last_agm_date=None,
+        agm_held_this_cycle=True,
+        members_present_at_agm=1,
+        agm_attendance_verified=True,
+        agm_attendance_evidence_ref="agm-attendance-register",
+        agm_quorum_basis_verified=False,
+        auditor_reappointed_at_agm=False,
+        auditor_reappointment_verified=True,
+        auditor_reappointment_evidence_ref="agm-auditor-resolution",
+        financial_statements_presented=False,
+        financial_statements_filed=False,
+        books_of_account_kept=False,
+        last_board_meeting_date=today - timedelta(days=30),
+        board_meeting_notice_given=False,
+        board_minutes_prepared=False,
+        verified_fact_keys=frozenset({
+            "agm_held_this_cycle", "members_present_at_agm",
+        }),
+    ),
+    "bsec_scope_conflict": make_base(
+        company_id="R-BSEC",
+        company_type="PRIVATE_LIMITED",
+        bsec_listed=True,
+        verified_fact_keys=frozenset({"company_type"}),
+    ),
+    "director_events_and_extended": make_base(
+        company_id="R-DIR",
+        director_changes=[
+            DirectorChange(
+                director_id="D-RESIGNED",
+                event_type="resignation",
+                event_date=today - timedelta(days=500),
+                form_filed=False,
+                form_filed_verified=True,
+                form_filed_evidence_ref="rjsc-form-xii-resignation",
+            ),
+            DirectorChange(
+                director_id="D-APPOINTED",
+                event_type="appointment",
+                event_date=today - timedelta(days=60),
+                form_filed=False,
+                form_filed_verified=True,
+                form_filed_evidence_ref="rjsc-form-xii-appointment",
+                consent_filed=False,
+                consent_verified=True,
+                consent_evidence_ref="rjsc-form-ix-consent",
+            ),
+        ],
+        director_office_of_profit=True,
+        managing_director_appointment_date=today - timedelta(days=6 * 365),
+    ),
+    "inc003_verified_director_shortfall": make_base(
+        company_id="R-INC003",
+        current_director_count=1,
+        directors_verified=True,
+        directors_verification_evidence_ref="rjsc-certified-director-extract",
+        directors_verified_at=today - timedelta(days=2),
+        directors_verified_by="reviewer-1",
+        verified_fact_keys=frozenset({
+            "company_type", "current_director_count",
+        }),
+    ),
+    "inc007_public_commencement": make_base(
+        company_id="R-INC007",
+        company_type="PUBLIC_LIMITED",
+        section150_prospectus_issued=True,
+        section150_applicability_verified=True,
+        section150_applicability_evidence_ref="prospectus-and-applicability-review",
+        business_commencement_declaration_verified=True,
+        business_commencement_declaration_evidence_ref="rjsc-commencement-search",
+        business_commencement_declaration_filed=False,
+        verified_fact_keys=frozenset({
+            "company_type",
+            "section150_prospectus_issued",
+            "business_commencement_declaration_filed",
+        }),
+    ),
+    "members_below_minimum": make_base(
+        company_id="R-MEM",
+        member_count=1,
+        below_minimum_members_since=today - timedelta(days=245),
+        company_operating=True,
+        verified_fact_keys=frozenset({
+            "company_type", "member_count",
+            "below_minimum_members_since", "company_operating",
+        }),
+    ),
+    "registers_verified_absent_and_alternative_location": make_base(
+        company_id="R-REG",
+        register_of_members_maintained=False,
+        register_of_directors_maintained=False,
+        register_of_charges_maintained=False,
+        minutes_book_agm_maintained=False,
+        minutes_book_board_maintained=False,
+        register_location="approved-alternative-office-candidate",
+        verified_fact_keys=frozenset({
+            "register_of_members_maintained",
+            "register_of_directors_maintained",
+            "register_of_charges_maintained",
+            "minutes_book_agm_maintained",
+            "minutes_book_board_maintained",
+            "register_location",
+        }),
+    ),
+    "share_events_verified": make_base(
+        company_id="R-SH",
+        share_compliance_events=[
+            ShareComplianceEventEvidence(
+                event_reference="ALLOTMENT-001",
+                event_type="ALLOTMENT",
+                event_date=today - timedelta(days=100),
+                event_verified=True,
+                event_evidence_ref="board-allotment-resolution",
+                filing_form="FORM_XV",
+                filing_status=False,
+                filing_status_verified=True,
+                filing_evidence_ref="rjsc-form-xv-status",
+                certificate_issued=False,
+                certificate_status_verified=True,
+                certificate_evidence_ref="share-certificate-register-extract",
+            ),
+            ShareComplianceEventEvidence(
+                event_reference="CAPITAL-INCREASE-001",
+                event_type="CAPITAL_INCREASE_RESOLUTION",
+                event_date=today - timedelta(days=30),
+                event_verified=True,
+                event_evidence_ref="capital-increase-resolution",
+                filing_form="FORM_IV",
+                filing_status=False,
+                filing_status_verified=True,
+                filing_evidence_ref="rjsc-form-iv-status",
+            ),
+        ],
+    ),
+    "capital_and_structural_workflows": make_base(
+        company_id="R-STR",
+        capital_increase_date=today - timedelta(days=45),
+        capital_increase_resolution=False,
+        name_change_pending=True,
+        name_change_date=today - timedelta(days=45),
+        object_clause_change_pending=True,
+        object_clause_change_date=today - timedelta(days=40),
+        aoa_alteration_pending=True,
+        aoa_alteration_date=today - timedelta(days=35),
+        verified_fact_keys=frozenset({
+            "name_change_pending", "name_change_date",
+            "object_clause_change_pending", "object_clause_change_date",
+            "aoa_alteration_pending", "aoa_alteration_date",
+        }),
+    ),
+    "labour_license_expiry_unknown": make_base(
+        company_id="R-LBR",
+        labour_establishment_category="industrial_establishment",
+        labour_license_scope_verified=True,
+        labour_license_scope_evidence_ref="establishment-category-review",
+        labour_license_scope_verified_at=today - timedelta(days=3),
+        labour_license_scope_verified_by="reviewer-1",
+        factory_license_required_by_direction=True,
+        labour_license_status_verified=True,
+        labour_license_status_evidence_ref="dife-status-extract",
+        labour_license_status_verified_at=today - timedelta(days=2),
+        labour_license_status_verified_by="reviewer-1",
+        factory_license_obtained=True,
+        factory_license_expiry=None,
+    ),
+    "trade_license_verified_absent": make_base(
+        company_id="R-TL-ABSENT",
+        trade_license_obtained=False,
+        verified_fact_keys=frozenset({"trade_license_obtained"}),
+    ),
+    "trade_license_verified_expired": make_base(
+        company_id="R-TL-EXPIRED",
+        trade_license_obtained=True,
+        trade_license_expiry=today - timedelta(days=20),
+        verified_fact_keys=frozenset({
+            "trade_license_obtained", "trade_license_expiry",
+        }),
+        verified_fact_context={
+            "trade_license_obtained": {"document_id": "trade-license-2025"},
+            "trade_license_expiry": {"document_id": "trade-license-2025"},
+        },
+    ),
+    "transfer_review_events": make_base(
+        company_id="R-TR",
+        share_transfers=[
+            ShareTransfer(
+                transfer_id="TRANSFER-001",
+                transfer_date=today - timedelta(days=100),
+                stamp_duty_paid=False,
+                stamp_duty_applicability_verified=True,
+                aoa_restriction_apply=True,
+                board_approval_obtained=False,
+                articles_clause_evidence_ref="articles-clause-38-7",
+                registration_refused=True,
+                refusal_notice_sent=False,
+                instrument_lodged_date=today - timedelta(days=60),
+                refusal_decision_evidence_ref="board-refusal-decision",
+                transfer_registered=True,
+                transfer_registration_evidence_ref="rjsc-transfer-register-extract",
+            ),
+        ],
+    ),
+    "tax_return_overdue": make_base(
+        company_id="R-TAX",
+        tin_obtained=True,
+        tax_return_filed_for_current_fy=False,
+        financial_year_end=date(2024, 6, 30),
+    ),
+    "esc001_verified_backlog": make_base(
+        company_id="R-ESC001",
+        agm_count=3,
+        agm_history_verified=True,
+        agm_history_evidence_ref="agm-history-certified-extract",
+        agm_history_verified_at=today - timedelta(days=10),
+        agm_history_verified_by="reviewer-1",
+        last_agm_date=today - timedelta(days=1300),
+        unfiled_returns_count=2,
+    ),
+})
+
+
 
 def main() -> None:
     # RUN ENGINE ON ALL PROFILES
@@ -309,7 +539,7 @@ def main() -> None:
         for rid in not_fired:
             print(f"  {rid}: {seed[rid].get('rule_name', '?')}")
     else:
-        print("[OK] All 75 rules triggered by test profiles")
+        print("[OK] All 85 rules triggered by test profiles")
     
     print()
     
