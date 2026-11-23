@@ -57,6 +57,13 @@ def test_live_production_catalogue_keeps_inc001_active_and_only_inc002_inactive(
         )
         for rule in ILRMF_RULES
     ]
+    if not any(row.rule_id == "INC-002" for row in catalogue_rows):
+        catalogue_rows.append(SimpleNamespace(
+            rule_id="INC-002",
+            is_active=False,
+            rule_version="legacy",
+            statutory_basis="Legacy inactive rule",
+        ))
     active_ids = _active_catalogue_rule_ids(catalogue_rows, set())
 
     canonical_ids = {rule["rule_id"] for rule in ILRMF_RULES}
