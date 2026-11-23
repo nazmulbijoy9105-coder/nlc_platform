@@ -26,6 +26,7 @@ from app.core.dependencies import (
 )
 from app.models.charges import CompanyCharge
 from app.models.compliance import ComplianceEvaluationRun
+from app.models.rules import LegalRule
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
@@ -343,8 +344,18 @@ def _flag_to_response(flag) -> FlagResponse:
     evaluation_state = getattr(evaluation_state, "value", evaluation_state)
     flag_status = getattr(flag, "flag_status", None)
     flag_status = getattr(flag_status, "value", flag_status)
+    detail = getattr(flag, "detail", None)
+    identity_binding_conflict = (
+        isinstance(detail, dict)
+        and detail.get("rule_catalogue_binding") in {
+            "CATALOGUE_ENTRY_MISSING",
+            "RULE_INACTIVE",
+            "STATUTORY_BASIS_MISMATCH",
+        }
+    )
     score_eligible = (
-        _legal_score_is_released()
+        not identity_binding_conflict
+        and _legal_score_is_released()
         and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
         and evaluation_state == "VIOLATION"
         and flag_status == "ACTIVE"
@@ -915,7 +926,19 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
-    return [_flag_to_response(flag) for flag in flags]
+    # Hide stale active rows whenever their current catalogue identity cannot
+    # be bound. They remain auditable in storage but cannot leak as violations.
+    from app.services.compliance_service import _catalogue_identity_conflicts, _has_unresolved_catalogue_binding
+    catalogue_rows = list((
+        await db.execute(select(LegalRule).order_by(LegalRule.rule_id))
+    ).scalars().all())
+    conflicted_rule_ids = set(_catalogue_identity_conflicts(catalogue_rows))
+    return [
+        _flag_to_response(flag)
+        for flag in flags
+        if flag.rule_id not in conflicted_rule_ids
+        and not _has_unresolved_catalogue_binding(flag)
+    ]
 
 
 @router.post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")
