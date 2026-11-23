@@ -17,6 +17,7 @@ def test_85_rule_catalogue_keeps_84_canonical_active_ids_when_inc001_is_held():
 
     assert len(ILRMF_RULES) == 85
     assert len(active_ids) == 84
+    assert len(set(active_ids)) == 84
     assert "INC-001" not in active_ids
     assert set(active_ids) == {rule["rule_id"] for rule in ILRMF_RULES} - {"INC-001"}
 
