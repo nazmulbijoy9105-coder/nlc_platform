@@ -154,7 +154,10 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
             conflicts[rule_id] = {
                 "rule_id": rule_id,
                 "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
-                "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
+                "binding_reason": (
+                    "RULE_INACTIVE" if row.is_active is not True
+                    else "ENGINE_RULE_DEFINITION_MISSING"
+                ),
                 "engine_statutory_basis": None,
                 "catalogue_statutory_basis": row.statutory_basis,
                 "catalogue_rule_version": row.rule_version,
