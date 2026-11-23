@@ -112,6 +112,57 @@ def _active_catalogue_rule_ids(catalogue_rows, identity_mismatch_rule_ids):
     ]
 
 
+def _normalise_statutory_basis(value) -> str | None:
+    """Use the same conservative normalization as the engine catalogue binder."""
+    translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+    normalized = " ".join(str(value or "").translate(translation).split()).casefold()
+    return normalized or None
+
+
+def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
+    """Compare the complete DB snapshot with every canonical evaluator identity."""
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+    rows_by_id = {row.rule_id: row for row in catalogue_rows}
+    conflicts: dict[str, dict] = {}
+    for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
+        row = rows_by_id.get(rule_id)
+        engine_basis = getattr(canonical_rule, "law", None)
+        if row is None:
+            reason = "CATALOGUE_ENTRY_MISSING"
+            catalogue_basis = None
+        elif row.is_active is not True:
+            reason = "RULE_INACTIVE"
+            catalogue_basis = row.statutory_basis
+        elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
+            reason = "STATUTORY_BASIS_MISMATCH"
+            catalogue_basis = row.statutory_basis
+        else:
+            continue
+        conflicts[rule_id] = {
+            "rule_id": rule_id,
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": reason,
+            "engine_statutory_basis": engine_basis,
+            "catalogue_statutory_basis": catalogue_basis,
+            "catalogue_rule_version": getattr(row, "rule_version", None) if row else None,
+            "catalogue_is_active": bool(row.is_active) if row else False,
+        }
+
+    for rule_id, row in rows_by_id.items():
+        if rule_id not in STATUTORY_RULE_REGISTRY:
+            conflicts[rule_id] = {
+                "rule_id": rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
+                "engine_statutory_basis": None,
+                "catalogue_statutory_basis": row.statutory_basis,
+                "catalogue_rule_version": row.rule_version,
+                "catalogue_is_active": bool(row.is_active),
+            }
+    return conflicts
+
+
 def _applied_score_impacts(flags) -> list[dict]:
     """Reconcile every finding to the same versioned score allocation as the engine.
 
@@ -327,16 +378,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
-        catalogue_rows = (
+        catalogue_rows = list((
             await self.db.execute(
-                select(
-                    LegalRule.rule_id,
-                    LegalRule.rule_version,
-                    LegalRule.is_active,
-                    LegalRule.statutory_basis,
-                ).order_by(LegalRule.rule_id)
+                select(LegalRule).order_by(LegalRule.rule_id)
             )
-        ).all()
+        ).scalars().all())
+        catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
         profile.catalogue_rule_versions = {
             row.rule_id: row.rule_version for row in catalogue_rows
@@ -347,6 +394,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         profile.catalogue_rule_bases = {
             row.rule_id: row.statutory_basis for row in catalogue_rows
         }
+        # Rescue-plan and ordinary evaluation paths consume the same immutable
+        # binding object; no alternate profile may silently run unbound.
+        profile.catalogue_identity_conflicts = catalogue_identity_conflicts
         catalogue_binding = {
             "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
             "rules": [
@@ -382,7 +432,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         from app.compliance.rule_applicability import build_rule_applicability_results
 
-        identity_mismatch_rule_ids = {
+        identity_mismatch_rule_ids = set(catalogue_identity_conflicts) | {
             flag.rule_id for flag in output.flags
             if _has_unresolved_catalogue_binding(flag)
         }
@@ -420,6 +470,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
             applicability_results=applicability_results,
+            catalogue_snapshot=catalogue_rows,
+            catalogue_identity_conflicts=catalogue_identity_conflicts,
         )
 
         logger.info(
@@ -585,6 +637,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         trigger_source: str,
         fact_provenance_snapshot: list[dict] | None = None,
         applicability_results: dict[str, dict] | None = None,
+        catalogue_snapshot: list[LegalRule] | None = None,
+        catalogue_identity_conflicts: dict[str, dict] | None = None,
     ) -> ComplianceEvaluationRun:
         """
         Persist all evaluation results to DB atomically.
@@ -641,7 +695,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
 
         # ── Resolve previously active flags not in current output ──
-        persistable_flags = _persistable_output_flags(output.flags)
+        identity_mismatch_rule_ids = set(catalogue_identity_conflicts or {})
+        persistable_flags = [
+            flag for flag in _persistable_output_flags(output.flags)
+            if flag.rule_id not in identity_mismatch_rule_ids
+        ]
         current_rule_ids = {f.rule_id for f in persistable_flags}
         await self.db.execute(
             update(ComplianceFlag)
