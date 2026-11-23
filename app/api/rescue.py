@@ -239,7 +239,7 @@ async def create_rescue_plan(
     from app.services.compliance_service import (
         _catalogue_identity_conflicts,
         _company_profile_kwargs,
-        _quarantine_catalogue_conflict_findings,
+        _reconcile_engine_output_identity_conflicts,
     )
     from app.models.rules import LegalRule
     from sqlalchemy import select
@@ -269,8 +269,8 @@ async def create_rescue_plan(
 
     engine = NLCRuleEngine()
     engine_output = engine.evaluate(profile)
-    _quarantine_catalogue_conflict_findings(
-        engine_output.flags, catalogue_identity_conflicts
+    _reconcile_engine_output_identity_conflicts(
+        engine_output, catalogue_identity_conflicts
     )
     conflicted_findings = sorted({
         flag.rule_id for flag in engine_output.flags
