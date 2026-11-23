@@ -1,5 +1,6 @@
 """Integrity tests for the preserved 85-rule ledger and current production follow-up."""
 import json
+import re
 from pathlib import Path
 
 from scripts.seed_rules import ILRMF_RULES
@@ -13,6 +14,10 @@ def _stable(value):
         return {key: _stable(value[key]) for key in sorted(value)}
     if isinstance(value, list):
         return [_stable(item) for item in value]
+    if isinstance(value, str):
+        # The Python seed and JSON ledger serialise boolean literals with
+        # different casing. Normalise only whole-word literals, not prose.
+        return re.sub(r"\\b(True|False)\\b", lambda m: m.group(1).lower(), value)
     return value
 
 
@@ -179,7 +184,7 @@ def test_primary_source_candidates_are_linked_without_promoting_them_to_effectiv
 
     assert events["REG003"][0]["provisions"] == ["41(1)", "89(4)", "174(1)"]
     assert "Section 89(4)" in rebase["legal_source_review_notes"]["REG003"]
-    assert "Board-minute location rule" in rebase["legal_source_review_notes"]["REG003"]
+    assert "no Board-minute location rule is asserted" in rebase["legal_source_review_notes"]["REG003"]
 
     labour = events["LBR001"]
     act = next(item for item in labour if item["instrument"] == "Bangladesh Labour (Amendment) Act 2026")
