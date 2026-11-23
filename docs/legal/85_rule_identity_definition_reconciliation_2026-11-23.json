@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "ledger_type": "85_RULE_IDENTITY_AND_DEFINITION_RECONCILIATION",
   "ledger_status": "INITIAL_READ_ONLY_RECONCILIATION_NOT_LEGAL_APPROVAL_OR_DEFINITION_RELEASE",
-  "generated_at_utc": "2026-11-23T16:25:57.595Z",
+  "generated_at_utc": "2026-11-23T16:26:23.653Z",
   "repository": {
     "full_name": "nazmulbijoy9105-coder/nlc_platform",
     "branch": "main",
@@ -8438,6 +8438,19 @@
         },
         "revision_disposition": "HISTORICAL_CANDIDATE_SOURCE_LINKS_POPULATED; SOURCE_WORKPACK_IS_STALE_VS_CURRENT_MAIN; RULE_LEVEL_EFFECTIVE_INTERVAL_UNRESOLVED; DO_NOT_INSERT_AS_LEGAL_RULE_REVISION",
         "source_workpack_alignment_status": "STALE_REQUIRES_INDIVIDUAL_REBASE"
+      },
+      "prior_workpack_discrepancy_resolution": {
+        "status": "WORKPACK_DRIFT_RESOLVED_CURRENT_MAIN_RETAINED; PRODUCTION_DEFINITION_REVIEW_PENDING",
+        "finding": "The prior workpack description omits Board meeting minutes. Current main explicitly includes general and Board meeting minutes and adds minutes_book_board_maintained to the data points. Section 89 text covers general meetings and directors' meetings.",
+        "disposition": "Retain current-main description and condition; do not roll back to the stale workpack claim. Compare production row individually before any update.",
+        "sources": [
+          {
+            "url": "https://www.ainkosh.bd/acts/act-788/",
+            "provision": "Section 89",
+            "type": "statutory-text-transcription",
+            "note": "Section heading and text identify minutes of general meetings and directors' meetings."
+          }
+        ]
       }
     },
     {
@@ -8657,6 +8670,19 @@
         },
         "revision_disposition": "HISTORICAL_CANDIDATE_SOURCE_LINKS_POPULATED; SOURCE_WORKPACK_IS_STALE_VS_CURRENT_MAIN; RULE_LEVEL_EFFECTIVE_INTERVAL_UNRESOLVED; DO_NOT_INSERT_AS_LEGAL_RULE_REVISION",
         "source_workpack_alignment_status": "STALE_REQUIRES_INDIVIDUAL_REBASE"
+      },
+      "prior_workpack_discrepancy_resolution": {
+        "status": "WORKPACK_CITATION_ERROR_IDENTIFIED; CURRENT_MAIN_CAUTION_RETAINED; PRODUCTION_REVIEW_PENDING",
+        "finding": "The prior workpack attributes alternative-register-location authority to Section 34(2). The Section 34(2) text is a penalty for breach of Section 34, not an alternative-location permission. Current main correctly avoids asserting that proposition and marks the location basis unresolved.",
+        "disposition": "Retain current-main unresolved legal basis and REQUIRES_LAWYER_JUDGMENT state. Do not reinstate the Section 34(2) alternative-location claim or infer breach from location mismatch.",
+        "sources": [
+          {
+            "url": "https://www.unidaraassociates.bd/acts/companies-act-1994/section-34",
+            "provision": "Section 34(2)",
+            "type": "statutory-text-transcription",
+            "note": "Text provides a continuing daily penalty for breach of Section 34; it does not grant an alternative-location permission."
+          }
+        ]
       }
     },
     {
@@ -20428,6 +20454,19 @@
         },
         "revision_disposition": "HISTORICAL_CANDIDATE_SOURCE_LINKS_POPULATED; SOURCE_WORKPACK_IS_STALE_VS_CURRENT_MAIN; RULE_LEVEL_EFFECTIVE_INTERVAL_UNRESOLVED; DO_NOT_INSERT_AS_LEGAL_RULE_REVISION",
         "source_workpack_alignment_status": "STALE_REQUIRES_INDIVIDUAL_REBASE"
+      },
+      "prior_workpack_discrepancy_resolution": {
+        "status": "WORKPACK_TRIGGER_UNDERSPECIFIED; CURRENT_MAIN_GUARDS_RETAINED; PRODUCTION_REVIEW_PENDING",
+        "finding": "The prior workpack trigger uses member_count < minimum_members only. Current main correctly adds more than six months of continued business and member-specific knowledge review, matching the liability conditions stated in Section 222.",
+        "disposition": "Retain current-main evidence/time-gated trigger and description; do not revert to a headcount-only breach. Production definition remains pending individual comparison.",
+        "sources": [
+          {
+            "url": "https://cdn1.ogrlegal.com/files/rjsc/Bangladesh-COMPANIES-ACT.pdf",
+            "provision": "Section 222",
+            "type": "English-text-copy",
+            "note": "Text states the six-month continuation and knowledge conditions for member liability; verify against the current official consolidated Bangla text before release."
+          }
+        ]
       }
     },
     {
@@ -20675,6 +20714,16 @@
       "trigger": 83
     },
     "exact_seed_claim_matches": 82,
-    "seed_claim_rows_with_differences": 3
+    "seed_claim_rows_with_differences": 3,
+    "individually_reviewed_prior_claim_discrepancies": [
+      "REG-002",
+      "REG-003",
+      "MEM-001"
+    ],
+    "prior_claim_discrepancy_disposition": {
+      "REG-002": "CURRENT_MAIN_RETAINED; old workpack omitted Board meeting minutes.",
+      "REG-003": "CURRENT_MAIN_UNRESOLVED_BASIS_RETAINED; old workpack mischaracterized Section 34(2).",
+      "MEM-001": "CURRENT_MAIN_TIME_AND_KNOWLEDGE_GATES_RETAINED; old workpack trigger was incomplete."
+    }
   }
 }
