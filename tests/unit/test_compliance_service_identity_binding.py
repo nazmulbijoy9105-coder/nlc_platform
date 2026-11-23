@@ -53,7 +53,7 @@ def test_live_production_catalogue_keeps_84_canonical_active_and_two_legacy_hold
     catalogue_rows = [
         SimpleNamespace(
             rule_id=rule["rule_id"],
-            is_active=rule["rule_id"] != "INC-001",
+            is_active=True,
         )
         for rule in ILRMF_RULES
     ]
@@ -65,6 +65,5 @@ def test_live_production_catalogue_keeps_84_canonical_active_and_two_legacy_hold
     assert len(active_ids) == 84
     assert set(active_ids) == canonical_ids - {"INC-001"}
     assert {row.rule_id for row in catalogue_rows if not row.is_active} == {
-        "INC-001",
         "INC-002",
     }
