@@ -132,3 +132,41 @@ def test_catalogue_activation_is_not_misrepresented_as_identity_or_legal_approva
     assert snapshot["safety_decision"]["production_database_changed"] is False
     assert snapshot["safety_decision"]["historical_ids_changed"] is False
     assert snapshot["safety_decision"]["finding_or_evidence_references_rebound"] is False
+
+
+def test_source_workpack_rebase_covers_all_85_and_identifies_only_four_material_cases():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    snapshot = _latest(ledger)
+    rebase = snapshot["source_workpack_rebase"]
+    assert len(rebase["rules"]) == 85
+    assert len({row["rule_id"] for row in rebase["rules"]}) == 85
+    assert rebase["summary"]["rules_with_any_seed_claim_drift"] == 3
+    assert rebase["summary"]["seed_claim_exact_rules"] == 82
+    assert rebase["summary"]["rules_with_current_canonical_source_claim_drift"] == 4
+    assert rebase["summary"]["current_source_claim_exact_rules"] == 81
+    assert {
+        row["rule_id"] for row in rebase["material_discrepancies"]
+    } == {"REG-002", "REG-003", "LBR-001", "MEM-001"}
+
+
+def test_source_workpack_rebase_does_not_invent_effective_dates_or_legal_approval():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    rebase = _latest(ledger)["source_workpack_rebase"]
+    summary = rebase["summary"]
+
+    assert summary["rules_with_resolved_rule_specific_intervals"] == 0
+    assert summary["rules_with_non_exhaustive_amendment_history"] == 85
+    assert summary["located_primary_record_anchors"] == 26
+    assert summary["independently_authenticated_issuers"] == 0
+    assert summary["source_artifact_sha256_captured"] == 0
+    assert summary["legal_counsel_approved_rules"] == 0
+    assert summary["fact_to_evidence_complete_mappings"] == 0
+    assert summary["legal_revisions_created"] == 0
+
+    for row in rebase["rules"]:
+        assert row["operating_interval"]["from"] is None
+        assert row["operating_interval"]["to_exclusive"] is None
+        assert row["operating_interval"]["status"] == "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
+        assert row["provenance"]["operative_effective_date_status"] == "UNRESOLVED"
+        assert row["provenance"]["legal_review_status"] == "REVIEW_REQUIRED"
+        assert row["release"]["score_eligible"] is False
