@@ -17,7 +17,7 @@ def _stable(value):
     if isinstance(value, str):
         # The Python seed and JSON ledger serialise boolean literals with
         # different casing. Normalise only whole-word literals, not prose.
-        return re.sub(r"\\b(True|False)\\b", lambda m: m.group(1).lower(), value)
+        return re.sub(r"\b(True|False)\b", lambda m: m.group(1).lower(), value)
     return value
 
 
