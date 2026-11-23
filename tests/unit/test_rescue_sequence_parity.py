@@ -289,3 +289,34 @@ def test_catalogue_identity_conflict_is_blocked_before_not_applicable_dispositio
     result = _dispositions([finding])
     assert result[0]["disposition"] == "BLOCKED"
     assert result[0]["reason"] == "CATALOGUE_IDENTITY_CONFLICT"
+
+
+def test_post_evaluation_identity_reconciliation_removes_rescue_step_and_rebuilds_disposition():
+    from app.services.compliance_service import _reconcile_engine_output_identity_conflicts
+
+    finding = _flag(
+        "AGM-001",
+        state=RuleState.NON_COMPLIANT,
+        detail={},
+    )
+    output = SimpleNamespace(
+        flags=[finding],
+        score_breakdown=SimpleNamespace(risk_band=Severity.RED),
+        rescue_sequence=[{"related_rules": ["AGM-001"], "rescue_id": "RES-AGM-001"}],
+        rescue_dispositions=[],
+    )
+    conflicts = {
+        "AGM-001": {
+            "rule_id": "AGM-001",
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
+            "engine_statutory_basis": "Section 23",
+            "catalogue_statutory_basis": "Section 9",
+        }
+    }
+
+    _reconcile_engine_output_identity_conflicts(output, conflicts)
+
+    assert output.rescue_sequence == []
+    assert output.rescue_dispositions[0]["disposition"] == "BLOCKED"
+    assert output.rescue_dispositions[0]["reason"] == "CATALOGUE_IDENTITY_CONFLICT"
