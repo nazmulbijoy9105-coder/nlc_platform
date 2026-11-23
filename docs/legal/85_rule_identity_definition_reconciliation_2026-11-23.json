@@ -33679,6 +33679,71 @@
               "source_status": "OFFICIAL_BANGLA_TEXT_LOCATED; COMPLETE_AMENDMENT_CHAIN_NOT_YET_VERIFIED"
             }
           ]
+        },
+        "current_main_statutory_claims": {
+          "REG-002": {
+            "law": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+            "requirement": "Core internal records missing: register of members (Section 34), general and Board meeting minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.",
+            "provision": "UNVERIFIED CANDIDATE — Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+            "provision_status": "RECONCILE",
+            "severity": "NOT_EVALUATED",
+            "score_impact": 0
+          },
+          "REG-003": {
+            "law": "Unresolved location proposition; Companies Act 1994 (Bangladesh)",
+            "requirement": "A verified profile location differs from the registered office. The cited Section 34(2) is a penalty provision, not a location authority. Do not infer a breach; confirm the operative location requirement, any alternative-location notice and the Articles from current primary sources.",
+            "provision": "UNVERIFIED CANDIDATE — UNRESOLVED: Section 34(2) is not relied on as location authority; primary-source/counsel review required",
+            "provision_status": "RECONCILE",
+            "severity": "NOT_EVALUATED",
+            "score_impact": 0
+          },
+          "LBR-001": {
+            "law": "Bangladesh Labour Act 2006, section 326(1)(b), as amended by Act No. 43 of 2026; Bangladesh Labour Rules 2015, rules 354-355",
+            "requirement": "Review prompt only: verify the actual establishment category, Rule 354 scope, any operative Government direction, authentic DIFE licence status and the unresolved renewal-term interaction between amended section 326 and rule 355. Manufacturing status alone is not the licensing predicate.",
+            "provision": "UNVERIFIED CANDIDATE — establishment/factory licence applicability and status require source evidence and counsel review",
+            "provision_status": "RECONCILE",
+            "severity": "NOT_EVALUATED",
+            "score_impact": 0,
+            "applies_if": "LABOUR_LICENSE_SCOPE_VERIFIED",
+            "exceptions": [
+              "VERIFIED_NON_APPLICABLE_ESTABLISHMENT_CATEGORY",
+              "VERIFIED_NO_APPLICABLE_DIRECTION"
+            ]
+          },
+          "MEM-001": {
+            "law": "Section 222, Companies Act 1994 (Bangladesh)",
+            "requirement": "Section 222 applies only where membership falls below two for a private company or seven for another company and the company carries on business with the reduced membership for more than six months. Personal liability is limited to a member who remained during that period and knew of the shortfall; a headcount alone cannot establish breach or identify a liable member.",
+            "provision": "UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)",
+            "provision_status": "RECONCILE",
+            "severity": "NOT_EVALUATED",
+            "score_impact": 0
+          }
+        },
+        "individual_discrepancy_dispositions": {
+          "REG-002": {
+            "classification": "WORDING_AND_FACT_INVENTORY_ALIGNMENT",
+            "action": "Keep Form XII separate under DIR-001; verify Section 89(1) minutes coverage and preserve the new Board-minutes evidence fact. Section 89(4) location requirement is only for general-meeting minutes.",
+            "legal_status": "RECONCILE",
+            "production_definition_change": "NOT_AUTHORIZED"
+          },
+          "REG-003": {
+            "classification": "UNRESOLVED_LOCATION_PROPOSITION",
+            "action": "Retain review-only rule. Section 34(2) is not location authority; candidate location provisions differ by register. Require the evidence to identify the exact register before mapping to Section 41(1), 89(4), or 174(1). Do not infer a breach from profile location alone.",
+            "legal_status": "RECONCILE",
+            "production_definition_change": "NOT_AUTHORIZED"
+          },
+          "LBR-001": {
+            "classification": "SOURCE_WORKPACK_STALE_AND_AMENDMENT_CONFLICT",
+            "action": "Current main claim already includes Act No. 43 of 2026 section 326(1)(b) and the unresolved Rule 355 interaction. Update the source-workpack claim only after authentic 2015 Rule 354/355 Bangla Gazette text is captured; retain review-only applicability.",
+            "legal_status": "RECONCILE",
+            "production_definition_change": "NOT_AUTHORIZED"
+          },
+          "MEM-001": {
+            "classification": "SOURCE_WORKPACK_STALE_CLAIM",
+            "action": "Current main claim reflects Section 222's private/other-company thresholds, more-than-six-month period, and member-specific knowledge/continued-membership. Rebase the workpack claim, then complete amendment-chain and Bangla-source review.",
+            "legal_status": "RECONCILE",
+            "production_definition_change": "NOT_AUTHORIZED"
+          }
         }
       }
     }
