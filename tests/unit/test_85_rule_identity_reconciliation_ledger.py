@@ -106,3 +106,29 @@ def test_follow_up_definition_difference_counts_match_the_stored_snapshots():
     assert snapshot["summary"]["rules_with_exact_definition_match"] == exact_matches
     assert snapshot["summary"]["rules_with_any_definition_difference"] == differing_rows
     assert snapshot["summary"]["per_field_mismatch_counts"] == field_counts
+
+
+def test_catalogue_activation_is_not_misrepresented_as_identity_or_legal_approval():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    snapshot = _latest(ledger)
+    state = snapshot["identity_and_release_state"]
+
+    inc001 = state["inc001"]
+    assert inc001["production_is_active"] is True
+    assert inc001["production_verification_status"] == "PENDING"
+    assert inc001["production_severity"] == "NOT_EVALUATED"
+    assert inc001["canonical_candidate_identity_status"] == "QUARANTINED"
+    assert inc001["alias_resolution"] == "UNRESOLVED"
+    assert inc001["archived_identity_preserved"] is True
+
+    inc002 = state["inc002"]
+    assert inc002["production_is_active"] is False
+    assert inc002["production_verification_status"] == "PENDING"
+    assert inc002["archived_identity_preserved"] is True
+
+    assert state["identity_cohort_interpretation"]["release_state"].startswith(
+        "Production catalogue shows zero VERIFIED legal_rules"
+    )
+    assert snapshot["safety_decision"]["production_database_changed"] is False
+    assert snapshot["safety_decision"]["historical_ids_changed"] is False
+    assert snapshot["safety_decision"]["finding_or_evidence_references_rebound"] is False
