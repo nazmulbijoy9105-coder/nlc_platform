@@ -667,7 +667,7 @@ def main() -> None:
     else:
         print(f"  [OK] All rules triggered")
     
-    print(f"\nEngine rule coverage: {len(engine_flags)}/75 = {len(engine_flags)/75*100:.0f}%")
+    print(f"\nEngine rule coverage: {len(engine_flags)}/85 = {len(engine_flags)/85*100:.0f}%")
     
 
 
