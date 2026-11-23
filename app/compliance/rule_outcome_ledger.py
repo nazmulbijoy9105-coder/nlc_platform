@@ -217,6 +217,10 @@ def build_rule_outcomes_snapshot(
             else "CONTRADICTORY" if len(states) > 1
             else "UNKNOWN"
         )
+        orphan_source = (
+            "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+            if findings else "CATALOGUE_IDENTITY_CONFLICT_NOT_ATTRIBUTED"
+        )
         snapshot.append({
             "rule_id": orphan_rule_id,
             "rule_version": None,
@@ -233,7 +237,7 @@ def build_rule_outcomes_snapshot(
             "applicability_reason": "RULE_NOT_IN_ACTIVE_CATALOGUE",
             "applicability_policy_version": None,
             "applicability_fact_evidence": [],
-            "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
+            "assessment_source": orphan_source,
             "findings": findings,
             "identity_conflicts": identity_conflicts,
         })
