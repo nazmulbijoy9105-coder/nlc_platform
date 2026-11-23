@@ -177,3 +177,35 @@ def test_0125_requarantines_only_the_archived_legacy_inc001_catalogue_row():
         "DELETE FROM",
     ):
         assert forbidden not in source
+
+
+def test_0125_migration_rehearsal_and_manual_release_target_the_new_head():
+    script = ROOT / "scripts" / "rehearse_production_0112_to_0125.py"
+    source = script.read_text(encoding="utf-8")
+    for marker in (
+        'HEAD_REVISION = "0125_requarantine_legacy_inc001_catalogue_row"',
+        'or inc001["is_active"]',
+        'active_legal_rule_rows") != 84',
+        'inc001_quarantined") is not True',
+        'inc002_quarantined") is not True',
+        "historical_table_fingerprints_before",
+        "historical_table_fingerprints_after",
+        "nlc_ci_audit_role",
+    ):
+        assert marker in source
+
+    rehearsal = (
+        ROOT / ".github" / "workflows"
+        / "production-0112-to-0122-rehearsal.yml"
+    ).read_text(encoding="utf-8")
+    assert "Production 0112 to 0125 Neon Migration Rehearsal" in rehearsal
+    assert "rehearse_production_0112_to_0125.py" in rehearsal
+    assert "neon-production-0112-to-0125.json" in rehearsal
+
+    release = (
+        ROOT / ".github" / "workflows" / "production-release.yml"
+    ).read_text(encoding="utf-8")
+    assert "APPLY_0125_AND_DEPLOY" in release
+    assert "Apply and verify production migrations 0112 through 0125" in release
+    assert "rehearse_production_0112_to_0125.py" in release
+    assert "nlc-production-release-0125-evidence" in release
