@@ -239,6 +239,7 @@ async def create_rescue_plan(
     from app.services.compliance_service import (
         _catalogue_identity_conflicts,
         _company_profile_kwargs,
+        _quarantine_catalogue_conflict_findings,
     )
     from app.models.rules import LegalRule
     from sqlalchemy import select
@@ -268,6 +269,9 @@ async def create_rescue_plan(
 
     engine = NLCRuleEngine()
     engine_output = engine.evaluate(profile)
+    _quarantine_catalogue_conflict_findings(
+        engine_output.flags, catalogue_identity_conflicts
+    )
 
     if not engine_output.rescue_sequence:
         raise HTTPException(
