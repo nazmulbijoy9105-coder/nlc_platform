@@ -507,7 +507,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "value",
             output.score_breakdown.risk_band,
         )
-        score_is_released = legal_score_is_released() and risk_band_value != "NOT_EVALUATED"
+        score_is_released = (
+            legal_score_is_released()
+            and risk_band_value != "NOT_EVALUATED"
+            and not identity_mismatch_rule_ids
+        )
         public_risk_band = risk_band_value if score_is_released else "NOT_EVALUATED"
         api_score = output.score_breakdown.final_score if score_is_released else None
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
@@ -722,11 +726,15 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Defense in depth: persistence independently enforces the
         # product-controlled release switch; a provisional engine band cannot
         # publish a numeric score while product scoring is disabled.
-        if not legal_score_is_released():
+        if not legal_score_is_released() or catalogue_identity_conflicts:
             risk_band = RiskBand.NOT_EVALUATED
         score_for_current = (
             score
-            if legal_score_is_released() and risk_band != RiskBand.NOT_EVALUATED
+            if (
+                legal_score_is_released()
+                and not catalogue_identity_conflicts
+                and risk_band != RiskBand.NOT_EVALUATED
+            )
             else None
         )
 
@@ -1062,7 +1070,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         black_flags = (
             output.score_breakdown.black_flag_count
-            if legal_score_is_released() else 0
+            if score_for_current is not None else 0
         )
         evaluation_run = ComplianceEvaluationRun(
             id=uuid.uuid4(),
