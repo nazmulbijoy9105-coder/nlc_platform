@@ -123,6 +123,43 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     """Compare the complete DB snapshot with every canonical evaluator identity."""
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
+
+def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts):
+    """Make every finding for a conflicted ID non-scoring and non-actionable."""
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.rule_engine.engine import RuleState, Severity
+
+    for flag in flags:
+        if flag.rule_id not in STATUTORY_RULE_REGISTRY:
+            catalogue_identity_conflicts.setdefault(flag.rule_id, {
+                "rule_id": flag.rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
+                "engine_statutory_basis": getattr(flag, "statutory_basis", None),
+                "catalogue_statutory_basis": None,
+                "catalogue_rule_version": None,
+                "catalogue_is_active": False,
+            })
+        conflict = catalogue_identity_conflicts.get(flag.rule_id)
+        if not conflict:
+            continue
+        detail = dict(getattr(flag, "detail", None) or {})
+        detail["rule_catalogue_binding"] = conflict["binding_reason"]
+        detail["engine_flag_statutory_basis"] = getattr(flag, "statutory_basis", None)
+        detail["catalogue_rule_statutory_basis"] = conflict.get("catalogue_statutory_basis")
+        flag.detail = detail
+        flag.severity = Severity.NOT_EVALUATED
+        flag.score_impact = 0
+        flag.state = RuleState.UNKNOWN
+        flag.eval_state = "UNKNOWN"
+        flag.is_black_override = False
+        flag.conditional_applies = False
+        flag.applicability_state = "UNKNOWN"
+        flag.applicability_reason = (
+            "Catalogue/evaluator identity conflict; this finding is quarantined "
+            "and cannot support applicability, scoring or rescue."
+        )
+
     rows_by_id = {row.rule_id: row for row in catalogue_rows}
     conflicts: dict[str, dict] = {}
     for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
@@ -435,39 +472,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         engine = rule_engine if rule_engine is not None else get_rule_engine()
         output = engine.evaluate(profile)
 
-        # The complete preflight catalogue comparison is authoritative even
-        # when a particular evaluator emits no finding. Quarantine any emitted
-        # finding for a conflicted ID before scoring, persistence or rescue.
-        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
-        for flag in output.flags:
-            if flag.rule_id not in STATUTORY_RULE_REGISTRY:
-                catalogue_identity_conflicts.setdefault(flag.rule_id, {
-                    "rule_id": flag.rule_id,
-                    "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
-                    "binding_reason": "ENGINE_RULE_DEFINITION_MISSING",
-                    "engine_statutory_basis": getattr(flag, "statutory_basis", None),
-                    "catalogue_statutory_basis": None,
-                    "catalogue_rule_version": None,
-                    "catalogue_is_active": False,
-                })
-            conflict = catalogue_identity_conflicts.get(flag.rule_id)
-            if conflict:
-                detail = dict(getattr(flag, "detail", None) or {})
-                detail["rule_catalogue_binding"] = conflict["binding_reason"]
-                detail["engine_flag_statutory_basis"] = getattr(flag, "statutory_basis", None)
-                detail["catalogue_rule_statutory_basis"] = conflict.get("catalogue_statutory_basis")
-                flag.detail = detail
-                flag.severity = Severity.NOT_EVALUATED
-                flag.score_impact = 0
-                flag.state = RuleState.UNKNOWN
-                flag.eval_state = "UNKNOWN"
-                flag.is_black_override = False
-                flag.conditional_applies = False
-                flag.applicability_state = "UNKNOWN"
-                flag.applicability_reason = (
-                    "Catalogue/evaluator identity conflict; this finding is quarantined "
-                    "and cannot support applicability, scoring or rescue."
-                )
+        # Catalogue identity conflicts remain authoritative even when no finding is emitted.
+        _quarantine_catalogue_conflict_findings(
+            output.flags, catalogue_identity_conflicts
+        )
 
         from app.compliance.rule_applicability import build_rule_applicability_results
 
