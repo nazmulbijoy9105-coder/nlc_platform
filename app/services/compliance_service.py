@@ -140,10 +140,33 @@ def _quarantine_catalogue_conflict_findings(flags, catalogue_identity_conflicts)
                 "catalogue_rule_version": None,
                 "catalogue_is_active": False,
             })
+        detail = dict(getattr(flag, "detail", None) or {})
+        binding_reason = detail.get("rule_catalogue_binding")
+        if (
+            not catalogue_identity_conflicts.get(flag.rule_id)
+            and binding_reason in {
+                "CATALOGUE_ENTRY_MISSING",
+                "RULE_INACTIVE",
+                "STATUTORY_BASIS_MISMATCH",
+            }
+        ):
+            catalogue_identity_conflicts[flag.rule_id] = {
+                "rule_id": flag.rule_id,
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+                "binding_reason": binding_reason,
+                "engine_statutory_basis": detail.get(
+                    "engine_flag_statutory_basis",
+                    getattr(flag, "statutory_basis", None),
+                ),
+                "catalogue_statutory_basis": detail.get(
+                    "catalogue_rule_statutory_basis"
+                ),
+                "catalogue_rule_version": getattr(flag, "rule_version", None),
+                "catalogue_is_active": binding_reason != "RULE_INACTIVE",
+            }
         conflict = catalogue_identity_conflicts.get(flag.rule_id)
         if not conflict:
             continue
-        detail = dict(getattr(flag, "detail", None) or {})
         detail["rule_catalogue_binding"] = conflict["binding_reason"]
         detail["engine_flag_statutory_basis"] = getattr(flag, "statutory_basis", None)
         detail["catalogue_rule_statutory_basis"] = conflict.get("catalogue_statutory_basis")
