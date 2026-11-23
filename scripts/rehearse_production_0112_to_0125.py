@@ -51,7 +51,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0125.json")
+REPORT = Path(os.environ.get("REPORT_PATH", "artifacts/neon-production-0112-to-0125.json"))
 
 
 def _url() -> str:
