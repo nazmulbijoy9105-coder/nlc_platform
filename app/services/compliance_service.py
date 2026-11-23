@@ -978,15 +978,23 @@ class ComplianceService(BaseService[ComplianceFlag]):
             hash_rule_outcomes_snapshot,
         )
 
-        catalogue_result = await self.db.execute(
-            select(LegalRule).where(LegalRule.is_active.is_(True)).order_by(LegalRule.rule_id)
-        )
-        active_legal_rules = list(catalogue_result.scalars().all())
+        # Persist against the exact catalogue rows used to bind the engine.
+        # Never reload here: a concurrent catalogue edit must not rewrite this run.
+        if catalogue_snapshot is None:
+            catalogue_result = await self.db.execute(
+                select(LegalRule).where(LegalRule.is_active.is_(True)).order_by(LegalRule.rule_id)
+            )
+            active_legal_rules = list(catalogue_result.scalars().all())
+        else:
+            active_legal_rules = [
+                row for row in catalogue_snapshot if bool(row.is_active)
+            ]
         rule_outcomes_snapshot = jsonable_encoder(
             build_rule_outcomes_snapshot(
                 active_legal_rules,
                 output.flags,
                 applicability_results=applicability_results,
+                catalogue_identity_conflicts=catalogue_identity_conflicts or {},
             )
         )
         rule_outcomes_hash = hash_rule_outcomes_snapshot(rule_outcomes_snapshot)
