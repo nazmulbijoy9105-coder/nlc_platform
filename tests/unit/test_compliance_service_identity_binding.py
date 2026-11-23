@@ -136,3 +136,57 @@ def test_catalogue_conflict_quarantines_finding_before_scoring_or_rescue():
     assert flag.conditional_applies is False
     assert flag.applicability_state == "UNKNOWN"
     assert flag.detail["rule_catalogue_binding"] == "STATUTORY_BASIS_MISMATCH"
+
+
+def test_inactive_legacy_catalogue_identity_is_audited_but_does_not_block_score_release():
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import (
+        _catalogue_identity_conflicts,
+        _score_blocking_catalogue_conflicts,
+    )
+
+    rows = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=rule.law,
+        )
+        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+    ]
+    rows.append(SimpleNamespace(
+        rule_id="INC-002",
+        rule_version="legacy",
+        is_active=False,
+        statutory_basis="Legacy inactive identity",
+    ))
+
+    conflicts = _catalogue_identity_conflicts(rows)
+
+    assert conflicts["INC-002"]["binding_reason"] == "RULE_INACTIVE"
+    assert "INC-002" not in _score_blocking_catalogue_conflicts(conflicts)
+
+
+def test_inactive_canonical_evaluator_identity_blocks_score_release():
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import (
+        _catalogue_identity_conflicts,
+        _score_blocking_catalogue_conflicts,
+    )
+
+    rows = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=rule.law,
+        )
+        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+    ]
+    canonical_rule_id = next(iter(STATUTORY_RULE_REGISTRY))
+    next(row for row in rows if row.rule_id == canonical_rule_id).is_active = False
+
+    conflicts = _catalogue_identity_conflicts(rows)
+
+    assert conflicts[canonical_rule_id]["binding_reason"] == "RULE_INACTIVE"
+    assert canonical_rule_id in _score_blocking_catalogue_conflicts(conflicts)
