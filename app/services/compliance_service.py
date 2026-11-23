@@ -85,18 +85,22 @@ def _has_rescue_output(output) -> bool:
     return bool(rescue_plan or rescue_sequence)
 
 
-def _has_catalogue_identity_mismatch(flag) -> bool:
-    """True when the evaluator quarantined a finding for catalogue identity drift."""
+def _has_unresolved_catalogue_binding(flag) -> bool:
+    """True when a finding has no valid active catalogue binding."""
     detail = getattr(flag, "detail", None)
     return (
         isinstance(detail, dict)
-        and detail.get("rule_catalogue_binding") == "STATUTORY_BASIS_MISMATCH"
+        and detail.get("rule_catalogue_binding") in {
+            "CATALOGUE_ENTRY_MISSING",
+            "RULE_INACTIVE",
+            "STATUTORY_BASIS_MISMATCH",
+        }
     )
 
 
 def _persistable_output_flags(flags):
     """Never overwrite a legacy catalogue finding with a mismatched engine identity."""
-    return [flag for flag in flags if not _has_catalogue_identity_mismatch(flag)]
+    return [flag for flag in flags if not _has_unresolved_catalogue_binding(flag)]
 
 
 def _active_catalogue_rule_ids(catalogue_rows, identity_mismatch_rule_ids):
@@ -379,7 +383,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         identity_mismatch_rule_ids = {
             flag.rule_id for flag in output.flags
-            if _has_catalogue_identity_mismatch(flag)
+            if _has_unresolved_catalogue_binding(flag)
         }
         active_rule_ids = _active_catalogue_rule_ids(
             catalogue_rows, identity_mismatch_rule_ids
@@ -489,7 +493,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ],
                 }
                 for index, f in enumerate(output.flags)
-                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS and not _has_catalogue_identity_mismatch(f)
+                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(f)
             ],
             "review_findings": [
                 {
@@ -501,8 +505,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ),
                     "review_status": applied_impacts[index]["status"],
                     "identity_binding_status": (
-                        "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH"
-                        if _has_catalogue_identity_mismatch(flag)
+                        (getattr(flag, "detail", None) or {}).get("rule_catalogue_binding")
+                        if _has_unresolved_catalogue_binding(flag)
                         else "MATCHED_CATALOGUE_IDENTITY"
                     ),
                     "message": (
@@ -512,7 +516,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "score_impact_applied": 0,
                 }
                 for index, flag in enumerate(output.flags)
-                if _has_catalogue_identity_mismatch(flag) or not (
+                if _has_unresolved_catalogue_binding(flag) or not (
                     score_is_released
                     and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 )
@@ -533,7 +537,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "scoring_status": applied_impacts[index]["status"],
                 }
                 for index, flag in enumerate(output.flags)
-                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS and not _has_catalogue_identity_mismatch(flag)
+                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(flag)
             ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
