@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import os
 from datetime import UTC, datetime, timedelta
 from typing import Optional, cast
@@ -83,32 +84,36 @@ def generate_totp_secret() -> str:
     return base64.b32encode(os.urandom(20)).decode("utf-8")
 
 
-_fernet_instance = None
+_fernet_instance: Fernet | None = None
 
 
-def _get_fernet():
+def _get_fernet() -> Fernet:
     """Get Fernet instance for AES-256 encryption of TOTP secrets."""
     global _fernet_instance
     if _fernet_instance is None:
-        key = os.environ.get("TOTP_ENCRYPTION_KEY", "")
-        if not key:
-            import hashlib
+        configured_key = os.environ.get("TOTP_ENCRYPTION_KEY")
+        if configured_key:
+            # Fernet keys are URL-safe base64-encoded 32-byte keys.
+            key_bytes = configured_key.encode("ascii")
+        else:
+            # Preserve the existing deterministic fallback for installations
+            # that have not configured a dedicated TOTP key.
             jwt_secret = os.environ["JWT_SECRET_KEY"]
-            key = hashlib.sha256(jwt_secret.encode()).digest()
-            key = base64.urlsafe_b64encode(key)
-        _fernet_instance = Fernet(key if isinstance(key, bytes) else key.encode())
+            derived_key = hashlib.sha256(jwt_secret.encode("utf-8")).digest()
+            key_bytes = base64.urlsafe_b64encode(derived_key)
+        _fernet_instance = Fernet(key_bytes)
     return _fernet_instance
 
 
 def encrypt_totp_secret(secret: str) -> str:
     """Encrypt TOTP secret with AES-256 (Fernet). NOT base64."""
-    return _get_fernet().encrypt(secret.encode()).decode()
+    return _get_fernet().encrypt(secret.encode("utf-8")).decode("ascii")
 
 
 def decrypt_totp_secret(encrypted: str) -> str:
     """Decrypt TOTP secret with AES-256 (Fernet)."""
     try:
-        return _get_fernet().decrypt(encrypted.encode()).decode()
+        return _get_fernet().decrypt(encrypted.encode("ascii")).decode("utf-8")
     except Exception:
         try:
             return base64.b64decode(encrypted.encode()).decode()
