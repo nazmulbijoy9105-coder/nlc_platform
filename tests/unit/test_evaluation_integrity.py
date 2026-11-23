@@ -151,6 +151,9 @@ def test_not_released_snapshot_is_integrity_valid_without_score_data():
         lambda snapshot: snapshot.update(category_deductions={"AGM": 5}),
         lambda snapshot: snapshot.update(risk_band="GREEN"),
         lambda snapshot: snapshot.update(reason=""),
+        lambda snapshot: snapshot.update(reason="   "),
+        lambda snapshot: snapshot.update(reason="FABRICATED_REASON"),
+        lambda snapshot: snapshot.update(reason=["INSUFFICIENT_EVIDENCE_FOR_SCORE"]),
     ],
 )
 def test_not_released_snapshot_rejects_invented_or_invalid_score_data(mutation):

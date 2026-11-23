@@ -41,7 +41,11 @@ from app.compliance.fact_provenance import (
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.compliance.outcome_status import derive_compliance_outcome
-from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+from app.compliance.evaluation_integrity import (
+    UNRELEASED_REASON_GATE_CLOSED,
+    UNRELEASED_REASON_INSUFFICIENT_EVIDENCE,
+    calculate_evaluation_score_hash,
+)
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -1151,9 +1155,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "snapshot_schema_version": 1,
                 "status": "NOT_RELEASED",
                 "reason": (
-                    "LEGAL_SCORE_RELEASE_GATE_CLOSED"
+                    UNRELEASED_REASON_GATE_CLOSED
                     if not legal_score_is_released()
-                    else "INSUFFICIENT_EVIDENCE_FOR_SCORE"
+                    else UNRELEASED_REASON_INSUFFICIENT_EVIDENCE
                 ),
                 "score": None,
                 "risk_band": "NOT_EVALUATED",

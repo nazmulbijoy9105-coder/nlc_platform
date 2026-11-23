@@ -24,6 +24,11 @@ from canonical_architecture.rjsc_scope import (
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _UNMAPPED_SOURCE = "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+UNRELEASED_REASON_GATE_CLOSED = "LEGAL_SCORE_RELEASE_GATE_CLOSED"
+UNRELEASED_REASON_INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE_FOR_SCORE"
+_UNRELEASED_REASONS = frozenset(
+    {UNRELEASED_REASON_GATE_CLOSED, UNRELEASED_REASON_INSUFFICIENT_EVIDENCE}
+)
 
 
 def calculate_evaluation_score_hash(
@@ -254,7 +259,7 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             or score_breakdown_snapshot.get("snapshot_schema_version") != 1
             or score_breakdown_snapshot.get("status") != "NOT_RELEASED"
             or not isinstance(score_breakdown_snapshot.get("reason"), str)
-            or not score_breakdown_snapshot.get("reason")
+            or score_breakdown_snapshot["reason"] not in _UNRELEASED_REASONS
             or score_breakdown_snapshot.get("score") is not None
             or score_breakdown_snapshot.get("risk_band") != "NOT_EVALUATED"
             or score_breakdown_snapshot.get("scoring_data") != "WITHHELD"
