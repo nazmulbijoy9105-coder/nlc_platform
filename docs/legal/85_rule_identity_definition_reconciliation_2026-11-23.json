@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "ledger_type": "85_RULE_IDENTITY_AND_DEFINITION_RECONCILIATION",
   "ledger_status": "INITIAL_READ_ONLY_RECONCILIATION_NOT_LEGAL_APPROVAL_OR_DEFINITION_RELEASE",
-  "generated_at_utc": "2026-11-23T16:18:16.020Z",
+  "generated_at_utc": "2026-11-23T16:18:38.850Z",
   "repository": {
     "full_name": "nazmulbijoy9105-coder/nlc_platform",
     "branch": "main",
@@ -37,7 +37,26 @@
       "path": "docs/legal/85_rule_source_and_evidence_workpack_v1.json",
       "blob_sha": "08172ae3637ec9db874e71e4f72030263cd44ef3",
       "rule_count": 85,
-      "release_effect": "NONE"
+      "release_effect": "NONE",
+      "generated_from": {
+        "base_commit": "51371a8e98a06ce00c7cb2f7acbc1554d61645b3",
+        "rule_catalog": {
+          "path": "docs/legal/NLC_BD_COMPANIES_LAW_RULES_v1.0.json",
+          "blob_sha": "a010454efb5f732b287a5bde4feb5e146b9381ff"
+        },
+        "evidence_model": {
+          "path": "canonical_architecture/evidence_model.py",
+          "blob_sha": "36d89852e32807344901c673541b7a26301569a6"
+        },
+        "applicability_model": {
+          "path": "canonical_architecture/applicability_model.py",
+          "blob_sha": "7cf69b4157eaa55e2345ddad3554cda0e9001b04"
+        },
+        "seed_rules": {
+          "path": "scripts/seed_rules.py",
+          "blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8"
+        }
+      }
     },
     "operating_interval_register": {
       "path": "docs/legal/85_rule_operating_interval_register_v1.json",
@@ -58,7 +77,8 @@
         "amendment_candidate_entries": 75,
         "rules_with_amendment_candidates": 29,
         "rules_without_amendment_candidates": 56
-      }
+      },
+      "status_policy": "FAIL_CLOSED_NO_INFERRED_OPERATIVE_INTERVALS"
     }
   },
   "production_capture": {
@@ -212,7 +232,10 @@
     "artifact_sha256_captured": 0,
     "production_revisions": 0,
     "verified_effective_dated_revisions": 0,
-    "action": "Instrument-level source URLs and known publication/commencement dates are now carried per rule from the existing workpack. They are candidate source links, not independently authenticated revisions. All rule-level operative intervals remain unresolved; do not write legal_rule_revisions or assign valid_from/valid_to until amendment, savings, transitional, repeal, corrigendum and rule-scope review is complete."
+    "action": "Instrument-level source URLs and known publication/commencement dates are now carried per rule from the existing workpack. They are candidate source links, not independently authenticated revisions. All rule-level operative intervals remain unresolved; do not write legal_rule_revisions or assign valid_from/valid_to until amendment, savings, transitional, repeal, corrigendum and rule-scope review is complete.",
+    "source_workpack_entries_present": 85,
+    "operative_interval_from_values": 0,
+    "operative_interval_to_values": 0
   },
   "runtime_coverage": {
     "seed_rule_count": 85,
@@ -357,7 +380,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -379,7 +402,8 @@
           "identity_status": "KNOWN_HISTORICAL_IDENTITY_CONFLICT_OR_QUARANTINE_UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -538,7 +562,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -561,7 +585,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -720,7 +745,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -743,7 +768,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -902,7 +928,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
             "url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
@@ -924,7 +950,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -1200,7 +1227,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "BIDA Guidelines for foreign commercial offices and work permits (2023)",
             "url": "https://www.bida.gov.bd/resources",
@@ -1223,7 +1250,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -1412,7 +1440,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -1434,7 +1462,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -1594,7 +1623,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -1616,7 +1645,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -1777,7 +1807,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -1801,7 +1831,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -1959,7 +1990,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -1982,7 +2013,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -2142,7 +2174,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -2165,7 +2197,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -2330,7 +2363,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -2353,7 +2386,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -2516,7 +2550,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -2565,7 +2599,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -2762,7 +2797,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -2811,7 +2846,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -3006,7 +3042,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -3029,7 +3065,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -3187,7 +3224,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -3209,7 +3246,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -3368,7 +3406,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -3390,7 +3428,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -3548,7 +3587,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -3572,7 +3611,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -3789,7 +3829,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -3813,7 +3853,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4028,7 +4069,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4050,7 +4091,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4208,7 +4250,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4231,7 +4273,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4390,7 +4433,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4413,7 +4456,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4579,7 +4623,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4601,7 +4645,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4762,7 +4807,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4785,7 +4830,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -4939,7 +4985,7 @@
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -4961,7 +5007,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -5114,7 +5161,7 @@
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -5136,7 +5183,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -5293,7 +5341,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -5315,7 +5363,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -5474,7 +5523,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -5510,7 +5559,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -5689,7 +5739,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Stamp Act, 1899 (Act No. II of 1899)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-77.html",
@@ -5712,7 +5762,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -5910,7 +5961,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -5946,7 +5997,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -6126,7 +6178,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -6162,7 +6214,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -6341,7 +6394,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -6377,7 +6430,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -6552,7 +6606,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -6575,7 +6629,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -6731,7 +6786,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -6753,7 +6808,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -6914,7 +6970,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -6939,7 +6995,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -7099,7 +7156,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -7121,7 +7178,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -7277,7 +7335,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -7299,7 +7357,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -7460,7 +7519,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -7484,7 +7543,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -7648,7 +7708,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -7670,7 +7730,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -7829,7 +7890,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -7852,7 +7913,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -8010,7 +8072,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -8033,7 +8095,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -8191,7 +8254,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
@@ -8218,7 +8281,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -8399,7 +8463,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
@@ -8445,7 +8509,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -8686,7 +8751,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -8708,7 +8773,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -8869,7 +8935,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -8891,7 +8957,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9051,7 +9118,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9076,7 +9143,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9229,7 +9297,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9252,7 +9320,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9404,7 +9473,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9426,7 +9495,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9576,7 +9646,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9599,7 +9669,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9750,7 +9821,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9786,7 +9857,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -9954,7 +10026,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -9977,7 +10049,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -10130,7 +10203,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "BSEC Corporate Governance Code 2018",
             "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
@@ -10170,7 +10243,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -10341,7 +10415,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "BSEC Corporate Governance Code 2018",
             "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
@@ -10381,7 +10455,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -10601,7 +10676,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "BSEC Corporate Governance Code 2018",
             "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
@@ -10649,7 +10724,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -10892,7 +10968,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "BSEC Corporate Governance Code 2018",
             "url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
@@ -10932,7 +11008,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -11156,7 +11233,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -11179,7 +11256,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -11337,7 +11415,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -11360,7 +11438,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -11511,7 +11590,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -11533,7 +11612,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -11690,7 +11770,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -11712,7 +11792,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -11862,7 +11943,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -11884,7 +11965,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -12034,7 +12116,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -12057,7 +12139,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -12208,7 +12291,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -12232,7 +12315,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -12383,7 +12467,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Foreign Exchange Regulation Act, 1947 (Act VII of 1947)",
             "url": "https://old.bdlaws.minlaw.gov.bd/upload/bdcodeact/2023-12-11-15-13-10-234.-FOREIGN-EXCHANGE-REGULATION-ACT-1947.pdf",
@@ -12405,7 +12489,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -12629,7 +12714,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
@@ -12666,7 +12751,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -12863,7 +12949,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
@@ -12900,7 +12986,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -13087,7 +13174,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
@@ -13120,7 +13207,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -13303,7 +13391,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -13327,7 +13415,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -13479,7 +13568,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -13505,7 +13594,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -13659,7 +13749,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -13683,7 +13773,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -13844,7 +13935,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
@@ -13871,7 +13962,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -14051,7 +14143,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Income Tax Act, 2023 (Act No. XII of 2023)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
@@ -14080,7 +14172,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -14261,7 +14354,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
@@ -14283,7 +14376,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -14521,7 +14615,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
@@ -14543,7 +14637,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -14792,7 +14887,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
@@ -14835,7 +14930,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -15072,7 +15168,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
@@ -15104,7 +15200,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -15319,7 +15416,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -15341,7 +15438,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -15495,7 +15593,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -15517,7 +15615,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -15671,7 +15770,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -15693,7 +15792,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -15844,7 +15944,7 @@
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -15866,7 +15966,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16017,7 +16118,7 @@
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16039,7 +16140,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16209,7 +16311,7 @@
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16231,7 +16333,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16394,7 +16497,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16417,7 +16520,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16572,7 +16676,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16597,7 +16701,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16754,7 +16859,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16776,7 +16881,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -16933,7 +17039,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -16955,7 +17061,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
@@ -17116,7 +17223,7 @@
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
         "source_workpack": {
-          "status": "MISSING",
+          "status": "ENTRY_PRESENT_STATUS_FIELD_OMITTED",
           "primary_instrument": {
             "title": "Companies Act, 1994 (Act XVIII of 1994)",
             "url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
@@ -17138,7 +17245,8 @@
           "identity_status": "UNRESOLVED",
           "legal_review": "REVIEW_REQUIRED",
           "product_decision": "NOT_REVIEWED",
-          "score_eligible": false
+          "score_eligible": false,
+          "entry_present": true
         },
         "operating_interval_register": {
           "primary_instrument": {
