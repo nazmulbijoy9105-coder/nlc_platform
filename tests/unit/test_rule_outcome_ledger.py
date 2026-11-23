@@ -208,3 +208,60 @@ def test_duplicate_active_catalogue_rule_ids_fail_closed():
             [_rule("INC-001"), _rule("INC-001")],
             [],
         )
+
+
+def test_identity_basis_matching_normalizes_case_and_whitespace():
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001", statutory_basis="  SECTION   9, Companies Act 1994 ")],
+        [_flag(
+            "INC-001",
+            "UNKNOWN",
+            statutory_basis="section 9, companies act 1994",
+        )],
+    )
+    assert rows[0]["assessment_source"] == "ENGINE_FINDING"
+    assert rows[0]["identity_conflicts"] == []
+
+
+def test_catalogue_identity_conflict_is_preserved_without_engine_finding():
+    conflict = {
+        "rule_id": "INC-001",
+        "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        "binding_reason": "STATUTORY_BASIS_MISMATCH",
+        "engine_statutory_basis": "Section 23",
+        "catalogue_statutory_basis": "Section 9",
+        "catalogue_rule_version": "2.3",
+        "catalogue_is_active": True,
+    }
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001")],
+        [],
+        catalogue_identity_conflicts={"INC-001": conflict},
+    )
+    assert rows[0]["outcome_state"] == "UNKNOWN"
+    assert rows[0]["applicability_status"] == "UNKNOWN"
+    assert rows[0]["assessment_source"] == "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
+    assert rows[0]["findings"] == []
+    assert rows[0]["identity_conflicts"] == [conflict]
+
+
+def test_inactive_catalogue_identity_is_preserved_as_unmapped_conflict():
+    conflict = {
+        "rule_id": "INC-002",
+        "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        "binding_reason": "RULE_INACTIVE",
+        "engine_statutory_basis": "Section 9",
+        "catalogue_statutory_basis": "Section 9",
+        "catalogue_rule_version": "legacy",
+        "catalogue_is_active": False,
+    }
+    rows = build_rule_outcomes_snapshot(
+        [_rule("INC-001")],
+        [],
+        catalogue_identity_conflicts={"INC-002": conflict},
+    )
+    orphan = next(row for row in rows if row["rule_id"] == "INC-002")
+    assert orphan["outcome_state"] == "UNKNOWN"
+    assert orphan["assessment_source"] == "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE"
+    assert orphan["findings"] == []
+    assert orphan["identity_conflicts"] == [conflict]
