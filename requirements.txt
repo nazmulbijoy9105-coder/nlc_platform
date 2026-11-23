@@ -45,7 +45,6 @@ distlib==0.4.1
 distro==1.9.0
 dnspython==2.8.0
 docstring_parser==0.18.0
-ecdsa==0.19.2
 email-validator==2.3.0
 fastapi==0.115.5
 fastapi-cli==0.0.32
@@ -227,11 +226,7 @@ zopfli==0.4.1
 #   PYSEC-2026-161, 249, 248, 1942, 1941, 2281, 2280
 #   Fix: upgrade fastapi>=0.116.0 + starlette>=1.1.0 (breaking change)
 #   Status: deferred — requires FastAPI major version upgrade + test updates
-#
-# ecdsa 0.19.2: 1 CVE (Minerva timing attack, no fix from project)
-#   PYSEC-2026-1325
-#   Fix: replace python-jose with PyJWT + cryptography
-#   Status: deferred — requires auth library migration
+
 # ═══════════════════════════════════════════════════════════════
 apscheduler>=3.11.0
 apscheduler>=3.11.0
