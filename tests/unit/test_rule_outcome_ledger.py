@@ -6,18 +6,18 @@ from app.compliance.rule_outcome_ledger import (
 )
 
 
-def _rule(rule_id: str):
+def _rule(rule_id: str, *, statutory_basis="UNVERIFIED CANDIDATE"):
     return SimpleNamespace(
         rule_id=rule_id,
         rule_version="2.2",
-        statutory_basis="UNVERIFIED CANDIDATE",
+        statutory_basis=statutory_basis,
         verification_status="PENDING",
         verified_by=None,
         verified_at=None,
     )
 
 
-def _flag(rule_id: str, state: str, *, applicability_state=None, conditional_applies=True):
+def _flag(rule_id: str, state: str, *, applicability_state=None, conditional_applies=True, statutory_basis="UNVERIFIED CANDIDATE"):
     return SimpleNamespace(
         rule_id=rule_id,
         flag_code=f"{rule_id}_REVIEW",
@@ -28,7 +28,7 @@ def _flag(rule_id: str, state: str, *, applicability_state=None, conditional_app
         applicability_reason=None,
         severity="NOT_EVALUATED",
         description="Evidence review required",
-        statutory_basis="UNVERIFIED CANDIDATE",
+        statutory_basis=statutory_basis,
         detail={},
     )
 
@@ -166,3 +166,45 @@ def test_scoring_ineligibility_is_not_misreported_as_not_applicable():
     )
     assert rows[0]["applicability_state"] == "UNKNOWN"
     assert rows[0]["applicability_state"] != "NOT_APPLICABLE"
+
+
+
+def test_same_rule_id_with_different_statutory_basis_is_not_attributed_to_catalogue_row():
+    rows = build_rule_outcomes_snapshot(
+        [
+            _rule(
+                "INC-001",
+                statutory_basis="Section 9, Companies Act 1994 (Bangladesh)",
+            )
+        ],
+        [
+            _flag(
+                "INC-001",
+                "UNKNOWN",
+                statutory_basis="Section 23, Companies Act 1994 (Bangladesh)",
+            )
+        ],
+    )
+    assert len(rows) == 1
+    assert rows[0]["rule_id"] == "INC-001"
+    assert rows[0]["findings"] == []
+    assert rows[0]["outcome_state"] == "UNKNOWN"
+    assert rows[0]["assessment_source"] == "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
+    assert rows[0]["identity_conflicts"] == [
+        {
+            "flag_code": "INC-001_REVIEW",
+            "flag_statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
+            "catalogue_statutory_basis": "Section 9, Companies Act 1994 (Bangladesh)",
+            "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+        }
+    ]
+
+
+def test_duplicate_active_catalogue_rule_ids_fail_closed():
+    import pytest
+
+    with pytest.raises(ValueError, match="Duplicate active catalogue rule_id"):
+        build_rule_outcomes_snapshot(
+            [_rule("INC-001"), _rule("INC-001")],
+            [],
+        )

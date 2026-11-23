@@ -85,6 +85,33 @@ def _has_rescue_output(output) -> bool:
     return bool(rescue_plan or rescue_sequence)
 
 
+def _has_unresolved_catalogue_binding(flag) -> bool:
+    """True when a finding has no valid active catalogue binding."""
+    detail = getattr(flag, "detail", None)
+    return (
+        isinstance(detail, dict)
+        and detail.get("rule_catalogue_binding") in {
+            "CATALOGUE_ENTRY_MISSING",
+            "RULE_INACTIVE",
+            "STATUTORY_BASIS_MISMATCH",
+        }
+    )
+
+
+def _persistable_output_flags(flags):
+    """Never overwrite a legacy catalogue finding with a mismatched engine identity."""
+    return [flag for flag in flags if not _has_unresolved_catalogue_binding(flag)]
+
+
+def _active_catalogue_rule_ids(catalogue_rows, identity_mismatch_rule_ids):
+    """Return active IDs only where the current engine did not detect identity drift."""
+    return [
+        row.rule_id
+        for row in catalogue_rows
+        if bool(row.is_active) and row.rule_id not in identity_mismatch_rule_ids
+    ]
+
+
 def _applied_score_impacts(flags) -> list[dict]:
     """Reconcile every finding to the same versioned score allocation as the engine.
 
@@ -306,6 +333,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     LegalRule.rule_id,
                     LegalRule.rule_version,
                     LegalRule.is_active,
+                    LegalRule.statutory_basis,
                 ).order_by(LegalRule.rule_id)
             )
         ).all()
@@ -315,6 +343,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         profile.catalogue_rule_active = {
             row.rule_id: bool(row.is_active) for row in catalogue_rows
+        }
+        profile.catalogue_rule_bases = {
+            row.rule_id: row.statutory_basis for row in catalogue_rows
         }
         catalogue_binding = {
             "record_type": "LEGAL_RULE_CATALOGUE_SNAPSHOT",
@@ -334,18 +365,30 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         fact_provenance_snapshot.append(catalogue_binding)
 
-        # Applicability is a separate, run-scoped assessment. Only verified,
-        # document-backed CompanyFact records may satisfy scope predicates.
-        # Missing policies/facts remain UNKNOWN; findings are never used to
-        # infer applicability and this result does not gate scoring or activation.
-        from app.compliance.rule_applicability import build_rule_applicability_results
-
+        # Prepare verified fact inputs before evaluation. Applicability is built
+        # after engine evaluation so an identity collision can be excluded from
+        # the canonical active-rule set before any applicability is attributed.
         verified_fact_records = {}
         for fact in current_facts:
             fact_record = fact.to_fact_record()
             if fact_record.is_verified_document_fact():
                 verified_fact_records[fact.fact_key] = fact_record
-        active_rule_ids = [row.rule_id for row in catalogue_rows if bool(row.is_active)]
+
+        # ── Step 2: Run rule engine ────────────────────────────────
+        # Explicit injection supports deterministic tests and controlled
+        # evaluation runs. Production callers retain the canonical engine.
+        engine = rule_engine if rule_engine is not None else get_rule_engine()
+        output = engine.evaluate(profile)
+
+        from app.compliance.rule_applicability import build_rule_applicability_results
+
+        identity_mismatch_rule_ids = {
+            flag.rule_id for flag in output.flags
+            if _has_unresolved_catalogue_binding(flag)
+        }
+        active_rule_ids = _active_catalogue_rule_ids(
+            catalogue_rows, identity_mismatch_rule_ids
+        )
         applicability_results = build_rule_applicability_results(
             active_rule_ids, verified_fact_records
         )
@@ -362,12 +405,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 and str(fact.id) not in already_snapshotted_fact_ids
             ):
                 fact_provenance_snapshot.append(fact.provenance_payload())
-
-        # ── Step 2: Run rule engine ────────────────────────────────
-        # Explicit injection supports deterministic tests and controlled
-        # evaluation runs. Production callers retain the canonical engine.
-        engine = rule_engine if rule_engine is not None else get_rule_engine()
-        output = engine.evaluate(profile)
         risk_band_value = getattr(
             output.score_breakdown.risk_band,
             "value",
@@ -457,7 +494,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     ],
                 }
                 for index, f in enumerate(output.flags)
-                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and f.rule_id in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(f)
             ],
             "review_findings": [
                 {
@@ -468,6 +505,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         flag, counsel_verified_rule=flag.rule_id in VERIFIED_RULE_IDS
                     ),
                     "review_status": applied_impacts[index]["status"],
+                    "identity_binding_status": (
+                        (getattr(flag, "detail", None) or {}).get("rule_catalogue_binding")
+                        if _has_unresolved_catalogue_binding(flag)
+                        else "MATCHED_CATALOGUE_IDENTITY"
+                    ),
                     "message": (
                         "No statutory conclusion is issued. Evidence review is required. Product scoring "
                         "release is not independent legal verification, legal advice or certification."
@@ -475,7 +517,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "score_impact_applied": 0,
                 }
                 for index, flag in enumerate(output.flags)
-                if not (
+                if _has_unresolved_catalogue_binding(flag) or not (
                     score_is_released
                     and flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 )
@@ -496,7 +538,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     "scoring_status": applied_impacts[index]["status"],
                 }
                 for index, flag in enumerate(output.flags)
-                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS
+                if score_is_released and flag.rule_id not in PRODUCT_SCORING_RULE_IDS and not _has_unresolved_catalogue_binding(flag)
             ],
             "score_breakdown": {
                 "risk_band": public_risk_band,
@@ -599,7 +641,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
             )
 
         # ── Resolve previously active flags not in current output ──
-        current_rule_ids = {f.rule_id for f in output.flags}
+        persistable_flags = _persistable_output_flags(output.flags)
+        current_rule_ids = {f.rule_id for f in persistable_flags}
         await self.db.execute(
             update(ComplianceFlag)
             .where(
@@ -615,7 +658,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         # ── Insert new flags (upsert by company_id + rule_id) ──────
         collected_new_flags: list = []
-        for flag in output.flags:
+        for flag in persistable_flags:
 
             # Check if this flag already exists as ACTIVE
             existing = await self.db.execute(
@@ -725,7 +768,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 return_score=sb.return_score if score_for_current is not None else None,
                 director_score=sb.director_score if score_for_current is not None else None,
                 shareholding_score=sb.shareholding_score if score_for_current is not None else None,
-                active_flags_count=len(output.flags),
+                active_flags_count=len(persistable_flags),
                 black_flags_count=black_flags,
                 override_applied=sb.override_applied,
                 score_hash=score_hash,

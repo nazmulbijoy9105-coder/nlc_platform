@@ -69,6 +69,12 @@ def _applicability(findings: list[Any]) -> tuple[str, str, str, bool]:
     )
 
 
+def _identity_basis(value: Any) -> str | None:
+    """Normalize a statutory basis for conservative identity matching."""
+    normalized = " ".join(str(value or "").split()).casefold()
+    return normalized or None
+
+
 def build_rule_outcomes_snapshot(
     active_legal_rules: Iterable[Any],
     flags: Iterable[Any],
@@ -76,46 +82,90 @@ def build_rule_outcomes_snapshot(
 ) -> list[dict[str, Any]]:
     rules = list(active_legal_rules)
     applicability_results = applicability_results or {}
+    rules_by_id: dict[str, Any] = {}
+    for rule in rules:
+        if rule.rule_id in rules_by_id:
+            raise ValueError(
+                f"Duplicate active catalogue rule_id cannot be attributed: {rule.rule_id}"
+            )
+        rules_by_id[rule.rule_id] = rule
+
     findings_by_rule: dict[str, list[dict[str, Any]]] = {}
     raw_findings_by_rule: dict[str, list[Any]] = {}
+    identity_conflicts_by_rule: dict[str, list[dict[str, Any]]] = {}
+    unmapped_findings: dict[str, list[dict[str, Any]]] = {}
+    unmapped_raw_findings: dict[str, list[Any]] = {}
+
     for flag in flags:
-        state = getattr(flag, "state", None)
-        state_value = _value(state) or "UNKNOWN"
-        severity = getattr(flag, "severity", None)
-        severity_value = _value(severity)
-        eval_state = getattr(flag, "eval_state", None)
-        eval_state_value = _value(eval_state)
-        findings_by_rule.setdefault(flag.rule_id, []).append({
+        rule = rules_by_id.get(flag.rule_id)
+        flag_basis = _identity_basis(getattr(flag, "statutory_basis", None))
+        catalogue_basis = (
+            _identity_basis(getattr(rule, "statutory_basis", None))
+            if rule is not None else None
+        )
+        if rule is not None and (
+            flag_basis is None or catalogue_basis is None or flag_basis != catalogue_basis
+        ):
+            identity_conflicts_by_rule.setdefault(flag.rule_id, []).append({
+                "flag_code": getattr(flag, "flag_code", None),
+                "flag_statutory_basis": getattr(flag, "statutory_basis", None),
+                "catalogue_statutory_basis": getattr(rule, "statutory_basis", None),
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            })
+            continue
+
+        state_value = _value(getattr(flag, "state", None)) or "UNKNOWN"
+        severity_value = _value(getattr(flag, "severity", None))
+        eval_state_value = _value(getattr(flag, "eval_state", None))
+        finding = {
             "flag_code": getattr(flag, "flag_code", None),
             "outcome_state": state_value,
             "evaluation_state": eval_state_value,
             "severity": severity_value,
             "description": getattr(flag, "description", None),
             "statutory_basis": getattr(flag, "statutory_basis", None),
-        })
-        raw_findings_by_rule.setdefault(flag.rule_id, []).append(flag)
+        }
+        if rule is None:
+            unmapped_findings.setdefault(flag.rule_id, []).append(finding)
+            unmapped_raw_findings.setdefault(flag.rule_id, []).append(flag)
+        else:
+            findings_by_rule.setdefault(flag.rule_id, []).append(finding)
+            raw_findings_by_rule.setdefault(flag.rule_id, []).append(flag)
 
     snapshot: list[dict[str, Any]] = []
     for rule in rules:
-        findings = findings_by_rule.get(rule.rule_id, [])
+        rule_id = rule.rule_id
+        findings = findings_by_rule.get(rule_id, [])
+        identity_conflicts = identity_conflicts_by_rule.get(rule_id, [])
+        raw_findings = raw_findings_by_rule.get(rule_id, [])
         applicability_state, applicability_source, applicability_reason, applicability_conflict = _applicability(
-            raw_findings_by_rule.get(rule.rule_id, [])
+            raw_findings
         )
         states = {item["outcome_state"] for item in findings}
         state = (
             next(iter(states)) if len(states) == 1
             else "CONTRADICTORY" if len(states) > 1
+            else "UNKNOWN" if identity_conflicts
             else "NOT_EVALUATED"
         )
         verified_at = getattr(rule, "verified_at", None)
-        applicability = dict(applicability_results.get(rule.rule_id, {}))
+        applicability = dict(applicability_results.get(rule_id, {}))
         applicability_status = str(applicability.get("status", "UNKNOWN")).upper()
         if applicability_status not in {"APPLICABLE", "NOT_APPLICABLE", "UNKNOWN"}:
             raise ValueError(
-                f"Invalid applicability status for {rule.rule_id}: {applicability_status!r}"
+                f"Invalid applicability status for {rule_id}: {applicability_status!r}"
+            )
+        if identity_conflicts and not findings:
+            assessment_source = "IDENTITY_MISMATCH_NOT_ATTRIBUTED"
+        elif identity_conflicts:
+            assessment_source = "ENGINE_FINDING_WITH_IDENTITY_CONFLICT"
+        else:
+            assessment_source = (
+                "ENGINE_FINDING" if findings
+                else "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE"
             )
         snapshot.append({
-            "rule_id": rule.rule_id,
+            "rule_id": rule_id,
             "rule_version": rule.rule_version,
             "statutory_basis": rule.statutory_basis,
             "verification_status": rule.verification_status,
@@ -132,17 +182,15 @@ def build_rule_outcomes_snapshot(
             ),
             "applicability_policy_version": applicability.get("policy_version"),
             "applicability_fact_evidence": applicability.get("fact_evidence", []),
-            "assessment_source": (
-                "ENGINE_FINDING" if findings
-                else "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE"
-            ),
+            "assessment_source": assessment_source,
             "findings": findings,
+            "identity_conflicts": identity_conflicts,
         })
-    catalogue_ids = {rule.rule_id for rule in rules}
-    for orphan_rule_id in sorted(set(findings_by_rule) - catalogue_ids):
-        findings = findings_by_rule[orphan_rule_id]
+
+    for orphan_rule_id in sorted(unmapped_findings):
+        findings = unmapped_findings[orphan_rule_id]
         applicability_state, applicability_source, applicability_reason, applicability_conflict = _applicability(
-            raw_findings_by_rule.get(orphan_rule_id, [])
+            unmapped_raw_findings.get(orphan_rule_id, [])
         )
         states = {item["outcome_state"] for item in findings}
         state = (
@@ -168,9 +216,9 @@ def build_rule_outcomes_snapshot(
             "applicability_fact_evidence": [],
             "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
             "findings": findings,
+            "identity_conflicts": [],
         })
     return snapshot
-
 
 def hash_rule_outcomes_snapshot(snapshot: list[dict[str, Any]]) -> str:
     payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), default=str)
