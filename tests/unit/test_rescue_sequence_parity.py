@@ -277,3 +277,15 @@ def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkey
     assert result[0]["disposition"] == "REVIEW_REQUIRED"
     assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
 
+
+
+def test_catalogue_identity_conflict_is_blocked_before_not_applicable_disposition():
+    finding = _flag(
+        "AGM-001",
+        state=RuleState.UNKNOWN,
+        applies=False,
+        detail={"rule_catalogue_binding": "STATUTORY_BASIS_MISMATCH"},
+    )
+    result = _dispositions([finding])
+    assert result[0]["disposition"] == "BLOCKED"
+    assert result[0]["reason"] == "CATALOGUE_IDENTITY_CONFLICT"
