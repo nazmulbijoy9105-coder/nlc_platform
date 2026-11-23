@@ -311,7 +311,14 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot is None
+        assert persisted_run.score_breakdown_snapshot == {
+            "snapshot_schema_version": 1,
+            "status": "NOT_RELEASED",
+            "reason": "LEGAL_SCORE_RELEASE_GATE_CLOSED",
+            "score": None,
+            "risk_band": "NOT_EVALUATED",
+            "scoring_data": "WITHHELD",
+        }
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
