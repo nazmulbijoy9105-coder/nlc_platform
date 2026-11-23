@@ -170,3 +170,31 @@ def test_source_workpack_rebase_does_not_invent_effective_dates_or_legal_approva
         assert row["provenance"]["operative_effective_date_status"] == "UNRESOLVED"
         assert row["provenance"]["legal_review_status"] == "REVIEW_REQUIRED"
         assert row["release"]["score_eligible"] is False
+
+
+def test_primary_source_candidates_are_linked_without_promoting_them_to_effective_intervals():
+    ledger = json.loads(LEDGER.read_text(encoding="utf-8"))
+    rebase = _latest(ledger)["source_workpack_rebase"]
+    events = rebase["source_event_candidates"]
+
+    assert events["REG003"][0]["provisions"] == ["41(1)", "89(4)", "174(1)"]
+    assert "Section 89(4)" in rebase["legal_source_review_notes"]["REG003"]
+    assert "Board-minute location rule" in rebase["legal_source_review_notes"]["REG003"]
+
+    labour = events["LBR001"]
+    act = next(item for item in labour if item["instrument"] == "Bangladesh Labour (Amendment) Act 2026")
+    rules = next(item for item in labour if item["instrument"] == "Bangladesh Labour (Amendment) Rules 2026")
+    assert act["publication_date"] == "2026-04-10"
+    assert act["commencement"] == "In force at once"
+    assert act["provisions"] == ["326(1)(b)"]
+    assert rules["publication_date"] == "2026-02-16"
+    assert "NO_AMENDMENT_TO_RULES_354_355" in rules["source_status"]
+
+    members = events["MEM001"][0]
+    assert members["candidate_commencement_date"] == "1994-12-01"
+    assert members["provisions"] == ["222", "223"]
+
+    # Candidate publication/commencement dates are not rule-specific operative intervals.
+    for row in rebase["rules"]:
+        assert row["operating_interval"]["from"] is None
+        assert row["operating_interval"]["to_exclusive"] is None
