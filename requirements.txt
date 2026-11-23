@@ -160,7 +160,7 @@ python-dateutil==2.9.0
 python-discovery==1.6.1
 python-dotenv==1.2.4
 python-http-client==3.3.7
-python-jose==3.5.0
+PyJWT[crypto]==2.15.1
 python-magic==0.4.27
 python-multipart==0.0.32
 pytz==2024.1
