@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "ledger_type": "85_RULE_IDENTITY_AND_DEFINITION_RECONCILIATION",
   "ledger_status": "INITIAL_READ_ONLY_RECONCILIATION_NOT_LEGAL_APPROVAL_OR_DEFINITION_RELEASE",
-  "generated_at_utc": "2026-11-23T16:26:23.653Z",
+  "generated_at_utc": "2026-11-23T16:26:55.245Z",
   "repository": {
     "full_name": "nazmulbijoy9105-coder/nlc_platform",
     "branch": "main",
@@ -303,11 +303,18 @@
     "operative_intervals_unresolved": 85
   },
   "runtime_coverage": {
-    "seed_rule_count": 85,
-    "static_registry_id_count": 85,
-    "static_parser_test_is_not_runtime_evaluation": true,
-    "current_runtime_test_suite_proves_actual_emission_for_all_85": false,
-    "action": "Add deterministic NLCRuleEngine.evaluate fixtures and assert the actual emitted rule IDs/states for every rule, including applicability, exceptions, unknown evidence and contradictory facts."
+    "status": "PASSED_IN_CI",
+    "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+    "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+    "workflow_run_id": 45215990698,
+    "unit_job_id": 137837149849,
+    "profiles_used": 31,
+    "expected_unique_ids": 85,
+    "emitted_unique_ids": 85,
+    "missing_ids": 0,
+    "unexpected_ids": 0,
+    "execution": "NLCRuleEngine.evaluate() on deterministic CompanyProfile scenarios; actual EngineOutput.flags; no mocked ComplianceFlag objects",
+    "limitation": "This proves at-least-one runtime emission per rule ID. It is not full branch coverage for every rule, all six evaluation states, legal applicability, or legal correctness."
   },
   "safety": {
     "database_changed": false,
@@ -441,8 +448,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -663,8 +675,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -886,8 +903,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -1107,8 +1129,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -1444,8 +1471,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -1695,8 +1727,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -1916,8 +1953,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -2140,8 +2182,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -2363,8 +2410,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -2585,8 +2637,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -2813,8 +2870,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -3044,8 +3106,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -3332,8 +3399,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -3618,8 +3690,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -3839,8 +3916,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -4059,8 +4141,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -4279,8 +4366,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -4559,8 +4651,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -4837,8 +4934,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -5056,8 +5158,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -5278,8 +5385,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -5507,8 +5619,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -5735,8 +5852,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -5953,8 +6075,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
@@ -6167,8 +6294,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
@@ -6385,8 +6517,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -6605,8 +6742,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -6861,8 +7003,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -7124,8 +7271,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -7381,8 +7533,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -7638,8 +7795,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -7891,8 +8053,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -8109,8 +8276,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -8330,8 +8502,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -8569,8 +8746,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -8800,8 +8982,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -9022,8 +9209,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -9252,8 +9444,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -9476,8 +9673,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -9696,8 +9898,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -9916,8 +10123,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -10163,8 +10375,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -10489,8 +10706,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -10712,8 +10934,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -10934,8 +11161,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -11153,8 +11385,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -11366,8 +11603,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -11577,8 +11819,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -11789,8 +12036,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -12031,8 +12283,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -12245,8 +12502,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -12495,8 +12757,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -12794,8 +13061,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -13124,8 +13396,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -13427,8 +13704,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -13651,8 +13933,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -13868,8 +14155,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -14086,8 +14378,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -14296,8 +14593,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -14506,8 +14808,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -14718,8 +15025,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -14931,8 +15243,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -15215,8 +15532,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -15497,8 +15819,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -15769,8 +16096,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -16023,8 +16355,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -16238,8 +16575,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -16457,8 +16799,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -16681,8 +17028,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -16927,8 +17279,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -17178,8 +17535,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -17476,8 +17838,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -17785,8 +18152,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -18104,8 +18476,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -18390,8 +18767,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -18604,8 +18986,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -18818,8 +19205,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -19029,8 +19421,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
@@ -19240,8 +19637,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
@@ -19470,8 +19872,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "EXACT_FIELD_MATCH_ONLY_IDENTITY_AND_LEGAL_REVIEW_STILL_REQUIRED",
       "source_revision_candidates": {
@@ -19693,8 +20100,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -19917,8 +20329,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -20137,8 +20554,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -20354,8 +20776,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
@@ -20589,8 +21016,13 @@
       },
       "runtime_coverage": {
         "static_engine_id_declared": true,
-        "actual_runtime_emission_tested": false,
-        "status": "NOT_YET_PROVEN"
+        "actual_runtime_emission_tested": true,
+        "status": "EMITTED_IN_CI_RUNTIME_EVALUATOR_TEST",
+        "test_file": "tests/unit/test_runtime_85_rule_evaluator_coverage.py",
+        "tested_code_commit": "59b9333dd4da0cda5dba819d8e01ba3f8267c2dc",
+        "workflow_run_id": 45215990698,
+        "unit_job_id": 137837149849,
+        "profile_name_mapping": "not exported by the test; each ID is asserted to appear in at least one actual evaluator output"
       },
       "definition_resolution_status": "PENDING_INDIVIDUAL_PRIMARY_SOURCE_AND_DEFINITION_REVIEW",
       "source_revision_candidates": {
