@@ -1,4 +1,4 @@
-name: Production 0112 to 0123 Neon Migration Rehearsal
+name: Production 0112 to 0125 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -13,7 +13,7 @@ on:
       - "canonical_architecture/statutory_rules.py"
       - "alembic.ini"
       - "requirements.txt"
-      - "scripts/rehearse_production_0112_to_0122.py"
+      - "scripts/rehearse_production_0112_to_0125.py"
       - ".github/workflows/production-0112-to-0122-rehearsal.yml"
   workflow_dispatch:
 
@@ -76,7 +76,7 @@ jobs:
           fi
 
           # A unique disposable branch prevents stale IDs and concurrent-run collisions.
-          BRANCH_NAME="nlc-0112-to-0123-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          BRANCH_NAME="nlc-0112-to-0125-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           payload=$(jq -n --arg name "$BRANCH_NAME" --arg parent "$NEON_PARENT_BRANCH_ID"             '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
           created=$(curl --silent --show-error --fail --request POST             "${AUTH[@]}" -H "Content-Type: application/json"             --data "$payload" "$API/branches")
           BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
@@ -166,9 +166,9 @@ jobs:
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0123.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0125.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0112-to-0123-rehearsal
+          name: nlc-production-0112-to-0125-rehearsal
           path: artifacts/neon-production-0112-to-0123.json
           if-no-files-found: error
