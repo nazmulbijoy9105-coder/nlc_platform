@@ -467,6 +467,7 @@ class CompanyProfile:
     catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
     catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
     catalogue_rule_bases: Dict[str, str] = field(default_factory=dict)
+    catalogue_identity_conflicts: Dict[str, Dict[str, Any]] = field(default_factory=dict, repr=False)
 
 @dataclass
 class ScoreBreakdown:
