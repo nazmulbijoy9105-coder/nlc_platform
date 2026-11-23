@@ -116,9 +116,20 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                     if not isinstance(conflicts, list) or any(
                         not isinstance(conflict, dict)
                         or conflict.get("resolution_status") != "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH"
+                        or not isinstance(conflict.get("flag_code"), str)
+                        or not conflict.get("flag_code", "").strip()
+                        or "flag_statutory_basis" not in conflict
+                        or "catalogue_statutory_basis" not in conflict
                         for conflict in conflicts
                     ):
                         problems.append("RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED")
+                        break
+                    if source in {
+                        "ENGINE_FINDING",
+                        "NO_FINDING_EMITTED_NOT_PROOF_OF_COMPLIANCE",
+                        _UNMAPPED_SOURCE,
+                    } and conflicts:
+                        problems.append("RULE_OUTCOME_SOURCE_CONFLICT_CONTRADICTION")
                         break
                     if source == "IDENTITY_MISMATCH_NOT_ATTRIBUTED" and (
                         findings or not conflicts
@@ -126,7 +137,7 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
                         problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
                         break
                     if source == "ENGINE_FINDING_WITH_IDENTITY_CONFLICT" and (
-                        not conflicts
+                        not findings or not conflicts
                     ):
                         problems.append("RULE_OUTCOME_IDENTITY_CONFLICT_SHAPE_INVALID")
                         break
