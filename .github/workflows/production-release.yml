@@ -1,10 +1,10 @@
-name: Controlled Production Release 0112 to 0125
+name: Controlled Production Release 0112 to 0123
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_release:
-        description: Type APPLY_0125_AND_DEPLOY to authorize the controlled production release
+        description: Type APPLY_0123_AND_DEPLOY to authorize the controlled production release
         required: true
         type: string
       api_url:
@@ -185,13 +185,13 @@ jobs:
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts-pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts-pre-migration-health.json >/dev/null
 
-      - name: Apply and verify production migrations 0112 through 0125
+      - name: Apply and verify production migrations 0112 through 0123
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          REPORT_PATH=artifacts/neon-production-0112-to-0125.json \
-            python scripts/rehearse_production_0112_to_0125.py
+          REPORT_PATH=artifacts/neon-production-0112-to-0123.json \
+            python scripts/rehearse_production_0112_to_0122.py
           mkdir -p artifacts
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
@@ -276,6 +276,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-release-0125-evidence
+          name: nlc-production-release-0123-evidence
           path: artifacts/*.json
           if-no-files-found: warn
