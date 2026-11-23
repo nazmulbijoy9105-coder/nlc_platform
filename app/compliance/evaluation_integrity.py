@@ -256,7 +256,8 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
         }
         if (
             set(score_breakdown_snapshot) != expected_unreleased_fields
-            or score_breakdown_snapshot.get("snapshot_schema_version") != 1
+            or type(score_breakdown_snapshot.get("snapshot_schema_version")) is not int
+            or score_breakdown_snapshot["snapshot_schema_version"] != 1
             or score_breakdown_snapshot.get("status") != "NOT_RELEASED"
             or not isinstance(score_breakdown_snapshot.get("reason"), str)
             or score_breakdown_snapshot["reason"] not in _UNRELEASED_REASONS
