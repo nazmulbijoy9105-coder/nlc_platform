@@ -18,9 +18,23 @@ branch_labels = None
 depends_on = None
 
 LEGACY_IDENTITY_KEY = "legacy:INC-001:preserved-original-definition"
-EXPECTED_NAME = "Certificate of Incorporation Not Obtained"
-EXPECTED_BASIS = "Section 9, Companies Act 1994 (Bangladesh)"
-EXPECTED_TRIGGER = "certificate_obtained == False"
+ALLOWED_LEGACY_FINGERPRINTS = {
+    (
+        "Certificate of Incorporation Not Obtained",
+        "Section 9, Companies Act 1994 (Bangladesh)",
+        "certificate_obtained == False",
+    ),
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 23, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    ),
+    (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    ),
+}
 
 
 def upgrade() -> None:
@@ -43,15 +57,18 @@ def upgrade() -> None:
 
     archive_payload = archived["original_payload"]
     archived_condition = archive_payload.get("rule_condition") or {}
+    archived_fingerprint = (
+        archive_payload.get("rule_name"),
+        archive_payload.get("statutory_basis"),
+        archived_condition.get("trigger"),
+    )
     if (
         archive_payload.get("rule_id") != "INC-001"
-        or archive_payload.get("rule_name") != EXPECTED_NAME
-        or archive_payload.get("statutory_basis") != EXPECTED_BASIS
-        or archived_condition.get("trigger") != EXPECTED_TRIGGER
+        or archived_fingerprint not in ALLOWED_LEGACY_FINGERPRINTS
     ):
         raise RuntimeError(
-            "0125 refuses to proceed: the archived INC-001 payload is not the "
-            "known legacy Section 9 identity"
+            "0125 refuses to proceed: the immutable archive does not match an "
+            "explicitly accepted 0115 legacy INC-001 fingerprint"
         )
 
     current = bind.execute(
@@ -69,10 +86,14 @@ def upgrade() -> None:
         raise RuntimeError("0125 refuses to proceed: legal_rules INC-001 is missing")
 
     current_condition = current["rule_condition"] or {}
+    current_fingerprint = (
+        current["rule_name"],
+        current["statutory_basis"],
+        current_condition.get("trigger"),
+    )
     if (
-        current["rule_name"] != EXPECTED_NAME
-        or current["statutory_basis"] != EXPECTED_BASIS
-        or current_condition.get("trigger") != EXPECTED_TRIGGER
+        current_fingerprint != archived_fingerprint
+        or current_condition != archived_condition
         or current["default_severity"] != "NOT_EVALUATED"
         or current["score_impact"] != 0
         or current["is_black_override"] is not False
