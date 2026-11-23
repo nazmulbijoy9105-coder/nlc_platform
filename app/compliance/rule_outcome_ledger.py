@@ -79,9 +79,11 @@ def build_rule_outcomes_snapshot(
     active_legal_rules: Iterable[Any],
     flags: Iterable[Any],
     applicability_results: Mapping[str, Mapping[str, Any]] | None = None,
+    catalogue_identity_conflicts: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     rules = list(active_legal_rules)
     applicability_results = applicability_results or {}
+    catalogue_identity_conflicts = catalogue_identity_conflicts or {}
     rules_by_id: dict[str, Any] = {}
     for rule in rules:
         if rule.rule_id in rules_by_id:
@@ -92,7 +94,10 @@ def build_rule_outcomes_snapshot(
 
     findings_by_rule: dict[str, list[dict[str, Any]]] = {}
     raw_findings_by_rule: dict[str, list[Any]] = {}
-    identity_conflicts_by_rule: dict[str, list[dict[str, Any]]] = {}
+    identity_conflicts_by_rule: dict[str, list[dict[str, Any]]] = {
+        str(rule_id): [dict(conflict)]
+        for rule_id, conflict in catalogue_identity_conflicts.items()
+    }
     unmapped_findings: dict[str, list[dict[str, Any]]] = {}
     unmapped_raw_findings: dict[str, list[Any]] = {}
 
@@ -109,7 +114,9 @@ def build_rule_outcomes_snapshot(
             identity_conflicts_by_rule.setdefault(flag.rule_id, []).append({
                 "flag_code": getattr(flag, "flag_code", None),
                 "flag_statutory_basis": getattr(flag, "statutory_basis", None),
+                "engine_statutory_basis": getattr(flag, "statutory_basis", None),
                 "catalogue_statutory_basis": getattr(rule, "statutory_basis", None),
+                "binding_reason": "STATUTORY_BASIS_MISMATCH",
                 "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
             })
             continue
@@ -187,8 +194,19 @@ def build_rule_outcomes_snapshot(
             "identity_conflicts": identity_conflicts,
         })
 
-    for orphan_rule_id in sorted(unmapped_findings):
-        findings = unmapped_findings[orphan_rule_id]
+    orphan_rule_ids = (set(unmapped_findings) | set(catalogue_identity_conflicts)) - set(rules_by_id)
+    for orphan_rule_id in sorted(orphan_rule_ids):
+        findings = unmapped_findings.get(orphan_rule_id, [])
+        identity_conflicts = identity_conflicts_by_rule.get(orphan_rule_id, [])
+        if not identity_conflicts:
+            identity_conflicts = [{
+                "flag_code": None,
+                "flag_statutory_basis": None,
+                "engine_statutory_basis": None,
+                "catalogue_statutory_basis": None,
+                "binding_reason": "CATALOGUE_ENTRY_MISSING",
+                "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
+            }]
         applicability_state, applicability_source, applicability_reason, applicability_conflict = _applicability(
             unmapped_raw_findings.get(orphan_rule_id, [])
         )
@@ -216,7 +234,7 @@ def build_rule_outcomes_snapshot(
             "applicability_fact_evidence": [],
             "assessment_source": "ENGINE_FINDING_WITHOUT_ACTIVE_CATALOGUE_RULE",
             "findings": findings,
-            "identity_conflicts": [],
+            "identity_conflicts": identity_conflicts,
         })
     return snapshot
 
