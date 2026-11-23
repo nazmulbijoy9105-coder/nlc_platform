@@ -194,7 +194,9 @@ def test_same_rule_id_with_different_statutory_basis_is_not_attributed_to_catalo
         {
             "flag_code": "INC-001_REVIEW",
             "flag_statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
+            "engine_statutory_basis": "Section 23, Companies Act 1994 (Bangladesh)",
             "catalogue_statutory_basis": "Section 9, Companies Act 1994 (Bangladesh)",
+            "binding_reason": "STATUTORY_BASIS_MISMATCH",
             "resolution_status": "UNRESOLVED_STATUTORY_IDENTITY_MISMATCH",
         }
     ]
