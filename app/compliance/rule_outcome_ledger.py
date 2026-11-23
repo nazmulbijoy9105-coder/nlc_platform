@@ -71,7 +71,8 @@ def _applicability(findings: list[Any]) -> tuple[str, str, str, bool]:
 
 def _identity_basis(value: Any) -> str | None:
     """Normalize a statutory basis for conservative identity matching."""
-    normalized = " ".join(str(value or "").split()).casefold()
+    translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+    normalized = " ".join(str(value or "").translate(translation).split()).casefold()
     return normalized or None
 
 
