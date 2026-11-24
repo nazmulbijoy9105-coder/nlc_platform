@@ -11,6 +11,7 @@ readonly PILLOW_SDIST_URL="https://files.pythonhosted.org/packages/ce/a4/9cc3069
 readonly BROTLI_OLD="1.2.0"
 readonly BROTLI_FIXED="1.2.1"
 readonly BUILD_TAG="1brotli121"
+readonly WHEEL_TOOL_VERSION="0.48.0"
 readonly ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly WORK="${ROOT}/.build/pillow-brotli121"
 readonly RECIPE="${WORK}/Pillow-wheel-recipe"
@@ -62,7 +63,12 @@ print("Patched wheel dependency manifest:", json.dumps(data, sort_keys=True))
 PY
 
 python3 -m venv "${VENV}"
-"${VENV}/bin/python" -m pip install --disable-pip-version-check -r "${SOURCE}/.ci/requirements-cibw.txt" wheel
+"${VENV}/bin/python" -m pip install --disable-pip-version-check -r "${SOURCE}/.ci/requirements-cibw.txt" "wheel==${WHEEL_TOOL_VERSION}"
+actual_wheel_tool_version="$("${VENV}/bin/python" -c 'import wheel; print(wheel.__version__)')"
+if [[ "${actual_wheel_tool_version}" != "${WHEEL_TOOL_VERSION}" ]]; then
+  printf 'Expected wheel tool %s; found %s\\n' "${WHEEL_TOOL_VERSION}" "${actual_wheel_tool_version}" >&2
+  exit 1
+fi
 
 (
   cd "${SOURCE}"
@@ -147,6 +153,7 @@ PY
     echo "Pillow test-images commit: ${TEST_IMAGES_COMMIT}"
     echo "Only package build input changed: Brotli ${BROTLI_OLD} -> ${BROTLI_FIXED}"
     echo "Build tag: ${BUILD_TAG}"
+    echo "Wheel tag-rewriting tool: wheel ${WHEEL_TOOL_VERSION}"
     echo "Target: CPython 3.11, Linux x86_64, manylinux"
     echo "Wheel test suite: cibuildwheel ran Pillow's pyproject.toml test-command"
     echo "Independent validation: bundled decoder/common SONAMEs >= 1.2.1 and BrotliDecoderVersion() >= (1, 2, 1)"
