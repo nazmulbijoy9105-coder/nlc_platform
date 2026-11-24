@@ -73,7 +73,7 @@ def test_main_rejects_symlinked_consolidated_report(tmp_path, monkeypatch, capsy
 def test_run_script_writes_regular_report(tmp_path, monkeypatch):
     out = tmp_path / "out"
     out.mkdir()
-    script = Path(run_all_verifications.__file__).parent / "verify_rls.py"
+    script = Path(run_all_verifications.__file__).parent / "verify_tenant_isolation.py"
 
     def fake_run(args, **kwargs):
         output = Path(args[args.index("--output") + 1])

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -33,8 +34,45 @@ SCRIPTS = [
     "verify_historical.py",
 ]
 
+RLS_SCRIPT = "verify_rls.py"
+_RLS_SEVERITY = {"FAIL": "FAIL", "WARN": "WARN", "SKIP": "INFO"}
 
-def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
+
+def normalize_rls_report(report: object) -> dict:
+    """Convert verify_rls.py's `results` report into the shared `findings` shape."""
+    if not isinstance(report, dict):
+        raise ValueError("report is not a JSON object")
+    results = report.get("results")
+    if not isinstance(results, list) or not all(isinstance(row, dict) for row in results):
+        raise ValueError("report has no 'results' list")
+
+    findings = []
+    for row in results:
+        status = row.get("status")
+        if status == "PASS":
+            continue
+        severity = _RLS_SEVERITY.get(status)
+        if severity is None:
+            raise ValueError(f"unexpected result status: {status!r}")
+        finding = {
+            "check_id": row.get("check_id", "RLS"),
+            "file": f"db:{row.get('table', '?')}",
+            "line": 0,
+            "severity": severity,
+            "detail": row.get("detail", ""),
+        }
+        if row.get("evidence"):
+            finding["evidence"] = row["evidence"]
+        findings.append(finding)
+    return {**report, "findings": findings}
+
+
+def run_script(
+    script_path: Path,
+    repo: Path,
+    output_dir: Path,
+    database_url: str | None = None,
+) -> dict:
     """Run one allow-listed verification script and return its report."""
     trusted_scripts_dir = Path(__file__).resolve().parent
     resolved_script = script_path.resolve()
@@ -61,10 +99,16 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
             "stderr": f"Refusing to write report to symlinked path: {output_file}",
             "stdout_tail": "",
         }
+    # verify_rls.py takes a database URL, not the repo path. The URL goes through
+    # the environment so credentials never appear in the process command line.
+    is_rls = resolved_script.name == RLS_SCRIPT
+    env = None
+    if is_rls and database_url:
+        env = {**os.environ, "APP_DATABASE_URL": database_url}
     args = [
         sys.executable,
         str(resolved_script),
-        str(repo.resolve()),
+        *([] if is_rls else [str(repo.resolve())]),
         "--output",
         str(output_file),
     ]
@@ -72,6 +116,7 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
         proc = subprocess.run(
             args,
             shell=False,
+            env=env,
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -96,6 +141,16 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
                 "stderr": f"Could not parse output JSON: {exc}",
                 "stdout_tail": proc.stdout[-2000:],
             }
+        if is_rls:
+            try:
+                report = normalize_rls_report(report)
+            except ValueError as exc:
+                return {
+                    "script": resolved_script.name,
+                    "ok": False,
+                    "stderr": f"Could not normalize verify_rls.py report: {exc}",
+                    "stdout_tail": proc.stdout[-2000:],
+                }
         return {
             "script": resolved_script.name,
             "ok": True,
@@ -133,7 +188,7 @@ def main() -> int:
     parser.add_argument("repo", help="Path to the nlc_platform repository root.")
     parser.add_argument(
         "--database-url",
-        help="Optional PostgreSQL URL for verify_rls.py runtime checks.",
+        help="PostgreSQL URL for verify_rls.py. Defaults to $APP_DATABASE_URL, then $DATABASE_URL.",
     )
     parser.add_argument(
         "--output-dir",
@@ -172,7 +227,7 @@ def main() -> int:
             print(f"[SKIP] {script_name}: not found at {script_path}")
             continue
         print(f"[RUN ] {script_name}")
-        result = run_script(script_path, repo, out_dir)
+        result = run_script(script_path, repo, out_dir, args.database_url)
         results.append(result)
         status = "OK" if result.get("ok") else "FAIL"
         findings = result.get("report", {}).get("findings", []) if result.get("ok") else []
