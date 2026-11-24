@@ -250,6 +250,13 @@ class TestComplianceService:
         """Integration: build profile → run engine → persist → verify."""
         import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService
+        from sqlalchemy import select
+        from app.models.enums import (
+            RevenueTier as ModelRevenueTier,
+            RuleType,
+            SeverityLevel,
+        )
+        from app.models.rules import LegalRule
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
@@ -318,6 +325,40 @@ class TestComplianceService:
         )
         mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
 
+        # Bind the fixture finding to a real active catalogue identity. Without
+        # this row, the fail-closed identity gate correctly quarantines AGM-001
+        # and no customer-facing ComplianceFlag row should be created.
+        catalogue_result = await db.execute(
+            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
+        )
+        catalogue_rule = catalogue_result.scalar_one_or_none()
+        if catalogue_rule is None:
+            db.add(
+                LegalRule(
+                    rule_id="AGM-001",
+                    rule_name="First AGM Default",
+                    rule_type=RuleType.DEADLINE,
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                    description=(
+                        "First AGM must be held within 18 calendar months of "
+                        "incorporation. Calculate with calendar-month arithmetic; "
+                        "do not use a fixed-day approximation."
+                    ),
+                    default_severity=SeverityLevel.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=ModelRevenueTier.STRUCTURED_REGULARIZATION,
+                    is_black_override=False,
+                    rule_version="2.0",
+                    is_active=True,
+                )
+            )
+        else:
+            assert catalogue_rule.is_active is True
+            assert catalogue_rule.statutory_basis == (
+                "Section 81(1), Companies Act 1994 (Bangladesh)"
+            )
+        await db.flush()
+
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
             company_id=db_company.id,
@@ -339,7 +380,6 @@ class TestComplianceService:
 
         # The evaluation-run JSONB snapshot persists the full score contract,
         # including category deductions; no schema migration is required.
-        from sqlalchemy import select
         from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory, ComplianceFlag
 
         persisted_result = await db.execute(
