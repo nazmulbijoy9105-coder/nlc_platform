@@ -232,8 +232,6 @@ def test_rescue_service_rejects_out_of_scope_rule_even_if_product_allowlisted(mo
     monkeypatch.setattr(
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", rule_id})
     )
-    monkeypatch.setattr(
-    )
     tax_flag = SimpleNamespace(
         rule_id=rule_id,
         resolved=False,
