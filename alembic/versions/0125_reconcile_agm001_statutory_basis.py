@@ -29,26 +29,43 @@ CHANGE_REASON = (
 def upgrade() -> None:
     bind = op.get_bind()
 
+    # Migration provenance must not depend on an application user existing:
+    # first-time setup provisions users only after the schema is migrated.
+    # Keep human-authored history rows constrained to real user actors, while
+    # representing this schema migration explicitly as MIGRATION provenance.
+    op.add_column(
+        "legal_rule_versions",
+        sa.Column(
+            "actor_type", sa.String(20), nullable=False, server_default="USER"
+        ),
+    )
+    op.add_column(
+        "legal_rule_versions",
+        sa.Column("migration_revision", sa.String(255), nullable=True),
+    )
+    op.alter_column(
+        "legal_rule_versions", "changed_by", existing_type=sa.UUID(), nullable=True
+    )
+    op.create_check_constraint(
+        "ck_legal_rule_versions_actor_provenance",
+        "legal_rule_versions",
+        """(
+            actor_type = 'USER'
+            AND changed_by IS NOT NULL
+            AND migration_revision IS NULL
+        ) OR (
+            actor_type = 'MIGRATION'
+            AND changed_by IS NULL
+            AND migration_revision IS NOT NULL
+        )""",
+    )
+
     # Lock the target row and capture its complete pre-change definition.
-    # changed_by is a real user FK: use an active SUPER_ADMIN when available,
-    # otherwise preserve an existing governance actor. Never invent an actor.
     prior = bind.execute(
         sa.text(
             """
             SELECT to_jsonb(rule) AS previous_definition,
-                   rule.rule_version AS previous_version,
-                   COALESCE(
-                       (
-                           SELECT admin.id
-                             FROM public.users AS admin
-                            WHERE admin.role = 'SUPER_ADMIN'
-                              AND admin.is_active IS TRUE
-                            ORDER BY admin.created_at, admin.id
-                            LIMIT 1
-                       ),
-                       rule.last_modified_by,
-                       rule.created_by
-                   ) AS changed_by
+                   rule.rule_version AS previous_version
               FROM public.legal_rules AS rule
              WHERE rule.rule_id = 'AGM-001'
                AND rule.statutory_basis = :legacy_basis
@@ -59,12 +76,6 @@ def upgrade() -> None:
     ).mappings().one_or_none()
 
     if prior is not None:
-        if prior["changed_by"] is None:
-            raise RuntimeError(
-                "0125 cannot audit AGM-001 correction: no existing rule "
-                "governance actor or active SUPER_ADMIN user is available"
-            )
-
         previous_version = prior["previous_version"]
         # Increment the final numeric component (2.0 -> 2.1; 2.0.0 -> 2.0.1).
         parts = previous_version.split(".")
@@ -81,16 +92,18 @@ def upgrade() -> None:
                 """
                 INSERT INTO public.legal_rule_versions
                     (rule_id, version, change_reason, changed_by, changed_at,
-                     previous_definition, sro_reference)
+                     previous_definition, sro_reference, actor_type,
+                     migration_revision)
                 VALUES
-                    ('AGM-001', :previous_version, :change_reason, :changed_by,
-                     now(), CAST(:previous_definition AS jsonb), NULL)
+                    ('AGM-001', :previous_version, :change_reason, NULL,
+                     now(), CAST(:previous_definition AS jsonb), NULL,
+                     'MIGRATION', :migration_revision)
                 """
             ),
             {
                 "previous_version": previous_version,
                 "change_reason": CHANGE_REASON,
-                "changed_by": prior["changed_by"],
+                "migration_revision": revision,
                 "previous_definition": json.dumps(
                     prior["previous_definition"], default=str
                 ),
@@ -103,7 +116,6 @@ def upgrade() -> None:
                 UPDATE public.legal_rules
                    SET statutory_basis = :canonical_basis,
                        rule_version = :next_version,
-                       last_modified_by = :changed_by,
                        last_modified_at = now(),
                        updated_at = now()
                  WHERE rule_id = 'AGM-001'
@@ -113,7 +125,6 @@ def upgrade() -> None:
             {
                 "canonical_basis": CANONICAL_BASIS,
                 "next_version": next_version,
-                "changed_by": prior["changed_by"],
                 "legacy_basis": LEGACY_BASIS,
             },
         )
