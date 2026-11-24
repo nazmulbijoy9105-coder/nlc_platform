@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.core.dependencies import get_auth_db, get_db_for_user
 from app.core.security import (
     create_access_token,
@@ -24,7 +25,24 @@ from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
 
-_limiter = Limiter(key_func=get_remote_address)
+def _build_limiter() -> Limiter:
+    """Build the auth rate limiter (audit finding F-02).
+
+    Mounts the shared Redis storage when a Redis URL is configured so
+    buckets survive restarts and are shared across replicas, with the
+    in-process store only as the local/fallback carrier. If the storage
+    backend dies at runtime, the in-memory fallback keeps breached requests
+    rejected instead of surfacing backend errors.
+    """
+    settings = get_settings()
+    return Limiter(
+        key_func=get_remote_address,
+        storage_uri=settings.redis_url or "memory://",
+        in_memory_fallback=["10/minute", "5/minute"],
+    )
+
+
+limiter = _build_limiter()
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -84,7 +102,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/login", response_model=LoginResponse)
-@_limiter.limit("10/minute")
+@limiter.limit("10/minute")
 async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
@@ -227,7 +245,7 @@ class VerifyTOTPSetupRequest(BaseModel):
 
 
 @router.post("/2fa/confirm")
-@_limiter.limit("5/minute")
+@limiter.limit("5/minute")
 async def confirm_2fa_setup(
     request: Request,
     body: VerifyTOTPSetupRequest,
@@ -252,7 +270,7 @@ async def confirm_2fa_setup(
 
 
 @router.post("/verify-2fa", response_model=LoginResponse)
-@_limiter.limit("5/minute")
+@limiter.limit("5/minute")
 async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db)):
     """Verify a single-use 2FA challenge and then issue full tokens."""
     payload = decode_token(body.temp_token, expected_type="temp")
