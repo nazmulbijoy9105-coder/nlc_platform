@@ -136,7 +136,14 @@ async def _legacy_payloads(conn: asyncpg.Connection) -> dict[str, Any]:
         fingerprint = (row["rule_name"], row["statutory_basis"], row["trigger"])
         if fingerprint not in allowed:
             raise RuntimeError(f"{rule_id} does not match a known legacy fingerprint: {fingerprint!r}")
-        output[rule_id] = row["payload"]
+        payload = row["payload"]
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        if not isinstance(payload, dict):
+            raise RuntimeError(
+                f"{rule_id} before-image is not a JSON object: {type(payload).__name__}"
+            )
+        output[rule_id] = payload
     return output
 
 
@@ -238,6 +245,10 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
             f"expected={expected_agm001_version!r}, actual={agm001['rule_version']!r}"
         )
     current_agm001 = agm001["payload"]
+    if isinstance(current_agm001, str):
+        current_agm001 = json.loads(current_agm001)
+    if not isinstance(current_agm001, dict):
+        raise RuntimeError("AGM-001 current row payload is not a JSON object")
     preserved_fields = (
         "rule_name", "rule_type", "description", "rule_condition", "is_active",
         "default_severity", "score_impact", "revenue_tier", "is_black_override",
