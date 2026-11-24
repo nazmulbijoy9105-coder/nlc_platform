@@ -272,15 +272,15 @@ def test_missing_mapping_for_in_scope_actionable_finding_is_explicit(monkeypatch
     with pytest.raises(ValueError, match="Missing statutory rescue mapping"):
         _seq([_flag("AGM-001")])
 
-def test_explicitly_paused_release_keeps_rescue_plan_in_review_only_state(monkeypatch):
+def test_explicitly_paused_release_keeps_confirmed_rescue_action_authorized(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     assert engine_module.legal_score_is_released() is False
     finding = _flag("AGM-001")
     steps = _seq([finding])
     assert len(steps) == 1
     result = _dispositions([finding], steps=steps)
-    assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 
