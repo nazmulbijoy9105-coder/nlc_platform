@@ -55,7 +55,7 @@ async def test_service_locks_company_before_check_and_create():
     assert "FROM companies" in lock_sql
     assert "FOR UPDATE" in lock_sql
     service._generate_rescue_plan.assert_awaited_once()
-    assert service._generate_rescue_plan.await_args.kwargs["company_id"] == company_id
+    assert service._generate_rescue_plan.await_args.args[0] == company_id
 
 
 @pytest.mark.asyncio
