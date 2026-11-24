@@ -16,6 +16,11 @@ _INDEX_NAME = "uq_rescue_plans_one_active_per_company"
 
 def upgrade() -> None:
     bind = op.get_bind()
+    # SHARE ROW EXCLUSIVE conflicts with the ROW EXCLUSIVE lock taken by INSERT/UPDATE/DELETE.
+    # Acquire it before the duplicate preflight and retain it until the migration transaction
+    # commits, so legacy workers cannot insert a duplicate between the check and index build.
+    bind.execute(sa.text("LOCK TABLE rescue_plans IN SHARE ROW EXCLUSIVE MODE"))
+
     duplicates = bind.execute(
         sa.text(
             """
