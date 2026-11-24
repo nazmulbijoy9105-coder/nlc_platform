@@ -136,6 +136,30 @@ def test_main_resumes_from_0124(monkeypatch, tmp_path):
     assert report["final_revision"] == [rehearsal.HEAD_REVISION]
 
 
+def test_main_resumes_from_0122_and_reads_archived_identity_before_images(
+    monkeypatch, tmp_path
+):
+    commands, archive_reads, report_path = _main_harness(
+        monkeypatch, tmp_path, rehearsal.PREVIOUS_REVISION
+    )
+
+    asyncio.run(rehearsal.main())
+
+    assert commands == [
+        ["python", "-m", "alembic", "upgrade", rehearsal.AGM_PRE_0125_REVISION],
+        ["python", "-m", "alembic", "current"],
+        ["python", "-m", "alembic", "upgrade", rehearsal.HEAD_REVISION],
+        ["python", "-m", "alembic", "current"],
+    ]
+    assert archive_reads == [True]
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "PASS"
+    assert report["starting_revision"] == rehearsal.PREVIOUS_REVISION
+    assert report["mode"] == "resumed_from_0122"
+    assert report["legacy_before_image_source"] == "legal_rule_identity_archive"
+    assert report["final_revision"] == [rehearsal.HEAD_REVISION]
+
+
 def test_main_from_start_preserves_both_upgrade_boundaries(monkeypatch, tmp_path):
     commands, archive_reads, report_path = _main_harness(
         monkeypatch, tmp_path, rehearsal.START_REVISION
