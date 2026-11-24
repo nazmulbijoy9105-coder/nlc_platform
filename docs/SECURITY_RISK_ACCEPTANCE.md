@@ -27,6 +27,8 @@ security findings tracked in the security/remediate-12-findings pull request.
 - Verification subprocess calls use an argument vector, explicitly disable shell
   interpretation, close inherited file descriptors, disable stdin, and execute
   only allow-listed scripts resolved inside the trusted scripts directory.
+  Invalid text from subprocess output or UTF-8 report files is recorded as a
+  failed verification instead of aborting consolidated report generation.
 - The Alembic seed migration binds every inserted value through SQLAlchemy
   parameters; rule strings are no longer interpolated into SQL.
 - The fallback PDF HTML renderer escapes title and document content before
