@@ -207,7 +207,8 @@ def downgrade():
                     FROM legal_rules
                     WHERE rule_type NOT IN (
                         'AGM', 'AUDIT', 'RETURN', 'DIRECTOR',
-                        'TRANSFER', 'REGISTER', 'ESCALATION', 'CASCADE'
+                        'TRANSFER', 'REGISTER', 'ESCALATION', 'CASCADE',
+                        'DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL'
                     )
                 ) THEN
                     RAISE EXCEPTION
@@ -222,7 +223,8 @@ def downgrade():
         """
         CREATE TYPE rule_type AS ENUM (
             'AGM', 'AUDIT', 'RETURN', 'DIRECTOR',
-            'TRANSFER', 'REGISTER', 'ESCALATION', 'CASCADE'
+            'TRANSFER', 'REGISTER', 'ESCALATION', 'CASCADE',
+            'DEADLINE', 'DEPENDENCY', 'THRESHOLD', 'CONDITIONAL'
         )
         """
     )
