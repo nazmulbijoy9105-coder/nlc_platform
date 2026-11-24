@@ -29,6 +29,8 @@ START_REVISION = "0112_runtime_acl_and_alembic_rls"
 HEAD_REVISION = "0127_one_active_rescue_plan_per_company"
 AGM_MIGRATION_REVISION = "0125_reconcile_agm001_statutory_basis"
 AGM_PRE_0125_REVISION = "0124_restore_85_rule_catalogue_parity"
+AGM_POST_0125_REVISION = "0125_reconcile_agm001_statutory_basis"
+AGM_POST_0126_REVISION = "0126_score_independent_rescue_workflow"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -138,20 +140,32 @@ _ARCHIVED_RULE_SQL = (
 
 
 async def _legacy_payloads(
-    conn: asyncpg.Connection, *, from_archive: bool = False
+    conn: asyncpg.Connection, *, from_archive: bool = False,
+    agm001_from_history: bool = False,
 ) -> dict[str, Any]:
     """Capture the legacy before-images the postflight compares against.
 
-    When resuming at 0124, 0115 has already quarantined INC-001/INC-002, so
-    their original payloads come from the append-only identity archive instead
-    of the live rows. AGM-001 is still the untouched legacy row until 0125.
+    When resuming at 0124 or later, 0115 has already quarantined INC-001/INC-002,
+    so their original payloads come from the append-only identity archive. Once
+    0125 has run, AGM-001 is recovered from its immutable migration before-image.
     """
     output: dict[str, Any] = {}
     for rule_id, allowed in LEGACY_FINGERPRINTS.items():
         archived = from_archive and rule_id != "AGM-001"
-        row = await conn.fetchrow(
-            _ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL, rule_id
-        )
+        if rule_id == "AGM-001" and agm001_from_history:
+            row = await conn.fetchrow(
+                "SELECT previous_definition AS payload, "
+                "previous_definition ->> 'rule_name' AS rule_name, "
+                "previous_definition ->> 'statutory_basis' AS statutory_basis, "
+                "previous_definition -> 'rule_condition' ->> 'trigger' AS trigger "
+                "FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                rule_id, AGM_MIGRATION_REVISION,
+            )
+        else:
+            row = await conn.fetchrow(
+                _ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL, rule_id
+            )
         if row is None:
             if rule_id == "INC-002":
                 continue
@@ -626,20 +640,30 @@ async def main() -> None:
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
-        # The preserved production backup may be at 0112, 0122, or 0124.
-        # 0122 already archived the legacy INC-001/INC-002 rows, so load their
-        # before-images from the append-only archive when resuming there.
+        # A failed multi-revision upgrade may leave a committed intermediate
+        # head. Resume from 0125/0126 by recovering the exact AGM-001 before-image
+        # from 0125 legal_rule_versions history instead of requiring a fresh branch.
         resume_from_0122 = revisions == [PREVIOUS_REVISION]
         resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
-        if not (resume_from_0122 or resume_from_0124) and revisions != [START_REVISION]:
+        resume_from_0125 = revisions == [AGM_POST_0125_REVISION]
+        resume_from_0126 = revisions == [AGM_POST_0126_REVISION]
+        resume_after_agm_migration = resume_from_0125 or resume_from_0126
+        resumable = {
+            (START_REVISION,), (PREVIOUS_REVISION,), (AGM_PRE_0125_REVISION,),
+            (AGM_POST_0125_REVISION,), (AGM_POST_0126_REVISION,),
+        }
+        if tuple(revisions) not in resumable:
             raise RuntimeError(
                 f"Expected starting revision {START_REVISION}, resumable revisions "
-                f"{PREVIOUS_REVISION} or {AGM_PRE_0125_REVISION}, or already-rehearsed "
-                f"{HEAD_REVISION}; got {revisions!r}"
+                f"{PREVIOUS_REVISION}, {AGM_PRE_0125_REVISION}, "
+                f"{AGM_POST_0125_REVISION}, or {AGM_POST_0126_REVISION}, "
+                f"or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
             )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(
-            conn, from_archive=(resume_from_0122 or resume_from_0124)
+            conn,
+            from_archive=(resume_from_0122 or resume_from_0124 or resume_after_agm_migration),
+            agm001_from_history=resume_after_agm_migration,
         )
         active_plan_duplicates = await _active_plan_duplicate_preflight(conn)
         if active_plan_duplicates:
@@ -651,7 +675,7 @@ async def main() -> None:
 
         env = os.environ.copy()
         env["ENVIRONMENT"] = "production"
-        if not resume_from_0124:
+        if not (resume_from_0124 or resume_after_agm_migration):
             subprocess.run(
                 ["python", "-m", "alembic", "upgrade", AGM_PRE_0125_REVISION],
                 check=True,
@@ -670,14 +694,37 @@ async def main() -> None:
                 )
 
         conn = await _connect()
-        agm001_before_0125 = await _rule_payload(conn, "AGM-001")
-        if agm001_before_0125.get("statutory_basis") != (
-            "Section 81, Companies Act 1994 (Bangladesh)"
-        ):
-            raise RuntimeError(
-                "AGM-001 does not carry the exact legacy citation at the 0125 boundary: "
-                f"{agm001_before_0125.get('statutory_basis')!r}"
+        if resume_after_agm_migration:
+            history = await conn.fetchrow(
+                "SELECT previous_definition FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                "AGM-001", AGM_MIGRATION_REVISION,
             )
+            if history is None:
+                raise RuntimeError(
+                    f"Cannot resume at {revisions!r}: 0125 AGM-001 before-image is missing."
+                )
+            agm001_before_0125 = history["previous_definition"]
+            if isinstance(agm001_before_0125, str):
+                agm001_before_0125 = json.loads(agm001_before_0125)
+            if not isinstance(agm001_before_0125, dict) or agm001_before_0125.get("statutory_basis") != (
+                "Section 81, Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError("0125 history does not contain the exact AGM-001 legacy before-image.")
+            current_agm001 = await _rule_payload(conn, "AGM-001")
+            if current_agm001.get("statutory_basis") != (
+                "Section 81(1), Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError("AGM-001 is not canonical while resuming after 0125.")
+        else:
+            agm001_before_0125 = await _rule_payload(conn, "AGM-001")
+            if agm001_before_0125.get("statutory_basis") != (
+                "Section 81, Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError(
+                    "AGM-001 does not carry the exact legacy citation at the 0125 boundary: "
+                    f"{agm001_before_0125.get('statutory_basis')!r}"
+                )
         await conn.close()
 
         subprocess.run(
