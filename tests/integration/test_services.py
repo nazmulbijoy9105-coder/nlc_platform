@@ -260,7 +260,6 @@ class TestComplianceService:
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
         canonical_agm_001_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
-        canonical_agm_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
