@@ -74,7 +74,7 @@ class RescuePlan(FullMixin, Base):
     )
     source_rule_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list,
-        comment="Released statutory rule IDs supporting this rescue plan",
+        comment="Eligible RJSC rule IDs linked to active evidence-supported findings",
     )
     years_in_default: Mapped[int] = mapped_column(Integer, default=0)
 
