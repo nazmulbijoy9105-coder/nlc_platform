@@ -34,8 +34,6 @@ def test_agm001_reconciliation_archives_the_complete_before_image():
 
 def test_release_redaction_fixture_uses_migrated_catalogue_without_mutating_it():
     source = INTEGRATION_TEST.read_text(encoding="utf-8")
-    start = source.index("async def test_")  # Locate the full integration module.
-    del start
     marker = 'canonical_agm_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law'
     pos = source.index(marker)
     end = source.index("mock_engine.evaluate.assert_called_once()", pos)
