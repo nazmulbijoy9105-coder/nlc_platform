@@ -122,3 +122,39 @@ def test_public_rule_response_keeps_independent_legal_review_pending_after_owner
     assert response.verification_status == "PENDING"
     assert response.verified_at is None
     assert response.statutory_effective_date is None
+
+@pytest.mark.asyncio
+async def test_rule_history_serializes_migration_actor_without_fake_user(monkeypatch):
+    changed_at = datetime(2026, 11, 24, 9, 0, tzinfo=UTC)
+    migration_record = SimpleNamespace(
+        id=uuid4(),
+        rule_id="AGM-001",
+        version="2.1",
+        previous_definition={
+            "statutory_basis": "Section 81, Companies Act 1994 (Bangladesh)",
+            "rule_version": "2.0",
+        },
+        change_reason="Canonical Section 81(1) identity reconciliation",
+        changed_by=None,
+        actor_type="MIGRATION",
+        migration_revision="0125_reconcile_agm001_statutory_basis",
+        changed_at=changed_at,
+    )
+
+    class ServiceWithMigrationHistory(StubRulesService):
+        async def get_version_history(self, _rule_id):
+            return [migration_record]
+
+    monkeypatch.setattr(rules_api, "RulesService", ServiceWithMigrationHistory)
+
+    result = await rules_api.get_rule_history(
+        rule_id="AGM-001",
+        current_user=SimpleNamespace(id=uuid4()),
+        db=object(),
+    )
+
+    assert len(result) == 1
+    assert result[0].changed_by_id is None
+    assert result[0].actor_type == "MIGRATION"
+    assert result[0].migration_revision == "0125_reconcile_agm001_statutory_basis"
+
