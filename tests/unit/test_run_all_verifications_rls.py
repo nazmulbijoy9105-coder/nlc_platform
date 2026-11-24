@@ -143,7 +143,17 @@ def test_run_script_other_verifier_keeps_repo_argument_and_report(tmp_path, monk
     assert kwargs["env"] is None
 
 
-@pytest.mark.parametrize("report", [[], {}, {"results": "x"}, {"results": [{"status": "BOGUS"}]}])
+@pytest.mark.parametrize(
+    "report",
+    [
+        [],
+        {},
+        {"results": "x"},
+        {"results": [{"status": "BOGUS"}]},
+        {"results": [{"status": []}]},
+        {"results": [{"status": {}}]},
+    ],
+)
 def test_run_script_rejects_malformed_rls_report(tmp_path, monkeypatch, report):
     out = tmp_path / "out"
     out.mkdir()
@@ -209,3 +219,50 @@ def test_main_aggregates_rls_failure_and_limits_database_environment(tmp_path, m
         finding["_source_script"] == "verify_rls.py" and finding["check_id"] == "RLS_MAIN_FAIL"
         for finding in consolidated["findings"]
     )
+
+
+def test_main_fails_closed_when_rls_verifier_returns_non_string_status(
+    tmp_path, monkeypatch
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    out = tmp_path / "out"
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append((args, kwargs))
+        if Path(args[1]).name == "verify_rls.py":
+            report = {"results": [{"check_id": "RLS_BAD_STATUS", "status": []}]}
+        else:
+            report = {"findings": []}
+        output = Path(args[args.index("--output") + 1])
+        output.write_text(json.dumps(report), encoding="utf-8")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(run_all_verifications.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_all_verifications.py",
+            str(repo),
+            "--output-dir",
+            str(out),
+            "--database-url",
+            DATABASE_URL,
+        ],
+    )
+
+    assert run_all_verifications.main() == 1
+
+    consolidated = json.loads((out / "all_findings.json").read_text(encoding="utf-8"))
+    failures = [
+        finding
+        for finding in consolidated["findings"]
+        if finding["_source_script"] == "verify_rls.py"
+    ]
+    assert len(failures) == 1
+    assert failures[0]["check_id"] == "VERIFIER_EXECUTION"
+    assert failures[0]["severity"] == "FAIL"
+    assert "unexpected result status" in failures[0]["detail"]
+
