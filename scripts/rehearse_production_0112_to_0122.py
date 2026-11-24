@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the documented production 0112 schema through 0124 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through the current Alembic head on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -52,7 +52,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0124.json")
+REPORT = Path("artifacts/neon-production-0112-to-0125.json")
 
 
 def _url() -> str:
