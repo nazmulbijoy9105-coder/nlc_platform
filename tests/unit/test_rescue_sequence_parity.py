@@ -120,6 +120,19 @@ def test_product_score_does_not_activate_unverified_rescue_action(monkeypatch):
     assert result[0]["reason"] == "COUNSEL_APPROVAL_REQUIRED"
 
 
+@pytest.mark.parametrize("released", [False, True], ids=["paused", "unverified"])
+def test_candidate_without_generated_step_is_blocked_not_review_required(monkeypatch, released):
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", released)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    finding = _flag("AGM-001")
+
+    result = _dispositions([finding], steps=[])
+
+    assert result[0]["disposition"] == "BLOCKED"
+    assert result[0]["reason"] == "RESCUE_STEP_NOT_GENERATED"
+
+
 def test_yellow_finding_has_explicit_no_action_reason_in_red_plan(controlled_release):
     finding = _flag("AGM-001", severity=Severity.YELLOW)
 

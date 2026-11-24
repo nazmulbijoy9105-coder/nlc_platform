@@ -4451,12 +4451,12 @@ class NLCRuleEngine:
                 and score_band not in (Severity.RED.value, Severity.BLACK.value)
             ):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif not legal_score_is_released():
+            elif step is not None and not legal_score_is_released():
                 # Candidate steps remain available for professional review while
                 # product score publication is paused. A candidate is not an
                 # authorization to initiate statutory action.
                 disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
-            elif flag.rule_id not in VERIFIED_RULE_IDS:
+            elif step is not None and flag.rule_id not in VERIFIED_RULE_IDS:
                 # Product-score eligibility and independent counsel approval are
                 # separate gates. Keep the generated candidate visible, but do
                 # not promote it to an actionable statutory disposition until
