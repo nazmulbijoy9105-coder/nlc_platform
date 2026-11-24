@@ -158,3 +158,4 @@ async def test_rule_history_serializes_migration_actor_without_fake_user(monkeyp
     assert result[0].changed_by_id is None
     assert result[0].actor_type == "MIGRATION"
     assert result[0].migration_revision == "0125_reconcile_agm001_statutory_basis"
+

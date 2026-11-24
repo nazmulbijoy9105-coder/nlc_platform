@@ -15,7 +15,7 @@ from sqlalchemy.engine import make_url
 from app.db_url import prepare_asyncpg_connection
 from scripts.seed_rules import ILRMF_RULES
 
-EXPECTED_REVISION = "0124_restore_85_rule_catalogue_parity"
+EXPECTED_REVISION = "0125_reconcile_agm001_statutory_basis"
 REQUIRED_TRUE = (
     "identity_archive_present",
     "identities_present",

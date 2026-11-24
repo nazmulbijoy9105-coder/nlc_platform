@@ -1057,6 +1057,7 @@ async def main() -> int:
             ):
                 raise RuntimeError(
                     "0125 catalogue identity parity failed: "
+                    "0125 catalogue parity failed: "
                     f"{dict(rule_parity)!r}"
                 )
             report["85_rule_catalogue_parity"] = dict(rule_parity)
