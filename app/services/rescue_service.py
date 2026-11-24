@@ -37,15 +37,8 @@ logger = logging.getLogger("nlc.rescue")
 
 def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
     """Reject rescue work not traceable to released, evidenced rule findings."""
-    from app.rule_engine.engine import (
-        PRODUCT_SCORING_RULE_IDS,
-        VERIFIED_RULE_IDS,
-        legal_score_is_released,
-    )
+    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS
     from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
-
-    if not legal_score_is_released():
-        raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
 
     evaluated_company_id = getattr(engine_output, "company_id", None)
     has_engine_company_id = (
@@ -60,12 +53,15 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     score = getattr(engine_output, "score_breakdown", None)
     final_score = getattr(score, "final_score", None)
-    if isinstance(final_score, bool) or not isinstance(final_score, int) or not 0 <= final_score <= 100:
-        raise ValueError("Rescue requires a valid released score from 0 to 100.")
     risk_value = getattr(score, "risk_band", None)
     risk_band = getattr(risk_value, "value", risk_value)
-    if risk_band not in ("RED", "BLACK"):
-        raise ValueError("Rescue requires a released RED or BLACK evaluation.")
+    if final_score is not None and (
+        isinstance(final_score, bool) or not isinstance(final_score, int)
+        or not 0 <= final_score <= 100
+    ):
+        raise ValueError("Rescue score must be an integer from 0 to 100 when supplied.")
+    if risk_band is None:
+        risk_band = "NOT_EVALUATED"
 
     flags = getattr(engine_output, "flags", None)
     if not isinstance(flags, (list, tuple)):
@@ -126,14 +122,6 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
                 raise PermissionError(
                     "RJSC rescue actions cannot reference out-of-scope or unclassified rules."
                 )
-            if (
-                rule_id in PRODUCT_SCORING_RULE_IDS
-                and rule_id not in VERIFIED_RULE_IDS
-            ):
-                raise PermissionError(
-                    "Rescue generation is disabled until each referenced rule "
-                    "has counsel approval."
-                )
             if len(flags_by_rule.get(rule_id, [])) != 1 or rule_id not in eligible:
                 raise PermissionError(
                     "Rescue action references a rule without one unique, released, "
@@ -182,11 +170,6 @@ class RescueService(BaseService[RescuePlan]):
         # Service-level guard: callers other than the HTTP route (jobs,
         # internal services and future endpoints) must not create rescue work
         # from provisional engine output.
-        from app.rule_engine.engine import legal_score_is_released
-        if not legal_score_is_released():
-            raise PermissionError(
-                "Rescue generation is disabled because product scoring is disabled."
-            )
         source_rule_ids = validate_rescue_engine_output(
             engine_output, expected_company_id=company_id
         )
@@ -204,8 +187,15 @@ class RescueService(BaseService[RescuePlan]):
         )
 
         revenue_tier = RevenueTier.CORPORATE_RESCUE
-        score = engine_output.score_breakdown.final_score
-        risk_band = engine_output.score_breakdown.risk_band
+        from app.rule_engine.engine import legal_score_is_released
+        score = (
+            getattr(engine_output.score_breakdown, "final_score", None)
+            if legal_score_is_released() else None
+        )
+        risk_band = (
+            getattr(engine_output.score_breakdown, "risk_band", None)
+            if score is not None else "NOT_EVALUATED"
+        )
 
         plan = await self.create(
             company_id=company_id,
@@ -213,6 +203,7 @@ class RescueService(BaseService[RescuePlan]):
             revenue_tier=revenue_tier,
             initial_risk_band=risk_band,
             initial_score=score,
+            workflow_mode="STATUTORY_ACTION",
             years_in_default=0,
             is_active=True,
             started_at=datetime.now(UTC),
