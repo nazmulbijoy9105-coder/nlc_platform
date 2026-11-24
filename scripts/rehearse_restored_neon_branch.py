@@ -1056,6 +1056,7 @@ async def main() -> int:
                 or rule_parity["active_rows"] != 85
             ):
                 raise RuntimeError(
+                    "0125 catalogue identity parity failed: "
                     "0125 catalogue parity failed: "
                     f"{dict(rule_parity)!r}"
                 )

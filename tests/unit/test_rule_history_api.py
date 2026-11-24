@@ -123,6 +123,7 @@ def test_public_rule_response_keeps_independent_legal_review_pending_after_owner
     assert response.verified_at is None
     assert response.statutory_effective_date is None
 
+
 @pytest.mark.asyncio
 async def test_rule_history_serializes_migration_actor_without_fake_user(monkeypatch):
     changed_at = datetime(2026, 11, 24, 9, 0, tzinfo=UTC)

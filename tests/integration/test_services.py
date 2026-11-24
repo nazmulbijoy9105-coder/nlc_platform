@@ -335,19 +335,12 @@ class TestComplianceService:
         assert catalogue_rule.is_active is True
         assert catalogue_rule.statutory_basis == canonical_agm_001_basis
 
-        # Exercise the production catalogue reconciliation gate explicitly.
+        # The migration must reconcile the real catalogue row before evaluation.
         # A quarantined or conflicting identity must fail before release checks.
         from app.services.compliance_service import _catalogue_identity_conflicts
 
         identity_conflicts = _catalogue_identity_conflicts([catalogue_rule])
         assert "AGM-001" not in identity_conflicts
-
-        canonical_catalogue_result = await db.execute(
-            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
-        )
-        canonical_catalogue_rule = canonical_catalogue_result.scalar_one()
-        assert canonical_catalogue_rule.is_active is True
-        assert canonical_catalogue_rule.statutory_basis == canonical_agm_001_basis
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
@@ -365,6 +358,7 @@ class TestComplianceService:
         assert len(result["review_findings"]) == 1
         assert result["review_findings"][0]["rule_id"] == "AGM-001"
 
+        # Identity binding is asserted independently of release redaction.
         # Identity binding is independent of release redaction: the finding
         # must bind to the migrated canonical catalogue identity.
         assert (
@@ -372,6 +366,7 @@ class TestComplianceService:
             == "MATCHED_CATALOGUE_IDENTITY"
         )
 
+        # Release-redaction assertions cannot pass on a quarantined identity.
         # Release-redaction assertions are kept separate from identity checks.
         assert result["review_findings"][0]["score_impact_applied"] == 0
         assert "No statutory conclusion" in result["review_findings"][0]["message"]

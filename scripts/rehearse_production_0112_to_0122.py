@@ -3,7 +3,7 @@
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
-and the exact legacy INC-001/INC-002 payloads before running Alembic.
+and the exact legacy INC-001/INC-002/AGM-001 payloads before running Alembic.
 """
 from __future__ import annotations
 
@@ -121,14 +121,35 @@ async def _rows_digest(conn: asyncpg.Connection, table: str) -> dict[str, Any]:
     return {"rows": len(rows), "sha256": digest.hexdigest()}
 
 
-async def _legacy_payloads(conn: asyncpg.Connection) -> dict[str, Any]:
+_LIVE_RULE_SQL = (
+    "SELECT to_jsonb(r) AS payload, rule_name, statutory_basis, "
+    "rule_condition ->> 'trigger' AS trigger "
+    "FROM public.legal_rules r WHERE rule_id=$1"
+)
+_ARCHIVED_RULE_SQL = (
+    "SELECT original_payload AS payload, "
+    "original_payload ->> 'rule_name' AS rule_name, "
+    "original_payload ->> 'statutory_basis' AS statutory_basis, "
+    "original_payload -> 'rule_condition' ->> 'trigger' AS trigger "
+    "FROM public.legal_rule_identity_archive "
+    "WHERE legacy_rule_id=$1 ORDER BY captured_at, legacy_identity_key LIMIT 1"
+)
+
+
+async def _legacy_payloads(
+    conn: asyncpg.Connection, *, from_archive: bool = False
+) -> dict[str, Any]:
+    """Capture the legacy before-images the postflight compares against.
+
+    When resuming at 0124, 0115 has already quarantined INC-001/INC-002, so
+    their original payloads come from the append-only identity archive instead
+    of the live rows. AGM-001 is still the untouched legacy row until 0125.
+    """
     output: dict[str, Any] = {}
     for rule_id, allowed in LEGACY_FINGERPRINTS.items():
+        archived = from_archive and rule_id != "AGM-001"
         row = await conn.fetchrow(
-            "SELECT to_jsonb(r) AS payload, rule_name, statutory_basis, "
-            "rule_condition ->> 'trigger' AS trigger "
-            "FROM public.legal_rules r WHERE rule_id=$1",
-            rule_id,
+            _ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL, rule_id
         )
         if row is None:
             if rule_id == "INC-002":
@@ -254,6 +275,7 @@ async def _postflight(
         raise RuntimeError(
             f"AGM-001 canonical catalogue identity was not reconciled: {agm001!r}"
         )
+    original_agm001 = before_rules["AGM-001"]
     original_agm001 = agm001_before_0125
     previous_version = str(original_agm001["rule_version"])
     version_parts = previous_version.split(".")
@@ -273,6 +295,9 @@ async def _postflight(
         raise RuntimeError("AGM-001 current row payload is not a JSON object")
     before_compare = dict(original_agm001)
     current_compare = dict(current_agm001)
+    for mutable_key in ("statutory_basis", "rule_version", "last_modified_at", "updated_at"):
+        before_compare.pop(mutable_key, None)
+        current_compare.pop(mutable_key, None)
     mutable_fields = ("statutory_basis", "rule_version", "last_modified_at", "updated_at")
     for field in mutable_fields:
         before_compare.pop(field, None)
@@ -528,30 +553,36 @@ async def main() -> None:
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
-        if revisions != [START_REVISION]:
-            raise RuntimeError(f"Expected exact starting revision {START_REVISION} or already-rehearsed {HEAD_REVISION}; got {revisions!r}")
+        # A branch left at the previous rehearsal head resumes at 0125 only.
+        resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
+        if not resume_from_0124 and revisions != [START_REVISION]:
+            raise RuntimeError(
+                f"Expected starting revision {START_REVISION}, resumable revision "
+                f"{AGM_PRE_0125_REVISION}, or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
+            )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
-        before_rules = await _legacy_payloads(conn)
+        before_rules = await _legacy_payloads(conn, from_archive=resume_from_0124)
         await conn.close()
 
         env = os.environ.copy()
         env["ENVIRONMENT"] = "production"
-        subprocess.run(
-            ["python", "-m", "alembic", "upgrade", AGM_PRE_0125_REVISION],
-            check=True,
-            env=env,
-        )
-        pre_0125_current = subprocess.run(
-            ["python", "-m", "alembic", "current"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=env,
-        ).stdout.strip()
-        if AGM_PRE_0125_REVISION not in pre_0125_current:
-            raise RuntimeError(
-                f"Alembic did not stop at {AGM_PRE_0125_REVISION}: {pre_0125_current!r}"
+        if not resume_from_0124:
+            subprocess.run(
+                ["python", "-m", "alembic", "upgrade", AGM_PRE_0125_REVISION],
+                check=True,
+                env=env,
             )
+            pre_0125_current = subprocess.run(
+                ["python", "-m", "alembic", "current"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+            if AGM_PRE_0125_REVISION not in pre_0125_current:
+                raise RuntimeError(
+                    f"Alembic did not stop at {AGM_PRE_0125_REVISION}: {pre_0125_current!r}"
+                )
 
         conn = await _connect()
         agm001_before_0125 = await _rule_payload(conn, "AGM-001")
@@ -592,9 +623,17 @@ async def main() -> None:
             "started_at": started,
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "target": identity,
-            "starting_revision": START_REVISION,
+            "starting_revision": AGM_PRE_0125_REVISION if resume_from_0124 else START_REVISION,
             "final_revision": final_revisions,
             "alembic_current": current,
+            **(
+                {
+                    "mode": "resumed_from_0124",
+                    "legacy_before_image_source": "legal_rule_identity_archive",
+                }
+                if resume_from_0124
+                else {}
+            ),
             **postflight,
             "agm001_pre_0125_before_image_sha256": hashlib.sha256(
                 _canonical(agm001_before_0125).encode("utf-8")
