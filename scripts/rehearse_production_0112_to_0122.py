@@ -757,7 +757,9 @@ async def main() -> None:
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "target": identity,
             "starting_revision": (
-                AGM_PRE_0125_REVISION if resume_from_0124
+                AGM_POST_0126_REVISION if resume_from_0126
+                else AGM_POST_0125_REVISION if resume_from_0125
+                else AGM_PRE_0125_REVISION if resume_from_0124
                 else PREVIOUS_REVISION if resume_from_0122
                 else START_REVISION
             ),
@@ -765,6 +767,16 @@ async def main() -> None:
             "alembic_current": current,
             **(
                 {
+                    "mode": "resumed_from_0126",
+                    "legacy_before_image_source": "legal_rule_versions.previous_definition",
+                }
+                if resume_from_0126
+                else {
+                    "mode": "resumed_from_0125",
+                    "legacy_before_image_source": "legal_rule_versions.previous_definition",
+                }
+                if resume_from_0125
+                else {
                     "mode": "resumed_from_0124",
                     "legacy_before_image_source": "legal_rule_identity_archive",
                 }
