@@ -36,8 +36,8 @@ logger = logging.getLogger("nlc.rescue")
 
 
 def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
-    """Reject rescue work not traceable to released, evidenced rule findings."""
-    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS
+    """Require a unique, in-scope, active finding before authorizing a workflow."""
+    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
     from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
 
     evaluated_company_id = getattr(engine_output, "company_id", None)
@@ -62,6 +62,12 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         raise ValueError("Rescue score must be an integer from 0 to 100 when supplied.")
     if risk_band is None:
         risk_band = "NOT_EVALUATED"
+    if (
+        legal_score_is_released()
+        and final_score is not None
+        and risk_band not in ("RED", "BLACK")
+    ):
+        raise ValueError("A released rescue plan requires a RED or BLACK risk band.")
 
     flags = getattr(engine_output, "flags", None)
     if not isinstance(flags, (list, tuple)):
@@ -101,7 +107,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     sequence = getattr(engine_output, "rescue_sequence", None)
     if not isinstance(sequence, list) or not sequence:
-        raise ValueError("No product-released rescue sequence exists.")
+        raise ValueError("No eligible rescue sequence exists.")
 
     referenced: set[str] = set()
     for step in sequence:
@@ -188,12 +194,14 @@ class RescueService(BaseService[RescuePlan]):
 
         revenue_tier = RevenueTier.CORPORATE_RESCUE
         from app.rule_engine.engine import legal_score_is_released
+        score_breakdown = getattr(engine_output, "score_breakdown", None)
         score = (
-            getattr(engine_output.score_breakdown, "final_score", None)
+            getattr(score_breakdown, "final_score", None)
             if legal_score_is_released() else None
         )
+        risk_value = getattr(score_breakdown, "risk_band", None)
         risk_band = (
-            getattr(engine_output.score_breakdown, "risk_band", None)
+            getattr(risk_value, "value", risk_value)
             if score is not None else "NOT_EVALUATED"
         )
 
