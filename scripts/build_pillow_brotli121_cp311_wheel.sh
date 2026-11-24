@@ -104,14 +104,21 @@ if found != required:
 
 decoder = next(path for path in libs if "brotlidec" in path.name)
 api = ctypes.CDLL(str(decoder))
-api.BrotliDecoderVersion.restype = ctypes.c_int
+api.BrotliDecoderVersion.restype = ctypes.c_uint32
 api_version = api.BrotliDecoderVersion()
-if api_version < 10201:
-    raise SystemExit(f"BrotliDecoderVersion()={api_version}; expected >= 10201")
+decoded_version = (
+    api_version >> 24,
+    (api_version >> 12) & 0xFFF,
+    api_version & 0xFFF,
+)
+if decoded_version < (1, 2, 1):
+    raise SystemExit(
+        f"BrotliDecoderVersion()={decoded_version}; expected >= (1, 2, 1)"
+    )
 
 print(f"Pillow {PIL.__version__}: {PIL.__file__}")
 print(f"Bundled libraries: {[path.name for path in libs]}")
-print(f"BrotliDecoderVersion(): {api_version}")
+print(f"BrotliDecoderVersion(): {decoded_version}")
 PY
 
 (
