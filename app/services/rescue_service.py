@@ -211,7 +211,7 @@ class RescueService(BaseService[RescuePlan]):
             revenue_tier=revenue_tier,
             initial_risk_band=risk_band,
             initial_score=score,
-            workflow_mode="STATUTORY_ACTION",
+            workflow_mode="STATUTORY_ACTION_AUTHORIZED",
             years_in_default=0,
             is_active=True,
             started_at=datetime.now(UTC),
