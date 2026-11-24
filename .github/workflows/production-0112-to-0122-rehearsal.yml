@@ -1,4 +1,4 @@
-name: Production 0112 to 0125 Neon Migration Rehearsal
+name: Production 0112 to 0127 Neon Migration Rehearsal
 
 on:
   pull_request:
@@ -166,9 +166,9 @@ jobs:
           python scripts/rehearse_production_0112_to_0122.py
 
       - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0125.json') != ''
+        if: always() && hashFiles('artifacts/neon-production-0112-to-0127.json') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-0112-to-0125-rehearsal
-          path: artifacts/neon-production-0112-to-0125.json
+          name: nlc-production-0112-to-0127-rehearsal
+          path: artifacts/neon-production-0112-to-0127.json
           if-no-files-found: error
