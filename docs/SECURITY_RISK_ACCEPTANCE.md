@@ -46,7 +46,7 @@ from 1.2.0 to 1.2.1.
 - Release: [NLC Pillow 13.0.0 / Brotli 1.2.1 CPython 3.11 wheel](https://github.com/nazmulbijoy9105-coder/nlc_platform/releases/tag/nlc-pillow-13.0.0-brotli1.2.1-cp311)
 - Asset: \`pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl\`
 - SHA-256: \`f46b91793eed1471c239fdc2dbfd0f2fc87c3ff8e3fcc33bd78a6fc87b47621c\`
-- Pillow sdist SHA-256: \`cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a2a6fe6be3510\`
+- Pillow sdist SHA-256: \`cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510\`
 - Pillow wheel-recipe source commit: \`293218ad059d994baf1777d882911bed6a49704a\`
 - Pillow test-images commit: \`073ab5ff1895abf8cf5c8d797c1066ed394ce207\`
 - Build tag: \`1brotli121\`; target tags: CPython 3.11, manylinux 2.27/2.28, x86_64.
