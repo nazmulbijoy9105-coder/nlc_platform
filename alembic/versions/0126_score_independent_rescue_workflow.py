@@ -20,7 +20,7 @@ def upgrade() -> None:
             "workflow_mode",
             sa.String(length=32),
             nullable=False,
-            server_default="STATUTORY_ACTION",
+            server_default="STATUTORY_ACTION_AUTHORIZED",
             comment="REVIEW_ONLY or STATUTORY_ACTION; review work is not a score or legal conclusion",
         ),
     )
