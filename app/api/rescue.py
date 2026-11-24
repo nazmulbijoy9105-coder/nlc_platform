@@ -248,8 +248,8 @@ async def create_rescue_plan(
     )
     from app.services.compliance_service import _score_blocking_catalogue_conflicts
 
-    # Rescue is a score-derived action. Block it for every unresolved canonical
-    # evaluator/catalogue identity, including conflicts with no emitted finding.
+    # Preserve canonical identity integrity even though workflow authorization
+    # is independent of score publication.
     conflicted_rule_ids = sorted(
         _score_blocking_catalogue_conflicts(catalogue_identity_conflicts)
     )
@@ -269,8 +269,8 @@ async def create_rescue_plan(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                "A rescue plan requires a product-released RED or BLACK evaluation and an "
-                "active, applicable, evidence-supported finding."
+                "A rescue plan requires an active, applicable, evidence-supported finding "
+                "and an eligible RJSC rescue sequence."
             ),
         )
 
