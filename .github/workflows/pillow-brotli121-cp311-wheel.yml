@@ -90,5 +90,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Pillow 13.0.0 with Brotli 1.2.1 (CPython 3.11)" \
+            --prerelease \
             --notes "Reviewed NLC build of the upstream Pillow 13.0.0 source commit. Only the Pillow wheel dependency manifest changes Brotli from 1.2.0 to 1.2.1. Built with Pillow's cibuildwheel recipe; the wheel test command runs Pillow's own suite. The attached provenance and SHA256SUMS identify the exact artifact. This is a temporary compatibility wheel, not an upstream Pillow release."
           gh release view "$tag" --repo "$GITHUB_REPOSITORY"
