@@ -98,17 +98,17 @@ def test_each_finding_gets_exactly_one_rescue_disposition(controlled_release):
     assert result[5]["reason"] == "RULE_NOT_APPLICABLE"
 
 
-def test_confirmed_finding_is_review_required_when_legal_score_release_is_closed(monkeypatch):
+def test_confirmed_finding_is_action_required_when_legal_score_release_is_closed(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     finding = _flag("AGM-001")
 
     result = _dispositions([finding], steps=_seq([finding]))
 
-    assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
-def test_product_score_does_not_activate_unverified_rescue_action(monkeypatch):
+def test_unverified_rule_does_not_suppress_authorized_rescue_action(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
@@ -116,8 +116,8 @@ def test_product_score_does_not_activate_unverified_rescue_action(monkeypatch):
     steps = _seq([finding])
     assert len(steps) == 1  # candidate remains available for professional review
     result = _dispositions([finding], steps=steps)
-    assert result[0]["disposition"] == "REVIEW_REQUIRED"
-    assert result[0]["reason"] == "COUNSEL_APPROVAL_REQUIRED"
+    assert result[0]["disposition"] == "ACTION_REQUIRED"
+    assert result[0]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 @pytest.mark.parametrize("released", [False, True], ids=["paused", "unverified"])
