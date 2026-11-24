@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: pillow-brotli121-cp311-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
