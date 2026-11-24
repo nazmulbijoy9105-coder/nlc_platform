@@ -250,6 +250,16 @@ class TestComplianceService:
         """Integration: build profile → run engine → persist → verify."""
         import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService
+        from sqlalchemy import select
+        from app.models.enums import (
+            RevenueTier as ModelRevenueTier,
+            RuleType,
+            SeverityLevel,
+        )
+        from app.models.rules import LegalRule
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+        canonical_agm_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
@@ -303,9 +313,9 @@ class TestComplianceService:
             score_impact=10,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
             description="Controlled evidence review fixture",
-            # Match the migrated AGM-001 catalogue identity so this test
-            # exercises release redaction, not the separate identity-conflict gate.
-            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+            # Match the canonical AGM-001 identity so this test exercises
+            # release redaction, not the separate identity-conflict gate.
+            statutory_basis=canonical_agm_basis,
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -317,6 +327,42 @@ class TestComplianceService:
             rescue_sequence=None,
         )
         mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
+
+        # Bind the fixture finding to a real active catalogue identity. Without
+        # this row, the fail-closed identity gate correctly quarantines AGM-001
+        # and no customer-facing ComplianceFlag row should be created.
+        catalogue_result = await db.execute(
+            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
+        )
+        catalogue_rule = catalogue_result.scalar_one_or_none()
+        if catalogue_rule is None:
+            db.add(
+                LegalRule(
+                    rule_id="AGM-001",
+                    rule_name="First AGM Default",
+                    rule_type=RuleType.DEADLINE,
+                    statutory_basis=canonical_agm_basis,
+                    description=(
+                        "First AGM must be held within 18 calendar months of "
+                        "incorporation. Calculate with calendar-month arithmetic; "
+                        "do not use a fixed-day approximation."
+                    ),
+                    default_severity=SeverityLevel.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=ModelRevenueTier.STRUCTURED_REGULARIZATION,
+                    is_black_override=False,
+                    rule_version="2.0",
+                    is_active=True,
+                )
+            )
+        else:
+            assert catalogue_rule.is_active is True
+            # The migrated AGM-001 row carries the older "Section 81" wording,
+            # which the identity gate treats as a conflict with the canonical
+            # registry. Catalogue/engine parity is tracked separately; align
+            # the row inside this rolled-back test transaction only.
+            catalogue_rule.statutory_basis = canonical_agm_basis
+        await db.flush()
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
@@ -339,7 +385,6 @@ class TestComplianceService:
 
         # The evaluation-run JSONB snapshot persists the full score contract,
         # including category deductions; no schema migration is required.
-        from sqlalchemy import select
         from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory, ComplianceFlag
 
         persisted_result = await db.execute(
@@ -349,7 +394,14 @@ class TestComplianceService:
             .limit(1)
         )
         persisted_run = persisted_result.scalar_one()
-        assert persisted_run.score_breakdown_snapshot is None
+        assert persisted_run.score_breakdown_snapshot == {
+            "snapshot_schema_version": 1,
+            "status": "NOT_RELEASED",
+            "reason": "LEGAL_SCORE_RELEASE_GATE_CLOSED",
+            "score": None,
+            "risk_band": "NOT_EVALUATED",
+            "scoring_data": "WITHHELD",
+        }
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
@@ -358,9 +410,9 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        # Immutable evaluation evidence preserves the engine's internal raw label;
-        # customer-facing ComplianceFlag rows and API serializers must redact it.
-        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
+        # Persisted snapshots redact risk severity while the legal score
+        # release gate is closed; the raw engine label is not released.
+        assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
 
         persisted_flag_result = await db.execute(
             select(ComplianceFlag).where(
