@@ -271,18 +271,15 @@ async def _postflight(
         current_agm001 = json.loads(current_agm001)
     if not isinstance(current_agm001, dict):
         raise RuntimeError("AGM-001 current row payload is not a JSON object")
-    preserved_fields = (
-        "rule_name", "rule_type", "description", "rule_condition", "is_active",
-        "default_severity", "score_impact", "revenue_tier", "is_black_override",
-        "verification_status",
-    )
-    changed_fields = [
-        key for key in preserved_fields
-        if current_agm001.get(key) != original_agm001.get(key)
-    ]
-    if changed_fields:
+    before_compare = dict(original_agm001)
+    current_compare = dict(current_agm001)
+    mutable_fields = ("statutory_basis", "rule_version", "last_modified_at", "updated_at")
+    for field in mutable_fields:
+        before_compare.pop(field, None)
+        current_compare.pop(field, None)
+    if current_compare != before_compare:
         raise RuntimeError(
-            f"0125 changed AGM-001 fields beyond citation/version: {changed_fields!r}"
+            "0125 changed AGM-001 fields beyond citation/version/timestamps"
         )
 
     inc002 = by_rule.get("INC-002")
