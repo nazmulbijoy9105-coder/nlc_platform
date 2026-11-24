@@ -382,7 +382,7 @@ async def _audit_view_parity() -> dict[str, Any]:
         if actual_revision == HEAD_REVISION:
             if result.get("active_legal_rule_rows") != 85:
                 raise RuntimeError(
-                    "0124 requires exactly 85 active catalogue rows "
+                    "0125 requires exactly 85 active catalogue rows "
                     f"(observed {result.get('active_legal_rule_rows')!r})."
                 )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
