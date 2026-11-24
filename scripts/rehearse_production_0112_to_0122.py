@@ -599,7 +599,7 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions in ([HEAD_REVISION], [PREVIOUS_REVISION]):
+        if revisions == [HEAD_REVISION]:
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
             # instead of trying to replay the 0112-only migration.
@@ -626,15 +626,21 @@ async def main() -> None:
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
-        # A branch left at the previous rehearsal head resumes at 0125 only.
+        # The preserved production backup may be at 0112, 0122, or 0124.
+        # 0122 already archived the legacy INC-001/INC-002 rows, so load their
+        # before-images from the append-only archive when resuming there.
+        resume_from_0122 = revisions == [PREVIOUS_REVISION]
         resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
-        if not resume_from_0124 and revisions != [START_REVISION]:
+        if not (resume_from_0122 or resume_from_0124) and revisions != [START_REVISION]:
             raise RuntimeError(
-                f"Expected starting revision {START_REVISION}, resumable revision "
-                f"{AGM_PRE_0125_REVISION}, or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
+                f"Expected starting revision {START_REVISION}, resumable revisions "
+                f"{PREVIOUS_REVISION} or {AGM_PRE_0125_REVISION}, or already-rehearsed "
+                f"{HEAD_REVISION}; got {revisions!r}"
             )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
-        before_rules = await _legacy_payloads(conn, from_archive=resume_from_0124)
+        before_rules = await _legacy_payloads(
+            conn, from_archive=(resume_from_0122 or resume_from_0124)
+        )
         active_plan_duplicates = await _active_plan_duplicate_preflight(conn)
         if active_plan_duplicates:
             raise RuntimeError(
@@ -703,7 +709,11 @@ async def main() -> None:
             "started_at": started,
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "target": identity,
-            "starting_revision": AGM_PRE_0125_REVISION if resume_from_0124 else START_REVISION,
+            "starting_revision": (
+                AGM_PRE_0125_REVISION if resume_from_0124
+                else PREVIOUS_REVISION if resume_from_0122
+                else START_REVISION
+            ),
             "final_revision": final_revisions,
             "alembic_current": current,
             **(
@@ -712,6 +722,11 @@ async def main() -> None:
                     "legacy_before_image_source": "legal_rule_identity_archive",
                 }
                 if resume_from_0124
+                else {
+                    "mode": "resumed_from_0122",
+                    "legacy_before_image_source": "legal_rule_identity_archive",
+                }
+                if resume_from_0122
                 else {}
             ),
             **postflight,
