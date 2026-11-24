@@ -48,9 +48,11 @@ jobs:
 
       - name: Require explicit release confirmation and credentials
         shell: bash
+        env:
+          CONFIRM_PRODUCTION_RELEASE: ${{ inputs.confirm_production_release }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.confirm_production_release }}" != "APPLY_0127_AND_DEPLOY" ]]; then
+          if [[ "$CONFIRM_PRODUCTION_RELEASE" != "APPLY_0127_AND_DEPLOY" ]]; then
             echo "::error::Type APPLY_0127_AND_DEPLOY exactly to authorize this production operation."
             exit 1
           fi
