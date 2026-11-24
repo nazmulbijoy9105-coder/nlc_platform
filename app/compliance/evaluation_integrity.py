@@ -266,9 +266,9 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
         if evaluation_status == "NOT_RELEASED" and snapshot_status != "NOT_RELEASED":
             problems.append("EVALUATION_STATUS_SNAPSHOT_MISMATCH")
         if evaluation_status == "NOT_RELEASED" or snapshot_status == "NOT_RELEASED":
-        # A withheld evaluation is auditable without fabricating a score.
-        # Keep this envelope deliberately minimal: no deductions, module
-        # scores, raw total, coverage or inferred risk classification.
+            # A withheld evaluation is auditable without fabricating a score.
+            # Keep this envelope deliberately minimal: no deductions, module
+            # scores, raw total, coverage or inferred risk classification.
             expected_unreleased_fields = {
                 "snapshot_schema_version",
                 "status",
@@ -306,7 +306,16 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
         and isinstance(flags_snapshot, list)
         and all(isinstance(item, dict) for item in flags_snapshot)
         and isinstance(fact_provenance_snapshot, list)
-        and isinstance(score_breakdown_snapshot, dict)
+        and (
+            isinstance(score_breakdown_snapshot, dict)
+            or (
+                score_breakdown_snapshot is None
+                and evaluation_status == "NOT_RELEASED"
+                and getattr(run, "score", None) is None
+                and getattr(getattr(run, "risk_band", None), "value", getattr(run, "risk_band", None))
+                == "NOT_EVALUATED"
+            )
+        )
         and calculated_at is not None
         and callable(getattr(calculated_at, "isoformat", None))
         and engine_version
