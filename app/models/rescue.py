@@ -70,6 +70,7 @@ class RescuePlan(FullMixin, Base):
     initial_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     workflow_mode: Mapped[str] = mapped_column(
         String(32), nullable=False, default="STATUTORY_ACTION_AUTHORIZED",
+        server_default="STATUTORY_ACTION_AUTHORIZED",
         comment="REVIEW_ONLY or STATUTORY_ACTION; review work is not a score or legal conclusion"
     )
     source_rule_ids: Mapped[list[str]] = mapped_column(

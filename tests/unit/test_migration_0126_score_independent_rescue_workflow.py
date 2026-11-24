@@ -18,5 +18,13 @@ def test_score_independent_rescue_migration_makes_score_nullable_and_adds_author
     assert "nullable=True" in migration
     assert '"workflow_mode"' in migration
     assert 'server_default="STATUTORY_ACTION_AUTHORIZED"' in migration
+    assert "server_default=None" not in migration
     assert "def downgrade() -> None:" in migration
     assert "UPDATE rescue_plans SET initial_score = 0 WHERE initial_score IS NULL" in migration
+
+
+def test_rescue_plan_model_declares_the_retained_workflow_mode_server_default():
+    from app.models.rescue import RescuePlan
+
+    assert RescuePlan.__table__.c.workflow_mode.server_default.arg == "STATUTORY_ACTION_AUTHORIZED"
+    assert RescuePlan.__table__.c.workflow_mode.nullable is False

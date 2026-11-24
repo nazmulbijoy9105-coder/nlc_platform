@@ -24,7 +24,6 @@ def upgrade() -> None:
             comment="REVIEW_ONLY or STATUTORY_ACTION; review work is not a score or legal conclusion",
         ),
     )
-    op.alter_column("rescue_plans", "workflow_mode", server_default=None)
 
 
 def downgrade() -> None:
