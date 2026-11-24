@@ -13,6 +13,7 @@ readonly BROTLI_FIXED="1.2.1"
 readonly BUILD_TAG="1brotli121"
 readonly WHEEL_TOOL_VERSION="0.48.0"
 readonly ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly NLC_REPO_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
 readonly WORK="${ROOT}/.build/pillow-brotli121"
 readonly RECIPE="${WORK}/Pillow-wheel-recipe"
 readonly SOURCE="${WORK}/sdist/pillow-13.0.0"
@@ -146,6 +147,7 @@ PY
   cd "${DIST}"
   sha256sum *.whl > SHA256SUMS
   {
+    echo "NLC build recipe commit: ${NLC_REPO_COMMIT}"
     echo "Pillow version: ${PILLOW_VERSION}"
     echo "Pillow source: verified PyPI sdist"
     echo "Pillow sdist SHA-256: ${PILLOW_SDIST_SHA256}"
