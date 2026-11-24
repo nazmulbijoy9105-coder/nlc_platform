@@ -1340,10 +1340,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
             # the cached score fail closed until a new evaluation completes.
             "updated_at":               now,
         }
-        if rescue_required:
-            company_svc_update["rescue_triggered_at"] = now
+        if rescue_required or bool(getattr(output, "rescue_sequence", None)):
+            if rescue_required:
+                company_svc_update["rescue_triggered_at"] = now
             
-            # Auto-create RescuePlan if not already active
+            # Start the rescue workflow independently of score publication.
             from app.services.rescue_service import RescueService
             rescue_svc = RescueService(self.db)
             existing_plan = await rescue_svc.get_active_plan(company_id)
