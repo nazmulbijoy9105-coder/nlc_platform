@@ -289,10 +289,26 @@ async def create_rescue_plan(
             ),
         )
 
+    # A rescue candidate may be actionable independently of product-score
+    # publication. Never copy the raw engine score into the plan unless this
+    # exact evaluation has a publishable score.
+    from app.rule_engine.engine import legal_score_is_released
+
+    score_breakdown = getattr(engine_output, "score_breakdown", None)
+    risk_band_value = getattr(score_breakdown, "risk_band", None)
+    risk_band_name = getattr(risk_band_value, "value", risk_band_value)
+    score_publishable = bool(
+        legal_score_is_released()
+        and score_breakdown is not None
+        and getattr(score_breakdown, "final_score", None) is not None
+        and risk_band_name != "NOT_EVALUATED"
+    )
+
     try:
         plan = await rescue_svc.generate_rescue_plan(  # type: ignore
             company_id=body.company_id,
             engine_output=engine_output,
+            score_withheld=not score_publishable,
             created_by=current_user.id,
             assigned_staff_id=body.assigned_staff_id,
             estimated_fee_bdt=body.estimated_fee_bdt,
