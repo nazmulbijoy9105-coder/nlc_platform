@@ -36,11 +36,56 @@ security findings tracked in the security/remediate-12-findings pull request.
 - Deployment curl guidance reads the bearer token from an environment variable
   instead of embedding a token in the command.
 
+## Accepted residual risk — Pillow's bundled Brotli decoder
+
+Pillow 13.0.0 wheels may bundle Brotli 1.2.0 under `pillow.libs/`. The direct
+`brotli==1.2.1` pin does not replace or patch that private decoder. The
+vulnerable decoder is reached through FreeType's WOFF2 font decompression path.
+The application source currently has no direct `PIL` imports, which reduces
+the apparent direct exposure; it does **not** establish that the decoder is
+unreachable. Indirect consumers (including WeasyPrint and the OCR dependency
+stack) have not yet been fully audited for Pillow use or untrusted WOFF2 input.
+
+**Decision:** provisionally accept this residual risk until an upstream Pillow
+wheel with the fixed bundled decoder is available, or a reviewed CPython 3.11
+wheel is built from the 13.0.0 sdist against Brotli 1.2.1. Do not treat the
+separate Brotli package pin as closure evidence. Keep the finding open and do
+not deploy on the strength of the top-level pin alone.
+
+**Closure gate — record evidence against the exact production wheel/image:**
+
+```sh
+# Inspect the wheel before installation.
+unzip -l pillow-*.whl | grep -E 'pillow.libs/libbrotli(dec|common)'
+
+# Or inspect the installed Pillow payload in the built image.
+python - <<'PY'
+from pathlib import Path
+import PIL
+
+libdir = Path(PIL.__file__).resolve().parent.parent / "pillow.libs"
+matches = sorted(
+    p.name for p in libdir.glob("libbrotli*")
+    if "brotlidec" in p.name or "brotlicommon" in p.name
+)
+print("\\n".join(matches))
+assert matches, "No bundled Brotli libraries found; inspect the wheel/build linkage"
+assert all(".1.2.1" in name or ".1.2.2" in name for name in matches), matches
+PY
+```
+
+Retain the wheel SHA-256, Python/platform tag, Pillow build provenance, the
+Brotli version evidence, and Pillow's full test-suite result with the CI
+artifact. For a custom wheel, also record that the CPython 3.11/Linux target
+matches the production image. Re-run this gate against the final image rather
+than relying only on a locally inspected wheel.
+
 ## Findings requiring verification before closure
 
 1. **Pillow's bundled Brotli copy:** inspect the actual wheel installed in the
    production image. A top-level `brotli==1.2.1` does not patch a private
-   `pillow.libs/libbrotli*` copy.
+   `pillow.libs/libbrotli*` copy. The closure procedure and provisional
+   residual-risk decision are recorded above.
 2. **Full dependency graph:** run `pip-audit -r requirements.txt` against the
    resolved production environment and retain the machine-readable report.
 3. **Compatibility:** run the complete backend suite against the upgraded
