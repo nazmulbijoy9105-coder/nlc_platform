@@ -14,6 +14,7 @@ from canonical_architecture.rjsc_scope import (
 
 from app.services.compliance_service import (
     ComplianceService,
+    RescueWorkflowOutcome,
     _score_blocking_catalogue_conflicts,
 )
 
@@ -88,7 +89,7 @@ async def test_unentitled_company_does_not_start_rescue(workflow):
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result is None
+    assert result == RescueWorkflowOutcome("NOT_ENTITLED")
     workflow.rescue.get_active_plan.assert_awaited_once_with(workflow.company_id)
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_awaited_once_with(
@@ -106,7 +107,7 @@ async def test_entitled_company_starts_rescue(workflow, score_withheld):
         score_withheld=score_withheld, score_blocking_conflicts=set()
     )
 
-    assert result is None
+    assert result == RescueWorkflowOutcome("PLAN_CREATED")
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
@@ -141,7 +142,7 @@ async def test_existing_plan_is_kept_without_entitlement_query(
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result is None
+    assert result == RescueWorkflowOutcome("ACTIVE_PLAN_RETAINED")
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_not_called()
     workflow.db.execute.assert_not_awaited()
@@ -161,7 +162,7 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result is None
+    assert result == RescueWorkflowOutcome("PLAN_CREATED" if entitled else "NOT_ENTITLED")
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
@@ -192,7 +193,7 @@ async def test_generation_error_is_returned(workflow, error, expected):
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result == expected
+    assert result == RescueWorkflowOutcome("GENERATION_FAILED", expected)
     workflow.rescue.generate_rescue_plan.assert_awaited_once()
     assert workflow.events == ["savepoint_begin", "generate", "savepoint_rollback"]
 
@@ -205,7 +206,7 @@ async def test_entitlement_error_is_returned_without_generation(workflow):
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result == "unexpected: db down"
+    assert result == RescueWorkflowOutcome("GENERATION_FAILED", "unexpected: db down")
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
@@ -228,7 +229,8 @@ async def test_blocking_catalogue_conflicts_prevent_rescue_before_any_lookup(wor
         score_withheld=False, score_blocking_conflicts={"AGM-002", "AGM-001"},
     )
 
-    assert result.startswith(
+    assert result.status == "BLOCKED_CATALOGUE_CONFLICTS"
+    assert result.note.startswith(
         "Rescue generation blocked by unresolved RJSC catalogue/evaluator "
         "identity conflicts: AGM-001, AGM-002"
     )
@@ -247,7 +249,8 @@ async def test_blocking_conflict_note_is_truncated_to_500_characters(workflow):
         score_blocking_conflicts={f"RULE-{i:03d}" for i in range(200)},
     )
 
-    assert len(result) == 500
+    assert result.status == "BLOCKED_CATALOGUE_CONFLICTS"
+    assert len(result.note) == 500
 
 
 @pytest.mark.asyncio
@@ -269,13 +272,14 @@ async def test_catalogue_conflict_scope_matches_automatic_rescue_gate(
     )
 
     if blocks_rescue:
-        assert result.startswith(
+        assert result.status == "BLOCKED_CATALOGUE_CONFLICTS"
+        assert result.note.startswith(
             "Rescue generation blocked by unresolved RJSC catalogue/evaluator identity conflicts: "
         )
         workflow.rescue.generate_rescue_plan.assert_not_awaited()
         assert workflow.events == []
     else:
-        assert result is None
+        assert result == RescueWorkflowOutcome("PLAN_CREATED")
         workflow.rescue.generate_rescue_plan.assert_awaited_once()
 
 
