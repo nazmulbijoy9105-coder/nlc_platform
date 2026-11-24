@@ -1,7 +1,35 @@
+import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import ANY
 
+import pytest
+import sqlalchemy as sa
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_migration_with_fake_op(monkeypatch, scoreless_plans):
+    spec = importlib.util.spec_from_file_location(
+        "migration_0126",
+        ROOT / "alembic" / "versions" / "0126_score_independent_rescue_workflow.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    calls = []
+    bind = SimpleNamespace(
+        execute=lambda statement: SimpleNamespace(scalar_one=lambda: scoreless_plans)
+    )
+    fake_op = SimpleNamespace(
+        get_bind=lambda: bind,
+        drop_column=lambda *args, **kwargs: calls.append(("drop_column", args, kwargs)),
+        alter_column=lambda *args, **kwargs: calls.append(("alter_column", args, kwargs)),
+        execute=lambda *args, **kwargs: calls.append(("execute", args, kwargs)),
+    )
+    monkeypatch.setattr(module, "op", fake_op)
+    return module, calls
 
 
 def test_score_independent_rescue_migration_makes_score_nullable_and_adds_authorization_mode():
@@ -20,7 +48,32 @@ def test_score_independent_rescue_migration_makes_score_nullable_and_adds_author
     assert 'server_default="STATUTORY_ACTION_AUTHORIZED"' in migration
     assert "server_default=None" not in migration
     assert "def downgrade() -> None:" in migration
-    assert "UPDATE rescue_plans SET initial_score = 0 WHERE initial_score IS NULL" in migration
+    assert "SET initial_score = 0" not in migration
+
+
+def test_downgrade_refuses_when_scoreless_rescue_plans_exist(monkeypatch):
+    migration, calls = _load_migration_with_fake_op(monkeypatch, scoreless_plans=2)
+
+    with pytest.raises(RuntimeError, match="0126 refuses to downgrade"):
+        migration.downgrade()
+
+    assert calls == []
+
+
+def test_downgrade_restores_not_null_score_without_fabricating_values(monkeypatch):
+    migration, calls = _load_migration_with_fake_op(monkeypatch, scoreless_plans=0)
+
+    migration.downgrade()
+
+    assert calls == [
+        ("drop_column", ("rescue_plans", "workflow_mode"), {}),
+        (
+            "alter_column",
+            ("rescue_plans", "initial_score"),
+            {"existing_type": ANY, "nullable": False},
+        ),
+    ]
+    assert isinstance(calls[1][2]["existing_type"], sa.Integer)
 
 
 def test_rescue_plan_model_declares_the_retained_workflow_mode_server_default():

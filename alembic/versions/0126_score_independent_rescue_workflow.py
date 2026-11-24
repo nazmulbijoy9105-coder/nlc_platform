@@ -27,6 +27,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
+    scoreless_plans = bind.execute(
+        sa.text("SELECT count(*) FROM rescue_plans WHERE initial_score IS NULL")
+    ).scalar_one()
+    if scoreless_plans:
+        raise RuntimeError(
+            f"0126 refuses to downgrade: {scoreless_plans} rescue_plans rows have "
+            "no initial_score. They are score-independent NOT_EVALUATED plans; "
+            "restoring NOT NULL would require fabricating a score (0 denotes BLACK)."
+        )
     op.drop_column("rescue_plans", "workflow_mode")
-    op.execute("UPDATE rescue_plans SET initial_score = 0 WHERE initial_score IS NULL")
     op.alter_column("rescue_plans", "initial_score", existing_type=sa.Integer(), nullable=False)
