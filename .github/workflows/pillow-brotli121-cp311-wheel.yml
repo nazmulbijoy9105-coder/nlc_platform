@@ -1,4 +1,5 @@
 name: Build reviewed Pillow Brotli 1.2.1 CPython 3.11 wheel
+# Publish only the artifact produced by the exact current security branch head.
 
 on:
   push:
