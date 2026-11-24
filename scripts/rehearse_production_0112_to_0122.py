@@ -26,7 +26,7 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0124_restore_85_rule_catalogue_parity"
+HEAD_REVISION = "0125_reconcile_agm001_statutory_basis"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
