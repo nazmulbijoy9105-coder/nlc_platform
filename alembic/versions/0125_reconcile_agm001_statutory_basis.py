@@ -108,6 +108,10 @@ def _validate_migration_history(bind, current_row, expected_previous=None):
         raise RuntimeError(
             "0125 AGM-001 history row does not preserve the exact legacy citation"
         )
+    if previous.get("rule_version") != record["version"]:
+        raise RuntimeError(
+            "0125 AGM-001 history version does not match its before-image"
+        )
     if _definition(
         {
             "rule_name": previous.get("rule_name"),
@@ -207,6 +211,22 @@ def upgrade() -> None:
 
     previous_version = current["rule_version"]
     next_version = _next_version(previous_version)
+    existing_history_count = bind.execute(
+        sa.text(
+            """
+            SELECT count(*)
+              FROM public.legal_rule_versions
+             WHERE rule_id = :rule_id
+               AND migration_revision = :migration_revision
+            """
+        ),
+        {"rule_id": RULE_ID, "migration_revision": revision},
+    ).scalar_one()
+    if existing_history_count:
+        raise RuntimeError(
+            "0125 found an AGM-001 migration history row while the catalogue "
+            "still has the legacy basis; refusing duplicate/inconsistent history"
+        )
 
     bind.execute(
         sa.text(
