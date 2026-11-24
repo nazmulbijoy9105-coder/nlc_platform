@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.dialects import postgresql
 
+from app.models.rescue import RescuePlan
 from app.services.rescue_service import (
     ActiveRescuePlanExistsError,
     RescueService,
@@ -141,3 +142,44 @@ def test_migration_refuses_to_hide_existing_duplicate_active_plans(monkeypatch):
     with pytest.raises(RuntimeError, match="duplicate active plans"):
         migration.upgrade()
     assert calls == []
+
+
+
+def test_orm_model_declares_the_same_partial_unique_index():
+    indexes = {
+        index.name: index
+        for index in RescuePlan.__table__.indexes
+    }
+    index = indexes["uq_rescue_plans_one_active_per_company"]
+    assert index.unique is True
+    assert [column.name for column in index.columns] == ["company_id"]
+    assert "is_active IS TRUE" in str(index.dialect_options["postgresql"]["where"])
+    assert "is_active IS TRUE" in str(index.dialect_options["sqlite"]["where"])
+
+
+def test_migration_creates_index_after_clean_preflight(monkeypatch):
+    path = ROOT / "alembic" / "versions" / "0127_one_active_rescue_plan_per_company.py"
+    spec = importlib.util.spec_from_file_location("migration_0127_clean", path)
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+
+    calls = []
+    bind = SimpleNamespace(execute=lambda statement: SimpleNamespace(all=lambda: []))
+    fake_op = SimpleNamespace(
+        get_bind=lambda: bind,
+        create_index=lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+    monkeypatch.setattr(migration, "op", fake_op)
+
+    migration.upgrade()
+
+    assert len(calls) == 1
+    args, kwargs = calls[0]
+    assert args[:3] == (
+        "uq_rescue_plans_one_active_per_company",
+        "rescue_plans",
+        ["company_id"],
+    )
+    assert kwargs["unique"] is True
+    assert "is_active IS TRUE" in str(kwargs["postgresql_where"])
