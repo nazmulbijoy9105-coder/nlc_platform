@@ -69,6 +69,11 @@ jobs:
         run: |
           set -euo pipefail
           tag="nlc-pillow-13.0.0-brotli1.2.1-cp311"
+          branch_head="$(gh api "repos/$GITHUB_REPOSITORY/branches/security/remediate-12-findings" --jq '.commit.sha')"
+          if [[ "$branch_head" != "$GITHUB_SHA" ]]; then
+            echo "Build belongs to stale commit $GITHUB_SHA; current branch head is $branch_head. Refusing publication."
+            exit 1
+          fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Refusing to replace existing Pillow wheel release $tag" >&2
             exit 1
