@@ -30,8 +30,8 @@ def upgrade() -> None:
     bind = op.get_bind()
 
     # Lock the target row and capture its complete pre-change definition.
-    # changed_by is a real user FK: prefer the rule's existing governance
-    # actor, otherwise require an active SUPER_ADMIN. Never invent an actor.
+    # changed_by is a real user FK: use an active SUPER_ADMIN when available,
+    # otherwise preserve an existing governance actor. Never invent an actor.
     prior = bind.execute(
         sa.text(
             """
