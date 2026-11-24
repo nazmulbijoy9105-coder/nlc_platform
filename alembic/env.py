@@ -188,6 +188,7 @@ def get_database_url() -> str:
 # tests/unit/test_alembic_migration_only_tables.py pins this allowlist
 # against the migrations/models source on every CI run.
 MIGRATION_ONLY_TABLES = frozenset({
+    "_nlc_migration_0006_seeded_rule_ids",
     "articles_verification_events",
     "articles_verifications",
     "legal_release_quarantine_events",
