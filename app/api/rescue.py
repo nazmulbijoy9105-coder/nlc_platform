@@ -37,6 +37,7 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.user import User
+from app.models.company import Company
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
 from app.services.rescue_service import RescueService
@@ -211,6 +212,11 @@ async def create_rescue_plan(
     await _assert_rescue_entitlement(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
 
+    # Serialize the preflight check with every other rescue-plan creator.
+    await db.execute(
+        select(Company.id).where(Company.id == body.company_id).with_for_update()
+    )
+
     # Check for existing active plan
     existing = await rescue_svc.get_active_plan(body.company_id)
     if existing:
@@ -315,6 +321,11 @@ async def create_rescue_plan(
             target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
             engagement_id=None,  # RES-010: explicit linkage, populated by service
         )
+    except __import__("app.services.rescue_service", fromlist=["ActiveRescuePlanExistsError"]).ActiveRescuePlanExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
