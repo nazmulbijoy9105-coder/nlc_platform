@@ -4,30 +4,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_agm001_migration_is_fingerprint_scoped_and_forward_only():
+def test_agm001_migration_is_fingerprint_scoped_and_version_audited():
     migration = (
         ROOT
         / "alembic"
         / "versions"
-        / "0125_reconcile_agm001_catalogue_identity.py"
+        / "0125_reconcile_agm001_statutory_basis.py"
     ).read_text(encoding="utf-8")
 
-    assert 'revision = "0125_reconcile_agm001_catalogue_identity"' in migration
+    assert 'revision = "0125_reconcile_agm001_statutory_basis"' in migration
     assert 'down_revision = "0124_restore_85_rule_catalogue_parity"' in migration
     assert 'LEGACY_BASIS = "Section 81, Companies Act 1994 (Bangladesh)"' in migration
     assert (
         'CANONICAL_BASIS = "Section 81(1), Companies Act 1994 (Bangladesh)"'
         in migration
     )
-    assert '"rule_condition": LEGACY_CONDITION' in migration
-    assert "if observed_definition != expected_definition:" in migration
-    assert "refusing to overwrite a conflicting definition" in migration
-    assert "to_jsonb(r) AS payload" in migration
-    assert "payload_sha256" in migration
-    assert migration.index("INSERT INTO public.{ARCHIVE_TABLE}") < migration.index(
+    assert "if _definition(current) != LEGACY_DEFINITION:" in migration
+    assert "to_jsonb(rule) AS previous_definition" in migration
+    assert "INSERT INTO public.legal_rule_versions" in migration
+    assert "'MIGRATION', :migration_revision" in migration
+    assert migration.index("INSERT INTO public.legal_rule_versions") < migration.index(
         "UPDATE public.legal_rules"
     )
     assert "AND statutory_basis = :legacy_basis" in migration
+    assert "rule_version = :next_version" in migration
     assert "def downgrade() -> None:" in migration
     assert "0125 is forward-only" in migration
 
