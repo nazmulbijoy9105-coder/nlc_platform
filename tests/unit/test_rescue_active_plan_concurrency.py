@@ -1,6 +1,7 @@
 """Concurrency and database invariant contract for active rescue plans."""
 
 import importlib.util
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -33,10 +34,11 @@ class _Savepoint:
 
 @pytest.mark.asyncio
 async def test_service_locks_company_before_check_and_create():
-    company_id = __import__("uuid").uuid4()
-    plan = SimpleNamespace(id=__import__("uuid").uuid4())
+    company_id = uuid.uuid4()
+    plan = SimpleNamespace(id=uuid.uuid4())
     db = MagicMock()
     statements = []
+
     async def execute(statement):
         statements.append(statement)
         return _result(company_id if len(statements) == 1 else None)
@@ -61,8 +63,8 @@ async def test_service_locks_company_before_check_and_create():
 
 @pytest.mark.asyncio
 async def test_service_rejects_second_active_plan_after_company_lock():
-    company_id = __import__("uuid").uuid4()
-    active_plan_id = __import__("uuid").uuid4()
+    company_id = uuid.uuid4()
+    active_plan_id = uuid.uuid4()
     db = MagicMock()
     statements = []
     async def execute(statement):
@@ -85,9 +87,9 @@ async def test_service_rejects_second_active_plan_after_company_lock():
 
 @pytest.mark.asyncio
 async def test_evaluation_can_replace_only_after_its_locked_stale_plan_decision():
-    company_id = __import__("uuid").uuid4()
-    active_plan_id = __import__("uuid").uuid4()
-    plan = SimpleNamespace(id=__import__("uuid").uuid4())
+    company_id = uuid.uuid4()
+    active_plan_id = uuid.uuid4()
+    plan = SimpleNamespace(id=uuid.uuid4())
     db = MagicMock()
     statements = []
     async def execute(statement):
@@ -131,7 +133,7 @@ def test_migration_refuses_to_hide_existing_duplicate_active_plans(monkeypatch):
     spec.loader.exec_module(migration)
 
     calls = []
-    duplicate = (str(__import__("uuid").uuid4()), 2)
+    duplicate = (str(uuid.uuid4()), 2)
     bind = SimpleNamespace(execute=lambda statement: SimpleNamespace(all=lambda: [duplicate]))
     fake_op = SimpleNamespace(
         get_bind=lambda: bind,
@@ -144,11 +146,9 @@ def test_migration_refuses_to_hide_existing_duplicate_active_plans(monkeypatch):
     assert calls == []
 
 
-
 def test_orm_model_declares_the_same_partial_unique_index():
     indexes = {
-        index.name: index
-        for index in RescuePlan.__table__.indexes
+        index.name: index for index in RescuePlan.__table__.indexes
     }
     index = indexes["uq_rescue_plans_one_active_per_company"]
     assert index.unique is True
