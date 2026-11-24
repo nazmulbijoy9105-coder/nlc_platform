@@ -43,6 +43,11 @@ LEGACY_FINGERPRINTS = {
          "Section 23, Companies Act 1994 (Bangladesh)",
          "moa_aoa_filed == False"),
     },
+    "AGM-001": {
+        ("First AGM Default",
+         "Section 81, Companies Act 1994 (Bangladesh)",
+         "first_agm_held == False AND days_since_incorporation > 548"),
+    },
     "INC-002": {
         ("Memorandum and Articles Not Filed",
          "Section 11, Companies Act 1994 (Bangladesh)",
@@ -127,7 +132,7 @@ async def _legacy_payloads(conn: asyncpg.Connection) -> dict[str, Any]:
         if row is None:
             if rule_id == "INC-002":
                 continue
-            raise RuntimeError("INC-001 is missing before quarantine.")
+            raise RuntimeError(f"{rule_id} is missing before migration reconciliation.")
         fingerprint = (row["rule_name"], row["statutory_basis"], row["trigger"])
         if fingerprint not in allowed:
             raise RuntimeError(f"{rule_id} does not match a known legacy fingerprint: {fingerprint!r}")
@@ -150,7 +155,36 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "FROM public.legal_rule_identity_archive ORDER BY legacy_rule_id"
     )
     archived = {row["legacy_rule_id"]: row for row in archive}
+    migration_history_verified = []
     for rule_id, original in before_rules.items():
+        if rule_id == "AGM-001":
+            history = await conn.fetch(
+                "SELECT version, change_reason, changed_by, actor_type, "
+                "migration_revision, previous_definition "
+                "FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                rule_id,
+                HEAD_REVISION,
+            )
+            if len(history) != 1:
+                raise RuntimeError(
+                    f"0125 did not create exactly one AGM-001 migration history row: {len(history)}"
+                )
+            history_row = history[0]
+            if (
+                history_row["actor_type"] != "MIGRATION"
+                or history_row["changed_by"] is not None
+                or history_row["migration_revision"] != HEAD_REVISION
+                or history_row["version"] != original.get("rule_version")
+                or not history_row["change_reason"]
+                or _canonical(history_row["previous_definition"]) != _canonical(original)
+            ):
+                raise RuntimeError(
+                    "0125 AGM-001 migration history does not preserve the exact before-image: "
+                    f"{dict(history_row)!r}"
+                )
+            migration_history_verified.append(rule_id)
+            continue
         row = archived.get(rule_id)
         if row is None:
             raise RuntimeError(f"0115 did not archive {rule_id}.")
@@ -164,7 +198,8 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
 
     legacy_rows = await conn.fetch(
         "SELECT rule_id, is_active, default_severity, score_impact, "
-        "is_black_override, verification_status FROM public.legal_rules "
+        "is_black_override, verification_status, statutory_basis, rule_version, "
+        "to_jsonb(r) AS payload FROM public.legal_rules r "
         "WHERE rule_id = ANY($1::text[]) ORDER BY rule_id",
         list(before_rules),
     )
@@ -181,6 +216,42 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         raise RuntimeError(
             f"INC-001 85-ID catalogue activation parity failed: {inc001!r}"
         )
+    agm001 = by_rule.get("AGM-001")
+    if (
+        agm001 is None
+        or not agm001["is_active"]
+        or agm001["statutory_basis"] != "Section 81(1), Companies Act 1994 (Bangladesh)"
+    ):
+        raise RuntimeError(
+            f"AGM-001 canonical catalogue identity was not reconciled: {agm001!r}"
+        )
+    original_agm001 = before_rules["AGM-001"]
+    previous_version = str(original_agm001["rule_version"])
+    version_parts = previous_version.split(".")
+    if any(not part.isdigit() for part in version_parts):
+        raise RuntimeError(f"AGM-001 has a non-numeric prior version: {previous_version!r}")
+    version_parts[-1] = str(int(version_parts[-1]) + 1)
+    expected_agm001_version = ".".join(version_parts)
+    if agm001["rule_version"] != expected_agm001_version:
+        raise RuntimeError(
+            "AGM-001 version history was not advanced exactly once: "
+            f"expected={expected_agm001_version!r}, actual={agm001['rule_version']!r}"
+        )
+    current_agm001 = agm001["payload"]
+    preserved_fields = (
+        "rule_name", "rule_type", "description", "rule_condition", "is_active",
+        "default_severity", "score_impact", "revenue_tier", "is_black_override",
+        "verification_status",
+    )
+    changed_fields = [
+        key for key in preserved_fields
+        if current_agm001.get(key) != original_agm001.get(key)
+    ]
+    if changed_fields:
+        raise RuntimeError(
+            f"0125 changed AGM-001 fields beyond citation/version: {changed_fields!r}"
+        )
+
     inc002 = by_rule.get("INC-002")
     if inc002 is not None and (
         inc002["is_active"]
@@ -297,7 +368,10 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     return {
         "historical_table_fingerprints_before": before_tables,
         "historical_table_fingerprints_after": after_tables,
-        "legacy_archive_verified": sorted(before_rules),
+        "legacy_archive_verified": sorted(
+            rule_id for rule_id in before_rules if rule_id != "AGM-001"
+        ),
+        "migration_version_history_verified": migration_history_verified,
         "legacy_rule_catalogue_states": [dict(row) for row in legacy_rows],
         "required_identity_evidence_tables": list(required_tables),
         "canonical_identity_seed_counts": dict(identity_counts),
