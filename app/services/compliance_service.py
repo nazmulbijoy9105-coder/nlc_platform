@@ -1371,6 +1371,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                         assigned_staff_id=assigned_staff_id,
                         created_by=getattr(self, '_current_user_id', None),
                         engagement_id=None,  # RES-010: explicit linkage, populated by service
+                        score_withheld=score_for_current is None,
                     )
                 except ValueError as e:
                     # Engine produced actionable RED/BLACK flags but no rescue

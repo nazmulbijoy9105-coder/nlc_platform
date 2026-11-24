@@ -156,6 +156,77 @@ def test_rescue_service_rejects_missing_score_when_release_is_open(monkeypatch):
             validate_rescue_engine_output(output)
 
 
+def test_rescue_service_accepts_withheld_score_even_when_global_release_is_open(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="RED",
+        score_impact=5,
+    )
+    output = SimpleNamespace(
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="NOT_EVALUATED", final_score=None),
+        flags=[flag],
+        rescue_sequence=[{"title": "Remediate AGM", "related_rules": ["AGM-001"]}],
+    )
+    assert validate_rescue_engine_output(
+        output, expected_company_id="company-1", score_withheld=True
+    ) == frozenset({"AGM-001"})
+    with pytest.raises(ValueError, match="requires a score"):
+        validate_rescue_engine_output(output, expected_company_id="company-1")
+
+
+def test_withheld_flag_never_widens_a_closed_release(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    output = SimpleNamespace(
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="YELLOW", final_score=50),
+        flags=[SimpleNamespace(
+            rule_id="AGM-001",
+            resolved=False,
+            conditional_applies=True,
+            state="NON_COMPLIANT",
+            eval_state="VIOLATION",
+            severity="RED",
+            score_impact=5,
+        )],
+        rescue_sequence=[{"title": "Remediate AGM", "related_rules": ["AGM-001"]}],
+    )
+    for score_withheld in (False, True):
+        assert validate_rescue_engine_output(
+            output, expected_company_id="company-1", score_withheld=score_withheld
+        ) == frozenset({"AGM-001"})
+
+
+def test_compliance_service_passes_withheld_score_state_to_rescue_generation():
+    source = (Path(__file__).resolve().parents[2] / "app/services/compliance_service.py").read_text()
+    calls = [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "generate_rescue_plan"
+    ]
+    assert len(calls) == 1
+    keywords = {keyword.arg: keyword.value for keyword in calls[0].keywords}
+    assert "score_withheld" in keywords
+    assert ast.unparse(keywords["score_withheld"]) == "score_for_current is None"
+
+
 def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
     from types import SimpleNamespace
 

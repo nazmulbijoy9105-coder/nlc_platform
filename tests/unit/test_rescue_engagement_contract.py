@@ -179,6 +179,67 @@ async def test_generate_rescue_plan_persists_score_independently_when_product_sc
     svc._create_step.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("score_withheld", "expected_score", "expected_band"),
+    [(True, None, "NOT_EVALUATED"), (False, 50, "RED")],
+)
+async def test_generate_rescue_plan_stores_score_only_when_evaluation_released_it(
+    monkeypatch, score_withheld, expected_score, expected_band,
+):
+    from app.rule_engine import engine as engine_module
+    from app.services.rescue_service import RescueService
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    assert engine_module.legal_score_is_released() is True
+
+    company_id = uuid.uuid4()
+    created_plan = MagicMock()
+    created_plan.id = uuid.uuid4()
+    db = MagicMock()
+    db.flush = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
+    )
+    svc = RescueService(db=db)
+    svc.create = AsyncMock(return_value=created_plan)
+    svc._create_step = AsyncMock(return_value=MagicMock())
+    svc._create_tasks_from_steps = AsyncMock()
+
+    flag = MagicMock()
+    flag.rule_id = "AGM-001"
+    flag.resolved = False
+    flag.conditional_applies = True
+    flag.state = "NON_COMPLIANT"
+    flag.eval_state = "VIOLATION"
+    flag.severity = "RED"
+    flag.score_impact = 10
+
+    engine_output = MagicMock()
+    engine_output.company_id = company_id
+    engine_output.flags = [flag]
+    engine_output.rescue_sequence = [
+        {"title": "Hold the overdue AGM", "related_rules": ["AGM-001"]}
+    ]
+    engine_output.score_breakdown = MagicMock(final_score=50, risk_band="RED")
+
+    result = await svc.generate_rescue_plan(
+        company_id=company_id,
+        engine_output=engine_output,
+        score_withheld=score_withheld,
+    )
+
+    assert result is created_plan
+    svc.create.assert_awaited_once()
+    create_kwargs = svc.create.await_args.kwargs
+    assert create_kwargs["initial_score"] == expected_score
+    assert create_kwargs["initial_risk_band"] == expected_band
+    assert create_kwargs["workflow_mode"] == "STATUTORY_ACTION_AUTHORIZED"
+    assert create_kwargs["source_rule_ids"] == ["AGM-001"]
+
+
 def test_rescue_engagement_service_contract_matches_admin_endpoint():
     """The explicit admin endpoint's fee/payment fields are accepted by the service."""
     from app.services.rescue_service import RescueService
