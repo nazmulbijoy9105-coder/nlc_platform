@@ -16,6 +16,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 
 
+def _db_result(value):
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = value
+    result.scalar_one.return_value = value
+    return result
+
+
 def test_generate_rescue_plan_accepts_engagement_id_parameter():
     """RES-011: generate_rescue_plan must accept engagement_id as a parameter."""
     from app.services.rescue_service import RescueService
@@ -63,7 +70,6 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AUD-003"}))
 
-    db.execute = AsyncMock()
     db.refresh = AsyncMock()
     db.flush = AsyncMock()
 
@@ -85,7 +91,11 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     # the response serializer). Mock db.execute to return created_plan from
     # scalar_one() so the test still validates the create-contract.
     db.execute = AsyncMock(
-        return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
+        side_effect=[
+            _db_result(company_id),
+            _db_result(None),
+            _db_result(created_plan),
+        ]
     )
 
     flag = MagicMock()
@@ -139,7 +149,11 @@ async def test_generate_rescue_plan_persists_score_independently_when_product_sc
     db.flush = AsyncMock()
     db.refresh = AsyncMock()
     db.execute = AsyncMock(
-        return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
+        side_effect=[
+            _db_result(company_id),
+            _db_result(None),
+            _db_result(created_plan),
+        ]
     )
     svc = RescueService(db=db)
     svc.create = AsyncMock(return_value=created_plan)
@@ -201,7 +215,11 @@ async def test_generate_rescue_plan_stores_score_only_when_evaluation_released_i
     db.flush = AsyncMock()
     db.refresh = AsyncMock()
     db.execute = AsyncMock(
-        return_value=MagicMock(scalar_one=Mock(return_value=created_plan))
+        side_effect=[
+            _db_result(company_id),
+            _db_result(None),
+            _db_result(created_plan),
+        ]
     )
     svc = RescueService(db=db)
     svc.create = AsyncMock(return_value=created_plan)
