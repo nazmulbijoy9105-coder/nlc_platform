@@ -915,6 +915,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 )[:500],
             )
 
+        # Check entitlement before even inspecting or replacing an active
+        # workflow. Automatic evaluation must never mutate rescue state for a
+        # company that has not purchased the feature.
+        if not await SubscriptionService(self.db).has_entitlement(
+            company_id=company_id,
+            feature_code="corporate_rescue",
+        ):
+            logger.info(
+                "rescue_plan_skipped_no_entitlement company=%s", company_id
+            )
+            return RescueWorkflowOutcome("NOT_ENTITLED")
+
         # Serialize the active-plan decision with manual API requests and
         # other evaluations. The lock is held through plan persistence.
         await self.db.execute(
@@ -939,14 +951,6 @@ class ComplianceService(BaseService[ComplianceFlag]):
             return RescueWorkflowOutcome("ACTIVE_PLAN_RETAINED")
 
         try:
-            if not await SubscriptionService(self.db).has_entitlement(
-                company_id=company_id,
-                feature_code="corporate_rescue",
-            ):
-                logger.info(
-                    "rescue_plan_skipped_no_entitlement company=%s", company_id
-                )
-                return RescueWorkflowOutcome("NOT_ENTITLED")
             assigned_staff_result = await self.db.execute(
                 select(Company.assigned_staff_id).where(Company.id == company_id)
             )
