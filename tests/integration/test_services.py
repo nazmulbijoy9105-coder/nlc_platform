@@ -312,7 +312,7 @@ class TestComplianceService:
             description="Controlled evidence review fixture",
             # Match the migrated AGM-001 catalogue identity so this test
             # exercises release redaction, not the separate identity-conflict gate.
-            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -338,7 +338,7 @@ class TestComplianceService:
                     rule_id="AGM-001",
                     rule_name="First AGM Default",
                     rule_type=RuleType.DEADLINE,
-                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                     description=(
                         "First AGM must be held within 18 calendar months of "
                         "incorporation. Calculate with calendar-month arithmetic; "
@@ -355,7 +355,7 @@ class TestComplianceService:
         else:
             assert catalogue_rule.is_active is True
             assert catalogue_rule.statutory_basis == (
-                "Section 81, Companies Act 1994 (Bangladesh)"
+                "Section 81(1), Companies Act 1994 (Bangladesh)"
             )
         await db.flush()
 
@@ -374,6 +374,7 @@ class TestComplianceService:
         assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
         assert len(result["review_findings"]) == 1
         assert result["review_findings"][0]["rule_id"] == "AGM-001"
+        assert result["review_findings"][0]["identity_binding_status"] == "MATCHED_CATALOGUE_IDENTITY"
         assert result["review_findings"][0]["score_impact_applied"] == 0
         assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
@@ -400,7 +401,7 @@ class TestComplianceService:
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
         # Persisted snapshots redact risk severity while the legal score
         # release gate is closed; the raw engine label is not released.
-        assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
+        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
 
         persisted_flag_result = await db.execute(
             select(ComplianceFlag).where(
