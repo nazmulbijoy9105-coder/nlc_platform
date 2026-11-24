@@ -656,9 +656,16 @@ class TestRescue:
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_fails_closed_on_catalogue_identity_conflicts(
-        self, api_client, super_admin_tok, db_company
+        self, api_client, super_admin_tok, db_company, monkeypatch
     ):
-        """Unresolved catalogue identity must block API rescue generation first."""
+        """An explicitly injected identity conflict must fail closed before later validation."""
+        from app.services import compliance_service
+
+        monkeypatch.setattr(
+            compliance_service,
+            "_score_blocking_catalogue_conflicts",
+            lambda _conflicts: {"AGM-001"},
+        )
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
