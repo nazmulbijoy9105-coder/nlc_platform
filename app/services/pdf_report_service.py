@@ -244,6 +244,10 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     if total == 0 and steps:
         total = len(steps)
     pct = min(max(pct, 0), 100)
+    initial_score = getattr(plan, "initial_score", None)
+    initial_score_str = (
+        "NOT EVALUATED" if initial_score is None else f"{initial_score}/100"
+    )
 
     # Step rows
     if steps:
@@ -297,7 +301,7 @@ def _render_rescue_section(rescue_plan: Any) -> str:
         <div class="rescue-meta">
             <strong>Plan:</strong> {esc(getattr(plan, "plan_name", ""))}<br>
             <strong>Triggered by risk band:</strong> {esc(getattr(plan, "initial_risk_band", ""))}
-            &nbsp;|&nbsp; <strong>Initial score:</strong> {esc(getattr(plan, "initial_score", ""))}/100<br>
+            &nbsp;|&nbsp; <strong>Initial score:</strong> {esc(initial_score_str)}<br>
             <strong>Started:</strong> {esc(started_str)}
             &nbsp;|&nbsp; <strong>Target completion:</strong> {esc(target_str)}
             &nbsp;|&nbsp; <strong>Steps:</strong> {esc(completed)}/{esc(total)} completed

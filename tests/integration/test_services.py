@@ -1117,6 +1117,8 @@ def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
     html = _render_rescue_section(plan)
 
     assert "Corporate Rescue Plan" in html
+    assert "<strong>Initial score:</strong> NOT EVALUATED" in html
+    assert "/100" not in html
     assert "Verify records" in html
     assert "Missing source evidence" in html
     assert "BLOCKED" in html
