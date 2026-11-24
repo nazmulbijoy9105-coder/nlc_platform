@@ -34,9 +34,22 @@ def _request(path="/test"):
     return request
 
 
+def _effective_route_paths(routes):
+    """Include routes nested in FastAPI's lazy _IncludedRouter wrappers."""
+    paths = set()
+    for route in routes:
+        path = getattr(route, "path", None)
+        if path is not None:
+            paths.add(path)
+        effective_candidates = getattr(route, "effective_candidates", None)
+        if effective_candidates is not None:
+            paths.update(_effective_route_paths(effective_candidates()))
+    return paths
+
+
 def test_create_app_registers_health_rjsc_and_root_routes():
     app = create_app()
-    paths = {route.path for route in app.routes}
+    paths = _effective_route_paths(app.routes)
 
     assert "/api/v1/health" in paths
     assert "/api/v1/health/live" in paths
