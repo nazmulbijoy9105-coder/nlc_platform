@@ -392,9 +392,8 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        # Persisted snapshots redact risk severity while the legal score
-        # release gate is closed; the raw engine label is not released.
-        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
+        # The persisted customer-facing snapshot redacts raw engine severity
+        # while the legal score release gate is closed.
         assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
 
         persisted_flag_result = await db.execute(
