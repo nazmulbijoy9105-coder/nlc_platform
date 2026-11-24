@@ -11,7 +11,7 @@ Endpoints:
   GET   /rescue/plans                       List all rescue plans (ADMIN_STAFF+)
 
 Business rules:
-  - Rescue plans may only be created for companies in BLACK or RED band
+  - Score-independent statutory workflows require eligible, active, evidence-supported RJSC findings
   - Only one active rescue plan per company at a time
   - Step 8 completion triggers automatic compliance re-evaluation via Celery
   - Engagement creation is admin-only (revenue tracking)
@@ -110,6 +110,7 @@ class RescueStepResponse(BaseModel):
 
 class RescuePlanResponse(BaseModel):
     plan_id: str
+    workflow_mode: str
     company_id: str
     company_name: str | None
     status: str
@@ -152,6 +153,7 @@ def _step_to_response(step) -> RescueStepResponse:
 def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     return RescuePlanResponse(
         plan_id=str(plan.id),
+        workflow_mode=getattr(plan, "workflow_mode", "STATUTORY_ACTION_AUTHORIZED"),
         company_id=str(plan.company_id),
         company_name=company.company_name if company else None,
         status=("ACTIVE" if getattr(plan, "is_active", True) else "CLOSED"),
@@ -180,7 +182,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
-    summary="Generate a corporate rescue plan for a BLACK or RED band company",
+    summary="Generate an authorized RJSC statutory-action workflow from eligible findings",
 )
 async def create_rescue_plan(
     body: RescuePlanCreateRequest,
