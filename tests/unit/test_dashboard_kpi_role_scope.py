@@ -136,7 +136,12 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
     assert all("assigned_staff_id = CAST(:uid AS uuid)" in sql for sql, _ in db.calls)
     assert all("company_user_access AS cua" in sql for sql, _ in db.calls)
     assert all("cua.is_active IS TRUE" in sql for sql, _ in db.calls)
-    assert all(params == {"uid": str(user_id)} for _, params in db.calls)
+    assert len(db.calls) == 3
+    for sql, params in db.calls:
+        assert params is not None
+        assert params["uid"] == str(user_id)
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql:
+            assert params["rjsc_rule_ids"]
 
 
 
