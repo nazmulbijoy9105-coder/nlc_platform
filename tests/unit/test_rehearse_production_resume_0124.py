@@ -57,8 +57,8 @@ def _main_harness(monkeypatch, tmp_path, starting_revision):
     async def rows_digest(conn, table):
         return {"rows": 0, "sha256": "unchanged"}
 
-    async def legacy_payloads(conn, *, from_archive=False):
-        archive_reads.append(from_archive)
+    async def legacy_payloads(conn, *, from_archive=False, agm001_from_history=False):
+        archive_reads.append((from_archive, agm001_from_history))
         return {"AGM-001": {"rule_version": "1.0.0"}}
 
     async def rule_payload(conn, rule_id):
@@ -127,7 +127,7 @@ def test_main_resumes_from_0124(monkeypatch, tmp_path):
         ["python", "-m", "alembic", "upgrade", rehearsal.HEAD_REVISION],
         ["python", "-m", "alembic", "current"],
     ]
-    assert archive_reads == [True]
+    assert archive_reads == [(True, False)]
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["status"] == "PASS"
     assert report["starting_revision"] == rehearsal.AGM_PRE_0125_REVISION
@@ -151,7 +151,7 @@ def test_main_resumes_from_0122_and_reads_archived_identity_before_images(
         ["python", "-m", "alembic", "upgrade", rehearsal.HEAD_REVISION],
         ["python", "-m", "alembic", "current"],
     ]
-    assert archive_reads == [True]
+    assert archive_reads == [(True, False)]
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["status"] == "PASS"
     assert report["starting_revision"] == rehearsal.PREVIOUS_REVISION
@@ -173,7 +173,7 @@ def test_main_from_start_preserves_both_upgrade_boundaries(monkeypatch, tmp_path
         ["python", "-m", "alembic", "upgrade", rehearsal.HEAD_REVISION],
         ["python", "-m", "alembic", "current"],
     ]
-    assert archive_reads == [False]
+    assert archive_reads == [(False, False)]
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["status"] == "PASS"
     assert report["starting_revision"] == rehearsal.START_REVISION
@@ -272,3 +272,22 @@ def test_legacy_payloads_rejects_unknown_fingerprint_in_archive():
 
     with pytest.raises(RuntimeError, match="INC-001 does not match a known legacy"):
         asyncio.run(rehearsal._legacy_payloads(conn, from_archive=True))
+
+
+def test_rehearsal_accepts_0125_and_0126_as_resumable_heads():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert rehearsal.AGM_POST_0125_REVISION == "0125_reconcile_agm001_statutory_basis"
+    assert rehearsal.AGM_POST_0126_REVISION == "0126_score_independent_rescue_workflow"
+    assert "resume_from_0125 = revisions == [AGM_POST_0125_REVISION]" in source
+    assert "resume_from_0126 = revisions == [AGM_POST_0126_REVISION]" in source
+    assert "legal_rule_versions" in source
+    assert "previous_definition" in source
+    assert "legacy_before_image_source" in source
+
+
+def test_legacy_payloads_can_recover_agm001_from_0125_history():
+    source = SCRIPT.read_text(encoding="utf-8")
+    history_branch = source.index("if rule_id == \"AGM-001\" and agm001_from_history:")
+    history_query = source.index("FROM public.legal_rule_versions", history_branch)
+    live_query = source.index("_ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL", history_branch)
+    assert history_branch < history_query < live_query
