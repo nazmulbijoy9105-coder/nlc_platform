@@ -26,7 +26,8 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0125_reconcile_agm001_statutory_basis"
+HEAD_REVISION = "0127_one_active_rescue_plan_per_company"
+AGM_MIGRATION_REVISION = "0125_reconcile_agm001_statutory_basis"
 AGM_PRE_0125_REVISION = "0124_restore_85_rule_catalogue_parity"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
@@ -58,7 +59,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0125.json")
+REPORT = Path("artifacts/neon-production-0112-to-0127.json")
 
 
 def _url() -> str:
@@ -214,7 +215,7 @@ async def _postflight(
                 "FROM public.legal_rule_versions "
                 "WHERE rule_id=$1 AND migration_revision=$2",
                 rule_id,
-                HEAD_REVISION,
+                AGM_MIGRATION_REVISION,
             )
             if len(history) != 1:
                 raise RuntimeError(
@@ -224,7 +225,7 @@ async def _postflight(
             if (
                 history_row["actor_type"] != "MIGRATION"
                 or history_row["changed_by"] is not None
-                or history_row["migration_revision"] != HEAD_REVISION
+                or history_row["migration_revision"] != AGM_MIGRATION_REVISION
                 or history_row["version"] != original.get("rule_version")
                 or not history_row["change_reason"]
                 or _canonical(history_row["previous_definition"]) != _canonical(original)
