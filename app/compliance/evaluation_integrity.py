@@ -45,24 +45,30 @@ def calculate_evaluation_score_hash(
     score_breakdown_snapshot: dict[str, Any] | None,
     rule_outcomes_hash: str,
     rule_outcomes_snapshot: list[dict[str, Any]],
+    evaluation_status: str | None = None,
 ) -> str:
     """Reproduce the exact canonical SHA-256 material persisted by the evaluator."""
     risk_band_value = getattr(risk_band, "value", risk_band)
+    hash_payload = {
+        "previous_hash": previous_hash or "GENESIS",
+        "company_id": str(company_id),
+        "score": score,
+        "risk_band": risk_band_value,
+        "calculated_at": calculated_at.isoformat(),
+        "engine_version": engine_version,
+        "trigger_source": trigger_source,
+        "flags_snapshot": flags_snapshot,
+        "fact_provenance_snapshot": fact_provenance_snapshot,
+        "score_breakdown_snapshot": score_breakdown_snapshot,
+        "rule_outcomes_hash": rule_outcomes_hash,
+        "rule_outcomes_snapshot": rule_outcomes_snapshot,
+    }
+    # Versioned snapshots opt into status-bound hashing. Historical snapshots
+    # retain their original hash material so this validator can read old rows.
+    if isinstance(score_breakdown_snapshot, dict) and "snapshot_schema_version" in score_breakdown_snapshot:
+        hash_payload["evaluation_status"] = evaluation_status
     hash_material = json.dumps(
-        {
-            "previous_hash": previous_hash or "GENESIS",
-            "company_id": str(company_id),
-            "score": score,
-            "risk_band": risk_band_value,
-            "calculated_at": calculated_at.isoformat(),
-            "engine_version": engine_version,
-            "trigger_source": trigger_source,
-            "flags_snapshot": flags_snapshot,
-            "fact_provenance_snapshot": fact_provenance_snapshot,
-            "score_breakdown_snapshot": score_breakdown_snapshot,
-            "rule_outcomes_hash": rule_outcomes_hash,
-            "rule_outcomes_snapshot": rule_outcomes_snapshot,
-        },
+        hash_payload,
         sort_keys=True,
         separators=(",", ":"),
         default=str,
@@ -240,34 +246,52 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
         problems.append("FACT_PROVENANCE_SNAPSHOT_MALFORMED")
 
     score_breakdown_snapshot = getattr(run, "score_breakdown_snapshot", None)
-    if not isinstance(score_breakdown_snapshot, dict):
+    evaluation_status = getattr(run, "evaluation_status", None)
+    if score_breakdown_snapshot is None and evaluation_status == "NOT_RELEASED":
+        # Mixed-version rollout compatibility: old writers persisted NULL for
+        # withheld runs. Accept only the safe no-score legacy shape; new writers
+        # must persist the explicit versioned envelope below.
+        if (
+            getattr(run, "score", None) is not None
+            or getattr(getattr(run, "risk_band", None), "value", getattr(run, "risk_band", None))
+            != "NOT_EVALUATED"
+        ):
+            problems.append("LEGACY_UNRELEASED_SNAPSHOT_INVALID")
+    elif not isinstance(score_breakdown_snapshot, dict):
         problems.append("SCORE_BREAKDOWN_SNAPSHOT_MISSING")
-    elif getattr(run, "evaluation_status", None) == "NOT_RELEASED":
+    else:
+        snapshot_status = score_breakdown_snapshot.get("status")
+        if snapshot_status == "NOT_RELEASED" and evaluation_status != "NOT_RELEASED":
+            problems.append("EVALUATION_STATUS_SNAPSHOT_MISMATCH")
+        if evaluation_status == "NOT_RELEASED" and snapshot_status != "NOT_RELEASED":
+            problems.append("EVALUATION_STATUS_SNAPSHOT_MISMATCH")
+        if evaluation_status == "NOT_RELEASED" or snapshot_status == "NOT_RELEASED":
         # A withheld evaluation is auditable without fabricating a score.
         # Keep this envelope deliberately minimal: no deductions, module
         # scores, raw total, coverage or inferred risk classification.
-        expected_unreleased_fields = {
-            "snapshot_schema_version",
-            "status",
-            "reason",
-            "score",
-            "risk_band",
-            "scoring_data",
-        }
-        if (
-            set(score_breakdown_snapshot) != expected_unreleased_fields
-            or type(score_breakdown_snapshot.get("snapshot_schema_version")) is not int
-            or score_breakdown_snapshot["snapshot_schema_version"] != 1
-            or score_breakdown_snapshot.get("status") != "NOT_RELEASED"
-            or not isinstance(score_breakdown_snapshot.get("reason"), str)
-            or score_breakdown_snapshot["reason"] not in _UNRELEASED_REASONS
-            or score_breakdown_snapshot.get("score") is not None
-            or score_breakdown_snapshot.get("risk_band") != "NOT_EVALUATED"
-            or score_breakdown_snapshot.get("scoring_data") != "WITHHELD"
-            or getattr(run, "score", None) is not None
-            or getattr(getattr(run, "risk_band", None), "value", getattr(run, "risk_band", None)) != "NOT_EVALUATED"
-        ):
-            problems.append("UNRELEASED_SCORE_BREAKDOWN_INVALID")
+            expected_unreleased_fields = {
+                "snapshot_schema_version",
+                "status",
+                "reason",
+                "score",
+                "risk_band",
+                "scoring_data",
+            }
+            if (
+                set(score_breakdown_snapshot) != expected_unreleased_fields
+                or type(score_breakdown_snapshot.get("snapshot_schema_version")) is not int
+                or score_breakdown_snapshot["snapshot_schema_version"] != 1
+                or score_breakdown_snapshot.get("status") != "NOT_RELEASED"
+                or not isinstance(score_breakdown_snapshot.get("reason"), str)
+                or score_breakdown_snapshot["reason"] not in _UNRELEASED_REASONS
+                or score_breakdown_snapshot.get("score") is not None
+                or score_breakdown_snapshot.get("risk_band") != "NOT_EVALUATED"
+                or score_breakdown_snapshot.get("scoring_data") != "WITHHELD"
+                or getattr(run, "score", None) is not None
+                or getattr(getattr(run, "risk_band", None), "value", getattr(run, "risk_band", None)) != "NOT_EVALUATED"
+            ):
+                problems.append("UNRELEASED_SCORE_BREAKDOWN_INVALID")
+        
 
     calculated_at = getattr(run, "calculated_at", None)
     engine_version = getattr(run, "engine_version", None)
@@ -302,6 +326,7 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
             score_breakdown_snapshot=score_breakdown_snapshot,
             rule_outcomes_hash=outcomes_hash,
             rule_outcomes_snapshot=outcomes,
+            evaluation_status=evaluation_status,
         )
         if expected_score_hash != score_hash:
             problems.append("SCORE_HASH_MISMATCH")
