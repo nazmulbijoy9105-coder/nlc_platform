@@ -317,7 +317,6 @@ class TestComplianceService:
             # Match the canonical AGM-001 identity so this test exercises
             # release redaction, not the separate identity-conflict gate.
             statutory_basis=canonical_agm_001_basis,
-            statutory_basis=canonical_agm_basis,
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -344,7 +343,6 @@ class TestComplianceService:
                     rule_name="First AGM Default",
                     rule_type=RuleType.DEADLINE,
                     statutory_basis=canonical_agm_001_basis,
-                    statutory_basis=canonical_agm_basis,
                     description=(
                         "First AGM must be held within 18 calendar months of "
                         "incorporation. Calculate with calendar-month arithmetic; "
