@@ -212,12 +212,13 @@ async def test_entitlement_error_is_returned_without_generation(workflow):
         workflow.company_id, workflow.output, score_withheld=True, score_blocking_conflicts=set()
     )
 
-    assert result == RescueWorkflowOutcome("GENERATION_FAILED", "unexpected: db down")
+    assert result == RescueWorkflowOutcome("GENERATION_FAILED", "entitlement check failed: db down")
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
+    workflow.rescue.get_active_plan.assert_not_awaited()
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
-    workflow.db.execute.assert_awaited_once()
+    workflow.db.execute.assert_not_awaited()
     assert workflow.events == []
 
 
