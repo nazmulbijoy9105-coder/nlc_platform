@@ -7,6 +7,8 @@ The migration records the complete prior catalogue row in the append-only
 legal_rule_versions ledger before changing its statutory citation/version.
 It only rewrites the one known legacy citation and fails closed on drift.
 """
+import json
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -36,8 +38,6 @@ def upgrade() -> None:
             SELECT to_jsonb(rule) AS previous_definition,
                    rule.rule_version AS previous_version,
                    COALESCE(
-                       rule.last_modified_by,
-                       rule.created_by,
                        (
                            SELECT admin.id
                              FROM public.users AS admin
@@ -45,7 +45,9 @@ def upgrade() -> None:
                               AND admin.is_active IS TRUE
                             ORDER BY admin.created_at, admin.id
                             LIMIT 1
-                       )
+                       ),
+                       rule.last_modified_by,
+                       rule.created_by
                    ) AS changed_by
               FROM public.legal_rules AS rule
              WHERE rule.rule_id = 'AGM-001'
@@ -89,10 +91,7 @@ def upgrade() -> None:
                 "previous_version": previous_version,
                 "change_reason": CHANGE_REASON,
                 "changed_by": prior["changed_by"],
-                "previous_definition": sa.types.JSON().bind_processor(
-                    bind.dialect
-                )(prior["previous_definition"])
-                if False else __import__("json").dumps(
+                "previous_definition": json.dumps(
                     prior["previous_definition"], default=str
                 ),
             },
