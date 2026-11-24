@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
@@ -49,6 +50,40 @@ def test_score_independent_rescue_migration_makes_score_nullable_and_adds_author
     assert "server_default=None" not in migration
     assert "def downgrade() -> None:" in migration
     assert "SET initial_score = 0" not in migration
+
+
+def test_workflow_mode_comment_matches_model_and_names_the_persisted_mode():
+    from app.models.rescue import RescuePlan
+
+    migration = ast.parse(
+        (
+            ROOT
+            / "alembic"
+            / "versions"
+            / "0126_score_independent_rescue_workflow.py"
+        ).read_text(encoding="utf-8")
+    )
+    upgrade = next(
+        node for node in migration.body
+        if isinstance(node, ast.FunctionDef) and node.name == "upgrade"
+    )
+    column = next(
+        node for node in ast.walk(upgrade)
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Attribute) and node.func.attr == "Column")
+            or (isinstance(node.func, ast.Name) and node.func.id == "Column")
+        )
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "workflow_mode"
+    )
+    comment = next(keyword.value for keyword in column.keywords if keyword.arg == "comment")
+    assert isinstance(comment, ast.Constant)
+    workflow_mode = RescuePlan.__table__.c.workflow_mode
+    assert workflow_mode.comment == comment.value
+    assert workflow_mode.server_default.arg in comment.value
+    assert "REVIEW_ONLY" not in comment.value
 
 
 def test_downgrade_refuses_when_scoreless_rescue_plans_exist(monkeypatch):
