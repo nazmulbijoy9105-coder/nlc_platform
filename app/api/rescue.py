@@ -14,7 +14,8 @@ Business rules:
   - Score-independent statutory workflows require eligible, active, evidence-supported RJSC findings
   - Only one active rescue plan per company at a time
   - Step 8 completion triggers automatic compliance re-evaluation via Celery
-  - Engagement creation is admin-only (revenue tracking)
+  - Engagement creation is admin-only (revenue tracking) and withheld while
+    product score publication is disabled
 """
 
 
@@ -61,9 +62,21 @@ async def _assert_rescue_entitlement(
 router = APIRouter()
 
 
-def _require_legal_release() -> None:
-    """Compatibility shim: statutory-action authorization is not score-gated."""
-    return
+def _require_commercial_engagement_release() -> None:
+    """Withhold commercial engagements while product scoring is disabled.
+
+    Statutory-action rescue workflows are not score-gated; only the commercial
+    engagement record is.
+    """
+    from app.rule_engine.engine import legal_score_is_released
+
+    if not legal_score_is_released():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Commercial engagements are withheld because product scoring is disabled."
+            ),
+        )
 
 logger = structlog.get_logger(__name__)
 
@@ -513,7 +526,7 @@ async def create_engagement_from_rescue(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    _require_legal_release()
+    _require_commercial_engagement_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 

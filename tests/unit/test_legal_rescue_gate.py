@@ -1,16 +1,45 @@
 """Rescue authorization is independent of score publication and counsel allowlisting."""
 
+import ast
+from pathlib import Path
+
 import pytest
+from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
 from fastapi import HTTPException
 
 import app.rule_engine.engine as engine_module
-from app.api.rescue import _require_legal_release
-from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
+from app.api.rescue import _require_commercial_engagement_release
 
 
-def test_rescue_workflow_is_not_blocked_by_product_score_release():
-    # Statutory-action workflow is authorized independently of score publication.
-    _require_legal_release()
+def test_commercial_engagement_is_withheld_while_product_score_release_is_closed(monkeypatch):
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: False)
+    with pytest.raises(HTTPException) as exc:
+        _require_commercial_engagement_release()
+    assert exc.value.status_code == 503
+
+
+def test_commercial_engagement_proceeds_when_product_score_release_is_open(monkeypatch):
+    monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: True)
+    assert _require_commercial_engagement_release() is None
+
+
+def test_only_commercial_engagement_endpoint_is_score_release_gated():
+    source = (Path(__file__).resolve().parents[2] / "app/api/rescue.py").read_text()
+    tree = ast.parse(source)
+    gated_functions = {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
+        and node.name != "_require_commercial_engagement_release"
+        and any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id == "_require_commercial_engagement_release"
+            for child in ast.walk(node)
+        )
+    }
+    assert gated_functions == {"create_engagement_from_rescue"}
+    assert "_require_legal_release" not in source
 
 
 
