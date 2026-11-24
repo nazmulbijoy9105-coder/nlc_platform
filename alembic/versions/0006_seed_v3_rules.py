@@ -214,7 +214,7 @@ def downgrade():
                         'Cannot downgrade 0006: legal_rules contains rule_type values outside the original enum';
                 END IF;
             END;
-            $
+            $;
             """
         )
     )
