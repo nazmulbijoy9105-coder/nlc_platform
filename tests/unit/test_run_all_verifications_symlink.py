@@ -86,3 +86,38 @@ def test_run_script_writes_regular_report(tmp_path, monkeypatch):
 
     assert result["ok"] is True
     assert result["report"] == {"findings": []}
+
+
+def test_run_script_records_invalid_subprocess_text_as_failure(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    out.mkdir()
+    script = Path(run_all_verifications.__file__).parent / "verify_rls.py"
+
+    def invalid_text_run(*args, **kwargs):
+        raise UnicodeDecodeError("utf-8", bytes([255]), 0, 1, "invalid start byte")
+
+    monkeypatch.setattr(run_all_verifications.subprocess, "run", invalid_text_run)
+
+    result = run_all_verifications.run_script(script, tmp_path, out)
+
+    assert result["ok"] is False
+    assert "decode" in result["stderr"].lower()
+
+
+def test_run_script_records_invalid_report_utf8_as_failure(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    out.mkdir()
+    script = Path(run_all_verifications.__file__).parent / "verify_rls.py"
+
+    def invalid_report_run(args, **kwargs):
+        output = Path(args[args.index("--output") + 1])
+        output.write_bytes(b'{"findings": ["' + bytes([255]) + b'"]}')
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(run_all_verifications.subprocess, "run", invalid_report_run)
+
+    result = run_all_verifications.run_script(script, tmp_path, out)
+
+    assert result["ok"] is False
+    assert "could not parse output json" in result["stderr"].lower()
+    assert "utf-8" in result["stderr"].lower()
