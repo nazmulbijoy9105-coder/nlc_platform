@@ -131,10 +131,13 @@ def _validate_migration_history(bind, current_row, expected_previous=None):
             "0125 AGM-001 current version does not follow its migration history: "
             f"expected={expected_version!r}, actual={current_row['rule_version']!r}"
         )
-    if expected_previous is not None and previous != expected_previous:
-        raise RuntimeError(
-            "0125 AGM-001 migration history differs from the locked before-image"
-        )
+    if expected_previous is not None:
+        if isinstance(expected_previous, str):
+            expected_previous = json.loads(expected_previous)
+        if previous != expected_previous:
+            raise RuntimeError(
+                "0125 AGM-001 migration history differs from the locked before-image"
+            )
 
 
 def upgrade() -> None:
@@ -209,6 +212,14 @@ def upgrade() -> None:
             f"{current['statutory_basis']!r}"
         )
 
+    previous_definition = current["previous_definition"]
+    if isinstance(previous_definition, str):
+        previous_definition = json.loads(previous_definition)
+    if not isinstance(previous_definition, dict):
+        raise RuntimeError(
+            "0125 AGM-001 locked before-image is not a JSON object"
+        )
+
     previous_version = current["rule_version"]
     next_version = _next_version(previous_version)
     existing_history_count = bind.execute(
@@ -247,7 +258,10 @@ def upgrade() -> None:
             "change_reason": CHANGE_REASON,
             "migration_revision": revision,
             "previous_definition": json.dumps(
-                current["previous_definition"], sort_keys=True, default=str
+                previous_definition,
+                sort_keys=True,
+                separators=(",", ":"),
+                default=str,
             ),
         },
     )
@@ -311,7 +325,7 @@ def upgrade() -> None:
     _validate_migration_history(
         bind,
         actual,
-        expected_previous=current["previous_definition"],
+        expected_previous=previous_definition,
     )
 
 
