@@ -62,12 +62,11 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         raise ValueError("Rescue score must be an integer from 0 to 100 when supplied.")
     if risk_band is None:
         risk_band = "NOT_EVALUATED"
-    if (
-        legal_score_is_released()
-        and final_score is not None
-        and risk_band not in ("RED", "BLACK")
-    ):
-        raise ValueError("A released rescue plan requires a RED or BLACK risk band.")
+    if legal_score_is_released():
+        if final_score is None:
+            raise ValueError("A released rescue plan requires a score.")
+        if risk_band not in ("RED", "BLACK"):
+            raise ValueError("A released rescue plan requires a RED or BLACK risk band.")
 
     flags = getattr(engine_output, "flags", None)
     if not isinstance(flags, (list, tuple)):

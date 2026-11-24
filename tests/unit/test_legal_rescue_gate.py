@@ -124,6 +124,38 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
         ))
 
 
+def test_rescue_service_rejects_missing_score_when_release_is_open(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="RED",
+        score_impact=5,
+    )
+    for score in (
+        SimpleNamespace(risk_band="NOT_EVALUATED", final_score=None),
+        SimpleNamespace(risk_band="RED", final_score=None),
+        None,
+    ):
+        output = SimpleNamespace(
+            company_id="company-1",
+            flags=[flag],
+            rescue_sequence=[{"title": "Remediate", "related_rules": ["AGM-001"]}],
+        )
+        if score is not None:
+            output.score_breakdown = score
+        with pytest.raises(ValueError, match="requires a score"):
+            validate_rescue_engine_output(output)
+
+
 def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
     from types import SimpleNamespace
 
