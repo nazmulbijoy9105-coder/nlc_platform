@@ -312,7 +312,7 @@ class TestComplianceService:
             description="Controlled evidence review fixture",
             # Match the migrated AGM-001 catalogue identity so this test
             # exercises release redaction, not the separate identity-conflict gate.
-            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+            statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -338,7 +338,7 @@ class TestComplianceService:
                     rule_id="AGM-001",
                     rule_name="First AGM Default",
                     rule_type=RuleType.DEADLINE,
-                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                    statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                     description=(
                         "First AGM must be held within 18 calendar months of "
                         "incorporation. Calculate with calendar-month arithmetic; "
@@ -355,7 +355,7 @@ class TestComplianceService:
         else:
             assert catalogue_rule.is_active is True
             assert catalogue_rule.statutory_basis == (
-                "Section 81, Companies Act 1994 (Bangladesh)"
+                "Section 81(1), Companies Act 1994 (Bangladesh)"
             )
         await db.flush()
 
