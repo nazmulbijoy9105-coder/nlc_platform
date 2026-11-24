@@ -95,7 +95,7 @@ async def test_unentitled_company_does_not_start_rescue(workflow):
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
-    workflow.db.execute.assert_not_awaited()
+    workflow.db.execute.assert_awaited_once()
     assert workflow.events == []
 
 
@@ -111,7 +111,7 @@ async def test_entitled_company_starts_rescue(workflow, score_withheld):
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
-    workflow.db.execute.assert_awaited_once()
+    assert workflow.db.execute.await_count == 2
     workflow.rescue.generate_rescue_plan.assert_awaited_once_with(
         company_id=workflow.company_id,
         engine_output=workflow.output,
@@ -119,6 +119,7 @@ async def test_entitled_company_starts_rescue(workflow, score_withheld):
         created_by=workflow.service._current_user_id,
         engagement_id=None,
         score_withheld=score_withheld,
+        replace_existing=False,
     )
     assert workflow.events == ["savepoint_begin", "generate", "savepoint_release"]
 
@@ -145,7 +146,7 @@ async def test_existing_plan_is_kept_without_entitlement_query(
     assert result == RescueWorkflowOutcome("ACTIVE_PLAN_RETAINED")
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_not_called()
-    workflow.db.execute.assert_not_awaited()
+    workflow.db.execute.assert_awaited_once()
     assert workflow.events == []
 
 
@@ -174,10 +175,11 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
             created_by=workflow.service._current_user_id,
             engagement_id=None,
             score_withheld=True,
+            replace_existing=True,
         )
     else:
         workflow.rescue.generate_rescue_plan.assert_not_awaited()
-        workflow.db.execute.assert_not_awaited()
+        workflow.db.execute.assert_awaited_once()
         assert workflow.events == []
 
 
@@ -237,7 +239,7 @@ async def test_blocking_catalogue_conflicts_prevent_rescue_before_any_lookup(wor
     workflow.rescue.get_active_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_not_called()
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
-    workflow.db.execute.assert_not_awaited()
+    workflow.db.execute.assert_awaited_once()
     assert workflow.events == []
 
 
