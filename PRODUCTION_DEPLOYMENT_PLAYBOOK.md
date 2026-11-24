@@ -354,7 +354,7 @@ flyctl deploy
 # process list. printf is a shell builtin, so it does not expose it either.
 : "${NLC_API_TOKEN:?Set NLC_API_TOKEN in your local environment first}" && \
 printf 'header = "Authorization: Bearer %s"\n' "${NLC_API_TOKEN}" | \
-  curl --fail-with-body -K - https://nlc-api.fly.dev/api/v1/companies
+  curl --fail -K - https://nlc-api.fly.dev/api/v1/companies
 
 # Should return list of companies (if already created)
 ```
