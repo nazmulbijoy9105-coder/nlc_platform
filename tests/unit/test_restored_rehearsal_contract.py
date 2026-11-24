@@ -48,6 +48,7 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
+    assert EXPECTED_HEAD_REVISION == "0126_score_independent_rescue_workflow"
     assert EXPECTED_START_REVISION == "0042_dedup_key"
 
 
@@ -202,7 +203,6 @@ def test_0125_agm001_migration_records_prior_definition_and_advances_version():
     assert "rule_version = :next_version" in migration
     assert "last_modified_at = now()" in migration
     assert "last_modified_by = :changed_by" not in migration
-    assert "0125_reconcile_agm001_statutory_basis" == EXPECTED_HEAD_REVISION
 
 
 def test_0125_migration_actor_does_not_require_a_bootstrap_user():
