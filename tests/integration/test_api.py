@@ -398,7 +398,14 @@ class TestCompanies:
         run = run_result.scalar_one()
         assert run.score is None
         assert run.risk_band == "NOT_EVALUATED"
-        assert run.score_breakdown_snapshot is None
+        assert run.score_breakdown_snapshot == {
+            "snapshot_schema_version": 1,
+            "status": "NOT_RELEASED",
+            "reason": "LEGAL_SCORE_RELEASE_GATE_CLOSED",
+            "score": None,
+            "risk_band": "NOT_EVALUATED",
+            "scoring_data": "WITHHELD",
+        }
 
         # A legacy completed snapshot must not make the customer API appear
         # released after the product/legal release gate has been closed.
