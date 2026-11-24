@@ -53,7 +53,14 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
             "stdout_tail": "",
         }
 
-    output_file = (output_dir / f"{resolved_script.stem}_report.json").resolve()
+    output_file = output_dir / f"{resolved_script.stem}_report.json"
+    if output_file.is_symlink():
+        return {
+            "script": resolved_script.name,
+            "ok": False,
+            "stderr": f"Refusing to write report to symlinked path: {output_file}",
+            "stdout_tail": "",
+        }
     args = [
         sys.executable,
         str(resolved_script),
@@ -136,6 +143,16 @@ def main() -> int:
     out_dir = Path(args.output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    out_json = out_dir / "all_findings.json"
+    out_summary = out_dir / "all_findings_summary.txt"
+    for report_path in (out_json, out_summary):
+        if report_path.is_symlink():
+            print(
+                f"ERROR: refusing to write report to symlinked path: {report_path}",
+                file=sys.stderr,
+            )
+            return 2
+
     print("=== NLC Platform Master Verification ===")
     print(f"Repo: {repo}")
     print(f"Output dir: {out_dir}\n")
@@ -191,10 +208,8 @@ def main() -> int:
         "findings": all_findings,
     }
 
-    out_json = out_dir / "all_findings.json"
     out_json.write_text(json.dumps(consolidated, indent=2), encoding="utf-8")
 
-    out_summary = out_dir / "all_findings_summary.txt"
     with out_summary.open("w", encoding="utf-8") as summary_file:
         summary_file.write(
             f"NLC Platform Master Verification -- {generated_at}\n"
