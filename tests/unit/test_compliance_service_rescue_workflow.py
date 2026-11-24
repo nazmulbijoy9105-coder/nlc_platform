@@ -213,7 +213,7 @@ async def test_entitlement_error_is_returned_without_generation(workflow):
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
-    workflow.db.execute.assert_not_awaited()
+    workflow.db.execute.assert_awaited_once()
     assert workflow.events == []
 
 
@@ -239,7 +239,7 @@ async def test_blocking_catalogue_conflicts_prevent_rescue_before_any_lookup(wor
     workflow.rescue.get_active_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_not_called()
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
-    workflow.db.execute.assert_awaited_once()
+    workflow.db.execute.assert_not_awaited()
     assert workflow.events == []
 
 
