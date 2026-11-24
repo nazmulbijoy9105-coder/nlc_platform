@@ -1116,7 +1116,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         flags_snapshot = []
         for flag, applied in zip(output.flags, applied_impacts):
-            severity_value = getattr(flag.severity, "value", flag.severity)
+            severity_value = (
+                "NOT_EVALUATED"
+                if score_for_current is None
+                else getattr(flag.severity, "value", flag.severity)
+            )
             rule_category = next(
                 (
                     name
@@ -1289,6 +1293,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             score_breakdown_snapshot=score_breakdown_snapshot,
             rule_outcomes_hash=rule_outcomes_hash,
             rule_outcomes_snapshot=rule_outcomes_snapshot,
+            evaluation_status=(
+                "COMPLETED" if score_for_current is not None else "NOT_RELEASED"
+            ),
         )
         black_flags = (
             output.score_breakdown.black_flag_count
