@@ -26,8 +26,11 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0125_reconcile_agm001_statutory_basis"
+HEAD_REVISION = "0127_one_active_rescue_plan_per_company"
+AGM_MIGRATION_REVISION = "0125_reconcile_agm001_statutory_basis"
 AGM_PRE_0125_REVISION = "0124_restore_85_rule_catalogue_parity"
+AGM_POST_0125_REVISION = "0125_reconcile_agm001_statutory_basis"
+AGM_POST_0126_REVISION = "0126_score_independent_rescue_workflow"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -58,7 +61,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0125.json")
+REPORT = Path("artifacts/neon-production-0112-to-0127.json")
 
 
 def _url() -> str:
@@ -137,20 +140,32 @@ _ARCHIVED_RULE_SQL = (
 
 
 async def _legacy_payloads(
-    conn: asyncpg.Connection, *, from_archive: bool = False
+    conn: asyncpg.Connection, *, from_archive: bool = False,
+    agm001_from_history: bool = False,
 ) -> dict[str, Any]:
     """Capture the legacy before-images the postflight compares against.
 
-    When resuming at 0124, 0115 has already quarantined INC-001/INC-002, so
-    their original payloads come from the append-only identity archive instead
-    of the live rows. AGM-001 is still the untouched legacy row until 0125.
+    When resuming at 0124 or later, 0115 has already quarantined INC-001/INC-002,
+    so their original payloads come from the append-only identity archive. Once
+    0125 has run, AGM-001 is recovered from its immutable migration before-image.
     """
     output: dict[str, Any] = {}
     for rule_id, allowed in LEGACY_FINGERPRINTS.items():
         archived = from_archive and rule_id != "AGM-001"
-        row = await conn.fetchrow(
-            _ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL, rule_id
-        )
+        if rule_id == "AGM-001" and agm001_from_history:
+            row = await conn.fetchrow(
+                "SELECT previous_definition AS payload, "
+                "previous_definition ->> 'rule_name' AS rule_name, "
+                "previous_definition ->> 'statutory_basis' AS statutory_basis, "
+                "previous_definition -> 'rule_condition' ->> 'trigger' AS trigger "
+                "FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                rule_id, AGM_MIGRATION_REVISION,
+            )
+        else:
+            row = await conn.fetchrow(
+                _ARCHIVED_RULE_SQL if archived else _LIVE_RULE_SQL, rule_id
+            )
         if row is None:
             if rule_id == "INC-002":
                 continue
@@ -189,6 +204,72 @@ async def _alembic_revision(conn: asyncpg.Connection) -> list[str]:
     return [row["version_num"] for row in rows]
 
 
+async def _rescue_plan_schema_parity(conn: asyncpg.Connection) -> dict[str, Any]:
+    columns = await conn.fetch(
+        "SELECT column_name, is_nullable, column_default "
+        "FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='rescue_plans' "
+        "AND column_name IN ('initial_score', 'workflow_mode')"
+    )
+    by_name = {row["column_name"]: dict(row) for row in columns}
+    if set(by_name) != {"initial_score", "workflow_mode"}:
+        raise RuntimeError(f"0126 rescue-plan columns missing: {sorted(by_name)!r}")
+    if by_name["initial_score"]["is_nullable"] != "YES":
+        raise RuntimeError("0126 did not make rescue_plans.initial_score nullable.")
+    workflow_mode = by_name["workflow_mode"]
+    if (
+        workflow_mode["is_nullable"] != "NO"
+        or "STATUTORY_ACTION_AUTHORIZED" not in str(workflow_mode["column_default"])
+    ):
+        raise RuntimeError(f"0126 workflow_mode default/nullability mismatch: {workflow_mode!r}")
+
+    index = await conn.fetchrow(
+        "SELECT i.indisunique AS is_unique, "
+        "pg_get_expr(i.indpred, i.indrelid) AS predicate "
+        "FROM pg_index i "
+        "JOIN pg_class c ON c.oid=i.indexrelid "
+        "JOIN pg_namespace n ON n.oid=c.relnamespace "
+        "WHERE n.nspname='public' "
+        "AND c.relname='uq_rescue_plans_one_active_per_company'"
+    )
+    if (
+        index is None
+        or not index["is_unique"]
+        or "is_active IS TRUE" not in str(index["predicate"])
+    ):
+        raise RuntimeError(f"0127 partial unique active-plan index mismatch: {index!r}")
+
+    duplicates = await conn.fetch(
+        "SELECT company_id, count(*) AS active_count "
+        "FROM public.rescue_plans WHERE is_active IS TRUE "
+        "GROUP BY company_id HAVING count(*) > 1"
+    )
+    if duplicates:
+        raise RuntimeError(
+            "0127 left duplicate active rescue plans: "
+            f"{[dict(row) for row in duplicates]!r}"
+        )
+    active_count = await conn.fetchval(
+        "SELECT count(*) FROM public.rescue_plans WHERE is_active IS TRUE"
+    )
+    return {
+        "initial_score_nullable": True,
+        "workflow_mode_non_null_default": workflow_mode["column_default"],
+        "active_plan_unique_index": dict(index),
+        "active_plan_rows_after_migration": active_count,
+        "duplicate_active_company_count": 0,
+    }
+
+
+async def _active_plan_duplicate_preflight(conn: asyncpg.Connection) -> list[dict[str, Any]]:
+    rows = await conn.fetch(
+        "SELECT company_id, count(*) AS active_count "
+        "FROM public.rescue_plans WHERE is_active IS TRUE "
+        "GROUP BY company_id HAVING count(*) > 1 ORDER BY company_id"
+    )
+    return [dict(row) for row in rows]
+
+
 async def _postflight(
     conn: asyncpg.Connection,
     before_tables: dict[str, Any],
@@ -214,7 +295,7 @@ async def _postflight(
                 "FROM public.legal_rule_versions "
                 "WHERE rule_id=$1 AND migration_revision=$2",
                 rule_id,
-                HEAD_REVISION,
+                AGM_MIGRATION_REVISION,
             )
             if len(history) != 1:
                 raise RuntimeError(
@@ -224,7 +305,7 @@ async def _postflight(
             if (
                 history_row["actor_type"] != "MIGRATION"
                 or history_row["changed_by"] is not None
-                or history_row["migration_revision"] != HEAD_REVISION
+                or history_row["migration_revision"] != AGM_MIGRATION_REVISION
                 or history_row["version"] != original.get("rule_version")
                 or not history_row["change_reason"]
                 or _canonical(history_row["previous_definition"]) != _canonical(original)
@@ -532,10 +613,15 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions in ([HEAD_REVISION], [PREVIOUS_REVISION]):
+        if revisions == [HEAD_REVISION]:
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
             # instead of trying to replay the 0112-only migration.
+            rescue_plan_schema = (
+                await _rescue_plan_schema_parity(conn)
+                if revisions == [HEAD_REVISION]
+                else None
+            )
             await conn.close()
             audit_view = await _audit_view_parity()
             report = {
@@ -548,25 +634,48 @@ async def main() -> None:
                 "final_revision": revisions,
                 "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
                 "restricted_audit_view_parity": audit_view,
+                "rescue_plan_schema_parity": rescue_plan_schema,
                 "notes": f"The isolated branch was already at {revisions[0]}; no migration was replayed.",
             }
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
             print(json.dumps(report, indent=2, default=str))
             return
-        # A branch left at the previous rehearsal head resumes at 0125 only.
+        # A failed multi-revision upgrade may leave a committed intermediate
+        # head. Resume from 0125/0126 by recovering the exact AGM-001 before-image
+        # from 0125 legal_rule_versions history instead of requiring a fresh branch.
+        resume_from_0122 = revisions == [PREVIOUS_REVISION]
         resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
-        if not resume_from_0124 and revisions != [START_REVISION]:
+        resume_from_0125 = revisions == [AGM_POST_0125_REVISION]
+        resume_from_0126 = revisions == [AGM_POST_0126_REVISION]
+        resume_after_agm_migration = resume_from_0125 or resume_from_0126
+        resumable = {
+            (START_REVISION,), (PREVIOUS_REVISION,), (AGM_PRE_0125_REVISION,),
+            (AGM_POST_0125_REVISION,), (AGM_POST_0126_REVISION,),
+        }
+        if tuple(revisions) not in resumable:
             raise RuntimeError(
-                f"Expected starting revision {START_REVISION}, resumable revision "
-                f"{AGM_PRE_0125_REVISION}, or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
+                f"Expected starting revision {START_REVISION}, resumable revisions "
+                f"{PREVIOUS_REVISION}, {AGM_PRE_0125_REVISION}, "
+                f"{AGM_POST_0125_REVISION}, or {AGM_POST_0126_REVISION}, "
+                f"or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
             )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
-        before_rules = await _legacy_payloads(conn, from_archive=resume_from_0124)
+        before_rules = await _legacy_payloads(
+            conn,
+            from_archive=(resume_from_0122 or resume_from_0124 or resume_after_agm_migration),
+            agm001_from_history=resume_after_agm_migration,
+        )
+        active_plan_duplicates = await _active_plan_duplicate_preflight(conn)
+        if active_plan_duplicates:
+            raise RuntimeError(
+                "Refusing 0127 rehearsal: production-derived rescue data already "
+                f"contains duplicate active plans: {active_plan_duplicates!r}"
+            )
         await conn.close()
 
         env = os.environ.copy()
         env["ENVIRONMENT"] = "production"
-        if not resume_from_0124:
+        if not (resume_from_0124 or resume_after_agm_migration):
             subprocess.run(
                 ["python", "-m", "alembic", "upgrade", AGM_PRE_0125_REVISION],
                 check=True,
@@ -585,14 +694,37 @@ async def main() -> None:
                 )
 
         conn = await _connect()
-        agm001_before_0125 = await _rule_payload(conn, "AGM-001")
-        if agm001_before_0125.get("statutory_basis") != (
-            "Section 81, Companies Act 1994 (Bangladesh)"
-        ):
-            raise RuntimeError(
-                "AGM-001 does not carry the exact legacy citation at the 0125 boundary: "
-                f"{agm001_before_0125.get('statutory_basis')!r}"
+        if resume_after_agm_migration:
+            history = await conn.fetchrow(
+                "SELECT previous_definition FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                "AGM-001", AGM_MIGRATION_REVISION,
             )
+            if history is None:
+                raise RuntimeError(
+                    f"Cannot resume at {revisions!r}: 0125 AGM-001 before-image is missing."
+                )
+            agm001_before_0125 = history["previous_definition"]
+            if isinstance(agm001_before_0125, str):
+                agm001_before_0125 = json.loads(agm001_before_0125)
+            if not isinstance(agm001_before_0125, dict) or agm001_before_0125.get("statutory_basis") != (
+                "Section 81, Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError("0125 history does not contain the exact AGM-001 legacy before-image.")
+            current_agm001 = await _rule_payload(conn, "AGM-001")
+            if current_agm001.get("statutory_basis") != (
+                "Section 81(1), Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError("AGM-001 is not canonical while resuming after 0125.")
+        else:
+            agm001_before_0125 = await _rule_payload(conn, "AGM-001")
+            if agm001_before_0125.get("statutory_basis") != (
+                "Section 81, Companies Act 1994 (Bangladesh)"
+            ):
+                raise RuntimeError(
+                    "AGM-001 does not carry the exact legacy citation at the 0125 boundary: "
+                    f"{agm001_before_0125.get('statutory_basis')!r}"
+                )
         await conn.close()
 
         subprocess.run(
@@ -617,24 +749,48 @@ async def main() -> None:
         postflight = await _postflight(
             conn, before_tables, before_rules, agm001_before_0125
         )
+        rescue_plan_schema = await _rescue_plan_schema_parity(conn)
         audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
             "started_at": started,
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "target": identity,
-            "starting_revision": AGM_PRE_0125_REVISION if resume_from_0124 else START_REVISION,
+            "starting_revision": (
+                AGM_POST_0126_REVISION if resume_from_0126
+                else AGM_POST_0125_REVISION if resume_from_0125
+                else AGM_PRE_0125_REVISION if resume_from_0124
+                else PREVIOUS_REVISION if resume_from_0122
+                else START_REVISION
+            ),
             "final_revision": final_revisions,
             "alembic_current": current,
             **(
                 {
+                    "mode": "resumed_from_0126",
+                    "legacy_before_image_source": "legal_rule_versions.previous_definition",
+                }
+                if resume_from_0126
+                else {
+                    "mode": "resumed_from_0125",
+                    "legacy_before_image_source": "legal_rule_versions.previous_definition",
+                }
+                if resume_from_0125
+                else {
                     "mode": "resumed_from_0124",
                     "legacy_before_image_source": "legal_rule_identity_archive",
                 }
                 if resume_from_0124
+                else {
+                    "mode": "resumed_from_0122",
+                    "legacy_before_image_source": "legal_rule_identity_archive",
+                }
+                if resume_from_0122
                 else {}
             ),
             **postflight,
+            "rescue_plan_schema_parity": rescue_plan_schema,
+            "active_plan_duplicate_preflight": active_plan_duplicates,
             "agm001_pre_0125_before_image_sha256": hashlib.sha256(
                 _canonical(agm001_before_0125).encode("utf-8")
             ).hexdigest(),

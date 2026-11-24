@@ -1,11 +1,11 @@
 """Unit tests for the compliance report PDF service (no database required)."""
 import asyncio
 import re
-from uuid import uuid4
 import zlib
 from datetime import datetime
 from enum import Enum
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, Response
@@ -269,6 +269,37 @@ def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_clos
 def test_html_builder_includes_logo_only_when_given():
     page = build_compliance_report_html(COMPANY, FLAGS, WHEN, logo_uri="file:///x/logo.png")
     assert '<img class="logo" src="file:///x/logo.png"' in page
+
+
+@pytest.mark.parametrize(
+    ("initial_score", "expected"),
+    [
+        (None, "NOT EVALUATED"),
+        (0, "0/100"),
+        (87, "87/100"),
+        ("absent", "NOT EVALUATED"),
+    ],
+)
+def test_rescue_section_initial_score_label(initial_score, expected):
+    plan = SimpleNamespace(
+        steps=[],
+        started_at=None,
+        target_completion_date=None,
+        completed_steps=0,
+        total_steps=0,
+        blocked_steps=0,
+        completion_percentage=0,
+        plan_name="Plan",
+        initial_risk_band="NOT_EVALUATED",
+    )
+    if initial_score != "absent":
+        plan.initial_score = initial_score
+
+    html = report_module._render_rescue_section(plan)
+
+    assert f"<strong>Initial score:</strong> {expected}" in html
+    if expected == "NOT EVALUATED":
+        assert "/100" not in html
 
 
 def test_asset_uri_rejects_missing_and_traversal():

@@ -340,15 +340,20 @@ class CompanyService(BaseService[Company]):
 
     # ── READ ──────────────────────────────────────────────────────
 
-    async def get_with_relations(self, company_id: uuid.UUID) -> Company | None:
+    async def get_with_relations(
+        self, company_id: uuid.UUID, *, refresh: bool = False
+    ) -> Company | None:
         """
         Fetch company with all active directors, shareholders, AGMs,
         audits, annual returns, and active compliance flags loaded.
         Used to build the company dashboard view.
+
+        ``refresh`` overwrites company state this session loaded earlier, for
+        callers that waited on a lock after loading it.
         """
         from app.models.filings import AGM
 
-        result = await self.db.execute(
+        statement = (
             select(Company)
             .options(
                 selectinload(Company.directors),
@@ -365,6 +370,9 @@ class CompanyService(BaseService[Company]):
             )
             .where(Company.id == company_id)
         )
+        if refresh:
+            statement = statement.execution_options(populate_existing=True)
+        result = await self.db.execute(statement)
         return result.scalar_one_or_none()
 
     async def get_by_registration_number(
@@ -704,7 +712,9 @@ class CompanyService(BaseService[Company]):
 
     # ── RULE ENGINE PROFILE BUILDER ───────────────────────────────
 
-    async def build_company_profile(self, company_id: uuid.UUID) -> dict | None:
+    async def build_company_profile(
+        self, company_id: uuid.UUID, *, refresh: bool = False
+    ) -> dict | None:
         """
         Assemble a CompanyProfile dict for the rule engine from verified DB data.
         Returns all fields that C_rule_engine.py's CompanyProfile dataclass needs.
@@ -714,7 +724,7 @@ class CompanyService(BaseService[Company]):
         Returns None if company not found.
         """
         # Load company with all relations
-        company = await self.get_with_relations(company_id)
+        company = await self.get_with_relations(company_id, refresh=refresh)
         if not company:
             return None
 
