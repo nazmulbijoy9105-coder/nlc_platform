@@ -341,7 +341,7 @@ class TestComplianceService:
                     rule_id="AGM-001",
                     rule_name="First AGM Default",
                     rule_type=RuleType.DEADLINE,
-                    statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+                    statutory_basis=canonical_agm_001_basis,
                     description=(
                         "First AGM must be held within 18 calendar months of "
                         "incorporation. Calculate with calendar-month arithmetic; "
@@ -361,6 +361,13 @@ class TestComplianceService:
             catalogue_rule.statutory_basis = canonical_agm_001_basis
             catalogue_rule.is_active = True
         await db.flush()
+
+        canonical_catalogue_result = await db.execute(
+            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
+        )
+        canonical_catalogue_rule = canonical_catalogue_result.scalar_one()
+        assert canonical_catalogue_rule.is_active is True
+        assert canonical_catalogue_rule.statutory_basis == canonical_agm_001_basis
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
