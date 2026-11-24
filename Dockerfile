@@ -35,6 +35,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /opt/venv /opt/venv
 
+# Fail the production image build unless the exact Pillow payload contains the
+# fixed bundled Brotli decoder and common library. Load common globally first
+# so the decoder's private dependency resolves from pillow.libs.
+RUN python - <<'PY'
+import ctypes
+import re
+from pathlib import Path
+import PIL
+
+assert PIL.__version__ == "13.0.0", f"Unexpected Pillow version: {PIL.__version__}"
+libdir = Path(PIL.__file__).resolve().parent.parent / "pillow.libs"
+libraries = sorted(
+    path for path in libdir.glob("libbrotli*")
+    if "brotlidec" in path.name or "brotlicommon" in path.name
+)
+decoder = next((path for path in libraries if "brotlidec" in path.name), None)
+common = next((path for path in libraries if "brotlicommon" in path.name), None)
+assert decoder is not None, "Bundled Brotli decoder library missing"
+assert common is not None, "Bundled Brotli common library missing"
+for path in (decoder, common):
+    match = re.search(r"\.so\.(\d+)\.(\d+)\.(\d+)$", path.name)
+    assert match, f"Unversioned or unexpected bundled Brotli library: {path.name}"
+    version = tuple(map(int, match.groups()))
+    assert version >= (1, 2, 1), f"Vulnerable bundled Brotli library: {path.name}"
+    print(f"Verified {path.name}: {version}")
+
+ctypes.CDLL(str(common), mode=ctypes.RTLD_GLOBAL)
+decoder_library = ctypes.CDLL(str(decoder))
+decoder_library.BrotliDecoderVersion.restype = ctypes.c_uint32
+encoded = decoder_library.BrotliDecoderVersion()
+runtime_version = (encoded >> 24, (encoded >> 12) & 0xFFF, encoded & 0xFFF)
+assert runtime_version >= (1, 2, 1), f"Loaded Brotli decoder is too old: {runtime_version}"
+print(f"Verified loaded BrotliDecoderVersion: {runtime_version}")
+PY
+
 RUN groupadd --gid 1001 nlc && \
     useradd --uid 1001 --gid 1001 --no-create-home --shell /bin/sh nlc && \
     mkdir -p /tmp/nlc_cache/fontconfig && \
