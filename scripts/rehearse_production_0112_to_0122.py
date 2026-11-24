@@ -603,6 +603,11 @@ async def main() -> None:
             # A previous one-shot rehearsal may already have migrated this
             # disposable branch. Revalidate branch-pinned restricted parity
             # instead of trying to replay the 0112-only migration.
+            rescue_plan_schema = (
+                await _rescue_plan_schema_parity(conn)
+                if revisions == [HEAD_REVISION]
+                else None
+            )
             await conn.close()
             audit_view = await _audit_view_parity()
             report = {
@@ -615,6 +620,7 @@ async def main() -> None:
                 "final_revision": revisions,
                 "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
                 "restricted_audit_view_parity": audit_view,
+                "rescue_plan_schema_parity": rescue_plan_schema,
                 "notes": f"The isolated branch was already at {revisions[0]}; no migration was replayed.",
             }
             REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
