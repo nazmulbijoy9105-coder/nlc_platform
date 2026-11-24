@@ -178,3 +178,23 @@ def test_role_preflight_passes_only_noinherit_roles_without_memberships():
 
     assert result["status"] == "PASS"
     assert result["restricted_memberships"] == []
+
+def test_0125_agm001_migration_records_prior_definition_and_advances_version():
+    migration = (
+        ROOT / "alembic/versions/0125_reconcile_agm001_statutory_basis.py"
+    ).read_text(encoding="utf-8")
+
+    history_insert = migration.index(
+        "INSERT INTO public.legal_rule_versions"
+    )
+    catalogue_update = migration.index(
+        "UPDATE public.legal_rules"
+    )
+    assert history_insert < catalogue_update
+    assert "to_jsonb(rule) AS previous_definition" in migration
+    assert "previous_version" in migration
+    assert "changed_by" in migration
+    assert "rule_version = :next_version" in migration
+    assert "last_modified_by = :changed_by" in migration
+    assert "last_modified_at = now()" in migration
+    assert "0125_reconcile_agm001_statutory_basis" == EXPECTED_HEAD_REVISION
