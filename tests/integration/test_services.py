@@ -1143,8 +1143,11 @@ def test_rescue_output_validation_is_score_independent_and_requires_unique_evide
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    with pytest.raises(PermissionError, match="disabled"):
-        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+    # Closing product-score publication does not suppress deterministic
+    # candidate validation; the engine disposition remains review-only.
+    assert validate_rescue_engine_output(
+        output, expected_company_id="tenant-001"
+    ) == frozenset({"AGM-001"})
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
