@@ -134,6 +134,7 @@ def _valid_not_released_run():
         score_breakdown_snapshot=snapshot,
         rule_outcomes_hash=outcomes_hash,
         rule_outcomes_snapshot=outcomes,
+        evaluation_status="NOT_RELEASED",
     )
     return run
 
@@ -273,3 +274,34 @@ def test_integrity_rejects_conflict_rows_missing_explicit_conflict_identity_fiel
     problems = evaluation_run_integrity_problems(run)
     assert "RULE_OUTCOME_IDENTITY_CONFLICTS_MALFORMED" in problems
     assert "RJSC_RULE_OUTCOME_SCOPE_COVERAGE_MISMATCH" in problems
+
+
+def test_not_released_snapshot_status_must_match_run_status():
+    run = _valid_not_released_run()
+    run.evaluation_status = "COMPLETED"
+
+    problems = evaluation_run_integrity_problems(run)
+
+    assert "EVALUATION_STATUS_SNAPSHOT_MISMATCH" in problems
+    assert "SCORE_HASH_MISMATCH" in problems
+
+
+def test_legacy_not_released_null_snapshot_is_accepted_during_rollout():
+    run = _valid_not_released_run()
+    run.score_breakdown_snapshot = None
+    run.score_hash = calculate_evaluation_score_hash(
+        previous_hash=run.previous_hash,
+        company_id=run.company_id,
+        score=None,
+        risk_band="NOT_EVALUATED",
+        calculated_at=run.calculated_at,
+        engine_version=run.engine_version,
+        trigger_source=run.trigger_source,
+        flags_snapshot=run.flags_snapshot,
+        fact_provenance_snapshot=run.fact_provenance_snapshot,
+        score_breakdown_snapshot=None,
+        rule_outcomes_hash=run.rule_outcomes_hash,
+        rule_outcomes_snapshot=run.rule_outcomes_snapshot,
+    )
+
+    assert evaluation_run_integrity_problems(run) == []
