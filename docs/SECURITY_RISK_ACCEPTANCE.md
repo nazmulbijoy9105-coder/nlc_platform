@@ -61,6 +61,7 @@ unzip -l pillow-*.whl | grep -E 'pillow.libs/libbrotli(dec|common)'
 # Or inspect the installed Pillow payload in the built image.
 python - <<'PY'
 from pathlib import Path
+import re
 import PIL
 
 libdir = Path(PIL.__file__).resolve().parent.parent / "pillow.libs"
@@ -68,9 +69,13 @@ matches = sorted(
     p.name for p in libdir.glob("libbrotli*")
     if "brotlidec" in p.name or "brotlicommon" in p.name
 )
-print("\\n".join(matches))
+print("\n".join(matches))
 assert matches, "No bundled Brotli libraries found; inspect the wheel/build linkage"
-assert all(".1.2.1" in name or ".1.2.2" in name for name in matches), matches
+for name in matches:
+    version = re.search(r"\.so\.(\d+\.\d+\.\d+)$", name)
+    assert version and tuple(map(int, version.group(1).split("."))) >= (1, 2, 1), name
+assert any("brotlidec" in name for name in matches), "Bundled decoder library missing"
+assert any("brotlicommon" in name for name in matches), "Bundled common library missing"
 PY
 ```
 
