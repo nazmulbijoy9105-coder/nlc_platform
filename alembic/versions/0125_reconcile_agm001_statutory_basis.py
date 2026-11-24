@@ -1,11 +1,11 @@
-"""Reconcile AGM-001 citation with a versioned, auditable rule change.
+"""Reconcile the exact AGM-001 legacy citation through the rule-version ledger.
 
 Revision ID: 0125_reconcile_agm001_statutory_basis
 Revises: 0124_restore_85_rule_catalogue_parity
 
-The migration records the complete prior catalogue row in the append-only
-legal_rule_versions ledger before changing its statutory citation/version.
-It only rewrites the one known legacy citation and fails closed on drift.
+Only the known 0026 AGM-001 definition may be normalized. The complete
+before-image is recorded as MIGRATION provenance in legal_rule_versions.
+Conflicting catalogue definitions are rejected without mutation.
 """
 import json
 
@@ -17,22 +17,127 @@ down_revision = "0124_restore_85_rule_catalogue_parity"
 branch_labels = None
 depends_on = None
 
+RULE_ID = "AGM-001"
 LEGACY_BASIS = "Section 81, Companies Act 1994 (Bangladesh)"
 CANONICAL_BASIS = "Section 81(1), Companies Act 1994 (Bangladesh)"
+LEGACY_DEFINITION = {
+    "rule_name": "First AGM Default",
+    "rule_type": "DEADLINE",
+    "description": (
+        "First AGM not held within 18 months (548 days) of incorporation. "
+        "Section 81 is mandatory; no waiver for private companies. "
+        "Default counts from day after deadline."
+    ),
+    "rule_condition": {
+        "check_fn": "check_agm_001",
+        "data_points": ["incorporation_date", "first_agm_held", "agm_count"],
+        "trigger": "first_agm_held == False AND days_since_incorporation > 548",
+    },
+    "is_active": True,
+}
 CHANGE_REASON = (
-    "Reconcile the known legacy AGM-001 citation to the canonical "
-    "Section 81(1) statutory identity; preserve the prior catalogue "
+    "Reconcile the exact known legacy AGM-001 citation to the canonical "
+    "Section 81(1) registry identity; preserve the complete prior catalogue "
     "definition and advance its rule version for auditability."
 )
+
+
+def _next_version(previous_version: str) -> str:
+    if not previous_version:
+        raise RuntimeError("0125 refuses an empty AGM-001 rule_version")
+    parts = previous_version.split(".")
+    if any(not part.isdigit() for part in parts):
+        raise RuntimeError(
+            "0125 refuses to advance non-numeric AGM-001 rule_version: "
+            f"{previous_version!r}"
+        )
+    parts[-1] = str(int(parts[-1]) + 1)
+    return ".".join(parts)
+
+
+def _definition(row) -> dict:
+    return {
+        "rule_name": row["rule_name"],
+        "rule_type": row["rule_type"],
+        "description": row["description"],
+        "rule_condition": row["rule_condition"],
+        "is_active": row["is_active"],
+    }
+
+
+def _validate_migration_history(bind, current_row, expected_previous=None):
+    history = bind.execute(
+        sa.text(
+            """
+            SELECT version, change_reason, changed_by, actor_type,
+                   migration_revision, previous_definition
+              FROM public.legal_rule_versions
+             WHERE rule_id = :rule_id
+               AND migration_revision = :migration_revision
+            """
+        ),
+        {"rule_id": RULE_ID, "migration_revision": revision},
+    ).mappings().all()
+
+    if len(history) != 1:
+        raise RuntimeError(
+            "0125 requires exactly one auditable AGM-001 migration history row; "
+            f"found {len(history)}"
+        )
+
+    record = history[0]
+    if (
+        record["actor_type"] != "MIGRATION"
+        or record["changed_by"] is not None
+        or record["migration_revision"] != revision
+        or record["change_reason"] != CHANGE_REASON
+        or not record["version"]
+    ):
+        raise RuntimeError(
+            f"0125 AGM-001 migration provenance is invalid: {dict(record)!r}"
+        )
+
+    previous = record["previous_definition"]
+    if isinstance(previous, str):
+        previous = json.loads(previous)
+    if not isinstance(previous, dict):
+        raise RuntimeError("0125 AGM-001 previous_definition is not a JSON object")
+    if previous.get("rule_id") != RULE_ID:
+        raise RuntimeError("0125 AGM-001 history row references another rule ID")
+    if previous.get("statutory_basis") != LEGACY_BASIS:
+        raise RuntimeError(
+            "0125 AGM-001 history row does not preserve the exact legacy citation"
+        )
+    if _definition(
+        {
+            "rule_name": previous.get("rule_name"),
+            "rule_type": previous.get("rule_type"),
+            "description": previous.get("description"),
+            "rule_condition": previous.get("rule_condition"),
+            "is_active": previous.get("is_active"),
+        }
+    ) != LEGACY_DEFINITION:
+        raise RuntimeError(
+            "0125 AGM-001 history row does not preserve the exact known legacy definition"
+        )
+
+    expected_version = _next_version(str(record["version"]))
+    if current_row["rule_version"] != expected_version:
+        raise RuntimeError(
+            "0125 AGM-001 current version does not follow its migration history: "
+            f"expected={expected_version!r}, actual={current_row['rule_version']!r}"
+        )
+    if expected_previous is not None and previous != expected_previous:
+        raise RuntimeError(
+            "0125 AGM-001 migration history differs from the locked before-image"
+        )
 
 
 def upgrade() -> None:
     bind = op.get_bind()
 
-    # Migration provenance must not depend on an application user existing:
-    # first-time setup provisions users only after the schema is migrated.
-    # Keep human-authored history rows constrained to real user actors, while
-    # representing this schema migration explicitly as MIGRATION provenance.
+    # Existing human-authored history remains USER provenance. Migration
+    # history is explicit and does not invent a user actor.
     op.add_column(
         "legal_rule_versions",
         sa.Column(
@@ -60,106 +165,134 @@ def upgrade() -> None:
         )""",
     )
 
-    # Lock the target row and capture its complete pre-change definition.
-    prior = bind.execute(
+    # Lock and inspect the whole row before deciding whether it is safe to touch.
+    current = bind.execute(
         sa.text(
             """
             SELECT to_jsonb(rule) AS previous_definition,
-                   rule.rule_version AS previous_version
+                   rule.rule_name,
+                   rule.rule_type::text AS rule_type,
+                   rule.statutory_basis,
+                   rule.description,
+                   rule.rule_condition,
+                   rule.is_active,
+                   rule.rule_version
               FROM public.legal_rules AS rule
-             WHERE rule.rule_id = 'AGM-001'
-               AND rule.statutory_basis = :legacy_basis
+             WHERE rule.rule_id = :rule_id
              FOR UPDATE
             """
         ),
-        {"legacy_basis": LEGACY_BASIS},
+        {"rule_id": RULE_ID},
     ).mappings().one_or_none()
 
-    if prior is not None:
-        previous_version = prior["previous_version"]
-        # Increment the final numeric component (2.0 -> 2.1; 2.0.0 -> 2.0.1).
-        parts = previous_version.split(".")
-        if not parts or any(not part.isdigit() for part in parts):
-            raise RuntimeError(
-                "0125 refuses to advance non-numeric AGM-001 rule_version: "
-                f"{previous_version!r}"
-            )
-        parts[-1] = str(int(parts[-1]) + 1)
-        next_version = ".".join(parts)
-
-        bind.execute(
-            sa.text(
-                """
-                INSERT INTO public.legal_rule_versions
-                    (rule_id, version, change_reason, changed_by, changed_at,
-                     previous_definition, sro_reference, actor_type,
-                     migration_revision)
-                VALUES
-                    ('AGM-001', :previous_version, :change_reason, NULL,
-                     now(), CAST(:previous_definition AS jsonb), NULL,
-                     'MIGRATION', :migration_revision)
-                """
-            ),
-            {
-                "previous_version": previous_version,
-                "change_reason": CHANGE_REASON,
-                "migration_revision": revision,
-                "previous_definition": json.dumps(
-                    prior["previous_definition"], default=str
-                ),
-            },
+    if current is None:
+        raise RuntimeError("0125 refuses to reconcile a missing AGM-001 catalogue row")
+    if _definition(current) != LEGACY_DEFINITION:
+        raise RuntimeError(
+            "0125 refuses to overwrite a conflicting AGM-001 legal definition: "
+            f"{_definition(current)!r}"
         )
 
-        bind.execute(
-            sa.text(
-                """
-                UPDATE public.legal_rules
-                   SET statutory_basis = :canonical_basis,
-                       rule_version = :next_version,
-                       last_modified_at = now(),
-                       updated_at = now()
-                 WHERE rule_id = 'AGM-001'
-                   AND statutory_basis = :legacy_basis
-                """
+    # If an operator changed the citation before this migration, do not silently
+    # accept it. A canonical row is accepted only with this migration's own
+    # complete, immutable MIGRATION-provenance before-image.
+    if current["statutory_basis"] == CANONICAL_BASIS:
+        _validate_migration_history(bind, current)
+        return
+    if current["statutory_basis"] != LEGACY_BASIS:
+        raise RuntimeError(
+            "0125 refuses unexpected AGM-001 statutory_basis: "
+            f"{current['statutory_basis']!r}"
+        )
+
+    previous_version = current["rule_version"]
+    next_version = _next_version(previous_version)
+
+    bind.execute(
+        sa.text(
+            """
+            INSERT INTO public.legal_rule_versions
+                (rule_id, version, change_reason, changed_by, changed_at,
+                 previous_definition, sro_reference, actor_type,
+                 migration_revision)
+            VALUES
+                (:rule_id, :previous_version, :change_reason, NULL,
+                 now(), CAST(:previous_definition AS jsonb), NULL,
+                 'MIGRATION', :migration_revision)
+            """
+        ),
+        {
+            "rule_id": RULE_ID,
+            "previous_version": previous_version,
+            "change_reason": CHANGE_REASON,
+            "migration_revision": revision,
+            "previous_definition": json.dumps(
+                current["previous_definition"], sort_keys=True, default=str
             ),
-            {
-                "canonical_basis": CANONICAL_BASIS,
-                "next_version": next_version,
-                "legacy_basis": LEGACY_BASIS,
-            },
+        },
+    )
+
+    result = bind.execute(
+        sa.text(
+            """
+            UPDATE public.legal_rules
+               SET statutory_basis = :canonical_basis,
+                   rule_version = :next_version,
+                   last_modified_at = now(),
+                   updated_at = now()
+             WHERE rule_id = :rule_id
+               AND statutory_basis = :legacy_basis
+               AND rule_version = :previous_version
+               AND is_active IS TRUE
+            """
+        ),
+        {
+            "canonical_basis": CANONICAL_BASIS,
+            "next_version": next_version,
+            "rule_id": RULE_ID,
+            "legacy_basis": LEGACY_BASIS,
+            "previous_version": previous_version,
+        },
+    )
+    if result.rowcount != 1:
+        raise RuntimeError(
+            "0125 expected exactly one conditional AGM-001 basis update; "
+            f"updated={result.rowcount}"
         )
 
     actual = bind.execute(
         sa.text(
             """
-            SELECT rule.statutory_basis,
-                   rule.rule_version,
-                   (
-                       SELECT count(*)
-                         FROM public.legal_rule_versions AS history
-                        WHERE history.rule_id = 'AGM-001'
-                   ) AS history_count
+            SELECT rule.rule_name,
+                   rule.rule_type::text AS rule_type,
+                   rule.statutory_basis,
+                   rule.description,
+                   rule.rule_condition,
+                   rule.is_active,
+                   rule.rule_version
               FROM public.legal_rules AS rule
-             WHERE rule.rule_id = 'AGM-001'
+             WHERE rule.rule_id = :rule_id
             """
-        )
+        ),
+        {"rule_id": RULE_ID},
     ).mappings().one_or_none()
 
-    if actual is None or actual["statutory_basis"] != CANONICAL_BASIS:
+    if (
+        actual is None
+        or actual["statutory_basis"] != CANONICAL_BASIS
+        or actual["rule_version"] != next_version
+        or _definition(actual) != LEGACY_DEFINITION
+    ):
         raise RuntimeError(
-            "0125 refuses AGM-001 identity drift: "
-            f"expected={CANONICAL_BASIS!r}, actual="
-            f"{None if actual is None else actual['statutory_basis']!r}"
+            "0125 AGM-001 post-update identity/version verification failed: "
+            f"{None if actual is None else dict(actual)!r}"
         )
 
-    if prior is not None:
-        if actual["rule_version"] != next_version:
-            raise RuntimeError(
-                "0125 failed to advance AGM-001 rule_version: "
-                f"expected={next_version!r}, actual={actual['rule_version']!r}"
-            )
-        if actual["history_count"] < 1:
-            raise RuntimeError("0125 failed to record AGM-001 prior definition")
+    _validate_migration_history(
+        bind,
+        actual,
+        expected_previous=current["previous_definition"],
+    )
 
 
 def downgrade() -> None:
