@@ -214,9 +214,20 @@ def test_withheld_flag_never_widens_a_closed_release(monkeypatch):
 
 def test_compliance_service_passes_withheld_score_state_to_rescue_generation():
     source = (Path(__file__).resolve().parents[2] / "app/services/compliance_service.py").read_text()
+    tree = ast.parse(source)
+    workflow_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "_start_rescue_workflow"
+    ]
+    assert len(workflow_calls) == 1
+    workflow_keywords = {keyword.arg: keyword.value for keyword in workflow_calls[0].keywords}
+    assert ast.unparse(workflow_keywords["score_withheld"]) == "score_for_current is None"
     calls = [
         node
-        for node in ast.walk(ast.parse(source))
+        for node in ast.walk(tree)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "generate_rescue_plan"
@@ -224,7 +235,7 @@ def test_compliance_service_passes_withheld_score_state_to_rescue_generation():
     assert len(calls) == 1
     keywords = {keyword.arg: keyword.value for keyword in calls[0].keywords}
     assert "score_withheld" in keywords
-    assert ast.unparse(keywords["score_withheld"]) == "score_for_current is None"
+    assert ast.unparse(keywords["score_withheld"]) == "score_withheld"
 
 
 def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):

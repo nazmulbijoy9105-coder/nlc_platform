@@ -856,6 +856,82 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "evaluation_calculated_at": evaluation_run.calculated_at.isoformat(),
         }
 
+    async def _start_rescue_workflow(
+        self,
+        company_id: uuid.UUID,
+        output,
+        *,
+        score_withheld: bool,
+    ) -> str | None:
+        """Create the evaluation's rescue plan for a company entitled to it.
+
+        Workflow creation is independent of score publication but not of the
+        ``corporate_rescue`` entitlement; privileged staff can still create a
+        plan for an unentitled company explicitly through the rescue API.
+        Returns an error note to persist on the company, or None.
+        """
+        from app.services.rescue_service import RescueService
+        from app.services.subscription_service import SubscriptionService
+
+        rescue_svc = RescueService(self.db)
+        existing_plan = await rescue_svc.get_active_plan(company_id)
+        if existing_plan:
+            new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
+            old_titles = {st.step_title for st in existing_plan.steps}
+            untouched = existing_plan.completed_steps == 0 and all(
+                getattr(st.step_status, 'value', st.step_status) == 'PENDING' for st in existing_plan.steps
+            )
+            if new_titles and new_titles != old_titles:
+                if untouched:
+                    existing_plan = None
+                else:
+                    logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
+        if existing_plan:
+            return None
+
+        try:
+            if not await SubscriptionService(self.db).has_entitlement(
+                company_id=company_id,
+                feature_code="corporate_rescue",
+            ):
+                logger.info(
+                    "rescue_plan_skipped_no_entitlement company=%s", company_id
+                )
+                return None
+            assigned_staff_result = await self.db.execute(
+                select(Company.assigned_staff_id).where(Company.id == company_id)
+            )
+            assigned_staff_id = assigned_staff_result.scalar_one_or_none()
+            await rescue_svc.generate_rescue_plan(
+                company_id=company_id,
+                engine_output=output,
+                assigned_staff_id=assigned_staff_id,
+                created_by=getattr(self, '_current_user_id', None),
+                engagement_id=None,  # RES-010: explicit linkage, populated by service
+                score_withheld=score_withheld,
+            )
+        except ValueError as e:
+            # Engine produced actionable RED/BLACK flags but no rescue
+            # sequence — data-integrity issue, not transient. Persist
+            # the failure so ops/dashboard can see it.
+            actionable = [
+                (f.rule_id, str(f.severity))
+                for f in output.flags
+                if not f.resolved and str(f.severity) in ('BLACK', 'RED')
+            ]
+            logger.error(
+                "rescue_plan_value_error company=%s reason=%s actionable_flags=%s",
+                company_id, e, actionable,
+            )
+            return str(e)[:500]
+        except Exception as e:
+            logger.error(
+                "rescue_plan_unexpected_error company=%s error=%s",
+                company_id, e, exc_info=True,
+            )
+            return f'unexpected: {e}'[:500]
+        return None
+
     async def _persist_evaluation(
         self,
         company_id: uuid.UUID,
@@ -1344,55 +1420,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if rescue_required:
                 company_svc_update["rescue_triggered_at"] = now
             
-            # Start the rescue workflow independently of score publication.
-            from app.services.rescue_service import RescueService
-            rescue_svc = RescueService(self.db)
-            existing_plan = await rescue_svc.get_active_plan(company_id)
-            if existing_plan:
-                new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
-                old_titles = {st.step_title for st in existing_plan.steps}
-                untouched = existing_plan.completed_steps == 0 and all(
-                    getattr(st.step_status, 'value', st.step_status) == 'PENDING' for st in existing_plan.steps
-                )
-                if new_titles and new_titles != old_titles:
-                    if untouched:
-                        existing_plan = None
-                    else:
-                        logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
-            if not existing_plan:
-                try:
-                    assigned_staff_result = await self.db.execute(
-                        select(Company.assigned_staff_id).where(Company.id == company_id)
-                    )
-                    assigned_staff_id = assigned_staff_result.scalar_one_or_none()
-                    await rescue_svc.generate_rescue_plan(
-                        company_id=company_id,
-                        engine_output=output,
-                        assigned_staff_id=assigned_staff_id,
-                        created_by=getattr(self, '_current_user_id', None),
-                        engagement_id=None,  # RES-010: explicit linkage, populated by service
-                        score_withheld=score_for_current is None,
-                    )
-                except ValueError as e:
-                    # Engine produced actionable RED/BLACK flags but no rescue
-                    # sequence — data-integrity issue, not transient. Persist
-                    # the failure so ops/dashboard can see it.
-                    actionable = [
-                        (f.rule_id, str(f.severity))
-                        for f in output.flags
-                        if not f.resolved and str(f.severity) in ('BLACK', 'RED')
-                    ]
-                    logger.error(
-                        "rescue_plan_value_error company=%s reason=%s actionable_flags=%s",
-                        company_id, e, actionable,
-                    )
-                    company_svc_update['rescue_generation_error'] = str(e)[:500]
-                except Exception as e:
-                    logger.error(
-                        "rescue_plan_unexpected_error company=%s error=%s",
-                        company_id, e, exc_info=True,
-                    )
-                    company_svc_update['rescue_generation_error'] = f'unexpected: {e}'[:500]
+            rescue_generation_error = await self._start_rescue_workflow(
+                company_id,
+                output,
+                score_withheld=score_for_current is None,
+            )
+            if rescue_generation_error:
+                company_svc_update['rescue_generation_error'] = rescue_generation_error
 
         await self.db.execute(
             update(Company)
