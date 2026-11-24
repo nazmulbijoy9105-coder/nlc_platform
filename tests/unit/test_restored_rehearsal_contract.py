@@ -48,7 +48,7 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
-    assert EXPECTED_HEAD_REVISION == "0126_score_independent_rescue_workflow"
+    assert EXPECTED_HEAD_REVISION == "0127_one_active_rescue_plan_per_company"
     assert EXPECTED_START_REVISION == "0042_dedup_key"
 
 
