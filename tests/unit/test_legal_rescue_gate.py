@@ -8,19 +8,10 @@ from app.api.rescue import _require_legal_release
 from canonical_architecture.rjsc_scope import RJSC_OUT_OF_SCOPE_RULE_IDS
 
 
-def test_rescue_workflow_is_blocked_when_product_scoring_is_disabled(monkeypatch):
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
-    with pytest.raises(HTTPException) as exc:
-        _require_legal_release()
-    assert exc.value.status_code == 503
-    assert "product scoring is disabled" in exc.value.detail
-
-
-def test_rescue_workflow_gate_opens_when_product_scoring_is_enabled(monkeypatch):
-    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
-    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+def test_rescue_workflow_is_not_blocked_by_product_score_release():
+    # Statutory-action workflow is authorized independently of score publication.
     _require_legal_release()
+
 
 
 def test_rescue_service_requires_released_rule_findings_and_rule_linked_steps(monkeypatch):
@@ -30,7 +21,6 @@ def test_rescue_service_requires_released_rule_findings_and_rule_linked_steps(mo
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -239,3 +229,30 @@ def test_rescue_service_rejects_out_of_scope_rule_even_if_product_allowlisted(mo
     )
     with pytest.raises(PermissionError, match="out-of-scope"):
         validate_rescue_engine_output(output)
+
+
+
+def test_rescue_service_accepts_unverified_rule_when_score_is_unreleased(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services.rescue_service import validate_rescue_engine_output
+
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+    monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
+    flag = SimpleNamespace(
+        rule_id="AGM-001",
+        resolved=False,
+        conditional_applies=True,
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        severity="RED",
+        score_impact=5,
+    )
+    output = SimpleNamespace(
+        company_id="company-1",
+        score_breakdown=SimpleNamespace(risk_band="NOT_EVALUATED", final_score=None),
+        flags=[flag],
+        rescue_sequence=[{"title": "Authorized action", "related_rules": ["AGM-001"]}],
+    )
+    assert validate_rescue_engine_output(output, expected_company_id="company-1") == frozenset({"AGM-001"})
