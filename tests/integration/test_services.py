@@ -333,24 +333,14 @@ class TestComplianceService:
         )
         catalogue_rule = catalogue_result.scalar_one()
         assert catalogue_rule.is_active is True
-        assert catalogue_rule.statutory_basis == canonical_agm_basis
-
-        # Exercise the production catalogue identity gate before evaluation.
         assert catalogue_rule.statutory_basis == canonical_agm_001_basis
 
-        # Exercise the production catalogue reconciliation gate explicitly.
+        # The migration must reconcile the real catalogue row before evaluation.
         # A quarantined or conflicting identity must fail before release checks.
         from app.services.compliance_service import _catalogue_identity_conflicts
 
         identity_conflicts = _catalogue_identity_conflicts([catalogue_rule])
         assert "AGM-001" not in identity_conflicts
-
-        canonical_catalogue_result = await db.execute(
-            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
-        )
-        canonical_catalogue_rule = canonical_catalogue_result.scalar_one()
-        assert canonical_catalogue_rule.is_active is True
-        assert canonical_catalogue_rule.statutory_basis == canonical_agm_001_basis
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
