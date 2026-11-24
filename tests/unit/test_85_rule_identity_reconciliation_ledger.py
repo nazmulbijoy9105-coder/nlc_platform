@@ -1,6 +1,7 @@
 """Integrity tests for the preserved 85-rule ledger and current production follow-up."""
 import hashlib
 import json
+import re
 from pathlib import Path
 
 from scripts.seed_rules import ILRMF_RULES
@@ -19,6 +20,14 @@ def _stable(value):
     return value
 
 
+def _with_lowercase_trigger_booleans(definition):
+    # The Python seed and JSON ledger serialise boolean literals with different
+    # casing. Normalise only the rule_condition trigger, never descriptions.
+    condition = dict(definition["rule_condition"])
+    condition["trigger"] = re.sub(
+        r"\b(True|False)\b", lambda m: m.group(1).lower(), condition["trigger"]
+    )
+    return {**definition, "rule_condition": condition}
 def _original_payload_sha256(ledger):
     original = {key: value for key, value in ledger.items() if key != "follow_up_snapshots"}
     canonical = json.dumps(original, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -77,7 +86,9 @@ def test_follow_up_preserves_each_definition_and_leaves_identity_unresolved():
 
     for row in snapshot["rules"]:
         rule_id = row["rule_id"]
-        assert _stable(row["main_definition"]) == _stable(seed[rule_id])
+        assert _stable(_with_lowercase_trigger_booleans(row["main_definition"])) == _stable(
+            _with_lowercase_trigger_booleans(seed[rule_id])
+        )
         assert row["production_definition"]["rule_id"] == rule_id
         assert row["identity_resolution"] == "UNRESOLVED_PENDING_INDIVIDUAL_REVIEW"
         assert row["historical_finding_attribution"] == "UNATTRIBUTED_PENDING_RECORD_LEVEL_REVIEW"
@@ -214,7 +225,7 @@ def test_primary_source_candidates_are_linked_without_promoting_them_to_effectiv
 
     assert events["REG003"][0]["provisions"] == ["41(1)", "89(4)", "174(1)"]
     assert "Section 89(4)" in rebase["legal_source_review_notes"]["REG003"]
-    assert "Board-minute location rule" in rebase["legal_source_review_notes"]["REG003"]
+    assert "no Board-minute location rule is asserted" in rebase["legal_source_review_notes"]["REG003"]
 
     labour = events["LBR001"]
     act = next(item for item in labour if item["instrument"] == "Bangladesh Labour (Amendment) Act 2026")

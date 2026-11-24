@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rehearse the documented production 0112 schema through 0124 on a disposable Neon child.
+"""Rehearse the documented production 0112 schema through the current Alembic head on a disposable Neon child.
 
 The script is pinned to the NLC production project and the preserved backup
 branch. It captures immutable fingerprints for historical finding/score tables
@@ -26,7 +26,8 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0124_restore_85_rule_catalogue_parity"
+HEAD_REVISION = "0125_reconcile_agm001_statutory_basis"
+AGM_PRE_0125_REVISION = "0124_restore_85_rule_catalogue_parity"
 PREVIOUS_REVISION = "0122_rls_staff_scope_and_score_history"
 HISTORICAL_TABLES = (
     "compliance_flags",
@@ -43,6 +44,11 @@ LEGACY_FINGERPRINTS = {
          "Section 23, Companies Act 1994 (Bangladesh)",
          "moa_aoa_filed == False"),
     },
+    "AGM-001": {
+        ("First AGM Default",
+         "Section 81, Companies Act 1994 (Bangladesh)",
+         "first_agm_held == False AND days_since_incorporation > 548"),
+    },
     "INC-002": {
         ("Memorandum and Articles Not Filed",
          "Section 11, Companies Act 1994 (Bangladesh)",
@@ -52,7 +58,7 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0124.json")
+REPORT = Path("artifacts/neon-production-0112-to-0125.json")
 
 
 def _url() -> str:
@@ -127,12 +133,34 @@ async def _legacy_payloads(conn: asyncpg.Connection) -> dict[str, Any]:
         if row is None:
             if rule_id == "INC-002":
                 continue
-            raise RuntimeError("INC-001 is missing before quarantine.")
+            raise RuntimeError(f"{rule_id} is missing before migration reconciliation.")
         fingerprint = (row["rule_name"], row["statutory_basis"], row["trigger"])
         if fingerprint not in allowed:
             raise RuntimeError(f"{rule_id} does not match a known legacy fingerprint: {fingerprint!r}")
-        output[rule_id] = row["payload"]
+        payload = row["payload"]
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        if not isinstance(payload, dict):
+            raise RuntimeError(
+                f"{rule_id} before-image is not a JSON object: {type(payload).__name__}"
+            )
+        output[rule_id] = payload
     return output
+
+
+async def _rule_payload(conn: asyncpg.Connection, rule_id: str) -> dict[str, Any]:
+    row = await conn.fetchrow(
+        "SELECT to_jsonb(r) AS payload FROM public.legal_rules r WHERE rule_id=$1",
+        rule_id,
+    )
+    if row is None:
+        raise RuntimeError(f"{rule_id} is missing at the 0125 migration boundary.")
+    payload = row["payload"]
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"{rule_id} migration-boundary payload is not a JSON object.")
+    return payload
 
 
 async def _alembic_revision(conn: asyncpg.Connection) -> list[str]:
@@ -140,7 +168,12 @@ async def _alembic_revision(conn: asyncpg.Connection) -> list[str]:
     return [row["version_num"] for row in rows]
 
 
-async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], before_rules: dict[str, Any]) -> dict[str, Any]:
+async def _postflight(
+    conn: asyncpg.Connection,
+    before_tables: dict[str, Any],
+    before_rules: dict[str, Any],
+    agm001_before_0125: dict[str, Any],
+) -> dict[str, Any]:
     after_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
     if before_tables != after_tables:
         raise RuntimeError(f"Historical finding/score data changed: before={before_tables!r}, after={after_tables!r}")
@@ -150,7 +183,37 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         "FROM public.legal_rule_identity_archive ORDER BY legacy_rule_id"
     )
     archived = {row["legacy_rule_id"]: row for row in archive}
+    migration_history_verified = []
     for rule_id, original in before_rules.items():
+        if rule_id == "AGM-001":
+            original = agm001_before_0125
+            history = await conn.fetch(
+                "SELECT version, change_reason, changed_by, actor_type, "
+                "migration_revision, previous_definition "
+                "FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                rule_id,
+                HEAD_REVISION,
+            )
+            if len(history) != 1:
+                raise RuntimeError(
+                    f"0125 did not create exactly one AGM-001 migration history row: {len(history)}"
+                )
+            history_row = history[0]
+            if (
+                history_row["actor_type"] != "MIGRATION"
+                or history_row["changed_by"] is not None
+                or history_row["migration_revision"] != HEAD_REVISION
+                or history_row["version"] != original.get("rule_version")
+                or not history_row["change_reason"]
+                or _canonical(history_row["previous_definition"]) != _canonical(original)
+            ):
+                raise RuntimeError(
+                    "0125 AGM-001 migration history does not preserve the exact before-image: "
+                    f"{dict(history_row)!r}"
+                )
+            migration_history_verified.append(rule_id)
+            continue
         row = archived.get(rule_id)
         if row is None:
             raise RuntimeError(f"0115 did not archive {rule_id}.")
@@ -164,7 +227,8 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
 
     legacy_rows = await conn.fetch(
         "SELECT rule_id, is_active, default_severity, score_impact, "
-        "is_black_override, verification_status FROM public.legal_rules "
+        "is_black_override, verification_status, statutory_basis, rule_version, "
+        "to_jsonb(r) AS payload FROM public.legal_rules r "
         "WHERE rule_id = ANY($1::text[]) ORDER BY rule_id",
         list(before_rules),
     )
@@ -181,6 +245,43 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
         raise RuntimeError(
             f"INC-001 85-ID catalogue activation parity failed: {inc001!r}"
         )
+    agm001 = by_rule.get("AGM-001")
+    if (
+        agm001 is None
+        or not agm001["is_active"]
+        or agm001["statutory_basis"] != "Section 81(1), Companies Act 1994 (Bangladesh)"
+    ):
+        raise RuntimeError(
+            f"AGM-001 canonical catalogue identity was not reconciled: {agm001!r}"
+        )
+    original_agm001 = agm001_before_0125
+    previous_version = str(original_agm001["rule_version"])
+    version_parts = previous_version.split(".")
+    if any(not part.isdigit() for part in version_parts):
+        raise RuntimeError(f"AGM-001 has a non-numeric prior version: {previous_version!r}")
+    version_parts[-1] = str(int(version_parts[-1]) + 1)
+    expected_agm001_version = ".".join(version_parts)
+    if agm001["rule_version"] != expected_agm001_version:
+        raise RuntimeError(
+            "AGM-001 version history was not advanced exactly once: "
+            f"expected={expected_agm001_version!r}, actual={agm001['rule_version']!r}"
+        )
+    current_agm001 = agm001["payload"]
+    if isinstance(current_agm001, str):
+        current_agm001 = json.loads(current_agm001)
+    if not isinstance(current_agm001, dict):
+        raise RuntimeError("AGM-001 current row payload is not a JSON object")
+    before_compare = dict(original_agm001)
+    current_compare = dict(current_agm001)
+    mutable_fields = ("statutory_basis", "rule_version", "last_modified_at", "updated_at")
+    for field in mutable_fields:
+        before_compare.pop(field, None)
+        current_compare.pop(field, None)
+    if current_compare != before_compare:
+        raise RuntimeError(
+            "0125 changed AGM-001 fields beyond citation/version/timestamps"
+        )
+
     inc002 = by_rule.get("INC-002")
     if inc002 is not None and (
         inc002["is_active"]
@@ -297,7 +398,10 @@ async def _postflight(conn: asyncpg.Connection, before_tables: dict[str, Any], b
     return {
         "historical_table_fingerprints_before": before_tables,
         "historical_table_fingerprints_after": after_tables,
-        "legacy_archive_verified": sorted(before_rules),
+        "legacy_archive_verified": sorted(
+            rule_id for rule_id in before_rules if rule_id != "AGM-001"
+        ),
+        "migration_version_history_verified": migration_history_verified,
         "legacy_rule_catalogue_states": [dict(row) for row in legacy_rows],
         "required_identity_evidence_tables": list(required_tables),
         "canonical_identity_seed_counts": dict(identity_counts),
@@ -348,7 +452,7 @@ async def _audit_view_parity() -> dict[str, Any]:
         )
         failed = [key for key in required_true if result.get(key) is not True]
         actual_revision = result.get("alembic_revision")
-        if actual_revision not in {HEAD_REVISION, PREVIOUS_REVISION} or failed:
+        if actual_revision not in {HEAD_REVISION, AGM_PRE_0125_REVISION, PREVIOUS_REVISION} or failed:
             raise RuntimeError(
                 f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
@@ -379,10 +483,10 @@ async def _audit_view_parity() -> dict[str, Any]:
             raise RuntimeError(
                 f"Restricted audit view canonical identity counts mismatch: {actual_identity_counts!r}"
             )
-        if actual_revision == HEAD_REVISION:
+        if actual_revision in {HEAD_REVISION, AGM_PRE_0125_REVISION}:
             if result.get("active_legal_rule_rows") != 85:
                 raise RuntimeError(
-                    "0124 requires exactly 85 active catalogue rows "
+                    "0125 requires exactly 85 active catalogue rows "
                     f"(observed {result.get('active_legal_rule_rows')!r})."
                 )
         if result.get("historical_finding_binding_rows") != 0 or result.get("historical_finding_evidence_rows") != 0:
@@ -432,10 +536,45 @@ async def main() -> None:
 
         env = os.environ.copy()
         env["ENVIRONMENT"] = "production"
-        subprocess.run(["python", "-m", "alembic", "upgrade", "head"], check=True, env=env)
+        subprocess.run(
+            ["python", "-m", "alembic", "upgrade", AGM_PRE_0125_REVISION],
+            check=True,
+            env=env,
+        )
+        pre_0125_current = subprocess.run(
+            ["python", "-m", "alembic", "current"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        ).stdout.strip()
+        if AGM_PRE_0125_REVISION not in pre_0125_current:
+            raise RuntimeError(
+                f"Alembic did not stop at {AGM_PRE_0125_REVISION}: {pre_0125_current!r}"
+            )
+
+        conn = await _connect()
+        agm001_before_0125 = await _rule_payload(conn, "AGM-001")
+        if agm001_before_0125.get("statutory_basis") != (
+            "Section 81, Companies Act 1994 (Bangladesh)"
+        ):
+            raise RuntimeError(
+                "AGM-001 does not carry the exact legacy citation at the 0125 boundary: "
+                f"{agm001_before_0125.get('statutory_basis')!r}"
+            )
+        await conn.close()
+
+        subprocess.run(
+            ["python", "-m", "alembic", "upgrade", HEAD_REVISION],
+            check=True,
+            env=env,
+        )
         current = subprocess.run(
-            ["python", "-m", "alembic", "current"], check=True, capture_output=True,
-            text=True, env=env,
+            ["python", "-m", "alembic", "current"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
         ).stdout.strip()
         if HEAD_REVISION not in current:
             raise RuntimeError(f"Alembic did not reach {HEAD_REVISION}: {current!r}")
@@ -444,7 +583,9 @@ async def main() -> None:
         final_revisions = await _alembic_revision(conn)
         if final_revisions != [HEAD_REVISION]:
             raise RuntimeError(f"Unexpected final Alembic revisions: {final_revisions!r}")
-        postflight = await _postflight(conn, before_tables, before_rules)
+        postflight = await _postflight(
+            conn, before_tables, before_rules, agm001_before_0125
+        )
         audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
@@ -455,6 +596,9 @@ async def main() -> None:
             "final_revision": final_revisions,
             "alembic_current": current,
             **postflight,
+            "agm001_pre_0125_before_image_sha256": hashlib.sha256(
+                _canonical(agm001_before_0125).encode("utf-8")
+            ).hexdigest(),
             "restricted_audit_view_parity": audit_view,
         }
         REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")

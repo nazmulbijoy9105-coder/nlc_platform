@@ -251,15 +251,10 @@ class TestComplianceService:
         import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService
         from sqlalchemy import select
-        from app.models.enums import (
-            RevenueTier as ModelRevenueTier,
-            RuleType,
-            SeverityLevel,
-        )
         from app.models.rules import LegalRule
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
-        canonical_agm_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
+        canonical_agm_001_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
@@ -315,7 +310,7 @@ class TestComplianceService:
             description="Controlled evidence review fixture",
             # Match the canonical AGM-001 identity so this test exercises
             # release redaction, not the separate identity-conflict gate.
-            statutory_basis=canonical_agm_basis,
+            statutory_basis=canonical_agm_001_basis,
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -331,38 +326,28 @@ class TestComplianceService:
         # Bind the fixture finding to a real active catalogue identity. Without
         # this row, the fail-closed identity gate correctly quarantines AGM-001
         # and no customer-facing ComplianceFlag row should be created.
+        # Use the row produced by the real Alembic migration chain. The test
+        # must not seed or rewrite catalogue data to make identity binding pass.
         catalogue_result = await db.execute(
             select(LegalRule).where(LegalRule.rule_id == "AGM-001")
         )
-        catalogue_rule = catalogue_result.scalar_one_or_none()
-        if catalogue_rule is None:
-            db.add(
-                LegalRule(
-                    rule_id="AGM-001",
-                    rule_name="First AGM Default",
-                    rule_type=RuleType.DEADLINE,
-                    statutory_basis=canonical_agm_basis,
-                    description=(
-                        "First AGM must be held within 18 calendar months of "
-                        "incorporation. Calculate with calendar-month arithmetic; "
-                        "do not use a fixed-day approximation."
-                    ),
-                    default_severity=SeverityLevel.NOT_EVALUATED,
-                    score_impact=0,
-                    revenue_tier=ModelRevenueTier.STRUCTURED_REGULARIZATION,
-                    is_black_override=False,
-                    rule_version="2.0",
-                    is_active=True,
-                )
-            )
-        else:
-            assert catalogue_rule.is_active is True
-            # The migrated AGM-001 row carries the older "Section 81" wording,
-            # which the identity gate treats as a conflict with the canonical
-            # registry. Catalogue/engine parity is tracked separately; align
-            # the row inside this rolled-back test transaction only.
-            catalogue_rule.statutory_basis = canonical_agm_basis
-        await db.flush()
+        catalogue_rule = catalogue_result.scalar_one()
+        assert catalogue_rule.is_active is True
+        assert catalogue_rule.statutory_basis == canonical_agm_001_basis
+
+        # Exercise the production catalogue reconciliation gate explicitly.
+        # A quarantined or conflicting identity must fail before release checks.
+        from app.services.compliance_service import _catalogue_identity_conflicts
+
+        identity_conflicts = _catalogue_identity_conflicts([catalogue_rule])
+        assert "AGM-001" not in identity_conflicts
+
+        canonical_catalogue_result = await db.execute(
+            select(LegalRule).where(LegalRule.rule_id == "AGM-001")
+        )
+        canonical_catalogue_rule = canonical_catalogue_result.scalar_one()
+        assert canonical_catalogue_rule.is_active is True
+        assert canonical_catalogue_rule.statutory_basis == canonical_agm_001_basis
 
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
@@ -379,6 +364,15 @@ class TestComplianceService:
         assert result["legal_evaluation_status"] == "NOT_EVALUATED_PRODUCT_SCORING_DISABLED"
         assert len(result["review_findings"]) == 1
         assert result["review_findings"][0]["rule_id"] == "AGM-001"
+
+        # Identity binding is independent of release redaction: the finding
+        # must bind to the migrated canonical catalogue identity.
+        assert (
+            result["review_findings"][0]["identity_binding_status"]
+            == "MATCHED_CATALOGUE_IDENTITY"
+        )
+
+        # Release-redaction assertions are kept separate from identity checks.
         assert result["review_findings"][0]["score_impact_applied"] == 0
         assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
@@ -410,8 +404,8 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        # Persisted snapshots redact risk severity while the legal score
-        # release gate is closed; the raw engine label is not released.
+        # The persisted customer-facing snapshot redacts raw engine severity
+        # while the legal score release gate is closed.
         assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
 
         persisted_flag_result = await db.execute(

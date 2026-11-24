@@ -140,6 +140,20 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
     for sql, params in db.calls:
         assert params is not None
         assert params["uid"] == str(user_id)
+
+    rjsc_filter_calls = [
+        (sql, params)
+        for sql, params in db.calls
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql
+    ]
+    assert len(rjsc_filter_calls) == 2, (
+        "both evidence-review aggregation queries must filter by RJSC rule IDs"
+    )
+    for _sql, params in rjsc_filter_calls:
+        assert params is not None
+        assert params.get("rjsc_rule_ids"), (
+            "rjsc_rule_ids must be a non-empty array"
+        )
         if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql:
             assert params["rjsc_rule_ids"]
 

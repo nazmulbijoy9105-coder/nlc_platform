@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0124_restore_85_rule_catalogue_parity"
+EXPECTED_HEAD_REVISION = "0125_reconcile_agm001_statutory_basis"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -1056,7 +1056,7 @@ async def main() -> int:
                 or rule_parity["active_rows"] != 85
             ):
                 raise RuntimeError(
-                    "0124 catalogue parity failed: "
+                    "0125 catalogue parity failed: "
                     f"{dict(rule_parity)!r}"
                 )
             report["85_rule_catalogue_parity"] = dict(rule_parity)
