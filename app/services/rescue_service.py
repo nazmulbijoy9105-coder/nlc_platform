@@ -387,8 +387,28 @@ class RescueService(BaseService[RescuePlan]):
         COMPLETE status triggers plan progress recalculation.
         Step 8 COMPLETE triggers full compliance re-evaluation.
         """
+        plan_lookup = await self.db.execute(
+            select(RescueStep.rescue_plan_id).where(RescueStep.id == step_id)
+        )
+        plan_id = plan_lookup.scalar_one_or_none()
+        if plan_id is None:
+            return None
+
+        # Progress is derived from every step of the plan. Serialize updates
+        # on the plan row so concurrent completions cannot each miss the
+        # other's change, overwrite its counts and skip the completion-
+        # triggered re-evaluation. Later reads must bypass any step state this
+        # session loaded before the lock was granted.
+        locked_plan = await self.db.execute(
+            select(RescuePlan.id).where(RescuePlan.id == plan_id).with_for_update()
+        )
+        if locked_plan.scalar_one_or_none() is None:
+            return None
+
         result = await self.db.execute(
-            select(RescueStep).where(RescueStep.id == step_id)
+            select(RescueStep)
+            .where(RescueStep.id == step_id)
+            .execution_options(populate_existing=True)
         )
         step = result.scalar_one_or_none()
         if not step:
@@ -419,7 +439,9 @@ class RescueService(BaseService[RescuePlan]):
     async def _update_plan_progress(self, plan_id: uuid.UUID) -> None:
         """Recalculate completed_steps, blocked_steps, completion_percentage."""
         result = await self.db.execute(
-            select(RescueStep).where(RescueStep.rescue_plan_id == plan_id)
+            select(RescueStep)
+            .where(RescueStep.rescue_plan_id == plan_id)
+            .execution_options(populate_existing=True)
         )
         all_steps = result.scalars().all()
         if not all_steps:
