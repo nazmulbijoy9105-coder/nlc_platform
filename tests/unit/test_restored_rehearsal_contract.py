@@ -197,7 +197,7 @@ def test_0125_agm001_migration_records_prior_definition_and_advances_version():
     assert "actor_type" in migration
     assert "'MIGRATION'" in migration
     assert "migration_revision" in migration
-    assert "sa.alter_column(" in migration
+    assert "op.alter_column(" in migration
     assert 'nullable=True' in migration
     assert "rule_version = :next_version" in migration
     assert "last_modified_at = now()" in migration
