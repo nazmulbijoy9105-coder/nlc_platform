@@ -102,7 +102,9 @@ class RuleVersionResponse(BaseModel):
     previous_score_impact: int | None
     new_score_impact: int | None
     change_reason: str
-    changed_by_id: str
+    changed_by_id: str | None
+    actor_type: str
+    migration_revision: str | None
     changed_at: str
 
 
@@ -451,7 +453,13 @@ async def get_rule_history(
                 previous_score_impact=previous_score_impact,
                 new_score_impact=new_score_impact,
                 change_reason=version_record.change_reason,
-                changed_by_id=str(version_record.changed_by),
+                changed_by_id=(
+                    str(version_record.changed_by)
+                    if version_record.changed_by is not None
+                    else None
+                ),
+                actor_type=getattr(version_record, "actor_type", "USER"),
+                migration_revision=getattr(version_record, "migration_revision", None),
                 changed_at=version_record.changed_at.isoformat(),
             )
         )
