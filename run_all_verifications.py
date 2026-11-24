@@ -89,7 +89,7 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
             }
         try:
             report = json.loads(output_file.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             return {
                 "script": resolved_script.name,
                 "ok": False,
@@ -101,6 +101,13 @@ def run_script(script_path: Path, repo: Path, output_dir: Path) -> dict:
             "ok": True,
             "report": report,
             "stdout_tail": proc.stdout[-1500:],
+        }
+    except UnicodeDecodeError as exc:
+        return {
+            "script": resolved_script.name,
+            "ok": False,
+            "stderr": f"Could not decode verification subprocess output as text: {exc}",
+            "stdout_tail": "",
         }
     except subprocess.TimeoutExpired:
         return {
