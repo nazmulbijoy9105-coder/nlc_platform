@@ -18,9 +18,11 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Integer,
+    Index,
     Numeric,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -44,6 +46,14 @@ class RescuePlan(FullMixin, Base):
     Completing all steps triggers full compliance re-evaluation.
     """
     __tablename__ = "rescue_plans"
+    __table_args__ = (
+        Index(
+            "uq_rescue_plans_one_active_per_company",
+            "company_id",
+            unique=True,
+            postgresql_where=text("is_active IS TRUE"),
+        ),
+    )
 
     # RES-010: link rescue plan to commercial engagement
     engagement_id: Mapped[uuid.UUID | None] = mapped_column(
