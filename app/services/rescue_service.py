@@ -164,6 +164,38 @@ class RescueService(BaseService[RescuePlan]):
         self,
         company_id: uuid.UUID,
         *,
+        engine_output,
+        assigned_staff_id: uuid.UUID | None = None,
+        created_by: uuid.UUID | None = None,
+        estimated_fee_bdt: float | None = None,
+        target_completion_date: date | None = None,
+        notes: str | None = None,
+        engagement_id: uuid.UUID | None = None,
+        score_withheld: bool = True,
+    ) -> RescuePlan:
+        """Atomically create a rescue plan, its steps and its staff tasks.
+
+        The savepoint also protects any previously active plan: if any
+        application-level or database error occurs during generation, all
+        writes made by this attempt are rolled back before the error escapes.
+        """
+        async with self.db.begin_nested():
+            return await self._generate_rescue_plan(
+                company_id,
+                engine_output=engine_output,
+                assigned_staff_id=assigned_staff_id,
+                created_by=created_by,
+                estimated_fee_bdt=estimated_fee_bdt,
+                target_completion_date=target_completion_date,
+                notes=notes,
+                engagement_id=engagement_id,
+                score_withheld=score_withheld,
+            )
+
+    async def _generate_rescue_plan(
+        self,
+        company_id: uuid.UUID,
+        *,
         engine_output,          # EngineOutput from C_rule_engine.py
         assigned_staff_id: uuid.UUID | None = None,
         created_by: uuid.UUID | None = None,
