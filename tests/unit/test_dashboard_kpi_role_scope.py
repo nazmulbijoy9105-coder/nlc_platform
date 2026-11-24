@@ -154,6 +154,8 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
         assert params.get("rjsc_rule_ids"), (
             "rjsc_rule_ids must be a non-empty array"
         )
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql:
+            assert params["rjsc_rule_ids"]
 
 
 
