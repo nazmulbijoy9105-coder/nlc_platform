@@ -77,6 +77,18 @@ def _main_harness(monkeypatch, tmp_path, starting_revision):
     async def audit_view_parity():
         return {}
 
+    async def active_plan_duplicate_preflight(conn):
+        return []
+
+    async def rescue_plan_schema_parity(conn):
+        return {
+            "initial_score_nullable": True,
+            "workflow_mode_non_null_default": "STATUTORY_ACTION_AUTHORIZED",
+            "active_plan_unique_index": {"is_unique": True, "predicate": "is_active IS TRUE"},
+            "active_plan_rows_after_migration": 0,
+            "duplicate_active_company_count": 0,
+        }
+
     def run(args, **kwargs):
         nonlocal current_revision
         commands.append(args)
@@ -93,6 +105,12 @@ def _main_harness(monkeypatch, tmp_path, starting_revision):
     monkeypatch.setattr(rehearsal, "_rule_payload", rule_payload)
     monkeypatch.setattr(rehearsal, "_postflight", postflight)
     monkeypatch.setattr(rehearsal, "_audit_view_parity", audit_view_parity)
+    monkeypatch.setattr(
+        rehearsal, "_active_plan_duplicate_preflight", active_plan_duplicate_preflight
+    )
+    monkeypatch.setattr(
+        rehearsal, "_rescue_plan_schema_parity", rescue_plan_schema_parity
+    )
     monkeypatch.setattr(rehearsal.subprocess, "run", run)
     monkeypatch.setattr(rehearsal, "REPORT", report)
     return commands, archive_reads, report
