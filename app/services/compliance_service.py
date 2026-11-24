@@ -509,9 +509,16 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         from app.services.company_service import CompanyService
 
-        # ── Step 1: Build profile ──────────────────────────────────
+        # ── Step 1: Lock the company, then build the profile ───────
+        # Serialize before reading any input: an evaluation or profile change
+        # committed while this one waits is then visible to it, so stale output
+        # cannot replace newer score or rescue state. The refresh overwrites
+        # company state this session loaded before it waited.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         company_svc = CompanyService(self.db)
-        profile_data = await company_svc.build_company_profile(company_id)
+        profile_data = await company_svc.build_company_profile(company_id, refresh=True)
         if not profile_data:
             raise ValueError(f"Company {company_id} not found or inactive.")
 
