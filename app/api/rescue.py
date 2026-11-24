@@ -35,7 +35,6 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.enums import RiskBand
 from app.models.user import User
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
@@ -63,16 +62,8 @@ router = APIRouter()
 
 
 def _require_legal_release() -> None:
-    """Prevent rescue actions while product scoring is disabled."""
-    from app.rule_engine.engine import legal_score_is_released
-
-    if not legal_score_is_released():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Rescue plans are withheld because product scoring is disabled."
-            ),
-        )
+    """Compatibility shim: statutory-action authorization is not score-gated."""
+    return
 
 logger = structlog.get_logger(__name__)
 
@@ -197,13 +188,6 @@ async def create_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from app.rule_engine.engine import legal_score_is_released
-    if not legal_score_is_released():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Automated rescue generation is withheld because product scoring is disabled.",
-        )
-
     company_svc = CompanyService(db)
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
@@ -211,16 +195,6 @@ async def create_rescue_plan(
     # Verify company exists, assigned legal-staff scope and company-specific rescue entitlement.
     await _assert_rescue_entitlement(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
-
-    # Enforce: rescue plans only for RED or BLACK companies
-    if company.current_risk_band not in (RiskBand.RED, RiskBand.BLACK, "RED", "BLACK"):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Rescue plans may only be created for companies in RED or BLACK band. "
-                f"'{company.company_name}' is currently in {company.current_risk_band} band."
-            ),
-        )
 
     # Check for existing active plan
     existing = await rescue_svc.get_active_plan(body.company_id)
@@ -463,7 +437,7 @@ async def update_rescue_step(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    _require_legal_release()
+    # Score publication does not gate this explicitly authorized workflow.
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
