@@ -1,4 +1,4 @@
-"""Rescue workflow follows product scoring release and rule eligibility."""
+"""Rescue authorization is independent of score publication and counsel allowlisting."""
 
 import pytest
 from fastapi import HTTPException
@@ -46,7 +46,6 @@ def test_rescue_service_rejects_unknown_or_unapproved_rule_links(monkeypatch):
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     unknown_flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -81,7 +80,7 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
         eval_state="VIOLATION",
         score_impact=5,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="RED or BLACK"):
         validate_rescue_engine_output(SimpleNamespace(
             company_id="company-1",
             score_breakdown=SimpleNamespace(risk_band="YELLOW", final_score=80),
@@ -178,7 +177,6 @@ def test_rescue_service_rejects_finding_from_unreleased_rule_id(monkeypatch):
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-002"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-002"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -210,7 +208,6 @@ def test_rescue_service_rejects_out_of_scope_rule_even_if_product_allowlisted(mo
         engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", rule_id})
     )
     monkeypatch.setattr(
-        engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001", rule_id})
     )
     tax_flag = SimpleNamespace(
         rule_id=rule_id,
