@@ -204,15 +204,17 @@ class RescueService(BaseService[RescuePlan]):
         revenue_tier = RevenueTier.CORPORATE_RESCUE
         from app.rule_engine.engine import legal_score_is_released
         score_breakdown = getattr(engine_output, "score_breakdown", None)
-        score = (
-            getattr(score_breakdown, "final_score", None)
-            if legal_score_is_released() and not score_withheld else None
-        )
+        raw_score = getattr(score_breakdown, "final_score", None)
         risk_value = getattr(score_breakdown, "risk_band", None)
-        risk_band = (
-            getattr(risk_value, "value", risk_value)
-            if score is not None else "NOT_EVALUATED"
+        raw_risk_band = getattr(risk_value, "value", risk_value)
+        score_is_publishable = bool(
+            legal_score_is_released()
+            and not score_withheld
+            and raw_score is not None
+            and raw_risk_band != "NOT_EVALUATED"
         )
+        score = raw_score if score_is_publishable else None
+        risk_band = raw_risk_band if score_is_publishable else "NOT_EVALUATED"
 
         plan = await self.create(
             company_id=company_id,
