@@ -50,9 +50,6 @@ def _as_date(value: Any) -> date | None:
     return None
 
 
-def canonical_definition_hash(definition: Mapping[str, Any]) -> str:
-    """SHA-256 of canonical UTF-8 JSON; keys/order/spacing cannot alter digest."""
-    payload = json.dumps(
 def canonical_definition_json(definition: Mapping[str, Any]) -> str:
     """Return the canonical JSON text used as the cross-layer digest contract.
 
@@ -67,7 +64,6 @@ def canonical_definition_json(definition: Mapping[str, Any]) -> str:
         separators=(",", ":"),
         ensure_ascii=False,
         allow_nan=False,
-    ).encode("utf-8")
     )
 
 
@@ -124,7 +120,6 @@ def resolve_rule_identity(
     for alias in matching:
         start = _as_date(alias.get("valid_from"))
         end = _as_date(alias.get("valid_to"))
-        if alias.get("valid_from") is not None and start is None:
         # The database insert guard requires a concrete alias start date.
         # Match that contract here; an open-ended start is not a defensible
         # temporal mapping and must never resolve as if valid since forever.
