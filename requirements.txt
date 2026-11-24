@@ -118,7 +118,10 @@ pandas==2.2.2
 passlib==1.7.4
 pathspec==1.1.1
 pdf2image==1.17.0
-pillow==13.0.0
+# Production Docker target: reviewed CPython 3.11 Linux x86_64 wheel with bundled Brotli 1.2.1.
+pillow @ https://github.com/nazmulbijoy9105-coder/nlc_platform/releases/download/nlc-pillow-13.0.0-brotli1.2.1-cp311/pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=f46b91793eed1471c239fdc2dbfd0f2fc87c3ff8e3fcc33bd78a6fc87b47621c ; sys_platform == "linux" and python_version == "3.11" and platform_machine == "x86_64"
+# Non-production developer platforms retain upstream Pillow; do not deploy those targets.
+pillow==13.0.0 ; sys_platform != "linux" or python_version != "3.11" or platform_machine != "x86_64"
 pip-api==0.0.34
 pip-requirements-parser==32.0.1
 pip_audit==2.7.1
