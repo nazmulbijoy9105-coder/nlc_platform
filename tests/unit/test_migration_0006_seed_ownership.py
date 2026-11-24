@@ -33,3 +33,24 @@ def test_downgrade_deletes_only_migration_owned_rules_and_restores_enum_safely()
     assert "ALTER COLUMN rule_type TYPE rule_type" in downgrade
     assert "            $$;" in downgrade
     assert "DELETE FROM legal_rules WHERE rule_id IN (" not in downgrade
+
+
+
+def test_downgrade_preserves_rule_type_values_added_by_0004():
+    source = MIGRATION.read_text(encoding="utf-8")
+    downgrade = source.split("def downgrade():", maxsplit=1)[1]
+    preserved_values = (
+        "DEADLINE",
+        "DEPENDENCY",
+        "THRESHOLD",
+        "CONDITIONAL",
+    )
+
+    for value in preserved_values:
+        assert f"'{value}'" in downgrade
+
+    guard = downgrade.split("CREATE TYPE rule_type AS ENUM", maxsplit=1)[0]
+    recreated_enum = downgrade.split("CREATE TYPE rule_type AS ENUM", maxsplit=1)[1]
+    for value in preserved_values:
+        assert f"'{value}'" in guard
+        assert f"'{value}'" in recreated_enum
