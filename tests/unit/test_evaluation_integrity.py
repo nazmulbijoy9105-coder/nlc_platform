@@ -276,14 +276,28 @@ def test_integrity_rejects_conflict_rows_missing_explicit_conflict_identity_fiel
     assert "RJSC_RULE_OUTCOME_SCOPE_COVERAGE_MISMATCH" in problems
 
 
-def test_not_released_snapshot_status_must_match_run_status():
+@pytest.mark.parametrize(
+    "run_status",
+    ["COMPLETED", "PENDING"],
+)
+def test_not_released_snapshot_status_must_match_run_status(run_status):
     run = _valid_not_released_run()
-    run.evaluation_status = "COMPLETED"
+    run.evaluation_status = run_status
 
     problems = evaluation_run_integrity_problems(run)
 
     assert "EVALUATION_STATUS_SNAPSHOT_MISMATCH" in problems
     assert "SCORE_HASH_MISMATCH" in problems
+
+
+def test_not_released_run_rejects_snapshot_with_completed_status():
+    run = _valid_not_released_run()
+    run.score_breakdown_snapshot["status"] = "COMPLETED"
+
+    problems = evaluation_run_integrity_problems(run)
+
+    assert "EVALUATION_STATUS_SNAPSHOT_MISMATCH" in problems
+    assert "UNRELEASED_SCORE_BREAKDOWN_INVALID" in problems
 
 
 def test_legacy_not_released_null_snapshot_is_accepted_during_rollout():
