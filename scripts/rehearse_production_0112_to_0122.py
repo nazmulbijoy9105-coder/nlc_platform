@@ -190,6 +190,72 @@ async def _alembic_revision(conn: asyncpg.Connection) -> list[str]:
     return [row["version_num"] for row in rows]
 
 
+async def _rescue_plan_schema_parity(conn: asyncpg.Connection) -> dict[str, Any]:
+    columns = await conn.fetch(
+        "SELECT column_name, is_nullable, column_default "
+        "FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='rescue_plans' "
+        "AND column_name IN ('initial_score', 'workflow_mode')"
+    )
+    by_name = {row["column_name"]: dict(row) for row in columns}
+    if set(by_name) != {"initial_score", "workflow_mode"}:
+        raise RuntimeError(f"0126 rescue-plan columns missing: {sorted(by_name)!r}")
+    if by_name["initial_score"]["is_nullable"] != "YES":
+        raise RuntimeError("0126 did not make rescue_plans.initial_score nullable.")
+    workflow_mode = by_name["workflow_mode"]
+    if (
+        workflow_mode["is_nullable"] != "NO"
+        or "STATUTORY_ACTION_AUTHORIZED" not in str(workflow_mode["column_default"])
+    ):
+        raise RuntimeError(f"0126 workflow_mode default/nullability mismatch: {workflow_mode!r}")
+
+    index = await conn.fetchrow(
+        "SELECT i.indisunique AS is_unique, "
+        "pg_get_expr(i.indpred, i.indrelid) AS predicate "
+        "FROM pg_index i "
+        "JOIN pg_class c ON c.oid=i.indexrelid "
+        "JOIN pg_namespace n ON n.oid=c.relnamespace "
+        "WHERE n.nspname='public' "
+        "AND c.relname='uq_rescue_plans_one_active_per_company'"
+    )
+    if (
+        index is None
+        or not index["is_unique"]
+        or "is_active IS TRUE" not in str(index["predicate"])
+    ):
+        raise RuntimeError(f"0127 partial unique active-plan index mismatch: {index!r}")
+
+    duplicates = await conn.fetch(
+        "SELECT company_id, count(*) AS active_count "
+        "FROM public.rescue_plans WHERE is_active IS TRUE "
+        "GROUP BY company_id HAVING count(*) > 1"
+    )
+    if duplicates:
+        raise RuntimeError(
+            "0127 left duplicate active rescue plans: "
+            f"{[dict(row) for row in duplicates]!r}"
+        )
+    active_count = await conn.fetchval(
+        "SELECT count(*) FROM public.rescue_plans WHERE is_active IS TRUE"
+    )
+    return {
+        "initial_score_nullable": True,
+        "workflow_mode_non_null_default": workflow_mode["column_default"],
+        "active_plan_unique_index": dict(index),
+        "active_plan_rows_after_migration": active_count,
+        "duplicate_active_company_count": 0,
+    }
+
+
+async def _active_plan_duplicate_preflight(conn: asyncpg.Connection) -> list[dict[str, Any]]:
+    rows = await conn.fetch(
+        "SELECT company_id, count(*) AS active_count "
+        "FROM public.rescue_plans WHERE is_active IS TRUE "
+        "GROUP BY company_id HAVING count(*) > 1 ORDER BY company_id"
+    )
+    return [dict(row) for row in rows]
+
+
 async def _postflight(
     conn: asyncpg.Connection,
     before_tables: dict[str, Any],
@@ -563,6 +629,12 @@ async def main() -> None:
             )
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(conn, from_archive=resume_from_0124)
+        active_plan_duplicates = await _active_plan_duplicate_preflight(conn)
+        if active_plan_duplicates:
+            raise RuntimeError(
+                "Refusing 0127 rehearsal: production-derived rescue data already "
+                f"contains duplicate active plans: {active_plan_duplicates!r}"
+            )
         await conn.close()
 
         env = os.environ.copy()
@@ -618,6 +690,7 @@ async def main() -> None:
         postflight = await _postflight(
             conn, before_tables, before_rules, agm001_before_0125
         )
+        rescue_plan_schema = await _rescue_plan_schema_parity(conn)
         audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
@@ -636,6 +709,8 @@ async def main() -> None:
                 else {}
             ),
             **postflight,
+            "rescue_plan_schema_parity": rescue_plan_schema,
+            "active_plan_duplicate_preflight": active_plan_duplicates,
             "agm001_pre_0125_before_image_sha256": hashlib.sha256(
                 _canonical(agm001_before_0125).encode("utf-8")
             ).hexdigest(),
