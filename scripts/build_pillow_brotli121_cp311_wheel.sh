@@ -4,6 +4,7 @@
 set -euo pipefail
 
 readonly PILLOW_COMMIT="293218ad059d994baf1777d882911bed6a49704a"
+readonly TEST_IMAGES_COMMIT="073ab5ff1895abf8cf5c8d797c1066ed394ce207"
 readonly PILLOW_VERSION="13.0.0"
 readonly PILLOW_SDIST_SHA256="cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510"
 readonly PILLOW_SDIST_URL="https://files.pythonhosted.org/packages/ce/a4/9cc30690a394a8305e8be4c9036aa16d0dfddadd09079860b582f562496d/pillow-13.0.0.tar.gz"
@@ -36,8 +37,10 @@ git -C "${RECIPE}" submodule update --init --recursive --depth 1
 cp -a "${RECIPE}/.github" "${SOURCE}/.github"
 cp -a "${RECIPE}/.ci" "${SOURCE}/.ci"
 cp -a "${RECIPE}/wheels" "${SOURCE}/wheels"
-test -d "${RECIPE}/Tests/test-images"
-cp -a "${RECIPE}/Tests/test-images" "${SOURCE}/test-images-main"
+git clone --quiet --no-checkout --filter=blob:none https://github.com/python-pillow/test-images.git "${WORK}/test-images"
+git -C "${WORK}/test-images" fetch --quiet --depth 1 origin "${TEST_IMAGES_COMMIT}"
+git -C "${WORK}/test-images" checkout --quiet "${TEST_IMAGES_COMMIT}"
+cp -a "${WORK}/test-images" "${SOURCE}/test-images-main"
 
 # The only package build input changed from the released source is Brotli's
 # dependency version in Pillow's wheel manifest; refuse any other baseline.
@@ -141,6 +144,7 @@ PY
     echo "Pillow source: verified PyPI sdist"
     echo "Pillow sdist SHA-256: ${PILLOW_SDIST_SHA256}"
     echo "Pillow wheel-recipe source commit: ${PILLOW_COMMIT}"
+    echo "Pillow test-images commit: ${TEST_IMAGES_COMMIT}"
     echo "Only package build input changed: Brotli ${BROTLI_OLD} -> ${BROTLI_FIXED}"
     echo "Build tag: ${BUILD_TAG}"
     echo "Target: CPython 3.11, Linux x86_64, manylinux"
