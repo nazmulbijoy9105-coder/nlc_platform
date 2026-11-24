@@ -370,14 +370,6 @@ class TestComplianceService:
         assert canonical_catalogue_rule.is_active is True
         assert canonical_catalogue_rule.statutory_basis == canonical_agm_001_basis
 
-            assert catalogue_rule.is_active is True
-            # The migrated AGM-001 row carries the older "Section 81" wording,
-            # which the identity gate treats as a conflict with the canonical
-            # registry. Catalogue/engine parity is tracked separately; align
-            # the row inside this rolled-back test transaction only.
-            catalogue_rule.statutory_basis = canonical_agm_basis
-        await db.flush()
-
         svc = ComplianceService(db)
         result = await svc.evaluate_company(
             company_id=db_company.id,
@@ -427,9 +419,6 @@ class TestComplianceService:
         # Immutable evaluation evidence preserves the engine raw severity.
         # Release redaction applies to customer-facing ComplianceFlag/API data.
         assert persisted_run.flags_snapshot[0]["severity"] == "RED"
-        # Persisted snapshots redact risk severity while the legal score
-        # release gate is closed; the raw engine label is not released.
-        assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
 
         persisted_flag_result = await db.execute(
             select(ComplianceFlag).where(
