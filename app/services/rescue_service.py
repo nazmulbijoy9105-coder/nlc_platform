@@ -29,10 +29,16 @@ from app.models.enums import (
     TaskPriority,
     TaskStatus,
 )
+from app.models.company import Company
 from app.models.rescue import RescuePlan, RescueStep
 from app.services.base import BaseService
 
 logger = logging.getLogger("nlc.rescue")
+
+
+class ActiveRescuePlanExistsError(ValueError):
+    """Raised when a caller attempts to create a second active company plan."""
+
 
 
 def validate_rescue_engine_output(
@@ -172,13 +178,35 @@ class RescueService(BaseService[RescuePlan]):
         notes: str | None = None,
         engagement_id: uuid.UUID | None = None,
         score_withheld: bool = True,
+        replace_existing: bool = False,
     ) -> RescuePlan:
-        """Atomically create a rescue plan, its steps and its staff tasks.
+        """Serialize and atomically create a company's single active rescue plan.
 
         The savepoint also protects any previously active plan: if any
         application-level or database error occurs during generation, all
         writes made by this attempt are rolled back before the error escapes.
         """
+        # Every creation path locks the parent company row before checking
+        # active plans. PostgreSQL serializes competing requests on this row;
+        # the partial unique index remains the database-level backstop.
+        company_lock = await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
+        if company_lock.scalar_one_or_none() is None:
+            raise ValueError("Cannot create a rescue plan for an unknown company.")
+
+        active_plan = await self.db.execute(
+            select(RescuePlan.id).where(
+                RescuePlan.company_id == company_id,
+                RescuePlan.is_active.is_(True),
+            ).limit(1)
+        )
+        active_plan_id = active_plan.scalar_one_or_none()
+        if active_plan_id is not None and not replace_existing:
+            raise ActiveRescuePlanExistsError(
+                f"An active rescue plan (ID: {active_plan_id}) already exists for this company."
+            )
+
         async with self.db.begin_nested():
             return await self._generate_rescue_plan(
                 company_id,
