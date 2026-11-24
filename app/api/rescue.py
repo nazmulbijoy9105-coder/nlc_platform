@@ -40,7 +40,7 @@ from app.models.user import User
 from app.models.company import Company
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
-from app.services.rescue_service import RescueService
+from app.services.rescue_service import ActiveRescuePlanExistsError, RescueService
 async def _assert_rescue_entitlement(
     company_id: uuid.UUID, current_user: User, db: AsyncSession
 ) -> None:
@@ -321,7 +321,7 @@ async def create_rescue_plan(
             target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
             engagement_id=None,  # RES-010: explicit linkage, populated by service
         )
-    except __import__("app.services.rescue_service", fromlist=["ActiveRescuePlanExistsError"]).ActiveRescuePlanExistsError as exc:
+    except ActiveRescuePlanExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
