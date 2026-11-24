@@ -4481,13 +4481,13 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
+        """R-014: Generate action candidates from confirmed, applicable findings.
 
-        Candidate steps are not customer actions. The disposition gate keeps
-        them REVIEW_REQUIRED until product scoring is released; counsel-review status remains separate.
-        TAX-004 is aggregated into one step because its missed-quarter details
-        describe one remediation item. Missing quarter evidence does not itself
-        establish a missed payment.
+        Statutory workflow authorization is independent of product score release
+        and the separate counsel-verification allowlist. Only confirmed RED/BLACK
+        violations generate steps; UNKNOWN and unresolved evidence states do not.
+        TAX-004 is aggregated because missed-quarter details describe one item.
+        Missing quarter evidence does not itself establish a missed payment.
         """
         # A released company risk band below RED cannot start a rescue plan.
         # While release is paused, deterministic candidates may still be shown
