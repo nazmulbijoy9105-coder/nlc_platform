@@ -150,6 +150,11 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
     for sql, params in evidence_queries:
         assert "cf.rule_id = ANY(CAST(:rjsc_rule_ids AS text[]))" in sql
         assert params["rjsc_rule_ids"] == sorted(RJSC_IN_SCOPE_RULE_IDS)
+    for sql, params in db.calls:
+        assert params is not None
+        assert params["uid"] == str(user_id)
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql:
+            assert params["rjsc_rule_ids"]
 
 
 

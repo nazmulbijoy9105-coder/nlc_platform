@@ -41,7 +41,11 @@ from app.compliance.fact_provenance import (
 from app.models.rules import LegalRule
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.compliance.outcome_status import derive_compliance_outcome
-from app.compliance.evaluation_integrity import calculate_evaluation_score_hash
+from app.compliance.evaluation_integrity import (
+    UNRELEASED_REASON_GATE_CLOSED,
+    UNRELEASED_REASON_INSUFFICIENT_EVIDENCE,
+    calculate_evaluation_score_hash,
+)
 from app.models.enums import (
     ExposureBand,
     FlagStatus,
@@ -1112,7 +1116,11 @@ class ComplianceService(BaseService[ComplianceFlag]):
         }
         flags_snapshot = []
         for flag, applied in zip(output.flags, applied_impacts):
-            severity_value = getattr(flag.severity, "value", flag.severity)
+            severity_value = (
+                "NOT_EVALUATED"
+                if score_for_current is None
+                else getattr(flag.severity, "value", flag.severity)
+            )
             rule_category = next(
                 (
                     name
@@ -1146,7 +1154,21 @@ class ComplianceService(BaseService[ComplianceFlag]):
 
         flags_snapshot = jsonable_encoder(flags_snapshot)
         sb = output.score_breakdown
-        score_breakdown_snapshot = None if score_for_current is None else {
+        score_breakdown_snapshot = (
+            {
+                "snapshot_schema_version": 1,
+                "status": "NOT_RELEASED",
+                "reason": (
+                    UNRELEASED_REASON_GATE_CLOSED
+                    if not legal_score_is_released()
+                    else UNRELEASED_REASON_INSUFFICIENT_EVIDENCE
+                ),
+                "score": None,
+                "risk_band": "NOT_EVALUATED",
+                "scoring_data": "WITHHELD",
+            }
+            if score_for_current is None
+            else {
             "engine_version": engine_version,
             "rjsc_scope_version": RJSC_SCOPE_VERSION,
             "scoring_spec_version": SCORING_SPEC_VERSION,
@@ -1228,7 +1250,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "yellow": sb.yellow_flag_count,
                 "green": sb.green_flag_count,
             },
-        }
+        })
         # Persist the active catalogue and each rule's emitted engine finding.
         # Rules with no emitted finding remain NOT_EVALUATED, never COMPLIANT.
         from app.compliance.rule_outcome_ledger import (
@@ -1271,6 +1293,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
             score_breakdown_snapshot=score_breakdown_snapshot,
             rule_outcomes_hash=rule_outcomes_hash,
             rule_outcomes_snapshot=rule_outcomes_snapshot,
+            evaluation_status=(
+                "COMPLETED" if score_for_current is not None else "NOT_RELEASED"
+            ),
         )
         black_flags = (
             output.score_breakdown.black_flag_count
