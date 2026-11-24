@@ -1011,7 +1011,7 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
         severity=Severity.RED,
         score_impact=0,
         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-        description="Confirmed fact fixture; review required",
+        description="Confirmed fact fixture; action authorized",
         statutory_basis="Controlled test fixture",
         state=RuleState.NON_COMPLIANT,
         eval_state="VIOLATION",
@@ -1028,8 +1028,10 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
     dispositions = NLCRuleEngine._build_rescue_dispositions(
         [finding], score, steps
     )
-    assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
-    assert dispositions[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    # Score-independent authorization: a confirmed violation with a
+    # generated step is actionable while score publication is paused.
+    assert dispositions[0]["disposition"] == "ACTION_REQUIRED"
+    assert dispositions[0]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 
@@ -1144,7 +1146,7 @@ def test_rescue_output_validation_is_score_independent_and_requires_unique_evide
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     # Closing product-score publication does not suppress deterministic
-    # candidate validation; the engine disposition remains review-only.
+    # candidate validation; the engine disposition authorizes confirmed steps.
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
@@ -1153,8 +1155,8 @@ def test_rescue_output_validation_is_score_independent_and_requires_unique_evide
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     # Candidate validation is deliberately score-release independent. The
-    # engine's rescue disposition remains REVIEW_REQUIRED until counsel
-    # verification is present; validating the candidate must not activate it.
+    # engine's rescue disposition is authorized independently of counsel
+    # verification; validating the candidate activates the statutory action.
     assert validate_rescue_engine_output(
         output, expected_company_id="tenant-001"
     ) == frozenset({"AGM-001"})
@@ -1232,7 +1234,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     assert results[6]["status"] == "APPLIED"
 
 
-def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is_paused(monkeypatch):
+def test_rescue_dispositions_keep_confirmed_candidates_authorized_when_product_release_is_paused(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import (
         ComplianceFlag,
@@ -1267,9 +1269,9 @@ def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is
     dispositions = NLCRuleEngine._build_rescue_dispositions(rows, score, steps)
 
     assert [item["disposition"] for item in dispositions] == [
-        "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
+        "NO_ACTION", "WAITING_EVIDENCE", "ACTION_REQUIRED", "BLOCKED"
     ]
-    assert dispositions[2]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    assert dispositions[2]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 def test_rescue_target_date_prefers_explicit_then_latest_step_date():

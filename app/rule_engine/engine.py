@@ -4451,23 +4451,16 @@ class NLCRuleEngine:
                 and score_band not in (Severity.RED.value, Severity.BLACK.value)
             ):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None and not legal_score_is_released():
-                # Candidate steps remain available for professional review while
-                # product score publication is paused. A candidate is not an
-                # authorization to initiate statutory action.
-                disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
-            elif step is not None and flag.rule_id not in VERIFIED_RULE_IDS:
-                # Product-score eligibility and independent counsel approval are
-                # separate gates. Keep the generated candidate visible, but do
-                # not promote it to an actionable statutory disposition until
-                # the rule has the required counsel verification.
-                disposition, reason = "REVIEW_REQUIRED", "COUNSEL_APPROVAL_REQUIRED"
+            elif step is not None:
+                # Statutory action is authorized from a confirmed violation
+                # with a generated step, independently of product score
+                # publication and of counsel verification. A released score
+                # below the rescue threshold was already rejected above.
+                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif step is None and flag.rule_id != "TAX-004":
                 disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None:
-                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id == "TAX-004":
@@ -4493,16 +4486,18 @@ class NLCRuleEngine:
 
         Generation proceeds while product score release is paused and does not
         require counsel verification. Whether a candidate is actionable is
-        decided separately by the disposition gate, which keeps it
-        REVIEW_REQUIRED while release is paused or the rule is unverified.
-        Only confirmed RED/BLACK violations generate steps; UNKNOWN and
+        decided separately by the disposition gate, which authorizes a
+        confirmed violation with a generated step as ACTION_REQUIRED
+        independently of score release and counsel verification. Only
+        confirmed RED/BLACK violations generate steps; UNKNOWN and
         unresolved evidence states do not.
         TAX-004 is aggregated because missed-quarter details describe one item.
         Missing quarter evidence does not itself establish a missed payment.
         """
         # A released company risk band below RED cannot start a rescue plan.
-        # While release is paused, deterministic candidates may still be shown
-        # for review; the disposition gate prevents customer action.
+        # While release is paused, deterministic candidates are still
+        # generated from confirmed violations; the disposition gate
+        # authorizes them independently of the withheld score.
         score_band = getattr(score.risk_band, "value", score.risk_band)
         if legal_score_is_released() and score_band not in (
             Severity.RED.value, Severity.BLACK.value
