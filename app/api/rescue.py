@@ -22,6 +22,7 @@ Business rules:
 import uuid
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import structlog
@@ -237,7 +238,6 @@ async def create_rescue_plan(
         _reconcile_engine_output_identity_conflicts,
     )
     from app.models.rules import LegalRule
-    from sqlalchemy import select
 
     profile_data = await company_svc.build_company_profile(body.company_id)
     if not profile_data:
@@ -371,7 +371,6 @@ async def list_rescue_plans(
     """
     # Historical rescue plans remain readable while statutory score publication
     # is paused. Creation and mutation endpoints retain the release gate.
-    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
     from app.models.rescue import RescuePlan
@@ -439,7 +438,6 @@ async def get_rescue_plan(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     # Read-only retrieval of historical plans is safe while score release is paused.
-    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
     from app.models.rescue import RescuePlan
