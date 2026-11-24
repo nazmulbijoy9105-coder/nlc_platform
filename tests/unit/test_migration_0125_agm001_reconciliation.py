@@ -1,5 +1,5 @@
+import re
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,8 +37,9 @@ def test_agm001_release_redaction_fixture_uses_migrated_catalogue_identity():
         ROOT / "tests" / "integration" / "test_services.py"
     ).read_text(encoding="utf-8")
     start = source.index("async def test_evaluate_company_full_pipeline")
-    next_test = source.find("\nasync def test_", start + 1)
-    fixture = source[start:next_test if next_test != -1 else None]
+    next_boundary = re.compile(r"\n {0,4}(?:@|#|async def |def |class )")
+    boundary = next_boundary.search(source, start + 1)
+    fixture = source[start : boundary.start() if boundary else None]
 
     assert "catalogue_rule = catalogue_result.scalar_one()" in fixture
     assert (
