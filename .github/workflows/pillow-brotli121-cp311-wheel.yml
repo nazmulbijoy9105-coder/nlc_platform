@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pillow-brotli121-cp311-${{ github.ref }}
+  group: pillow-brotli121-cp311-wheel0480-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
       - name: Upload wheel, checksum, and build provenance
         uses: actions/upload-artifact@v4
         with:
-          name: pillow-13.0.0-brotli1.2.1-cp311-manylinux-x86_64
+          name: pillow-13.0.0-brotli1.2.1-cp311-wheel0480-manylinux-x86_64
           path: dist/pillow-brotli121/*
           if-no-files-found: error
           retention-days: 30
@@ -61,7 +61,7 @@ jobs:
       - name: Download tested wheel and provenance
         uses: actions/download-artifact@v4
         with:
-          name: pillow-13.0.0-brotli1.2.1-cp311-manylinux-x86_64
+          name: pillow-13.0.0-brotli1.2.1-cp311-wheel0480-manylinux-x86_64
           path: dist/pillow-brotli121
 
       - name: Publish immutable prerelease asset
@@ -69,8 +69,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="nlc-pillow-13.0.0-brotli1.2.1-cp311"
-          branch_head="$(gh api "repos/$GITHUB_REPOSITORY/branches/security/remediate-12-findings" --jq '.commit.sha')"
+          tag="nlc-pillow-13.0.0-brotli1.2.1-cp311-wheel0480"
+          branch_head="$(gh api "repos/$GITHUB_REPOSITORY/branches/security%2Fremediate-12-findings" --jq '.commit.sha')"
           if [[ "$branch_head" != "$GITHUB_SHA" ]]; then
             echo "Build belongs to stale commit $GITHUB_SHA; current branch head is $branch_head. Refusing publication."
             exit 1
@@ -89,7 +89,7 @@ jobs:
             dist/pillow-brotli121/BUILD_PROVENANCE.txt \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Pillow 13.0.0 with Brotli 1.2.1 (CPython 3.11)" \
+            --title "Pillow 13.0.0 with Brotli 1.2.1 (CPython 3.11, wheel 0.48.0)" \
             --prerelease \
-            --notes "Reviewed NLC build of the upstream Pillow 13.0.0 source commit. Only the Pillow wheel dependency manifest changes Brotli from 1.2.0 to 1.2.1. Built with Pillow's cibuildwheel recipe; the wheel test command runs Pillow's own suite. The attached provenance and SHA256SUMS identify the exact artifact. This is a temporary compatibility wheel, not an upstream Pillow release."
+            --notes "Reviewed NLC build of the upstream Pillow 13.0.0 source commit. Only the Pillow wheel dependency manifest changes Brotli from 1.2.0 to 1.2.1. Built with Pillow's cibuildwheel recipe; the wheel test command runs Pillow's own suite. The attached provenance and SHA256SUMS identify the exact artifact. This is a temporary compatibility wheel, not an upstream Pillow release. The wheel tag rewriter is pinned to wheel 0.48.0 and recorded in BUILD_PROVENANCE.txt."
           gh release view "$tag" --repo "$GITHUB_REPOSITORY"
