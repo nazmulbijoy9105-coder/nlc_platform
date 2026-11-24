@@ -918,10 +918,20 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Check entitlement before even inspecting or replacing an active
         # workflow. Automatic evaluation must never mutate rescue state for a
         # company that has not purchased the feature.
-        if not await SubscriptionService(self.db).has_entitlement(
-            company_id=company_id,
-            feature_code="corporate_rescue",
-        ):
+        try:
+            entitled = await SubscriptionService(self.db).has_entitlement(
+                company_id=company_id,
+                feature_code="corporate_rescue",
+            )
+        except Exception as exc:
+            logger.error(
+                "rescue_entitlement_check_failed company=%s error=%s",
+                company_id, exc, exc_info=True,
+            )
+            return RescueWorkflowOutcome(
+                "GENERATION_FAILED", f"entitlement check failed: {exc}"[:500]
+            )
+        if not entitled:
             logger.info(
                 "rescue_plan_skipped_no_entitlement company=%s", company_id
             )
