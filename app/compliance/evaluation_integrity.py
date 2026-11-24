@@ -261,9 +261,13 @@ def evaluation_run_integrity_problems(run: Any) -> list[str]:
         problems.append("SCORE_BREAKDOWN_SNAPSHOT_MISSING")
     else:
         snapshot_status = score_breakdown_snapshot.get("status")
-        if snapshot_status == "NOT_RELEASED" and evaluation_status != "NOT_RELEASED":
-            problems.append("EVALUATION_STATUS_SNAPSHOT_MISMATCH")
-        if evaluation_status == "NOT_RELEASED" and snapshot_status != "NOT_RELEASED":
+        # Every versioned snapshot binds status into its score hash, but hash
+        # validity alone does not establish that the envelope agrees with the
+        # run column. Require exact equality for all versioned statuses.
+        if (
+            "snapshot_schema_version" in score_breakdown_snapshot
+            and snapshot_status != evaluation_status
+        ):
             problems.append("EVALUATION_STATUS_SNAPSHOT_MISMATCH")
         if evaluation_status == "NOT_RELEASED" or snapshot_status == "NOT_RELEASED":
             # A withheld evaluation is auditable without fabricating a score.
