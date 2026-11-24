@@ -350,9 +350,11 @@ flyctl deploy
 # Set this in your local shell without putting the token in source control:
 # read -s NLC_API_TOKEN && export NLC_API_TOKEN
 # Never paste a live token into a committed script or shell command history.
+# The header is passed to curl on stdin (-K -) so the token never appears in the
+# process list. printf is a shell builtin, so it does not expose it either.
 : "${NLC_API_TOKEN:?Set NLC_API_TOKEN in your local environment first}" && \
-curl --fail-with-body https://nlc-api.fly.dev/api/v1/companies \
-  -H "Authorization: Bearer ${NLC_API_TOKEN}"
+printf 'header = "Authorization: Bearer %s"\n' "${NLC_API_TOKEN}" | \
+  curl --fail-with-body -K - https://nlc-api.fly.dev/api/v1/companies
 
 # Should return list of companies (if already created)
 ```
