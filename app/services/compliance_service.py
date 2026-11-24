@@ -915,7 +915,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 )[:500],
             )
 
+        # Serialize the active-plan decision with manual API requests and
+        # other evaluations. The lock is held through plan persistence.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         rescue_svc = RescueService(self.db)
+        replace_existing = False
         existing_plan = await rescue_svc.get_active_plan(company_id)
         if existing_plan:
             new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
@@ -926,6 +932,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             if new_titles and new_titles != old_titles:
                 if untouched:
                     existing_plan = None
+                    replace_existing = True
                 else:
                     logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
         if existing_plan:
@@ -955,6 +962,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                     created_by=getattr(self, '_current_user_id', None),
                     engagement_id=None,  # RES-010: explicit linkage, populated by service
                     score_withheld=score_withheld,
+                    replace_existing=replace_existing,
                 )
         except ValueError as e:
             # Engine produced actionable RED/BLACK flags but no rescue
