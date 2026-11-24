@@ -66,7 +66,7 @@ python3 -m venv "${VENV}"
 "${VENV}/bin/python" -m pip install --disable-pip-version-check -r "${SOURCE}/.ci/requirements-cibw.txt" "wheel==${WHEEL_TOOL_VERSION}"
 actual_wheel_tool_version="$("${VENV}/bin/python" -c 'import wheel; print(wheel.__version__)')"
 if [[ "${actual_wheel_tool_version}" != "${WHEEL_TOOL_VERSION}" ]]; then
-  printf 'Expected wheel tool %s; found %s\\n' "${WHEEL_TOOL_VERSION}" "${actual_wheel_tool_version}" >&2
+  printf 'Expected wheel tool %s; found %s\n' "${WHEEL_TOOL_VERSION}" "${actual_wheel_tool_version}" >&2
   exit 1
 fi
 
