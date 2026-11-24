@@ -141,7 +141,7 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
     evidence_queries = [
         (sql, params)
         for sql, params in db.calls
-        if "FROM compliance_flags AS cf" in sql
+        if "compliance_flags AS cf" in sql
     ]
     assert len(evidence_queries) == 2
     for sql, params in db.calls:
