@@ -71,7 +71,6 @@ def test_rescue_service_rejects_unlinked_steps_and_non_red_black_risk(monkeypatc
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -103,7 +102,6 @@ def test_rescue_service_rejects_cross_tenant_engine_output(monkeypatch):
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     output = SimpleNamespace(
         company_id="company-A",
         score_breakdown=SimpleNamespace(risk_band="RED", final_score=40),
@@ -122,7 +120,6 @@ def test_rescue_service_allows_absent_engine_company_id_when_no_mismatch_can_be_
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -149,7 +146,6 @@ def test_rescue_service_rejects_ambiguous_duplicate_findings(monkeypatch):
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
@@ -236,7 +232,6 @@ def test_rescue_service_accepts_unverified_rule_when_score_is_unreleased(monkeyp
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
-    monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     flag = SimpleNamespace(
         rule_id="AGM-001",
         resolved=False,
