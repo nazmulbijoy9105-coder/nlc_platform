@@ -73,12 +73,11 @@ def upgrade() -> None:
                 RAISE EXCEPTION
                     '0125 requires the dedicated nlc_migration_owner role';
             END IF;
-            DROP POLICY IF EXISTS legal_rule_identity_archive_migration_insert
-                ON public.legal_rule_identity_archive;
-            CREATE POLICY legal_rule_identity_archive_migration_insert
-                ON public.legal_rule_identity_archive
-                FOR INSERT TO nlc_migration_owner
-                WITH CHECK (current_user = 'nlc_migration_owner');
+            EXECUTE 'DROP POLICY IF EXISTS legal_rule_identity_archive_migration_insert '
+                || 'ON public.legal_rule_identity_archive';
+            EXECUTE 'CREATE POLICY legal_rule_identity_archive_migration_insert '
+                || 'ON public.legal_rule_identity_archive FOR INSERT TO nlc_migration_owner '
+                || 'WITH CHECK (current_user = ''nlc_migration_owner'')';
         END
         $policy$
     """)
