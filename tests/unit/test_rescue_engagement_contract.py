@@ -92,9 +92,10 @@ async def test_generate_rescue_plan_passes_engagement_id_to_create(monkeypatch):
     # scalar_one() so the test still validates the create-contract.
     db.execute = AsyncMock(
         side_effect=[
-            _db_result(company_id),
-            _db_result(None),
-            _db_result(created_plan),
+            _db_result(company_id),  # company row lock
+            _db_result(None),        # no active plan
+            _db_result(None),        # deactivate any stale active plan
+            _db_result(created_plan),  # eager reload
         ]
     )
 
@@ -150,9 +151,10 @@ async def test_generate_rescue_plan_persists_score_independently_when_product_sc
     db.refresh = AsyncMock()
     db.execute = AsyncMock(
         side_effect=[
-            _db_result(company_id),
-            _db_result(None),
-            _db_result(created_plan),
+            _db_result(company_id),  # company row lock
+            _db_result(None),        # no active plan
+            _db_result(None),        # deactivate any stale active plan
+            _db_result(created_plan),  # eager reload
         ]
     )
     svc = RescueService(db=db)
@@ -216,9 +218,10 @@ async def test_generate_rescue_plan_stores_score_only_when_evaluation_released_i
     db.refresh = AsyncMock()
     db.execute = AsyncMock(
         side_effect=[
-            _db_result(company_id),
-            _db_result(None),
-            _db_result(created_plan),
+            _db_result(company_id),  # company row lock
+            _db_result(None),        # no active plan
+            _db_result(None),        # deactivate any stale active plan
+            _db_result(created_plan),  # eager reload
         ]
     )
     svc = RescueService(db=db)
