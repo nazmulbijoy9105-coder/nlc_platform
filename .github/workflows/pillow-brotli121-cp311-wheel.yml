@@ -40,7 +40,7 @@ jobs:
         run: bash -n scripts/build_pillow_brotli121_cp311_wheel.sh
 
       - name: Build wheel and run Pillow's own cibuildwheel test suite
-        run: scripts/build_pillow_brotli121_cp311_wheel.sh
+        run: bash scripts/build_pillow_brotli121_cp311_wheel.sh
 
       - name: Upload wheel, checksum, and build provenance
         uses: actions/upload-artifact@v4
