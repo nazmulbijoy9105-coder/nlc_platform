@@ -902,14 +902,18 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 select(Company.assigned_staff_id).where(Company.id == company_id)
             )
             assigned_staff_id = assigned_staff_result.scalar_one_or_none()
-            await rescue_svc.generate_rescue_plan(
-                company_id=company_id,
-                engine_output=output,
-                assigned_staff_id=assigned_staff_id,
-                created_by=getattr(self, '_current_user_id', None),
-                engagement_id=None,  # RES-010: explicit linkage, populated by service
-                score_withheld=score_withheld,
-            )
+            # The savepoint keeps a failed generation from leaving a partial
+            # active workflow (plan without steps, deactivated predecessor) in
+            # the evaluation's transaction.
+            async with self.db.begin_nested():
+                await rescue_svc.generate_rescue_plan(
+                    company_id=company_id,
+                    engine_output=output,
+                    assigned_staff_id=assigned_staff_id,
+                    created_by=getattr(self, '_current_user_id', None),
+                    engagement_id=None,  # RES-010: explicit linkage, populated by service
+                    score_withheld=score_withheld,
+                )
         except ValueError as e:
             # Engine produced actionable RED/BLACK flags but no rescue
             # sequence — data-integrity issue, not transient. Persist

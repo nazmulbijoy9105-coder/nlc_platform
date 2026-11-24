@@ -1,6 +1,8 @@
-"""Automatic rescue workflows require the company's corporate rescue entitlement."""
+"""Automatic rescue workflows are entitlement-gated and isolated in a savepoint."""
 
+import ast
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -11,7 +13,24 @@ from app.services.compliance_service import ComplianceService
 
 @pytest.fixture
 def workflow(monkeypatch):
+    events = []
+
+    class FakeSavepoint:
+        async def __aenter__(self):
+            events.append("savepoint_begin")
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            events.append("savepoint_rollback" if exc_type is not None else "savepoint_release")
+            return False
+
+    async def generate(*args, **kwargs):
+        events.append("generate")
+        if rescue.generation_error is not None:
+            raise rescue.generation_error
+
     db = MagicMock()
+    db.begin_nested.side_effect = FakeSavepoint
     db.execute = AsyncMock(return_value=MagicMock())
     staff_id = uuid.uuid4()
     db.execute.return_value.scalar_one_or_none.return_value = staff_id
@@ -19,7 +38,8 @@ def workflow(monkeypatch):
     service._current_user_id = uuid.uuid4()
     rescue = SimpleNamespace(
         get_active_plan=AsyncMock(return_value=None),
-        generate_rescue_plan=AsyncMock(),
+        generate_rescue_plan=AsyncMock(side_effect=generate),
+        generation_error=None,
     )
     subscription = SimpleNamespace(has_entitlement=AsyncMock(return_value=True))
 
@@ -39,6 +59,7 @@ def workflow(monkeypatch):
         "app.services.subscription_service.SubscriptionService", FakeSubscriptionService
     )
     return SimpleNamespace(
+        events=events,
         db=db,
         service=service,
         company_id=uuid.uuid4(),
@@ -67,6 +88,7 @@ async def test_unentitled_company_does_not_start_rescue(workflow):
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
     workflow.db.execute.assert_not_awaited()
+    assert workflow.events == []
 
 
 @pytest.mark.asyncio
@@ -89,6 +111,7 @@ async def test_entitled_company_starts_rescue(workflow, score_withheld):
         engagement_id=None,
         score_withheld=score_withheld,
     )
+    assert workflow.events == ["savepoint_begin", "generate", "savepoint_release"]
 
 
 @pytest.mark.asyncio
@@ -114,6 +137,7 @@ async def test_existing_plan_is_kept_without_entitlement_query(
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_not_called()
     workflow.db.execute.assert_not_awaited()
+    assert workflow.events == []
 
 
 @pytest.mark.asyncio
@@ -145,6 +169,7 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
     else:
         workflow.rescue.generate_rescue_plan.assert_not_awaited()
         workflow.db.execute.assert_not_awaited()
+        assert workflow.events == []
 
 
 @pytest.mark.asyncio
@@ -153,7 +178,7 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
     [(ValueError("boom"), "boom"), (RuntimeError("bad"), "unexpected: bad")],
 )
 async def test_generation_error_is_returned(workflow, error, expected):
-    workflow.rescue.generate_rescue_plan.side_effect = error
+    workflow.rescue.generation_error = error
 
     result = await workflow.service._start_rescue_workflow(
         workflow.company_id, workflow.output, score_withheld=True
@@ -161,6 +186,7 @@ async def test_generation_error_is_returned(workflow, error, expected):
 
     assert result == expected
     workflow.rescue.generate_rescue_plan.assert_awaited_once()
+    assert workflow.events == ["savepoint_begin", "generate", "savepoint_rollback"]
 
 
 @pytest.mark.asyncio
@@ -177,3 +203,33 @@ async def test_entitlement_error_is_returned_without_generation(workflow):
     )
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.db.execute.assert_not_awaited()
+    assert workflow.events == []
+
+
+def test_generation_is_inside_savepoint():
+    source = Path(__file__).resolve().parents[2] / "app/services/compliance_service.py"
+    tree = ast.parse(source.read_text())
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "generate_rescue_plan"
+    ]
+    assert len(calls) == 1
+    ancestors = []
+    node = calls[0]
+    while node in parents:
+        node = parents[node]
+        ancestors.append(node)
+    assert any(
+        isinstance(ancestor, ast.AsyncWith)
+        and any(
+            isinstance(item.context_expr, ast.Call)
+            and isinstance(item.context_expr.func, ast.Attribute)
+            and item.context_expr.func.attr == "begin_nested"
+            for item in ancestor.items
+        )
+        for ancestor in ancestors
+    )
