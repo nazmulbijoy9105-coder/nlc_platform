@@ -300,6 +300,55 @@ def test_not_released_run_rejects_snapshot_with_completed_status():
     assert "UNRELEASED_SCORE_BREAKDOWN_INVALID" in problems
 
 
+def _rehash_versioned_run(run):
+    run.score_hash = calculate_evaluation_score_hash(
+        previous_hash=run.previous_hash,
+        company_id=run.company_id,
+        score=run.score,
+        risk_band=run.risk_band,
+        calculated_at=run.calculated_at,
+        engine_version=run.engine_version,
+        trigger_source=run.trigger_source,
+        flags_snapshot=run.flags_snapshot,
+        fact_provenance_snapshot=run.fact_provenance_snapshot,
+        score_breakdown_snapshot=run.score_breakdown_snapshot,
+        rule_outcomes_hash=run.rule_outcomes_hash,
+        rule_outcomes_snapshot=run.rule_outcomes_snapshot,
+        evaluation_status=run.evaluation_status,
+    )
+
+
+@pytest.mark.parametrize(
+    ("run_status", "snapshot_status"),
+    [
+        ("COMPLETED", "FAILED"),
+        ("FAILED", "COMPLETED"),
+    ],
+)
+def test_versioned_snapshot_status_must_match_for_all_statuses(
+    run_status, snapshot_status
+):
+    run = _valid_not_released_run()
+    run.evaluation_status = run_status
+    run.score_breakdown_snapshot["status"] = snapshot_status
+    _rehash_versioned_run(run)
+
+    problems = evaluation_run_integrity_problems(run)
+
+    assert "EVALUATION_STATUS_SNAPSHOT_MISMATCH" in problems
+    # A valid recomputed hash must not hide the status contradiction.
+    assert "SCORE_HASH_MISMATCH" not in problems
+
+
+def test_matching_completed_versioned_status_is_integrity_valid():
+    run = _valid_not_released_run()
+    run.evaluation_status = "COMPLETED"
+    run.score_breakdown_snapshot["status"] = "COMPLETED"
+    _rehash_versioned_run(run)
+
+    assert evaluation_run_integrity_problems(run) == []
+
+
 def test_legacy_not_released_null_snapshot_is_accepted_during_rollout():
     run = _valid_not_released_run()
     run.score_breakdown_snapshot = None
