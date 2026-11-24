@@ -90,12 +90,12 @@ async def test_unentitled_company_does_not_start_rescue(workflow):
     )
 
     assert result == RescueWorkflowOutcome("NOT_ENTITLED")
-    workflow.rescue.get_active_plan.assert_awaited_once_with(workflow.company_id)
+    workflow.rescue.get_active_plan.assert_not_awaited()
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
     workflow.subscription.has_entitlement.assert_awaited_once_with(
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
-    workflow.db.execute.assert_awaited_once()
+    workflow.db.execute.assert_not_awaited()
     assert workflow.events == []
 
 
@@ -131,7 +131,7 @@ async def test_entitled_company_starts_rescue(workflow, score_withheld):
      (0, "PENDING", "Remediate AGM")],
     ids=["completed-step", "non-pending-step", "identical-titles"],
 )
-async def test_existing_plan_is_kept_without_entitlement_query(
+async def test_existing_plan_is_kept_after_entitlement_check(
     workflow, completed_steps, step_status, step_title
 ):
     workflow.rescue.get_active_plan.return_value = SimpleNamespace(
@@ -145,7 +145,9 @@ async def test_existing_plan_is_kept_without_entitlement_query(
 
     assert result == RescueWorkflowOutcome("ACTIVE_PLAN_RETAINED")
     workflow.rescue.generate_rescue_plan.assert_not_awaited()
-    workflow.subscription.has_entitlement.assert_not_called()
+    workflow.subscription.has_entitlement.assert_awaited_once_with(
+        company_id=workflow.company_id, feature_code="corporate_rescue"
+    )
     workflow.db.execute.assert_awaited_once()
     assert workflow.events == []
 
@@ -168,6 +170,7 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
         company_id=workflow.company_id, feature_code="corporate_rescue"
     )
     if entitled:
+        workflow.rescue.get_active_plan.assert_awaited_once_with(workflow.company_id)
         workflow.rescue.generate_rescue_plan.assert_awaited_once_with(
             company_id=workflow.company_id,
             engine_output=workflow.output,
@@ -178,8 +181,9 @@ async def test_stale_untouched_plan_requires_entitlement_to_regenerate(workflow,
             replace_existing=True,
         )
     else:
+        workflow.rescue.get_active_plan.assert_not_awaited()
         workflow.rescue.generate_rescue_plan.assert_not_awaited()
-        workflow.db.execute.assert_awaited_once()
+        workflow.db.execute.assert_not_awaited()
         assert workflow.events == []
 
 
