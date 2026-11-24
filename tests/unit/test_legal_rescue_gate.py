@@ -225,6 +225,26 @@ def test_compliance_service_passes_withheld_score_state_to_rescue_generation():
     assert len(workflow_calls) == 1
     workflow_keywords = {keyword.arg: keyword.value for keyword in workflow_calls[0].keywords}
     assert ast.unparse(workflow_keywords["score_withheld"]) == "score_for_current is None"
+    assert ast.unparse(workflow_keywords["score_blocking_conflicts"]) == (
+        "score_blocking_identity_conflicts"
+    )
+    persist = next(
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.AsyncFunctionDef) and node.name == "_persist_evaluation"
+    )
+    conflict_assignments = [
+        node for node in ast.walk(persist)
+        if isinstance(node, ast.Assign)
+        and any(
+            isinstance(target, ast.Name) and target.id == "score_blocking_identity_conflicts"
+            for target in node.targets
+        )
+        and isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Name)
+        and node.value.func.id == "_score_blocking_catalogue_conflicts"
+    ]
+    assert len(conflict_assignments) == 1
+    assert conflict_assignments[0].lineno < workflow_calls[0].lineno
     calls = [
         node
         for node in ast.walk(tree)

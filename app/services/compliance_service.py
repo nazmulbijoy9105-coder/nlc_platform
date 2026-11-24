@@ -862,16 +862,30 @@ class ComplianceService(BaseService[ComplianceFlag]):
         output,
         *,
         score_withheld: bool,
+        score_blocking_conflicts: set[str],
     ) -> str | None:
         """Create the evaluation's rescue plan for a company entitled to it.
 
         Workflow creation is independent of score publication but not of the
-        ``corporate_rescue`` entitlement; privileged staff can still create a
-        plan for an unentitled company explicitly through the rescue API.
+        ``corporate_rescue`` entitlement or of unresolved RJSC catalogue
+        identity conflicts, which block it exactly as they block the rescue
+        API. Privileged staff can still create a plan for an unentitled
+        company explicitly through that API.
         Returns an error note to persist on the company, or None.
         """
         from app.services.rescue_service import RescueService
         from app.services.subscription_service import SubscriptionService
+
+        if score_blocking_conflicts:
+            conflicted_rule_ids = sorted(score_blocking_conflicts)
+            logger.warning(
+                "rescue_plan_blocked_catalogue_conflicts company=%s rule_ids=%s",
+                company_id, conflicted_rule_ids,
+            )
+            return (
+                "Rescue generation blocked by unresolved RJSC catalogue/evaluator "
+                f"identity conflicts: {', '.join(conflicted_rule_ids)}"
+            )[:500]
 
         rescue_svc = RescueService(self.db)
         existing_plan = await rescue_svc.get_active_plan(company_id)
@@ -1428,6 +1442,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 company_id,
                 output,
                 score_withheld=score_for_current is None,
+                score_blocking_conflicts=score_blocking_identity_conflicts,
             )
             if rescue_generation_error:
                 company_svc_update['rescue_generation_error'] = rescue_generation_error
