@@ -15,6 +15,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.entitlement import require_entitlement
+from app.compliance.live_rule_coverage import load_live_rule_coverage
+from canonical_architecture.coverage_report import CoverageInvariantError
 from app.core.dependencies import (
     Pagination,
     get_current_user,
@@ -23,6 +25,8 @@ from app.core.dependencies import (
     require_roles,
 )
 from app.models.charges import CompanyCharge
+from app.models.compliance import ComplianceEvaluationRun
+from app.models.rules import LegalRule
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
@@ -32,9 +36,12 @@ from app.rule_engine.engine import (
     AUTHORIZED_BLACK_OVERRIDE_RULE_IDS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
 from app.services.company_service import CompanyService
+from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
 from app.services.domain_events import DomainEventType, publish_domain_event
 from app.services.compliance_service import ComplianceService
 from app.services.notification_service import ActivityService
@@ -42,12 +49,8 @@ from app.services.pdf_report_service import PDFReportService
 
 
 def _legal_score_is_released() -> bool:
-    """Expose a statutory score only after the full catalogue is counsel-verified."""
-    return (
-        LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+    """Return product scoring availability, not independent legal approval."""
+    return LEGAL_SCORE_RELEASED is True and bool(PRODUCT_SCORING_RULE_IDS)
 
 logger = structlog.get_logger(__name__)
 
@@ -238,6 +241,11 @@ class CompanyResponse(BaseModel):
     incorporation_date: str
     compliance_score: int | None
     band: str | None
+    evaluation_status: str = "NOT_EVALUATED"
+    score_label: str = "Screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Screening output only — not legal advice, a legal opinion or a compliance certificate."
     last_evaluated_at: str | None
     director_count: int = 0
     violation_count: int = 0
@@ -282,11 +290,16 @@ class ComplianceSummaryResponse(BaseModel):
     evaluation_run_id: str | None = None
     evaluation_hash: str | None = None
     evaluation_run_status: str | None = None
+    evaluation_status: str = "NOT_EVALUATED"
     evaluation_calculated_at: str | None = None
     engine_version: str | None = None
     ilrmf_version: str | None = None
     scoring_spec_version: str | None = None
-    disclaimer: str = "Product risk indicator only — not legal advice and not a certification."
+    score_label: str = "Screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    release_scope: str = "SCREENED_PRIVATE_BETA"
+    disclaimer: str = "Screening output only — not legal advice, a legal opinion or a compliance certificate."
 
 
 class FlagResponse(BaseModel):
@@ -301,6 +314,9 @@ class FlagResponse(BaseModel):
     triggered_at: str
     resolved_at: str | None
     resolution_note: str | None
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Finding is a screening prompt only — not legal advice or a legal conclusion."
 
 
 class ScoreHistoryEntry(BaseModel):
@@ -312,6 +328,11 @@ class ScoreHistoryEntry(BaseModel):
     red_flags: int
     yellow_flags: int
     snapshot_date: str
+    evaluation_status: str = "NOT_EVALUATED"
+    score_label: str = "Historical screening score"
+    screening_only: bool = True
+    legal_advice: bool = False
+    disclaimer: str = "Historical screening output only — not legal advice or a compliance certificate."
 
 
 class MessageResponse(BaseModel):
@@ -319,11 +340,46 @@ class MessageResponse(BaseModel):
     success: bool = True
 
 
+def _filter_rjsc_active_flags(flags, conflicted_rule_ids):
+    """Suppress out-of-scope, unclassified and identity-conflicted active rows."""
+    from app.services.compliance_service import _has_unresolved_catalogue_binding
+
+    conflicted = set(conflicted_rule_ids or ())
+    return [
+        flag for flag in flags
+        if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+        and flag.rule_id not in conflicted
+        and not _has_unresolved_catalogue_binding(flag)
+    ]
+
+
 def _flag_to_response(flag) -> FlagResponse:
-    score_eligible = (
-        _legal_score_is_released() and flag.rule_id in PRODUCT_SCORING_RULE_IDS
+    evaluation_state = getattr(flag, "evaluation_state", "UNKNOWN")
+    evaluation_state = getattr(evaluation_state, "value", evaluation_state)
+    flag_status = getattr(flag, "flag_status", None)
+    flag_status = getattr(flag_status, "value", flag_status)
+    detail = getattr(flag, "detail", None)
+    identity_binding_conflict = (
+        isinstance(detail, dict)
+        and detail.get("rule_catalogue_binding") in {
+            "CATALOGUE_ENTRY_MISSING",
+            "RULE_INACTIVE",
+            "STATUTORY_BASIS_MISMATCH",
+        }
     )
-    legally_verified = flag.rule_id in VERIFIED_RULE_IDS
+    score_eligible = (
+        not identity_binding_conflict
+        and _legal_score_is_released()
+        and is_rjsc_rule_in_scope(flag.rule_id)
+        and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
+        and evaluation_state == "VIOLATION"
+        and flag_status == "ACTIVE"
+        and getattr(flag, "resolved_date", None) is None
+    )
+    legally_verified = (
+        is_rjsc_rule_in_scope(str(flag.rule_id))
+        and flag.rule_id in VERIFIED_RULE_IDS
+    )
     severity = getattr(flag.severity, "value", flag.severity)
     return FlagResponse(
         flag_id=str(flag.id),
@@ -332,17 +388,16 @@ def _flag_to_response(flag) -> FlagResponse:
             (getattr(flag, "description", flag.flag_code) or flag.flag_code)
             if legally_verified
             else (
-                "Pending independent counsel review: candidate signal only. "
-                "No breach, liability, penalty or compliance status is determined."
+                "Candidate product-risk signal — pending independent counsel review: "
+                + (getattr(flag, "description", flag.flag_code) or flag.flag_code)
             )
         ),
-        severity=str(severity) if legally_verified else "NOT_EVALUATED",
+        severity=str(severity) if score_eligible else "NOT_EVALUATED",
         score_impact=int(flag.score_impact or 0) if score_eligible else 0,
         status=flag.flag_status.value if hasattr(flag.flag_status, "value") else str(flag.flag_status),
         legal_review_status="LEGALLY_VERIFIED" if legally_verified else "NOT_LEGALLY_VERIFIED",
         is_black_override=(
-            legally_verified
-            and score_eligible
+            score_eligible
             and bool(getattr(flag, "is_black_override", False))
             and flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
@@ -354,7 +409,19 @@ def _flag_to_response(flag) -> FlagResponse:
 
 def _score_history_to_response(item: dict) -> ScoreHistoryEntry:
     source_band = getattr(item["risk_band"], "value", item["risk_band"])
-    released = _legal_score_is_released() and source_band != "NOT_EVALUATED"
+    run_status = str(item.get("evaluation_status") or "NOT_RELEASED")
+    released = (
+        _legal_score_is_released()
+        and run_status == "COMPLETED"
+        and source_band != "NOT_EVALUATED"
+        and item.get("score") is not None
+    )
+    response_status = (
+        "EVALUATED" if released
+        else "PENDING" if run_status in {"PENDING", "IN_PROGRESS"}
+        else "FAILED" if run_status == "FAILED"
+        else "NOT_EVALUATED"
+    )
     return ScoreHistoryEntry(
         snapshot_month=item["month"],
         score=item["score"] if released else None,
@@ -364,6 +431,7 @@ def _score_history_to_response(item: dict) -> ScoreHistoryEntry:
         red_flags=item.get("red_flags", 0) if released else 0,
         yellow_flags=item.get("yellow_flags", 0) if released else 0,
         snapshot_date=item["calculated_at"],
+        evaluation_status=response_status,
     )
 
 
@@ -387,29 +455,102 @@ async def _financial_access_ids(
     return set(result.scalars().all())
 
 
-def _company_to_response(company, *, can_view_financials: bool = True) -> CompanyResponse:
+def _evaluation_run_is_current(company, evaluation_run) -> bool:
+    """A cached score is current only when it matches the latest completed run."""
+    if not _legal_score_is_released() or evaluation_run is None:
+        return False
+    run_status = str(getattr(evaluation_run, "evaluation_status", "") or "")
+    run_band = getattr(
+        getattr(evaluation_run, "risk_band", None),
+        "value",
+        getattr(evaluation_run, "risk_band", None),
+    )
+    company_band = getattr(
+        getattr(company, "current_risk_band", None),
+        "value",
+        getattr(company, "current_risk_band", None),
+    )
+    from app.compliance.evaluation_integrity import evaluation_run_integrity_problems
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    score_snapshot = getattr(evaluation_run, "score_breakdown_snapshot", None)
+    return bool(
+        not evaluation_run_integrity_problems(evaluation_run)
+        and run_status == "COMPLETED"
+        and evaluation_run.score is not None
+        and run_band != "NOT_EVALUATED"
+        and getattr(evaluation_run, "engine_version", None) == RULE_ENGINE_VERSION
+        and isinstance(score_snapshot, dict)
+        and score_snapshot.get("scoring_spec_version") == SCORING_SPEC_VERSION
+        and score_snapshot.get("score_reconciles") is True
+        and score_snapshot.get("final_score") == evaluation_run.score
+        and company.last_evaluated_at is not None
+        and company.last_evaluated_at == evaluation_run.calculated_at
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at <= company.last_evaluated_at
+        and company.current_compliance_score == evaluation_run.score
+        and company_band == run_band
+    )
+
+
+def _company_evaluation_status(company, evaluation_run) -> str:
+    if evaluation_run is None:
+        return "NOT_EVALUATED"
+    run_status = str(getattr(evaluation_run, "evaluation_status", "") or "")
+    if run_status in {"PENDING", "IN_PROGRESS"}:
+        return "PENDING"
+    if run_status == "FAILED":
+        return "FAILED"
+    if run_status == "COMPLETED":
+        if not _legal_score_is_released():
+            return "NOT_EVALUATED"
+        return "EVALUATED" if _evaluation_run_is_current(company, evaluation_run) else "STALE"
+    return "NOT_EVALUATED"
+
+
+def _evaluation_run_response_status(company, evaluation_run) -> str | None:
+    """Expose release/currentness state, never raw COMPLETED as a released score."""
+    if evaluation_run is None:
+        return None
+    if not _legal_score_is_released():
+        return "NOT_RELEASED"
+    run_status = str(getattr(evaluation_run, "evaluation_status", "") or "")
+    if run_status == "COMPLETED" and not _evaluation_run_is_current(company, evaluation_run):
+        return "STALE"
+    return run_status or "NOT_EVALUATED"
+
+
+def _company_to_response(
+    company,
+    *,
+    can_view_financials: bool = True,
+    evaluation_run=None,
+) -> CompanyResponse:
     director_count = 0
     if hasattr(company, "directors") and company.directors is not None:
         director_count = len(company.directors)
-    violation_count = 0
-    if hasattr(company, "compliance_flags") and company.compliance_flags is not None:
-        violation_count = len([
-            f for f in company.compliance_flags
-            if hasattr(f, "status") and str(f.status) == "ACTIVE"
-        ])
+    score_is_current = _evaluation_run_is_current(company, evaluation_run)
+    evaluation_status = _company_evaluation_status(company, evaluation_run)
+    from app.services.compliance_service import _has_unresolved_catalogue_binding
+    rjsc_flags = [
+        flag for flag in (getattr(company, "compliance_flags", None) or [])
+        if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+        and not _has_unresolved_catalogue_binding(flag)
+    ]
+    active_rjsc_flags = [
+        flag for flag in rjsc_flags
+        if str(getattr(flag, "flag_status", getattr(flag, "status", "")))
+        in ("ACTIVE", "FlagStatus.ACTIVE")
+    ]
+    violation_count = len(active_rjsc_flags) if score_is_current else 0
 
     def _s(val):
         if val is None:
             return None
         return str(val.value if hasattr(val, "value") else val)
 
-    risk_band = _s(company.current_risk_band)
-    if not _legal_score_is_released():
-        risk_band = "NOT_EVALUATED"
-    compliance_score = (
-        None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED")
-        else company.current_compliance_score
-    )
+    risk_band = _s(company.current_risk_band) if score_is_current else "NOT_EVALUATED"
+    compliance_score = company.current_compliance_score if score_is_current else None
 
     return CompanyResponse(
         id=str(company.id),
@@ -418,12 +559,13 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         incorporation_date=company.incorporation_date.isoformat() if company.incorporation_date else None,  # type: ignore
         compliance_score=compliance_score,
         band=risk_band,
+        evaluation_status=evaluation_status,
         last_evaluated_at=(
             getattr(company, "last_evaluated_at", None).isoformat()
             if getattr(company, "last_evaluated_at", None) else None
         ),
         director_count=director_count,
-        violation_count=violation_count if _legal_score_is_released() else 0,
+        violation_count=violation_count,
         company_type=_s(getattr(company, "company_type", None)),
         company_status=_s(getattr(company, "company_status", None)),
         financial_year_end=company.financial_year_end.isoformat() if getattr(company, "financial_year_end", None) else None,
@@ -432,10 +574,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         is_fdi_registered=getattr(company, "is_fdi_registered", None),
         is_dormant=getattr(company, "is_dormant", None),
         created_at=company.created_at.isoformat() if getattr(company, "created_at", None) else None,
-        active_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE")]) if _legal_score_is_released() else 0),
-        black_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("BLACK", "Severity.BLACK")]) if _legal_score_is_released() else 0),
-        red_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("RED", "Severity.RED")]) if _legal_score_is_released() else 0),
-        yellow_flags=(len([f for f in getattr(company, "compliance_flags", []) if str(getattr(f, "flag_status", "")) in ("ACTIVE", "FlagStatus.ACTIVE") and str(getattr(f, "severity", "")) in ("YELLOW", "Severity.YELLOW")]) if _legal_score_is_released() else 0),
+        active_flags=len(active_rjsc_flags) if score_is_current else 0,
+        black_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("BLACK", "Severity.BLACK")) if score_is_current else 0,
+        red_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("RED", "Severity.RED")) if score_is_current else 0,
+        yellow_flags=sum(1 for flag in active_rjsc_flags if str(getattr(flag, "severity", "")) in ("YELLOW", "Severity.YELLOW")) if score_is_current else 0,
         is_manufacturing=getattr(company, "is_manufacturing", None),
         tax_return_filed_for_current_fy=(
             getattr(company, "tax_return_filed_for_current_fy", None)
@@ -445,38 +587,10 @@ def _company_to_response(company, *, can_view_financials: bool = True) -> Compan
         advance_tax_q2_paid=getattr(company, "advance_tax_q2_paid", None) if can_view_financials else None,
         advance_tax_q3_paid=getattr(company, "advance_tax_q3_paid", None) if can_view_financials else None,
         advance_tax_q4_paid=getattr(company, "advance_tax_q4_paid", None) if can_view_financials else None,
+        any_director_disqualified=getattr(company, "any_director_disqualified", None),
         penalty_notices_received=getattr(company, "penalty_notices_received", None) if can_view_financials else None,
         penalty_notices_resolved=getattr(company, "penalty_notices_resolved", None) if can_view_financials else None,
     )
-
-
-@router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))], summary="Create a new company")
-async def create_company(body: CompanyCreateRequest, request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
-    svc = CompanyService(db)
-    activity = ActivityService(db)
-    existing = await svc.get_by_registration_number(body.registration_number)
-    if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Company with registration number already exists.")
-    company = await svc.create_company(
-        company_name=body.company_name, registration_number=body.registration_number,
-        incorporation_date=body.incorporation_date, registered_address=body.registered_address,
-        company_type=body.company_type, financial_year_end=body.financial_year_end,  # type: ignore
-        assigned_staff_id=body.assigned_staff_id,
-        is_manufacturing=body.is_manufacturing,
-    )
-    _tax_fields = ["trade_license_obtained", "trade_license_expiry", "tax_return_filed_for_current_fy", "advance_tax_q1_paid", "advance_tax_q2_paid", "advance_tax_q3_paid", "advance_tax_q4_paid", "tds_deposited_up_to_date", "last_tds_deposit_date", "last_vat_return_filed", "vat_annual_return_filed_for_fy", "minimum_tax_paid", "tax_clearance_obtained", "tax_return_deadline_extended", "any_director_disqualified", "penalty_notices_received", "penalty_notices_resolved"]
-    _tax_update = {k: getattr(body, k) for k in _tax_fields if getattr(body, k, None) is not None}
-    if _tax_update:
-        await svc.update_by_id(company.id, **_tax_update)
-        await db.refresh(company)
-    # Grant creator access to company
-    from app.models.company import CompanyUserAccess
-    db.add(CompanyUserAccess(company_id=company.id, user_id=current_user.id, can_edit=True, can_view_financials=True))
-    await db.commit()
-    
-    await activity.log(action="COMPANY_CREATED", resource_type="company", resource_id=str(company.id), description=f"Company created: {company.company_name}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
-    logger.info("company_created", company_id=str(company.id), name=company.company_name)
-    return _company_to_response(company)
 
 
 @router.get("", response_model=list[CompanyResponse], summary="List companies")
@@ -509,10 +623,79 @@ async def list_companies(search: str | None = Query(None), risk_band: RiskBand |
     financial_ids = await _financial_access_ids(
         db, current_user, [company.id for company in companies]
     )
+    latest_runs = await ComplianceService(db).get_latest_evaluation_runs(
+        [company.id for company in companies]
+    )
     return [
-        _company_to_response(c, can_view_financials=c.id in financial_ids)
+        _company_to_response(
+            c,
+            can_view_financials=c.id in financial_ids,
+            evaluation_run=latest_runs.get(c.id),
+        )
         for c in companies
     ]
+
+
+@router.post(
+    "",
+    response_model=CompanyResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN"))],
+    summary="Create company",
+)
+async def create_company(
+    body: CompanyCreateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Create a company through the staff-controlled onboarding workflow."""
+    if body.assigned_staff_id is not None:
+        assigned_staff = await db.get(User, body.assigned_staff_id)
+        if assigned_staff is None or assigned_staff.role not in (
+            UserRole.ADMIN_STAFF,
+            UserRole.LEGAL_STAFF,
+            UserRole.SUPER_ADMIN,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="assigned_staff_id must identify an active staff account.",
+            )
+        if not assigned_staff.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="assigned_staff_id must identify an active staff account.",
+            )
+
+    service = CompanyService(db, actor_id=current_user.id)
+    try:
+        company = await service.create_company(
+            registration_number=body.registration_number,
+            company_name=body.company_name,
+            company_type=body.company_type,
+            incorporation_date=body.incorporation_date,
+            financial_year_end=body.financial_year_end,
+            registered_address=body.registered_address,
+            assigned_staff_id=body.assigned_staff_id,
+            created_by=current_user.id,
+            is_manufacturing=body.is_manufacturing,
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A company with this registration number already exists.",
+        ) from exc
+
+    await ActivityService(db).log(
+        action="COMPANY_CREATED",
+        resource_type="company",
+        resource_id=str(company.id),
+        description=f"Created company: {company.company_name}",
+        ip_address=request.client.host if request.client else None,
+        actor_user_id=current_user.id,
+    )
+    return _company_to_response(company)
 
 
 @router.get("/{company_id}", response_model=CompanyResponse, dependencies=[Depends(require_company_access("company_id"))], summary="Get company")
@@ -522,10 +705,42 @@ async def get_company(company_id: uuid.UUID, current_user: User = Depends(get_cu
     if not company:
         raise HTTPException(status_code=404, detail="Company not found.")
     financial_ids = await _financial_access_ids(db, current_user, [company.id])
+    evaluation_run = await ComplianceService(db).get_latest_evaluation_run(company_id)
     return _company_to_response(
         company,
         can_view_financials=company.id in financial_ids,
+        evaluation_run=evaluation_run,
     )
+
+
+@router.get(
+    "/{company_id}/compliance/coverage",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+    summary="Live six-state rule coverage",
+)
+async def get_company_rule_coverage(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return registered/implemented/active plus explicit run-scoped applicability/evaluation."""
+    try:
+        return await load_live_rule_coverage(db, company_id)
+    except CoverageInvariantError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "RULE_COVERAGE_INVARIANT_FAILURE",
+                "message": str(exc),
+            },
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Live rule coverage could not be collected from the deployed rule engine.",
+        ) from exc
 
 
 @router.get(
@@ -659,9 +874,33 @@ async def evaluate_company(company_id: uuid.UUID, request: Request, current_user
     result = await compliance_svc.evaluate_company(company_id=company_id, trigger_source="API_MANUAL")
     
     await db.refresh(company)
+    evaluation_run = await compliance_svc.get_latest_evaluation_run(company_id)
+    score_is_current = _evaluation_run_is_current(company, evaluation_run)
+    evaluation_status = _company_evaluation_status(company, evaluation_run)
     await activity.log(action="COMPLIANCE_EVALUATED", resource_type="company", resource_id=str(company_id), description=f"Evaluation: Score={result['score']}, Band={result['risk_band']}", ip_address=request.client.host if request.client else None, actor_user_id=current_user.id)
     flag_summary = await compliance_svc.get_flag_summary(company_id)
-    return ComplianceSummaryResponse(company_id=str(company_id), company_name=company.company_name, current_score=result["score"] if _legal_score_is_released() else None, pre_override_score=result.get("raw_total") if _legal_score_is_released() else None, risk_band=result["risk_band"] if _legal_score_is_released() else "NOT_EVALUATED", active_flags=flag_summary.get("total_active", 0) if _legal_score_is_released() else 0, black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0, red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0, yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0, last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None, evaluation_triggered=True, evaluation_run_id=result.get("evaluation_run_id"), evaluation_hash=result.get("evaluation_hash"), evaluation_run_status=result.get("evaluation_run_status"), evaluation_calculated_at=result.get("evaluation_calculated_at"), engine_version=result.get("engine_version"), ilrmf_version=result.get("ilrmf_version"), scoring_spec_version=result.get("scoring_spec_version"), disclaimer="Product risk indicator only — not legal advice and not a certification.")
+    return ComplianceSummaryResponse(
+        company_id=str(company_id),
+        company_name=company.company_name,
+        current_score=company.current_compliance_score if score_is_current else None,
+        pre_override_score=result.get("raw_total") if score_is_current else None,
+        risk_band=(getattr(company.current_risk_band, "value", company.current_risk_band) if score_is_current else "NOT_EVALUATED"),
+        active_flags=flag_summary.get("total_active", 0),
+        black_flags=flag_summary.get("black", 0) if score_is_current else 0,
+        red_flags=flag_summary.get("red", 0) if score_is_current else 0,
+        yellow_flags=flag_summary.get("yellow", 0) if score_is_current else 0,
+        last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
+        evaluation_triggered=True,
+        evaluation_run_id=str(evaluation_run.id) if evaluation_run else result.get("evaluation_run_id"),
+        evaluation_hash=evaluation_run.score_hash if evaluation_run else result.get("evaluation_hash"),
+        evaluation_run_status=_evaluation_run_response_status(company, evaluation_run) or result.get("evaluation_run_status"),
+        evaluation_status=evaluation_status,
+        evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else result.get("evaluation_calculated_at"),
+        engine_version=evaluation_run.engine_version if evaluation_run else result.get("engine_version"),
+        ilrmf_version=(evaluation_run.score_breakdown_snapshot or {}).get("ilrmf_version") if evaluation_run and isinstance(evaluation_run.score_breakdown_snapshot, dict) else result.get("ilrmf_version"),
+        scoring_spec_version=(evaluation_run.score_breakdown_snapshot or {}).get("scoring_spec_version") if evaluation_run and isinstance(evaluation_run.score_breakdown_snapshot, dict) else result.get("scoring_spec_version"),
+        disclaimer="Product risk indicator only — not legal advice and not a certification.",
+    )
 
 
 @router.get("/{company_id}/compliance", response_model=ComplianceSummaryResponse, dependencies=[Depends(require_company_access("company_id")), Depends(require_entitlement("compliance_package"))], summary="Get compliance state")
@@ -676,10 +915,13 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         if evaluation_run and isinstance(evaluation_run.score_breakdown_snapshot, dict)
         else {}
     )
-    risk_band = getattr(company.current_risk_band, "value", company.current_risk_band)
-    if not _legal_score_is_released():
-        risk_band = "NOT_EVALUATED"
-    current_score = None if (not _legal_score_is_released() or risk_band == "NOT_EVALUATED") else company.current_compliance_score
+    score_is_current = _evaluation_run_is_current(company, evaluation_run)
+    evaluation_status = _company_evaluation_status(company, evaluation_run)
+    risk_band = (
+        getattr(company.current_risk_band, "value", company.current_risk_band)
+        if score_is_current else "NOT_EVALUATED"
+    )
+    current_score = company.current_compliance_score if score_is_current else None
     return ComplianceSummaryResponse(
         company_id=str(company_id),
         company_name=company.company_name,
@@ -688,17 +930,14 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
         risk_band=risk_band,
         active_flags=flag_summary.get("total_active", 0),
         pending_review_flags=flag_summary.get("pending_review", 0),
-        black_flags=flag_summary.get("black", 0) if _legal_score_is_released() else 0,
-        red_flags=flag_summary.get("red", 0) if _legal_score_is_released() else 0,
-        yellow_flags=flag_summary.get("yellow", 0) if _legal_score_is_released() else 0,
+        black_flags=flag_summary.get("black", 0) if score_is_current else 0,
+        red_flags=flag_summary.get("red", 0) if score_is_current else 0,
+        yellow_flags=flag_summary.get("yellow", 0) if score_is_current else 0,
         last_evaluated_at=company.last_evaluated_at.isoformat() if company.last_evaluated_at else None,
         evaluation_run_id=str(evaluation_run.id) if evaluation_run else None,
         evaluation_hash=evaluation_run.score_hash if evaluation_run else None,
-        evaluation_run_status=(
-            "NOT_RELEASED"
-            if not _legal_score_is_released()
-            else (evaluation_run.evaluation_status if evaluation_run else None)
-        ),
+        evaluation_run_status=_evaluation_run_response_status(company, evaluation_run),
+        evaluation_status=evaluation_status,
         evaluation_calculated_at=evaluation_run.calculated_at.isoformat() if evaluation_run else None,
         engine_version=evaluation_run.engine_version if evaluation_run else None,
         ilrmf_version=score_snapshot.get("ilrmf_version"),
@@ -711,7 +950,17 @@ async def get_compliance(company_id: uuid.UUID, db: AsyncSession = Depends(get_d
 async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for_user)):
     svc = ComplianceService(db)
     flags = await svc.get_active_flags(company_id)
-    return [_flag_to_response(flag) for flag in flags]
+    # Hide stale active rows whenever their current catalogue identity cannot
+    # be bound. They remain auditable in storage but cannot leak as violations.
+    from app.services.compliance_service import _catalogue_identity_conflicts
+    catalogue_rows = list((
+        await db.execute(select(LegalRule).order_by(LegalRule.rule_id))
+    ).scalars().all())
+    conflicted_rule_ids = set(_catalogue_identity_conflicts(catalogue_rows))
+    return [
+        _flag_to_response(flag)
+        for flag in _filter_rjsc_active_flags(flags, conflicted_rule_ids)
+    ]
 
 
 @router.post("/{company_id}/flags/{flag_id}/resolve", response_model=MessageResponse, dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_company_access("company_id"))], summary="Resolve flag")
@@ -749,6 +998,183 @@ async def get_score_history(company_id: uuid.UUID, months: int = Query(default=1
     history = await svc.get_score_history(company_id=company_id, months=months)
     return [_score_history_to_response(item) for item in history]
 
+
+@router.get(
+    "/{company_id}/evaluation-runs",
+    dependencies=[
+        Depends(require_company_access("company_id")),
+        Depends(require_entitlement("compliance_package")),
+    ],
+    summary="List immutable per-evaluation records for an authorised company",
+)
+async def list_company_evaluation_runs(
+    company_id: uuid.UUID,
+    limit: int = Query(default=12, ge=1, le=60),
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """Return a bounded, tenant-scoped index of immutable evaluation runs.
+
+    Monthly score history is a separate append-only snapshot. This endpoint
+    exposes per-run chronology without rewriting a monthly NOT_RELEASED row
+    when a later evaluation completes.
+    """
+    result = await db.execute(
+        select(ComplianceEvaluationRun)
+        .where(ComplianceEvaluationRun.company_id == company_id)
+        .order_by(
+            ComplianceEvaluationRun.calculated_at.desc(),
+            ComplianceEvaluationRun.id.desc(),
+        )
+        .limit(limit)
+    )
+    runs = result.scalars().all()
+    product_score_released = _legal_score_is_released()
+    items = []
+    for run in runs:
+        stored_status = str(run.evaluation_status or "NOT_RELEASED").upper()
+        outcomes = run.rule_outcomes_snapshot
+        provenance = run.fact_provenance_snapshot
+        canonical_rule_ids = set(STATUTORY_RULE_REGISTRY)
+        outcome_rule_id_list = [
+            str(item.get("rule_id")).strip()
+            for item in outcomes
+            if isinstance(item, dict) and item.get("rule_id")
+        ] if isinstance(outcomes, list) else []
+        outcome_rule_ids = set(outcome_rule_id_list)
+        missing_canonical_rule_ids = sorted(canonical_rule_ids - outcome_rule_ids)
+        unmapped_outcome_rule_ids = sorted(outcome_rule_ids - canonical_rule_ids)
+        duplicate_outcome_rule_ids = sorted({
+            rule_id for rule_id in outcome_rule_id_list
+            if outcome_rule_id_list.count(rule_id) > 1
+        })
+        outcome_rule_id_parity = (
+            isinstance(outcomes, list)
+            and len(outcomes) == len(canonical_rule_ids)
+            and outcome_rule_ids == canonical_rule_ids
+            and not duplicate_outcome_rule_ids
+        )
+        catalogue_count_matches_canonical = (
+            run.rule_catalogue_count == len(canonical_rule_ids)
+        )
+
+        def collect_evidence_references(value: object) -> set[str]:
+            references: set[str] = set()
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key.endswith("_evidence_ref") or key in {"evidence_ref", "evidence_refs"}:
+                        if isinstance(child, str) and child.strip():
+                            references.add(child.strip())
+                        elif isinstance(child, list):
+                            references.update(
+                                item.strip() for item in child
+                                if isinstance(item, str) and item.strip()
+                            )
+                        elif isinstance(child, dict):
+                            references.update(collect_evidence_references(child))
+                    else:
+                        references.update(collect_evidence_references(child))
+            elif isinstance(value, list):
+                for child in value:
+                    references.update(collect_evidence_references(child))
+            return references
+
+        provenance_record_type_counts: dict[str, int] = {}
+        if isinstance(provenance, list):
+            for record in provenance:
+                record_type = (
+                    str(record.get("record_type") or "UNCLASSIFIED").strip().upper()
+                    if isinstance(record, dict) else "UNCLASSIFIED"
+                )
+                provenance_record_type_counts[record_type] = (
+                    provenance_record_type_counts.get(record_type, 0) + 1
+                )
+        evidence_reference_count = len(
+            collect_evidence_references(provenance)
+            | collect_evidence_references(outcomes)
+            | collect_evidence_references(run.flags_snapshot)
+        )
+        unattributed_profile_record_count = provenance_record_type_counts.get(
+            "UNATTRIBUTED_PROFILE_FIELDS", 0
+        )
+        score_withheld_reasons: list[str] = []
+        if not product_score_released:
+            score_withheld_reasons.append("Product score release is disabled.")
+        if stored_status != "COMPLETED":
+            score_withheld_reasons.append(f"Stored evaluation status is {stored_status}.")
+        if run.score is None:
+            score_withheld_reasons.append("No stored score is present.")
+        if str(getattr(run.risk_band, "value", run.risk_band)) == "NOT_EVALUATED":
+            score_withheld_reasons.append("Stored risk band is NOT_EVALUATED.")
+        if not catalogue_count_matches_canonical:
+            score_withheld_reasons.append(
+                "Historical catalogue count does not match the 85-ID canonical registry."
+            )
+        if not outcome_rule_id_parity:
+            score_withheld_reasons.append(
+                "Historical outcomes do not exactly match the 85-ID canonical registry."
+            )
+        if unattributed_profile_record_count:
+            score_withheld_reasons.append(
+                "Historical profile facts include unattributed source data."
+            )
+        if evidence_reference_count == 0:
+            score_withheld_reasons.append(
+                "No evidence references are bound to this evaluation snapshot."
+            )
+        score_available = not score_withheld_reasons
+
+        def count_snapshot_values(key: str, default: str) -> dict[str, int]:
+            counts: dict[str, int] = {}
+            if not isinstance(outcomes, list):
+                return counts
+            for item in outcomes:
+                raw = item.get(key) if isinstance(item, dict) else None
+                value = str(raw or default).strip().upper()
+                counts[value] = counts.get(value, 0) + 1
+            return dict(sorted(counts.items()))
+
+        items.append({
+            "evaluation_run_id": str(run.id),
+            "calculated_at": run.calculated_at.isoformat(),
+            "score_label": "Screening score",
+            "screening_only": True,
+            "legal_advice": False,
+            "release_scope": "SCREENED_PRIVATE_BETA",
+            "disclaimer": "Screening output only — not legal advice, a legal opinion or a compliance certificate.",
+            "evaluation_status": stored_status,
+            "score_available": score_available,
+            "score": run.score if score_available else None,
+            "risk_band": (
+                getattr(run.risk_band, "value", run.risk_band)
+                if score_available else "NOT_EVALUATED"
+            ),
+            "score_withheld_reason": (
+                "; ".join(score_withheld_reasons) if score_withheld_reasons else None
+            ),
+            "engine_version": run.engine_version,
+            "rule_catalogue_count": run.rule_catalogue_count,
+            "catalogue_count_matches_canonical": catalogue_count_matches_canonical,
+            "rule_outcomes_count": len(outcomes) if isinstance(outcomes, list) else None,
+            "canonical_rule_count": len(canonical_rule_ids),
+            "outcome_rule_ids_count": len(outcome_rule_ids),
+            "missing_canonical_rule_ids": missing_canonical_rule_ids,
+            "unmapped_outcome_rule_ids": unmapped_outcome_rule_ids,
+            "duplicate_outcome_rule_ids": duplicate_outcome_rule_ids,
+            "outcome_rule_id_parity": outcome_rule_id_parity,
+            # Legacy snapshots without an explicit applicability field remain
+            # UNKNOWN; never derive applicability from outcome or severity.
+            "applicability_state_counts": count_snapshot_values("applicability_state", "UNKNOWN"),
+            "outcome_state_counts": count_snapshot_values("outcome_state", "UNKNOWN"),
+            "verification_status_counts": count_snapshot_values("verification_status", "UNKNOWN"),
+            "rule_outcomes_hash": run.rule_outcomes_hash,
+            "fact_provenance_count": len(provenance) if isinstance(provenance, list) else None,
+            "fact_provenance_record_type_counts": provenance_record_type_counts,
+            "unattributed_profile_record_count": unattributed_profile_record_count,
+            "evidence_reference_count": evidence_reference_count,
+            "evidence_reference_present": evidence_reference_count > 0,
+            "score_hash": run.score_hash,
+        })
+    return {"company_id": str(company_id), "items": items}
 
 @router.get("/dashboard/kpis", dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF"))], summary="Portfolio KPIs")
 async def get_dashboard_kpis(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)):
@@ -1002,3 +1428,21 @@ async def verify_company_charge(
     )
     await db.refresh(charge)
     return charge
+
+
+@router.get(
+    "/{company_id}/rule-coverage",
+    summary="Get live six-state rule coverage for an authorised company",
+)
+async def get_company_rule_coverage_live_endpoint(
+    company_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_for_user),
+    _: uuid.UUID = Depends(require_company_access("company_id")),
+):
+    """Return current DB activity and explicit applicability from the latest immutable run."""
+    from app.services.rule_coverage_service import collect_company_rule_coverage
+
+    result = await collect_company_rule_coverage(db, company_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found.")
+    return result

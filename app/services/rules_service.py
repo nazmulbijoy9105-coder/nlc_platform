@@ -220,6 +220,8 @@ class RulesService(BaseService[LegalRule]):
             version=rule.rule_version or "1.0",
             change_reason=change_reason,
             changed_by=changed_by,
+            actor_type="USER",
+            migration_revision=None,
             changed_at=datetime.now(UTC),
             previous_definition=previous_definition,
             sro_reference=sro_reference,

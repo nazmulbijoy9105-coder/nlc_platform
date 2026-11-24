@@ -25,7 +25,7 @@ EXPECTED_BRANCH_ID = "br-little-cake-aovrrz0y"
 EXPECTED_DATABASE = "neondb"
 EXPECTED_START_REVISION = "0042_dedup_key"
 EXPECTED_PRE_IDENTITY_REVISION = "0114_annual_return_filing_status_provenance"
-EXPECTED_HEAD_REVISION = "0116_canonical_rule_identity_registry"
+EXPECTED_HEAD_REVISION = "0127_one_active_rescue_plan_per_company"
 EXPECTED_LEGACY_RULE_FINGERPRINTS = {
     "INC-001": (
         (
@@ -83,6 +83,35 @@ POST_MIGRATION_REQUIRED_COLUMNS = {
     "webhook_deliveries": (
         PRE_0042_REQUIRED_COLUMNS["webhook_deliveries"] | {"updated_at"}
     ),
+    "compliance_finding_bindings": {
+        "id", "company_id", "compliance_flag_id", "evaluation_run_id",
+        "jurisdiction", "source_namespace", "historical_rule_id",
+        "resolution_status", "attribution_status", "canonical_rule_id",
+        "alias_id", "revision_id", "effective_date", "revision_number",
+        "definition_hash", "evaluator_name", "evaluator_version",
+        "evaluator_artifact_hash", "evidence_status",
+        "evidence_manifest_hash", "finding_snapshot", "finding_snapshot_canonical",
+        "evidence_manifest_canonical", "finding_snapshot_hash",
+        "created_at",
+    },
+    "legal_rule_finding_contexts": {
+        "id", "historical_rule_id", "catalog_version", "source_namespace",
+        "jurisdiction", "source_instrument", "source_provision", "effective_date",
+        "effective_date_basis", "effective_date_source_ref", "context_snapshot",
+        "context_canonical", "context_sha256", "authored_by", "authored_at",
+    },
+    "legal_rule_finding_context_reviews": {
+        "id", "context_id", "review_status", "reviewed_context_sha256",
+        "review_basis", "reviewed_by", "reviewed_at",
+    },
+    "compliance_finding_evidence": {
+        "id", "binding_id", "company_id", "company_fact_id", "evidence_role",
+        "fact_key", "fact_value_snapshot", "fact_value_canonical",
+        "evidence_canonical", "fact_value_hash", "trust_level",
+        "verification_status", "observed_on", "source_reference", "document_id",
+        "document_sha256", "asserted_by", "authorized_uploader_id", "uploaded_at",
+        "verified_by", "verified_at", "captured_at", "evidence_hash",
+    },
 }
 EVIDENCE_TABLES = (
     "agm_notice_evidence",
@@ -956,7 +985,7 @@ async def main() -> int:
             report["error"] = (
                 "Migration 0115 preflight blocked after upgrading the isolated "
                 "branch through 0114. The 0043-0114 migrations were applied to "
-                "the rehearsal branch only; 0115/0116 were not run. Resolve the "
+                "the rehearsal branch only; 0115–0121 were not run. Resolve the "
                 "schema/fingerprint mismatch with an explicit reviewed disposition."
             )
             report["finished_at"] = datetime.now(timezone.utc).isoformat()
@@ -965,7 +994,7 @@ async def main() -> int:
             )
             print(
                 f"{legacy_preflight['status']}: branch stopped at 0114; "
-                f"0115/0116 not applied: {legacy_preflight!r}",
+                f"0115–0118 not applied: {legacy_preflight!r}",
                 file=sys.stderr,
             )
             return 2
@@ -978,6 +1007,23 @@ async def main() -> int:
             ["python", "scripts/audit_alembic_graph.py"], env
         )
         report["alembic_heads_output"] = _run_command(["alembic", "heads"], env)
+
+        try:
+            report["downgrade_rehearsal_output"] = _run_command(
+                ["alembic", "downgrade", EXPECTED_PRE_IDENTITY_REVISION],
+                env,
+            )
+            report["downgrade_rehearsal"] = "DOWNGRADED"
+        except RuntimeError as exc:
+            if "forward-only" not in str(exc).lower():
+                raise
+            report["downgrade_rehearsal_output"] = str(exc)[-12000:]
+            report["downgrade_rehearsal"] = "EXPECTED_FORWARD_ONLY_BLOCK"
+
+        report["post_downgrade_upgrade_output"] = _run_command(
+            ["alembic", "upgrade", "head"], env
+        )
+        report["downgrade_upgrade_rehearsal"] = "PASS"
 
         conn = await _connect(raw_url, assume_migration_owner=True)
         try:
@@ -997,6 +1043,24 @@ async def main() -> int:
                     f"Expected one head {EXPECTED_HEAD_REVISION}; observed "
                     f"{after_identity['alembic_versions']!r}."
                 )
+            rule_parity = await conn.fetchrow(
+                """
+                SELECT
+                    count(*) AS catalogue_rows,
+                    count(*) FILTER (WHERE is_active IS TRUE) AS active_rows
+                FROM public.legal_rules
+                """
+            )
+            if (
+                rule_parity["catalogue_rows"] not in {85, 86}
+                or rule_parity["active_rows"] != 85
+            ):
+                raise RuntimeError(
+                    "0125 catalogue identity parity failed: "
+                    "0125 catalogue parity failed: "
+                    f"{dict(rule_parity)!r}"
+                )
+            report["85_rule_catalogue_parity"] = dict(rule_parity)
             report["post_migration_schema_audit"] = (
                 await _post_migration_schema_audit(conn)
             )

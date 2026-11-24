@@ -1,0 +1,645 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nlc-platform.invalid/schemas/85-rule-provenance-manifest.schema.json",
+  "title": "NLC Bangladesh 85-rule legal provenance manifest",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "snapshot_date",
+    "jurisdiction",
+    "canonical_rule_count",
+    "status_policy",
+    "scoring_release_policy",
+    "canonical_id_inventory",
+    "rules",
+    "legacy_candidates",
+    "known_identity_conflicts"
+  ],
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "jurisdiction": {
+      "const": "BD"
+    },
+    "canonical_rule_count": {
+      "const": 85
+    },
+    "status_policy": {
+      "const": "FAIL_CLOSED"
+    },
+    "scoring_release_policy": {
+      "type": "string",
+      "minLength": 20
+    },
+    "canonical_id_inventory": {
+      "type": "object",
+      "required": [
+        "path",
+        "source_revision",
+        "source_revision_status"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_revision_status": {
+          "enum": [
+            "PINNED",
+            "UNPINNED_REQUIRES_COMMIT_SHA"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 85,
+      "maxItems": 85,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "legacy_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "historical_rule_id",
+          "source_namespace",
+          "disposition",
+          "canonical_rule_uuid",
+          "notes"
+        ],
+        "properties": {
+          "historical_rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_namespace": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "disposition": {
+            "enum": [
+              "QUARANTINED_PENDING_IDENTITY_REVIEW",
+              "RESOLVED"
+            ]
+          },
+          "canonical_rule_uuid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "known_identity_conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "historical_rule_id",
+          "status",
+          "details",
+          "allowed_actions",
+          "prohibited_actions"
+        ],
+        "properties": {
+          "historical_rule_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "allowed_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prohibited_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": [
+        "rule_id",
+        "record_status",
+        "identity",
+        "jurisdiction",
+        "company_scope",
+        "operative_effective_date",
+        "legal_instrument",
+        "amendment_chain",
+        "required_company_facts",
+        "evidence_roles",
+        "evaluator",
+        "legal_review",
+        "product_decision",
+        "unresolved_questions"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,5}-[0-9]{3}$"
+        },
+        "record_status": {
+          "enum": [
+            "UNRESOLVED",
+            "READY_FOR_LEGAL_REVIEW",
+            "LEGAL_REVIEWED",
+            "REJECTED",
+            "QUARANTINED"
+          ]
+        },
+        "identity": {
+          "type": "object",
+          "required": [
+            "canonical_rule_uuid",
+            "source_namespace",
+            "historical_rule_id",
+            "alias_resolution_status",
+            "identity_rationale"
+          ],
+          "properties": {
+            "canonical_rule_uuid": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "source_namespace": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "historical_rule_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "alias_resolution_status": {
+              "enum": [
+                "UNRESOLVED",
+                "AMBIGUOUS",
+                "RESOLVED",
+                "RETIRED"
+              ]
+            },
+            "identity_rationale": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "jurisdiction": {
+          "const": "BD"
+        },
+        "company_scope": {
+          "type": "object",
+          "required": [
+            "entity_types",
+            "conditions",
+            "exclusions",
+            "status"
+          ],
+          "properties": {
+            "entity_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "exclusions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "status": {
+              "enum": [
+                "NOT_ASSESSED",
+                "ASSESSED",
+                "DISPUTED"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "operative_effective_date": {
+          "type": "object",
+          "required": [
+            "from",
+            "to",
+            "date_basis",
+            "source_ref",
+            "status"
+          ],
+          "properties": {
+            "from": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "date_basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "enum": [
+                "UNRESOLVED",
+                "VERIFIED",
+                "DISPUTED"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "legal_instrument": {
+          "type": "object",
+          "required": [
+            "title",
+            "instrument_type",
+            "act_or_instrument_number",
+            "provision",
+            "official_source_url",
+            "artifact_sha256"
+          ],
+          "properties": {
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "instrument_type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "act_or_instrument_number": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "provision": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "official_source_url": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uri"
+            },
+            "artifact_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "amendment_chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "instrument_title",
+              "instrument_number",
+              "provision",
+              "publication_date",
+              "commencement_date",
+              "official_source_url",
+              "artifact_sha256",
+              "relationship"
+            ],
+            "properties": {
+              "instrument_title": {
+                "type": "string"
+              },
+              "instrument_number": {
+                "type": "string"
+              },
+              "provision": {
+                "type": "string"
+              },
+              "publication_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              },
+              "commencement_date": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date"
+              },
+              "official_source_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "artifact_sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[a-fA-F0-9]{64}$"
+              },
+              "relationship": {
+                "enum": [
+                  "AMENDS",
+                  "REPEALS",
+                  "SUBSTITUTES",
+                  "COMMENCES",
+                  "SAVING_OR_TRANSITION",
+                  "INTERPRETIVE_SOURCE"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required_company_facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fact_key",
+              "data_type",
+              "purpose",
+              "applicability_role",
+              "required"
+            ],
+            "properties": {
+              "fact_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "data_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "applicability_role": {
+                "enum": [
+                  "APPLICABILITY",
+                  "TRIGGER",
+                  "EXCEPTION",
+                  "CALCULATION",
+                  "STATUS",
+                  "IDENTITY"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evidence_roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fact_key",
+              "role",
+              "accepted_evidence_types",
+              "verification_standard",
+              "source_authority"
+            ],
+            "properties": {
+              "fact_key": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "accepted_evidence_types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verification_standard": {
+                "type": "string"
+              },
+              "source_authority": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "evaluator": {
+          "type": "object",
+          "required": [
+            "engine_version",
+            "source_commit",
+            "artifact_sha256",
+            "emitted_rule_ids_tested"
+          ],
+          "properties": {
+            "engine_version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "source_commit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "artifact_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[a-fA-F0-9]{64}$"
+            },
+            "emitted_rule_ids_tested": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "legal_review": {
+          "type": "object",
+          "required": [
+            "status",
+            "reviewer_id",
+            "reviewer_qualification",
+            "reviewed_at",
+            "review_basis",
+            "reviewed_payload_sha256"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "REVIEW_REQUIRED",
+                "APPROVED",
+                "REJECTED",
+                "DISPUTED"
+              ]
+            },
+            "reviewer_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reviewer_qualification": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reviewed_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "review_basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reviewed_payload_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "product_decision": {
+          "type": "object",
+          "required": [
+            "status",
+            "decision_owner",
+            "decided_at",
+            "decision_basis"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "NOT_REVIEWED",
+                "APPROVED",
+                "REJECTED",
+                "DEFERRED"
+              ]
+            },
+            "decision_owner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "decided_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "decision_basis": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "unresolved_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

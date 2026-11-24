@@ -1,6 +1,19 @@
 
 > **Historical snapshot — superseded (10 November 2026).** The claim that 82 rules were verified is not authoritative and conflicts with the current approval register: 85 records are REVIEW_REQUIRED, score_eligible=false, and approved_rule_ids is empty. Do not add IDs to VERIFIED_RULE_IDS based on this document. See [STATUS_AND_GAP_REGISTER_2026-11-10.md](STATUS_AND_GAP_REGISTER_2026-11-10.md).
 
+## Primary-source corrections — 21 November 2026
+
+The historical questions below are superseded for technical citation mapping by the current official Bangla Act text. These corrections do **not** constitute independent Bangladesh counsel approval; the 85-rule legal approval register remains pending.
+
+1. **AUD-001 — resolved technical citation:** Section 210(6) expressly requires the Board to appoint the first auditor within one month of registration. Section 210(1) governs appointment of auditors at each AGM. Section 210(2) gives an appointed auditor 30 days to notify the Registrar of acceptance or refusal. The current engine/canonical mapping to **Section 210(6)** and one-calendar-month calculation is correct. The legacy `FIRST_AUDITOR_DEADLINE_DAYS = 30` constant is deprecated and must not be used as the statutory calculation.
+2. **AUD-002 — resolved technical citation:** Section 183 governs the annual balance sheet and profit-and-loss / income-and-expenditure account presented at the AGM and requires audit and the auditor's report. Section 151 concerns return of share allotment and is not an audit provision. The current Section 183 mapping is correct.
+3. **AUD-003 / AUD-004:** The current candidate mappings are Sections 183 and 210 (actual accounts, auditor appointment and applicable exceptions) and Section 210(3) (auditor reappointment), respectively. Applicability and evidence remain review-required.
+4. **SH-001 — resolved technical citation:** Section 151 requires the return of allotment and prescribed supporting documents within 60 days after allotment, subject to the statutory extension mechanism. The current Section 151 mapping is correct; the historical Section 50 alternative is not the return-of-allotment provision.
+5. **SH-002 — resolved technical citation:** Section 158 requires share/debenture certificates to be ready for delivery within 90 days after allotment or registration of transfer. The current Section 158 mapping is correct; Section 46 concerns share warrants and is not the certificate-deadline provision.
+
+Primary text: [Companies Act 1994 — official consolidated text](https://bdlaws.minlaw.gov.bd/act-print-788.html), [Section 183](https://bdlaws.minlaw.gov.bd/act-788/section-33572.html), [Section 151](https://bdlaws.minlaw.gov.bd/act-788/section-33367.html), and [Section 158](https://bdlaws.minlaw.gov.bd/act-print-788/section-print-33470.html). All five rule families remain `RECONCILE` / `PENDING` for independent counsel sign-off.
+
+
 # NLC Legal Review — Pending Citation Questions
 
 ## Purpose

@@ -54,24 +54,30 @@ A full-stack compliance intelligence platform that:
 nlc_platform/
 ├── app/
 │   ├── main.py              # FastAPI app factory + middleware; no schema migration at startup
-│   ├── api/                 # 11 routers, 80+ endpoints
-│   ├── models/              # 28 SQLAlchemy ORM tables (147+ columns on companies)
-│   ├── services/            # 12 service files (CompanyService, ComplianceService, etc.)
+│   ├── api/                 # FastAPI routers and versioned endpoints
+│   ├── models/              # SQLAlchemy ORM models and RLS-aware schemas
+│   ├── services/            # Domain, statutory filing, evidence and compliance services
 │   ├── core/                # config, security, dependencies (RBAC + RLS)
-│   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.1
+│   ├── rule_engine/         # Deterministic 85-rule ILRMF engine v2.2
 │   └── worker/              # Celery tasks + beat schedule (7-year retention)
 ├── alembic/                 # Versioned Alembic revision DAG (including merge revisions)
 ├── scripts/                 # Audits and development-only utilities; production registry is migration-controlled
-├── tests/                   # 288 unit tests + integration tests (unit + integration)
+├── tests/                   # Unit, PostgreSQL integration, security and runtime regression suites
 ├── tools/                   # audit_rule_parity.py (canonical AST-based parity check)
 ├── docs/                    # LEGAL_BASIS_MATRIX.md, LAWYER_LEGAL_REVIEW_PACK.md
-├── .github/workflows/       # CI: compile + pytest + parity audit
+├── .github/workflows/       # CI, migration rehearsal, production parity and controlled deployment
 ├── Dockerfile               # Multi-stage build
 ├── docker-compose.yml       # Full local stack
 ├── render.yaml              # Render.com deployment blueprint
-├── .env.example             # All config variables documented (v2.1)
+├── .env.example             # Example configuration (never production secrets)
 ├── CHANGELOG.md             # Version history
 └── pytest.ini               # Test configuration
+
+## Score freshness and release contract
+
+A company score is a product risk indicator only — not legal advice and not a certification. The API may publish a score or risk band only when the latest evaluation is completed, uses the current engine and scoring specification, passes evaluation-ledger integrity checks, reconciles to its score snapshot, and matches the company's cached score, band and evaluation timestamp. Changes to company profile, facts, directors, shareholders, share transfers, AGM, audit, annual-return, statutory-register or share-evidence inputs invalidate the cached statutory score. Until a new valid evaluation completes, the current score and risk band are withheld as `NOT_EVALUATED` or `STALE`.
+
+`NOT_EVALUATED` is an evaluation/data status. It is not a GREEN result, a legal conclusion, or evidence that a company is compliant.
 
 ## 85 ILRMF Rules — 17 Modules
 
@@ -145,51 +151,68 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Native Render autoDeploy is disabled; GitHub Actions deploys only after CI succeeds on current main
-# Apply reviewed Alembic migrations as a separately authorized release operation; API startup performs no schema migration
-# Canonical legal-rule registry is managed by versioned Alembic migrations; do not seed production at runtime
+# Render native autoDeploy is disabled. The controlled GitHub Actions workflow runs after successful CI on current main.
+# The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
+# Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
+# Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
 
-API Endpoints
-Router
-	
-Endpoints
-	
-Auth
-/api/v1/auth	login, signup, refresh, logout, me, verify-2fa, change-password	Public (login/signup)
-/api/v1/companies	CRUD, evaluate, compliance, flags, score-history, dashboard	RBAC + RLS
-/api/v1/filings	AGM, audit, annual-return, statutory-register CRUD	RBAC
-/api/v1/rescue	plans CRUD, step updates, engagement creation	Admin+
-/api/v1/documents	list, generate, approve, release, download	RBAC
-/api/v1/commercial	pipeline, funnel, engagements, quotations	Admin only
-/api/v1/rules	list, get, update, history, black-overrides, summary	Public list, Admin edit
-/api/v1/admin	dashboard, users CRUD, activity-logs, cron evaluate-all	Admin only
-/api/v1/health	live, ready	Public
-/api/v1/rjsc-forms	list, create, pending, overdue	RBAC
- 
- 
-Security
+## API router inventory
 
-     RBAC: 5 roles (SUPER_ADMIN > ADMIN_STAFF > LEGAL_STAFF > CLIENT_DIRECTOR > CLIENT_VIEW_ONLY)
-     RLS: Row-Level Security on 15 company-scoped tables
-     JWT: 32+ char secret, access + refresh tokens, Redis blacklist on logout
-     2FA: TOTP with AES-256-GCM encryption (optional, mandatory for SUPER_ADMIN)
-     Rate Limiting: 10 login attempts/minute per IP
-     Password Policy: 8+ chars, complexity requirements enforced
-     CORS: Locked to frontend origin
-     Audit Trail: Append-only activity logs, 7-year retention (Bangladesh requirement)
-     AI Constitution: AI cannot modify rules; AI documents require human approval
+These are the routers mounted by `app/main.py` on current `main`. The prefix is not a promise that every operation is available to every role; route-level dependencies and company authorization are authoritative.
 
-Deployment
-Render.com (Production)
+| Prefix | Main capabilities | Access boundary |
+|---|---|---|
+| `/api/v1/health` | Liveness and readiness | Public |
+| `/api/v1/auth` | Login, signup, refresh, logout, profile, 2FA and password changes | Login/signup public; authenticated operations protected |
+| `/api/v1/companies` | Company CRUD, evaluation, compliance, flags, score history and dashboard | RBAC + company scope/RLS |
+| `/api/v1/portfolio/compliance` | Portfolio evaluation, rule-outcome aggregation and reactivation controls | SUPER_ADMIN |
+| `/api/v1/filings` | AGM, audit, annual return, statutory registers and filing evidence | RBAC + company scope |
+| `/api/v1/rescue` | Rescue plans, steps and engagements | Staff roles + company scope |
+| `/api/v1/documents` | Document listing, generation, approval, release and download | RBAC + company scope |
+| `/api/v1/commercial` | Pipeline, funnel, engagements and quotations | Staff roles |
+| `/api/v1/finance` | Invoices, payment submissions, payment approval/rejection and company payment history | RBAC + company scope; payment review is staff-controlled |
+| `/api/v1/subscriptions` | Plans, subscription state and entitlement operations | RBAC; plan administration is staff-controlled |
+| `/api/v1/rjsc-forms` | RJSC forms, pending and overdue filings | RBAC + company scope |
+| `/api/v1/calendar` | Company compliance calendar and deadline generation | Entitlement + company scope; generation requires a released deadline manifest |
+| `/api/v1/legal-provenance` | Legal source catalogue, provision mappings, deadline definitions and owner decisions | SUPER_ADMIN governance writes; authenticated scoped reads |
+| `/api/v1/rules` | Rule catalogue, history, summaries and override administration | Authenticated read; privileged rule changes |
+| `/api/v1/admin` | Administrative dashboard, user management, activity logs and maintenance operations | Administrative roles |
+| `/api/v1/notifications` | Current-user notifications, pending items and acknowledgement | Authenticated current user |
+| `/api/v1/webhooks` | Webhook registration, update, test and delivery history | RBAC + endpoint ownership/admin scope |
+
+Finance/subscription routes do not establish an automated payment-gateway integration. Treat customer billing activation and payment processing as staff-assisted until the complete payment provider, reconciliation and entitlement workflow is independently verified.
+
+## Security
+
+- **RBAC:** five roles — `SUPER_ADMIN`, `ADMIN_STAFF`, `LEGAL_STAFF`, `CLIENT_DIRECTOR`, `CLIENT_VIEW_ONLY`.
+- **RLS:** PostgreSQL row-level security is enabled and forced on protected tables; policies and grants must be re-audited against the deployed revision.
+- **JWT:** access and refresh tokens; Redis-backed revocation/blacklist on logout.
+- **2FA:** TOTP secrets encrypted with AES-256-GCM; mandatory for `SUPER_ADMIN`.
+- **Rate limiting:** login attempts are rate-limited per IP.
+- **CORS:** configured through `ALLOWED_ORIGINS`; production should contain only the deployed frontend origin(s).
+- **Audit trail:** append-only activity logging with configured retention.
+- **AI governance:** AI cannot modify statutory rules; generated legal documents require human approval.
+
+
+## Database migration status
+
+- Current `main` contains **119 Alembic revision files** under `alembic/versions/` and has source head `0117_canonical_registry_runtime_read`.
+- A read-only production inspection on **17 November 2026** observed Alembic revision `0112_runtime_acl_and_alembic_rls`; revisions 0113–0117 were not yet deployed at that observation time.
+- CI must prove one Alembic head, audit the revision DAG, upgrade independent fresh PostgreSQL databases, and rehearse supported historical baselines. Do not infer production migration state from the source tree.
+- Re-check `alembic_version` in the target environment before every release. Production migrations run only through the controlled deployment workflow; never use hand-written SQL or runtime seed scripts to reconcile the legal-rule registry.
+
+## Deployment
+
+**Render.com (Production)**
 
      Backend: https://nlc-platform.onrender.com
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
-     Apply reviewed Alembic migrations explicitly before application release
-     API startup does not mutate schema or seed legal rules
-     Native Render autoDeploy is disabled; GitHub Actions triggers the deploy hook only after successful CI on current main
+     Native Render autoDeploy is disabled; the controlled GitHub Actions workflow runs after successful CI on current main
+     The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets
+     Missing migration credentials abort before the Render deploy hook; API startup does not migrate or seed
+     Apply reviewed Alembic migrations before application release
 Docker (Local/On-Premise)
 docker-compose up -d
 Rule Parity Audit

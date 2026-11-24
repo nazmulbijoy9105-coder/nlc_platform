@@ -16,7 +16,6 @@ from tools.audit_rule_parity import get_seed_rules
 
 pytestmark = [pytest.mark.integration]
 
-
 @pytest.mark.asyncio
 async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_claims(db):
     role_exists = await db.execute(
@@ -26,6 +25,8 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
         if os.getenv("CI", "").lower() == "true":
             pytest.fail("CI must provision nlc_ci_audit_role before migration/integration tests")
         pytest.skip("nlc_ci_audit_role is provisioned by the CI integration database setup")
+
+    seed_ids = get_seed_rules()
 
     await db.execute(text("SET LOCAL ROLE nlc_ci_audit_role"))
     rows = (
@@ -52,8 +53,10 @@ async def test_ci_audit_role_can_read_full_catalogue_without_legal_verification_
     inactive_ids = {row["rule_id"] for row in rows if row["is_active"] is not True}
 
     # Inventory completeness is an identity assertion, not a legal conclusion.
+    # Migration 0124 restores all 85 catalogue IDs while preserving
+    # PENDING/NOT_EVALUATED and score-zero fail-closed controls.
     assert len(inventory) == len(rows) == 86
-    assert active_ids == get_seed_rules()
+    assert active_ids == seed_ids
     assert inactive_ids == {"INC-002"}
     assert all(row["verification_status"] == "PENDING" for row in rows)
     assert verified_ids == []

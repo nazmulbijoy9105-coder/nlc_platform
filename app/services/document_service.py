@@ -621,6 +621,12 @@ async def _render_pdf(content: str, title: str, settings) -> bytes:
         template = env.get_template("document.html")
     except jinja2.TemplateNotFound:
         # Fallback minimal template
+        from html import escape
+
+        # The fallback is assembled as an HTML string rather than rendered by
+        # Jinja, so escape all untrusted text before interpolating it.
+        safe_title = escape(str(title), quote=True)
+        safe_content = escape(str(content), quote=True)
         html = f"""
         <html><head><style>
           body {{ font-family: Arial, sans-serif; padding: 40px; }}
@@ -628,10 +634,10 @@ async def _render_pdf(content: str, title: str, settings) -> bytes:
           pre {{ white-space: pre-wrap; }}
         </style></head>
         <body>
-          <h1>{title}</h1>
+          <h1>{safe_title}</h1>
           <p><em>NEUM LEX COUNSEL — RJSC Compliance Intelligence</em></p>
           <hr/>
-          <pre>{content}</pre>
+          <pre>{safe_content}</pre>
           <hr/>
           <p><small>This document was prepared by Neum Lex Counsel.
           It is not legal advice. Consult your legal counsel.</small></p>

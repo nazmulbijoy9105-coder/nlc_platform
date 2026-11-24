@@ -89,6 +89,10 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 # ── Import ALL models so Alembic sees them in metadata ────────────────
+# The metadata-only guard is accepted only for the Alembic CLI process with
+# a dedicated migration URL; it prevents API pool/RLS startup side effects.
+os.environ.setdefault("NLC_ALEMBIC_METADATA_ONLY", "1")
+
 # This is critical for autogenerate — every model must be imported here
 from app.models import (  # noqa: F401 — imports are for side-effects
     AGM,
@@ -175,14 +179,45 @@ def get_database_url() -> str:
 
 
 # ── Autogenerate Configuration ────────────────────────────────────────
+# Tables that exist in the database only because migrations created them
+# (quarantine snapshots, RLS signing key material, append-only audit
+# ledgers, verification event logs). They are intentionally model-free
+# and managed exclusively by migrations, so autogenerate / `alembic
+# check` must never propose dropping them. Reflected tables NOT in this
+# allowlist still surface as drift — the check stays meaningful.
+# tests/unit/test_alembic_migration_only_tables.py pins this allowlist
+# against the migrations/models source on every CI run.
+MIGRATION_ONLY_TABLES = frozenset({
+    "_nlc_migration_0006_seeded_rule_ids",
+    "articles_verification_events",
+    "articles_verifications",
+    "legal_release_quarantine_events",
+    "legal_rule_identity_archive",
+    "legal_rule_reconciliation_audit",
+    "rls_signing_key",
+    "section150_legacy_status_snapshot",
+    "share_transfer_legacy_status_snapshot",
+})
+
+
 def include_object(object, name, type_, reflected, compare_to):
     """
     Control what Alembic includes in autogenerate diff.
-    Exclude: PostgreSQL system schemas, views (managed in migrations directly).
-    Include: All 29 tables in public schema.
+    Exclude: PostgreSQL system schemas, views (managed in migrations directly),
+    and the model-free migration-managed tables above (only when reflected
+    from the database — a future ORM model for the same name still compares).
+    Include: All remaining tables in public schema.
     """
     if type_ == "table" and name.startswith("vw_"):
         # Views are created via raw SQL in migrations, not ORM
+        return False
+    if (
+        type_ == "table"
+        and reflected
+        and compare_to is None
+        and name in MIGRATION_ONLY_TABLES
+    ):
+        # DB-only table explicitly maintained by migrations: never auto-drop
         return False
     return not (type_ == "schema" and name not in (None, "public"))
 
@@ -381,10 +416,14 @@ def prepare_production_migration_role(connection: Connection) -> None:
         )
     ).one()
 
-    if session_user != "nlc_migration_user" or current_user != session_user:
+    if session_user != "nlc_migration_user" or current_user not in {
+        "nlc_migration_user",
+        "nlc_migration_owner",
+    }:
         raise RuntimeError(
-            "Production migrations must connect as session_user "
-            "'nlc_migration_user' before assuming 'nlc_migration_owner'; "
+            "Production migrations must use session_user 'nlc_migration_user' "
+            "and may only start as that login or its explicitly assumed "
+            "nlc_migration_owner role; "
             f"observed session_user={session_user!r}, current_user={current_user!r}."
         )
     if server_version < 160000:
@@ -445,7 +484,11 @@ def prepare_production_migration_role(connection: Connection) -> None:
             "SET ROLE membership in nlc_migration_owner."
         )
 
-    connection.execute(text("SET ROLE nlc_migration_owner"))
+    # Neon/PgBouncer may return a session where this exact dedicated login
+    # already has its SET-only owner role active. Validate the role flags and
+    # membership above before accepting that state; never accept another role.
+    if current_user == session_user:
+        connection.execute(text("SET ROLE nlc_migration_owner"))
     assumed_role = connection.execute(text("SELECT current_user")).scalar_one()
     if assumed_role != "nlc_migration_owner":
         raise RuntimeError(
@@ -661,20 +704,30 @@ async def run_async_migrations() -> None:
         connect_args=connect_args,
     )
 
-    async with connectable.connect() as connection:
-        await connection.execute(text("SET timezone = 'UTC'"))
-        await connection.commit()
-        await connection.run_sync(prepare_production_migration_role)
-        await connection.run_sync(validate_production_migration_role)
-        # This guard is environment-independent and runs before any Alembic
-        # DDL, including the historical 0044 schema-only reconstruction.
-        await connection.run_sync(preflight_historical_evidence_schema)
-        await connection.run_sync(ensure_alembic_version_column_capacity)
-        await connection.commit()
-        await connection.run_sync(do_run_migrations)
-        await connection.commit()
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            try:
+                await connection.execute(text("SET timezone = 'UTC'"))
+                await connection.commit()
+                await connection.run_sync(prepare_production_migration_role)
+                await connection.run_sync(validate_production_migration_role)
+                # This guard is environment-independent and runs before any Alembic
+                # DDL, including the historical 0044 schema-only reconstruction.
+                await connection.run_sync(preflight_historical_evidence_schema)
+                await connection.run_sync(ensure_alembic_version_column_capacity)
+                await connection.commit()
+                await connection.run_sync(do_run_migrations)
+                await connection.commit()
+            finally:
+                if _is_production_migration_environment():
+                    # RESET ROLE is essential with pooled PostgreSQL endpoints:
+                    # a second Alembic CLI invocation must not inherit the
+                    # previous process's elevated current_user state.
+                    await connection.rollback()
+                    await connection.execute(text("RESET ROLE"))
+                    await connection.commit()
+    finally:
+        await connectable.dispose()
 
 
 def run_migrations_online() -> None:

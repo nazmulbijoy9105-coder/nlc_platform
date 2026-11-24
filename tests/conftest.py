@@ -36,6 +36,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from fastapi import Request
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url as _make_url
@@ -70,6 +71,44 @@ TEST_DATABASE_URL = _get_test_db_url()
 assert _make_url(TEST_DATABASE_URL).host in ("localhost", "127.0.0.1"), \
     "tests must run against a local database"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+# Local-only Alembic migration identity. Never used by the application engine.
+# Validated lazily so pure unit tests can be collected without a DB env.
+TEST_DATABASE_MIGRATION_URL = os.environ.get(
+    "DATABASE_URL_TEST_MIGRATION", ""
+).strip()
+
+
+def _require_test_migration_url() -> str:
+    """Validate the migration identity; DB fixtures call this lazily."""
+    if not TEST_DATABASE_MIGRATION_URL:
+        raise RuntimeError(
+            "DATABASE_URL_TEST_MIGRATION is required for local test migrations"
+        )
+    _app_url = _make_url(TEST_DATABASE_URL)
+    _migration_url = _make_url(TEST_DATABASE_MIGRATION_URL)
+    assert _migration_url.host in ("localhost", "127.0.0.1"), (
+        "test migration connection must be local"
+    )
+    assert _migration_url.database == _app_url.database, (
+        "application and migration connections must target the same database"
+    )
+    assert _migration_url.username != _app_url.username, (
+        "application and migration identities must be separate"
+    )
+    return TEST_DATABASE_MIGRATION_URL
+
+# Test-only HMAC key. Never use this value in production.
+# Keep the exact key used by the CI migration/bootstrap step. Replacing
+# it here makes every signed RLS principal unverifiable because PostgreSQL
+# stores the original key in nlc_private.rls_signing_key. Local runs get a
+# deterministic test-only fallback only when no key was supplied.
+TEST_RLS_HMAC_SECRET = os.environ.get(
+    "NLC_RLS_HMAC_SECRET",
+    "nlc-test-only-hmac-secret-not-for-production-2026",
+).strip()
+assert len(TEST_RLS_HMAC_SECRET) >= 32
+os.environ.setdefault("NLC_RLS_HMAC_SECRET", TEST_RLS_HMAC_SECRET)
 os.environ.setdefault("JWT_SECRET_KEY", "ci-only-" + "x" * 40)
 
 
@@ -94,12 +133,16 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(request):
+    _require_test_migration_url()
     """
     Async engine pointing at nlc_test database.
     NullPool ensures no connection leaks between tests.
     """
+    # Use the dedicated local migration/owner identity for ordinary fixture
+    # setup. RLS-specific tests and API requests explicitly SET LOCAL ROLE
+    # nlc_app_role with a signed principal, so this does not weaken those tests.
     engine = create_async_engine(
-        TEST_DATABASE_URL,
+        TEST_DATABASE_MIGRATION_URL,
         echo=False,
         poolclass=NullPool,
     )
@@ -138,7 +181,12 @@ async def test_engine(request):
     proc = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if proc.returncode != 0:
@@ -149,7 +197,12 @@ async def test_engine(request):
     heads_proc = subprocess.run(
         [sys.executable, "-m", "alembic", "heads"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if heads_proc.returncode != 0:
@@ -169,7 +222,12 @@ async def test_engine(request):
     current_proc = subprocess.run(
         [sys.executable, "-m", "alembic", "current"],
         cwd=Path(__file__).resolve().parent.parent,
-        env={**os.environ, "DATABASE_URL": TEST_DATABASE_URL},
+        env={
+            **os.environ,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "MIGRATION_DATABASE_URL": TEST_DATABASE_MIGRATION_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
+        },
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if current_proc.returncode != 0:
@@ -190,6 +248,7 @@ async def test_engine(request):
         env={
             **os.environ,
             "DATABASE_URL": TEST_DATABASE_URL,
+            "NLC_RLS_HMAC_SECRET": TEST_RLS_HMAC_SECRET,
             "NLC_ALLOW_DEVELOPMENT_RULE_SEED": "true",
             "ENVIRONMENT": "test",
         },
@@ -199,6 +258,14 @@ async def test_engine(request):
         pytest.fail(
             f"Rule seeding failed:\n{seed_proc.stdout}\n{seed_proc.stderr}",
             pytrace=False,
+        )
+
+    # Model the narrowly scoped migration-owner role for owner-level trigger
+    # tests. The isolated CI migration login is a test-cluster superuser; this
+    # one table transfer is confined to the disposable *_test database.
+    async with engine.begin() as owner_connection:
+        await owner_connection.execute(
+            text("ALTER TABLE public.payment_allocations OWNER TO nlc_migration_owner")
         )
 
     yield engine
@@ -317,8 +384,14 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
     Celery tasks are mocked to run eagerly (no worker needed).
     """
     from app.core.dependencies import get_db, get_db_for_user
+    from app.core.security import decode_token
     from app.main import create_app
-    from app.models.database import get_db as auth_get_db
+    from app.models.database import (
+        _set_signed_rls_principal,
+        get_db as auth_get_db,
+        set_auth_context,
+        set_rls_context,
+    )
     from app.models.enums import UserRole
     from app.models.user import User
 
@@ -339,13 +412,31 @@ async def api_client(db) -> AsyncGenerator[AsyncClient, None]:
 
     app = create_app()
 
-    # Override all DB dependency objects used by the API with the test transaction.
-    async def _override_db():
+    # Preserve the production RLS boundary while reusing the test transaction.
+    # The old blanket override yielded an unscoped session, so authenticated
+    # requests saw no signed principal and returned 401/RLS-denied rows.
+    async def _override_user_db(request: Request):
+        authorization = request.headers.get("authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        payload = decode_token(token, expected_type="access") if token else None
+        principal = (
+            payload.get("sub") or payload.get("user_id")
+            if isinstance(payload, dict)
+            else None
+        )
+        if principal:
+            await set_rls_context(db, str(principal))
+        else:
+            await _set_signed_rls_principal(db, "ANONYMOUS")
         yield db
 
-    app.dependency_overrides[get_db] = _override_db
-    app.dependency_overrides[get_db_for_user] = _override_db
-    app.dependency_overrides[auth_get_db] = _override_db
+    async def _override_auth_db():
+        await set_auth_context(db)
+        yield db
+
+    app.dependency_overrides[get_db] = _override_user_db
+    app.dependency_overrides[get_db_for_user] = _override_user_db
+    app.dependency_overrides[auth_get_db] = _override_auth_db
 
     # Patch Celery tasks to be no-ops
     with patch("app.worker.tasks.evaluate_company_compliance.apply_async", return_value=MagicMock(id="test-task")), \
@@ -404,6 +495,38 @@ def build_profile():
             "company_id": str(uuid.uuid4()),
             "company_name": "Test Company Ltd",
             "company_type": "PRIVATE_LIMITED",
+            # Pure-engine fixtures model explicit document-backed verification.
+            "verified_fact_context": {
+                "trade_license_obtained": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+                "trade_license_expiry": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+                "registered_office_change_date": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+                "form_vi_filed": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+                "special_resolution_date": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+                "special_resolution_filed": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+                "annual_return_filed": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+                "annual_return_content_complete": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+            },
+            "verified_fact_keys": frozenset({
+                "trade_license_obtained", "trade_license_expiry", "tin_obtained",
+                "company_type", "incorporation_date", "member_count", "current_director_count", "last_agm_date",
+                "last_audit_signed_date", "last_return_filed_year",
+                "first_auditor_appointed", "annual_return_filed", "annual_return_content_complete", "agm_held_this_cycle",
+                "members_present_at_agm", "agm_quorum_required",
+                "register_of_members_maintained", "register_of_directors_maintained",
+                "register_of_charges_maintained", "minutes_book_agm_maintained",
+                "minutes_book_board_maintained",
+            }),
+            "directors_verified": True,
+            "directors_verification_evidence_ref": "DIRECTOR-COUNT-TEST",
+            "audit_completion_verified": True,
+            "audit_completion_evidence_ref": "AUDIT-TEST",
+            "annual_return_filing_status_verified": True,
+            "annual_return_filing_status_evidence_ref": "RETURN-TEST",
+            "register_of_members_maintained": True,
+            "register_of_directors_maintained": True,
+            "register_of_charges_maintained": True,
+            "minutes_book_agm_maintained": True,
+            "minutes_book_board_maintained": True,
             # Incorporated 3 years ago — old enough for all deadlines
             "incorporation_date": today - timedelta(days=365 * 3),
             "financial_year_end": date(today.year - 1, 12, 31),

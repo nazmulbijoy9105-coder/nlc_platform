@@ -4,7 +4,8 @@ models/__init__.py — Single import point for all 29 ORM models.
 
 Usage:
     from app.models import User, Company, ComplianceFlag, ...
-    from app.models import Base, get_db
+    from app.models import Base
+    from app.models.database import get_db
 
 Import order matters: Base must be imported before models that
 use it, so SQLAlchemy can resolve all relationships correctly.
@@ -12,7 +13,8 @@ All models are imported here to ensure they're registered with Base.metadata
 before Alembic migrations are generated.
 """
 
-# ── Database infrastructure ─────────────────────────────────────────
+# ── Credential-independent ORM metadata ──────────────────────────────
+from .base import Base
 # ── Commercial (Tasks, Engagements, Quotations) ──────────────────────
 from .commercial import Engagement, Quotation, Task
 from .finance import (
@@ -34,6 +36,11 @@ from .company_fact import CompanyFact
 from .domain_event import DomainEventConsumption, DomainEventOutbox
 
 # ── Compliance (Flags, Score History, Events) ────────────────────────
+from .finding_evidence import ComplianceFindingBinding, ComplianceFindingEvidence
+from .governed_finding_context import (
+    LegalRuleFindingContext,
+    LegalRuleFindingContextReview,
+)
 from .compliance import (
     ComplianceEvent,
     ComplianceEvaluationRun,
@@ -41,7 +48,6 @@ from .compliance import (
     ComplianceScoreHistory,
 )
 from .compliance_calendar import ComplianceCalendarEvent
-from .database import Base, get_db, set_admin_context, set_rls_context
 
 # ── Documents (Documents, Access Log, AI Templates, AI Log) ──────────
 from .documents import (
@@ -159,6 +165,10 @@ __all__ = [
     "ComplexityLevel",
     "ComplianceCalendarEvent",
     "ComplianceEvent",
+    "ComplianceFindingBinding",
+    "ComplianceFindingEvidence",
+    "LegalRuleFindingContext",
+    "LegalRuleFindingContextReview",
     "ComplianceEvaluationRun",
     "ComplianceFlag",
     "ComplianceScoreHistory",
@@ -214,9 +224,6 @@ __all__ = [
     "WebhookDelivery",
     "WebhookEndpoint",
     "WebhookEvent",
-    "get_db",
-    "set_admin_context",
-    "set_rls_context",
 ]
 
 from .webhook import DeliveryStatus, WebhookDelivery, WebhookEndpoint, WebhookEvent

@@ -335,6 +335,10 @@ async def test_allocation_append_only_trigger_rejects_owner_mutation(
     # set_rls_context() switches to nlc_app_role. Reset to the connection's
     # authenticated session role so the ACL no longer masks the BEFORE trigger.
     await db.execute(text("RESET ROLE"))
+    # The migration login has a narrowly scoped SET-only membership in the
+    # non-login owner role. Exercise the trigger as the actual table owner,
+    # not as the superuser login and not as nlc_app_role.
+    await db.execute(text("SET ROLE nlc_migration_owner"))
     ownership = (await db.execute(text("""
         SELECT current_user = pg_get_userbyid(c.relowner)
           FROM pg_class c

@@ -6,11 +6,11 @@ Maps each verified rule to:
 - Exceptions (conditions that make the rule NOT_APPLICABLE)
 - Scope limitations (company type, lifecycle stage, etc.)
 
-Based on Companies Act 1994 (Bangladesh) section text.
+These are product-scope predicates, not a certification of legal correctness or a global scoring gate.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple
 
 @dataclass(frozen=True)
@@ -23,7 +23,8 @@ class ApplicabilityRule:
     notes: str = ""
 
 # ═════════════════════════════════════════════════════════════════════
-# APPLICABILITY MODEL — 35 verified rules
+# APPLICABILITY MODEL — 41 candidate mappings (not legally verified)
+# APPLICABILITY MODEL — 41 declared product-scope policies
 # ═════════════════════════════════════════════════════════════════════
 
 APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
@@ -120,8 +121,15 @@ APPLICABILITY_REGISTRY: dict[str, ApplicabilityRule] = {
         "remains liable until Form XII filed."
     ),
     "DIR-007": ApplicabilityRule(
-        "DIR-007", ("ALL",), ("director_appointed",), (),
-        "S93(2): Consent must be filed within 30 days of appointment."
+        "DIR-007",
+        ("UNCONFIRMED_REQUIRES_COUNSEL_MAPPING",),
+        ("director_appointed",),
+        (),
+        "UNRESOLVED — director_appointed is only a candidate event input, not a "
+        "validated applicability or deadline rule. The statutory s.92 / s.93(2) "
+        "mapping and RJSC Form IX instructions require independent reconciliation. "
+        "Do not infer a filing breach, universal company scope or a 30-day deadline "
+        "from this entry. Keep the finding NOT_EVALUATED pending source and counsel review."
     ),
     "DIR-008": ApplicabilityRule(
         "DIR-008", ("ALL",), ("director_holds_office_of_profit",), ("company_consent_given",),

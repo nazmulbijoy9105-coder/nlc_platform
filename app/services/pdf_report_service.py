@@ -28,6 +28,7 @@ from app.rule_engine.engine import (
     CATEGORY_CAPS,
     LEGAL_SCORE_RELEASED,
     PRODUCT_SCORING_RULE_IDS,
+    RULE_ENGINE_VERSION,
     SCORE_DEDUCTION_RULE_IDS,
     VERIFIED_RULE_IDS,
 )
@@ -41,6 +42,11 @@ from app.services.pdf_render import (
 from app.services.rescue_service import RescueService
 from canonical_architecture.scoring_spec import allocate_flag_deductions
 from canonical_architecture.scoring_spec import SCORING_SPEC_VERSION
+from canonical_architecture.rjsc_scope import (
+    RJSC_IN_SCOPE_RULE_IDS,
+    RJSC_RULE_SCOPE,
+    is_rjsc_rule_in_scope,
+)
 
 REPORT_TZ = ZoneInfo("Asia/Dhaka")
 LOGO_FILE = "nlc_logo.svg"
@@ -161,7 +167,10 @@ def _render_exec_summary(company: Any, flags: Any, band: str, score: int, rescue
     """Generate a brief executive summary paragraph based on the company's status."""
     flag_count = len(flags) if flags else 0
     def verified_severity(flag):
-        if getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS:
+        if (
+            not is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            or getattr(flag, "rule_id", "") not in PRODUCT_SCORING_RULE_IDS
+        ):
             return None
         return getattr(
             getattr(flag, "severity", None),
@@ -235,6 +244,10 @@ def _render_rescue_section(rescue_plan: Any) -> str:
     if total == 0 and steps:
         total = len(steps)
     pct = min(max(pct, 0), 100)
+    initial_score = getattr(plan, "initial_score", None)
+    initial_score_str = (
+        "NOT EVALUATED" if initial_score is None else f"{initial_score}/100"
+    )
 
     # Step rows
     if steps:
@@ -288,7 +301,7 @@ def _render_rescue_section(rescue_plan: Any) -> str:
         <div class="rescue-meta">
             <strong>Plan:</strong> {esc(getattr(plan, "plan_name", ""))}<br>
             <strong>Triggered by risk band:</strong> {esc(getattr(plan, "initial_risk_band", ""))}
-            &nbsp;|&nbsp; <strong>Initial score:</strong> {esc(getattr(plan, "initial_score", ""))}/100<br>
+            &nbsp;|&nbsp; <strong>Initial score:</strong> {esc(initial_score_str)}<br>
             <strong>Started:</strong> {esc(started_str)}
             &nbsp;|&nbsp; <strong>Target completion:</strong> {esc(target_str)}
             &nbsp;|&nbsp; <strong>Steps:</strong> {esc(completed)}/{esc(total)} completed
@@ -314,11 +327,10 @@ def _render_rescue_section(rescue_plan: Any) -> str:
 
 
 def _legal_score_is_released() -> bool:
-    """Mirror the engine gate: every catalogue rule needs counsel approval."""
+    """Mirror the product-owner scoring switch; legal review is disclosed separately."""
     return (
         LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
+        and bool(PRODUCT_SCORING_RULE_IDS.intersection(RJSC_IN_SCOPE_RULE_IDS))
     )
 
 
@@ -329,6 +341,9 @@ def _is_active_confirmed_violation(flag: Any) -> bool:
     evaluation_state/flag_status/resolved_date. Missing classification fails
     closed instead of defaulting to a violation.
     """
+    if not is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", ""))):
+        return False
+
     evaluation_state = getattr(
         flag, "evaluation_state", getattr(flag, "eval_state", "UNKNOWN")
     )
@@ -583,6 +598,11 @@ def _render_review_queue(flags: Any) -> str:
 
 def _flag_impact_label(flag: Any) -> str:
     rule_id = getattr(flag, "rule_id", "") or ""
+    scope_row = RJSC_RULE_SCOPE.get(str(rule_id))
+    if scope_row is None:
+        return "Not classified in the RJSC scope registry"
+    if not is_rjsc_rule_in_scope(str(rule_id)):
+        return "Not included in the RJSC assessment scope"
     if not _legal_score_is_released():
         return "Not evaluated — product score release disabled"
     if rule_id not in SCORE_DEDUCTION_RULE_IDS:
@@ -669,7 +689,20 @@ def build_compliance_report_html(
     # Enforce the release boundary here, not only in the HTTP endpoint:
     # stale cached scores, flags and rescue plans must never leak into a report.
     review_flags = []
-    if not _legal_score_is_released():
+    current_band = getattr(
+        getattr(company, "current_risk_band", None),
+        "value",
+        getattr(company, "current_risk_band", None),
+    )
+    score_is_current = (
+        _legal_score_is_released()
+        and getattr(company, "current_compliance_score", None) is not None
+        and current_band not in (None, "NOT_EVALUATED")
+        and getattr(company, "last_evaluated_at", None) is not None
+        and getattr(company, "updated_at", None) is not None
+        and company.updated_at <= company.last_evaluated_at
+    )
+    if not score_is_current:
         flags = ()
         rescue_plan = None
         score = 0
@@ -679,11 +712,13 @@ def build_compliance_report_html(
         band = company.current_risk_band or "NOT_EVALUATED"
         review_flags = [
             flag for flag in (flags or [])
-            if getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
+            if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            and getattr(flag, "rule_id", "") not in VERIFIED_RULE_IDS
         ]
         flags = [
             flag for flag in (flags or [])
-            if getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
+            if is_rjsc_rule_in_scope(str(getattr(flag, "rule_id", "")))
+            and getattr(flag, "rule_id", "") in PRODUCT_SCORING_RULE_IDS
         ]
     company_name = company.company_name or "[COMPANY NAME NOT ON FILE]"
     score_display = "NOT EVALUATED" if band == "NOT_EVALUATED" else f"{score} / 100"
@@ -820,13 +855,13 @@ class PDFReportService:
         except Exception:
             rescue_plan = None
 
-        # COM-007: bind report to evidence snapshot + engine version
+        # COM-007: bind report to the latest evaluation run, not merely the
+        # older run whose timestamp still matches the cached company score.
+        # A newer PENDING/FAILED/NOT_RELEASED run invalidates the old band.
         score_snapshot = await self.db.execute(
             select(ComplianceEvaluationRun)
-            .where(
-                ComplianceEvaluationRun.company_id == company.id,
-                ComplianceEvaluationRun.calculated_at == company.last_evaluated_at,
-            )
+            .where(ComplianceEvaluationRun.company_id == company.id)
+            .order_by(ComplianceEvaluationRun.calculated_at.desc(), ComplianceEvaluationRun.id.desc())
             .limit(1)
         )
         snapshot = score_snapshot.scalar_one_or_none()
@@ -838,7 +873,7 @@ class PDFReportService:
         if (
             getattr(snapshot, "evaluation_status", None) != "COMPLETED"
             or not getattr(snapshot, "score_hash", None)
-            or not getattr(snapshot, "engine_version", None)
+            or getattr(snapshot, "engine_version", None) != RULE_ENGINE_VERSION
             or not isinstance(getattr(snapshot, "flags_snapshot", None), list)
         ):
             raise HTTPException(
@@ -885,6 +920,8 @@ class PDFReportService:
             or snapshot.risk_band != company.current_risk_band
             or company.last_evaluated_at is None
             or snapshot.calculated_at != company.last_evaluated_at
+            or getattr(company, "updated_at", None) is None
+            or company.updated_at > company.last_evaluated_at
         ):
             raise HTTPException(
                 status_code=409,

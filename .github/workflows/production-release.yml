@@ -1,0 +1,282 @@
+name: Controlled Production Release 0112 to 0127
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production_release:
+        description: Type APPLY_0127_AND_DEPLOY to authorize the controlled production release
+        required: true
+        type: string
+      api_url:
+        description: Production API base URL
+        required: true
+        default: https://nlc-platform.onrender.com
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 90
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      NEON_PROJECT_ID: rapid-bonus-26545234
+      NEON_PRODUCTION_BRANCH_ID: br-purple-fog-aodj8s04
+      NEON_PRODUCTION_ENDPOINT_ID: ep-broad-darkness-aoou0pie
+      NEON_BACKUP_BRANCH_ID: br-divine-glade-aovapmi5
+      NEON_BACKUP_ENDPOINT_ID: ep-nameless-shadow-ao2rhjhj
+      RENDER_SERVICE_ID: srv-d72sam94tr6s73dk8etg
+      API_URL: ${{ inputs.api_url }}
+      EXPECTED_DEPLOYED_SHA: ${{ github.sha }}
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install migration and parity dependencies
+        run: python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Require explicit release confirmation and credentials
+        shell: bash
+        env:
+          CONFIRM_PRODUCTION_RELEASE: ${{ inputs.confirm_production_release }}
+        run: |
+          set -euo pipefail
+          if [[ "$CONFIRM_PRODUCTION_RELEASE" != "APPLY_0127_AND_DEPLOY" ]]; then
+            echo "::error::Type APPLY_0127_AND_DEPLOY exactly to authorize this production operation."
+            exit 1
+          fi
+          for key in NEON_API_KEY RENDER_API_KEY; do
+            if [[ -z "${!key:-}" ]]; then
+              echo "::error::$key repository secret is required. No production change was made."
+              exit 1
+            fi
+          done
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Production release is permitted only from main."
+            exit 1
+          fi
+          API_URL="${API_URL%/}"
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
+
+      - name: Verify production branch, preserved backup and Render target
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEON_API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
+          NEON_AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
+          PROD_BRANCH=$(curl --silent --show-error --fail "${NEON_AUTH[@]}" "$NEON_API/branches/$NEON_PRODUCTION_BRANCH_ID")
+          BACKUP_BRANCH=$(curl --silent --show-error --fail "${NEON_AUTH[@]}" "$NEON_API/branches/$NEON_BACKUP_BRANCH_ID")
+          PROD_NAME=$(jq -r '.branch.name // empty' <<<"$PROD_BRANCH")
+          PROD_DEFAULT=$(jq -r '.branch.default // false' <<<"$PROD_BRANCH")
+          BACKUP_NAME=$(jq -r '.branch.name // empty' <<<"$BACKUP_BRANCH")
+          BACKUP_PARENT=$(jq -r '.branch.parent_id // empty' <<<"$BACKUP_BRANCH")
+          BACKUP_DEFAULT=$(jq -r '.branch.default // false' <<<"$BACKUP_BRANCH")
+          if [[ "$PROD_NAME" != "production" || "$PROD_DEFAULT" != "true" ]]; then
+            echo "::error::Production target is not the expected default Neon branch."
+            exit 1
+          fi
+          if [[ "$BACKUP_NAME" != "nlc-prod-backup-2026-11-20-before-0122" || "$BACKUP_PARENT" != "$NEON_PRODUCTION_BRANCH_ID" || "$BACKUP_DEFAULT" != "false" ]]; then
+            echo "::error::The preserved 0112 backup branch is missing or not a child of production."
+            exit 1
+          fi
+
+          RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
+          SERVICE=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" "https://api.render.com/v1/services/$RENDER_SERVICE_ID")
+          if [[ "$(jq -r '.repo // empty' <<<"$SERVICE")" != "https://github.com/nazmulbijoy9105-coder/nlc_platform" ||
+                "$(jq -r '.branch // empty' <<<"$SERVICE")" != "main" ||
+                "$(jq -r '.type // empty' <<<"$SERVICE")" != "web_service" ||
+                "$(jq -r '.autoDeployTrigger // empty' <<<"$SERVICE")" != "off" ||
+                "$(jq -r '.autoDeploy // empty' <<<"$SERVICE")" != "no" ]]; then
+            echo "::error::Render target does not match the expected manual-deploy NLC production service."
+            exit 1
+          fi
+
+      - name: Obtain direct migration, runtime, audit and backup connection URIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEON_API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
+          NEON_AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
+
+          get_uri() {
+            local branch_id="$1" endpoint_id="$2" role_name="$3"
+            curl --silent --show-error --fail --get "${NEON_AUTH[@]}" \
+              --data-urlencode "branch_id=$branch_id" \
+              --data-urlencode "endpoint_id=$endpoint_id" \
+              --data-urlencode "database_name=neondb" \
+              --data-urlencode "role_name=$role_name" \
+              --data-urlencode "pooled=false" \
+              "$NEON_API/connection_uri" | jq -r '.uri // empty'
+          }
+
+          MIGRATION_URL=$(get_uri "$NEON_PRODUCTION_BRANCH_ID" "$NEON_PRODUCTION_ENDPOINT_ID" "nlc_migration_user")
+          APP_URL=$(get_uri "$NEON_PRODUCTION_BRANCH_ID" "$NEON_PRODUCTION_ENDPOINT_ID" "nlc_app_role")
+          AUDIT_URL=$(get_uri "$NEON_PRODUCTION_BRANCH_ID" "$NEON_PRODUCTION_ENDPOINT_ID" "nlc_ci_audit_role")
+          BACKUP_URL=$(get_uri "$NEON_BACKUP_BRANCH_ID" "$NEON_BACKUP_ENDPOINT_ID" "nlc_migration_user")
+          for key in MIGRATION_URL APP_URL AUDIT_URL BACKUP_URL; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::Neon did not return the required direct connection URI: $key"
+              exit 1
+            fi
+            echo "::add-mask::${!key}"
+          done
+
+          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
+          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
+          {
+            echo "MIGRATION_DATABASE_URL=$MIGRATION_URL"
+            echo "APP_DATABASE_URL=$APP_URL"
+            echo "NLC_AUDIT_DATABASE_URL=$AUDIT_URL"
+            echo "NLC_PRODUCTION_DATABASE_URL=$AUDIT_URL"
+            echo "BACKUP_DATABASE_URL=$BACKUP_URL"
+            echo "NLC_REHEARSAL_BRANCH_ID=$NEON_PRODUCTION_BRANCH_ID"
+            echo "NLC_TARGET_BRANCH_ID=$NEON_PRODUCTION_BRANCH_ID"
+            echo "NLC_RLS_HMAC_SECRET=$REHEARSAL_HMAC_SECRET"
+          } >> "$GITHUB_ENV"
+
+      - name: Verify preserved backup is exactly at revision 0112
+        shell: bash
+        run: |
+          python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+          from sqlalchemy.engine import make_url
+          from app.db_url import prepare_asyncpg_connection
+
+          async def main():
+              raw = os.environ["BACKUP_DATABASE_URL"]
+              url, args = prepare_asyncpg_connection(raw, require_tls=True)
+              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+              conn = await asyncpg.connect(dsn, **args)
+              try:
+                  branch_id = await conn.fetchval("SELECT current_setting('neon.branch_id', true)")
+                  revision = await conn.fetchval("SELECT version_num FROM public.alembic_version")
+                  await conn.execute("SET ROLE nlc_migration_owner")
+                  branch_id = await conn.fetchval("SELECT current_setting('neon.branch_id', true)")
+                  active_role = await conn.fetchval("SELECT current_user")
+                  revision = await conn.fetchval("SELECT version_num FROM public.alembic_version")
+                  if active_role != "nlc_migration_owner":
+                      raise RuntimeError(f"Backup verification did not assume migration owner: {active_role!r}")
+                  if branch_id != os.environ["NEON_BACKUP_BRANCH_ID"]:
+                      raise RuntimeError(f"Backup connection reached wrong branch: {branch_id!r}")
+                  if revision != "0112_runtime_acl_and_alembic_rls":
+                      raise RuntimeError(f"Backup is not preserved at 0112: {revision!r}")
+                  print(f"Preserved backup verified: branch={branch_id}, revision={revision}")
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+
+      - name: Verify current production API readiness before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts-pre-migration-health.json
+          jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts-pre-migration-health.json >/dev/null
+
+      - name: Apply and verify production migrations 0112 through 0127
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python scripts/rehearse_production_0112_to_0122.py
+          mkdir -p artifacts
+          curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
+          jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
+
+      - name: Configure Render readiness health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
+          curl --silent --show-error --fail --request PATCH \
+            --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
+            "${RENDER_AUTH[@]}" \
+            -H "Content-Type: application/json" \
+            --data '{"serviceDetails":{"healthCheckPath":"/api/v1/health/ready"}}' >/dev/null
+          SERVICE=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" "https://api.render.com/v1/services/$RENDER_SERVICE_ID")
+          jq -e '.serviceDetails.healthCheckPath == "/api/v1/health/ready"' <<<"$SERVICE" >/dev/null
+
+      - name: Deploy exact main SHA and verify Render deployment
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
+          RESPONSE=$(curl --silent --show-error --fail --request POST \
+            --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            "${RENDER_AUTH[@]}" -H "Content-Type: application/json" \
+            --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\",\"clearCache\":\"do_not_clear\"}")
+
+          DEPLOY_ID=$(jq -r '.id // .deploy.id // empty' <<<"$RESPONSE")
+          if [[ -z "$DEPLOY_ID" ]]; then
+            echo "::error::Render did not return a deploy ID."
+            exit 1
+          fi
+          echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+
+          for attempt in $(seq 1 60); do
+            DEPLOY=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID")
+            STATUS=$(jq -r '.status // empty' <<<"$DEPLOY")
+            DEPLOYED_SHA=$(jq -r '.commit.id // empty' <<<"$DEPLOY")
+            echo "Render deploy status=$STATUS sha=$DEPLOYED_SHA attempt=$attempt"
+            if [[ "$STATUS" == "live" ]]; then
+              if [[ "$DEPLOYED_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+                echo "::error::Render live SHA mismatch: expected $EXPECTED_DEPLOYED_SHA, got $DEPLOYED_SHA"
+                exit 1
+              fi
+              exit 0
+            fi
+            if [[ "$STATUS" == "build_failed" || "$STATUS" == "update_failed" || "$STATUS" == "canceled" || "$STATUS" == "pre_deploy_failed" ]]; then
+              echo "::error::Render deployment failed with status $STATUS"
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::Render deployment did not become live within 15 minutes."
+          exit 1
+
+      - name: Verify deployed API readiness and exact SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/production-health.json; then
+              if jq -e --arg sha "$EXPECTED_DEPLOYED_SHA" '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded") and .revision == $sha' artifacts/production-health.json >/dev/null; then
+                cat artifacts/production-health.json
+                exit 0
+              fi
+            fi
+            sleep 15
+          done
+          echo "::error::Production readiness or deployed SHA verification failed."
+          cat artifacts/production-health.json || true
+          exit 1
+
+      - name: Run production DB/API parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/audit_production_release_parity.py | tee artifacts/production-release-parity.json
+
+      - name: Upload production release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-production-release-0127-evidence
+          path: artifacts/*.json
+          if-no-files-found: warn

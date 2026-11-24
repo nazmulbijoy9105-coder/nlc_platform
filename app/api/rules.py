@@ -102,7 +102,9 @@ class RuleVersionResponse(BaseModel):
     previous_score_impact: int | None
     new_score_impact: int | None
     change_reason: str
-    changed_by_id: str
+    changed_by_id: str | None
+    actor_type: str
+    migration_revision: str | None
     changed_at: str
 
 
@@ -130,8 +132,7 @@ def _rule_to_response(rule) -> RuleResponse:
     legally_verified = rule.rule_id in VERIFIED_RULE_IDS
     product_scoring_enabled = (
         legal_score_is_released()
-        and scoring_catalogue_member
-        and legally_verified
+        and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
     )
     return RuleResponse(
         rule_id=rule.rule_id,
@@ -154,7 +155,7 @@ def _rule_to_response(rule) -> RuleResponse:
         product_scoring_enabled=product_scoring_enabled,
         score_impact=(
             rule.score_impact
-            if legally_verified and rule.rule_id in SCORE_DEDUCTION_RULE_IDS
+            if product_scoring_enabled
             else 0
         ),
         revenue_tier=str(rule.revenue_tier) if scoring_catalogue_member else "COMPLIANCE_PACKAGE",
@@ -162,7 +163,6 @@ def _rule_to_response(rule) -> RuleResponse:
         # This field describes product policy, not independent legal verification.
         is_black_override=(
             product_scoring_enabled
-            and legally_verified
             and scoring_catalogue_member
             and rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         ),
@@ -277,7 +277,6 @@ async def get_black_overrides(
         for rule in rules
         if rule.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
         and rule.rule_id in PRODUCT_SCORING_RULE_IDS
-        and rule.rule_id in VERIFIED_RULE_IDS
         and legal_score_is_released()
     ]
 
@@ -454,7 +453,13 @@ async def get_rule_history(
                 previous_score_impact=previous_score_impact,
                 new_score_impact=new_score_impact,
                 change_reason=version_record.change_reason,
-                changed_by_id=str(version_record.changed_by),
+                changed_by_id=(
+                    str(version_record.changed_by)
+                    if version_record.changed_by is not None
+                    else None
+                ),
+                actor_type=getattr(version_record, "actor_type", "USER"),
+                migration_revision=getattr(version_record, "migration_revision", None),
                 changed_at=version_record.changed_at.isoformat(),
             )
         )

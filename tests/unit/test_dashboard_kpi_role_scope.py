@@ -124,6 +124,7 @@ async def test_unreleased_kpis_return_evidence_metrics_without_legal_risk_bands(
 async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membership_scope(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.services.compliance_service import ComplianceService
+    from canonical_architecture.rjsc_scope import RJSC_IN_SCOPE_RULE_IDS
 
     monkeypatch.setattr(engine_module, "legal_score_is_released", lambda: False)
     db = _EvidenceKPIDB()
@@ -136,7 +137,38 @@ async def test_unreleased_legal_staff_evidence_kpis_include_assignment_and_membe
     assert all("assigned_staff_id = CAST(:uid AS uuid)" in sql for sql, _ in db.calls)
     assert all("company_user_access AS cua" in sql for sql, _ in db.calls)
     assert all("cua.is_active IS TRUE" in sql for sql, _ in db.calls)
-    assert all(params == {"uid": str(user_id)} for _, params in db.calls)
+    assert len(db.calls) == 3
+    evidence_queries = [
+        (sql, params)
+        for sql, params in db.calls
+        if "compliance_flags AS cf" in sql
+    ]
+    assert len(evidence_queries) == 2
+    for sql, params in db.calls:
+        assert params is not None
+        assert params["uid"] == str(user_id)
+    for sql, params in evidence_queries:
+        assert "cf.rule_id = ANY(CAST(:rjsc_rule_ids AS text[]))" in sql
+        assert params["rjsc_rule_ids"] == sorted(RJSC_IN_SCOPE_RULE_IDS)
+    for sql, params in db.calls:
+        assert params is not None
+        assert params["uid"] == str(user_id)
+
+    rjsc_filter_calls = [
+        (sql, params)
+        for sql, params in db.calls
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql
+    ]
+    assert len(rjsc_filter_calls) == 2, (
+        "both evidence-review aggregation queries must filter by RJSC rule IDs"
+    )
+    for _sql, params in rjsc_filter_calls:
+        assert params is not None
+        assert params.get("rjsc_rule_ids"), (
+            "rjsc_rule_ids must be a non-empty array"
+        )
+        if "ANY(CAST(:rjsc_rule_ids AS text[]))" in sql:
+            assert params["rjsc_rule_ids"]
 
 
 
@@ -172,7 +204,20 @@ async def test_released_legal_staff_kpis_include_assignment_and_membership_scope
     assert "assigned_staff_id = CAST(:uid AS uuid)" in db.calls[0][0]
     assert "company_user_access AS cua" in db.calls[0][0]
     assert "cua.is_active IS TRUE" in db.calls[0][0]
-    assert db.calls[0][1] == {"uid": str(user_id)}
+    assert "FROM compliance_evaluation_runs" in db.calls[0][0]
+    assert "lr.evaluation_status = 'COMPLETED'" in db.calls[0][0]
+    assert "c.updated_at <= c.last_evaluated_at" in db.calls[0][0]
+    assert "lr.engine_version = :engine_version" in db.calls[0][0]
+    assert "score_breakdown_snapshot ->> 'scoring_spec_version'" in db.calls[0][0]
+    assert "score_breakdown_snapshot ->> 'score_reconciles'" in db.calls[0][0]
+    assert "ELSE 'NOT_EVALUATED'::risk_band" in db.calls[0][0]
+    from app.rule_engine.engine import RULE_ENGINE_VERSION, SCORING_SPEC_VERSION
+
+    assert db.calls[0][1] == {
+        "uid": str(user_id),
+        "engine_version": RULE_ENGINE_VERSION,
+        "scoring_spec_version": SCORING_SPEC_VERSION,
+    }
 
 
 

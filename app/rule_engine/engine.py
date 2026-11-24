@@ -12,10 +12,20 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+from app.compliance.fact_provenance import business_date_today
+
+from canonical_architecture.rjsc_scope import (
+    RJSC_IN_SCOPE_RULE_IDS,
+    assert_rjsc_scope_parity,
+    filter_rjsc_items,
+    is_rjsc_rule_in_scope,
+    rjsc_scope_identity,
+)
 
 from canonical_architecture.scoring_spec import (
     CATEGORY_CAPS,
@@ -38,8 +48,8 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.2"
-ILRMF_VERSION = "2.2"
+RULE_ENGINE_VERSION = "2.3"
+ILRMF_VERSION = "2.3"
 
 # ═══════════════════════════════════════════════════════════════════════
 # ENUMERATIONS
@@ -124,6 +134,8 @@ class ComplianceFlag:
     escalation_pending: bool = False
     state: RuleState = RuleState.NON_COMPLIANT
     conditional_applies: bool = True
+    applicability_state: str | None = None
+    applicability_reason: str | None = None
     eval_state: str = "VIOLATION"   # F3: UNKNOWN -> impact forced to 0
 
     def __post_init__(self):
@@ -345,6 +357,8 @@ class CompanyProfile:
     managing_director_appointment_date: Optional[date] = None
     # ── Members (Section 222) ──
     member_count: int | None = None
+    below_minimum_members_since: date | None = None
+    company_operating: bool | None = None
     # ── Business commencement (Section 150) ──
     business_commencement_declaration_filed: bool | None = None
     section150_prospectus_issued: bool | None = None
@@ -451,11 +465,17 @@ class CompanyProfile:
     audit_committee_established: bool | None = None
     # -- Bangladesh Bank / Foreign Exchange --
     foreign_exchange_violation: bool = False
+    # Internal trust metadata populated only from verified, document-backed CompanyFact rows.
+    # It is not a user-writable CompanyProfile field and never inferred from legacy DB booleans.
+    verified_fact_keys: frozenset[str] = field(default_factory=frozenset)
+    verified_fact_context: Dict[str, Dict[str, str | None]] = field(default_factory=dict, repr=False)
     # Production evaluation binds every emitted rule to the LegalRule catalogue.
     # Direct pure-engine tests may omit this snapshot; service evaluations must set it.
     catalogue_binding_required: bool = False
     catalogue_rule_versions: Dict[str, str] = field(default_factory=dict)
     catalogue_rule_active: Dict[str, bool] = field(default_factory=dict)
+    catalogue_rule_bases: Dict[str, str] = field(default_factory=dict)
+    catalogue_identity_conflicts: Dict[str, Dict[str, Any]] = field(default_factory=dict, repr=False)
 
 @dataclass
 class ScoreBreakdown:
@@ -539,7 +559,7 @@ REQUIRED_REGISTERS = [
 # Director particulars are an RJSC filing event under Section 115, not an
 # internal register inferred from maintained_registers. DIR-001 evaluates
 # Form XII separately when a director appointment/change event exists.
-CORE_REGISTERS = ["members", "charges", "minutes_agm"]
+CORE_REGISTERS = ["members", "charges", "minutes_agm", "minutes_board"]
 
 # Product-owner-authorized BLACK override allowlist. A BLACK label alone is
 # never sufficient: the rule must also be in the product scoring allowlist and
@@ -752,7 +772,7 @@ SCORE_DEDUCTION_RULE_IDS: frozenset[str] = frozenset({
 
 # Product owner-controlled release switch. This enables deterministic product
 # scoring; it is not a legal-verification or certification claim.
-LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}
+LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().lower() in {"true", "1", "yes", "on"}
 
 
 def legal_score_is_released() -> bool:
@@ -762,18 +782,40 @@ def legal_score_is_released() -> bool:
     Individual statutory findings, deductions and overrides remain subject to
     separate counsel, evidence and applicability gates.
     """
+    try:
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+        assert_rjsc_scope_parity(STATUTORY_RULE_REGISTRY)
+    except Exception:
+        return False
     return (
         LEGAL_SCORE_RELEASED is True
-        and bool(PRODUCT_SCORING_RULE_IDS)
+        and bool(PRODUCT_SCORING_RULE_IDS.intersection(RJSC_IN_SCOPE_RULE_IDS))
     )
 
 
-def _counsel_score_basis_is_verified() -> bool:
-    """A company-wide statutory score needs counsel review of the full catalogue."""
-    return (
-        bool(PRODUCT_SCORING_RULE_IDS)
-        and PRODUCT_SCORING_RULE_IDS.issubset(VERIFIED_RULE_IDS)
-    )
+def rescue_registry_integrity_failure(referenced_rule_ids) -> bool:
+    """Return whether production registry integrity blocks rescue authorization.
+
+    The production statutory registry is the only source of valid rule
+    identities: a rule id is authorizable only as a valid production id, and
+    every rule id this workflow references must be one. Scope parity must
+    hold exactly, and any referenced id missing from the production registry
+    is an integrity failure.
+
+    This is distinct from a paused release switch: a paused switch keeps
+    score-independent rescue authorization per the approved contract, while
+    an integrity failure fails closed and blocks action.
+    """
+    try:
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+        registry_ids = frozenset(STATUTORY_RULE_REGISTRY)
+        assert_rjsc_scope_parity(STATUTORY_RULE_REGISTRY)
+    except Exception:
+        return True
+    for rule_id in referenced_rule_ids:
+        if not isinstance(rule_id, str) or rule_id not in registry_ids:
+            return True
+    return False
 
 
 REVENUE_TIER_MAP = {
@@ -797,35 +839,96 @@ _VAT_TURNOVER_TAX_ENLISTMENT_THRESHOLD_BDT = 3000000
 
 
 _COVERAGE_FIELDS: dict[str, float] = {
+    # Essential company classification and registration facts.
+    "company_type":             2.0,
+    "incorporation_date":       2.0,
+    # Core annual compliance history.
     "last_agm_date":            2.0,
     "last_audit_signed_date":   2.0,
     "last_return_filed_year":   2.0,
     "first_auditor_appointed":  1.0,
-    "tin_obtained":             1.0,
+    "annual_return_filed":      1.0,
+    # RJSC-relevant governance and statutory-record position only.
+    # Tax, VAT, labour, licensing and other external-regulator inputs are
+    # intentionally excluded from RJSC score coverage.
     "current_director_count":   0.5,
     "member_count":             0.5,
+    "register_of_members_maintained": 1.0,
+    "register_of_directors_maintained": 1.0,
+    "register_of_charges_maintained": 1.0,
+    "minutes_book_agm_maintained": 1.0,
+    "minutes_book_board_maintained": 1.0,
 }
 
 
 def _input_coverage(company) -> float:
-    """Weighted completeness of selected company-profile input fields.
+    """Weighted completeness of fresh, evidence-backed company-profile inputs.
 
-    This is NOT the fraction of statutory rules evaluated or verified. It is
-    an input-data completeness indicator only. Tri-state booleans (None=
-    unknown, True/False=known) count as known when False; director count is
-    counted only when independently RJSC-verified.
+    Only keys supplied by the internal fresh VERIFIED document-fact allowlist
+    count. Legacy profile verification booleans and evidence-reference strings
+    are not a substitute for a current CompanyFact provenance record.
     """
+    verified = set(getattr(company, "verified_fact_keys", ()) or ())
+    if not {"company_type", "incorporation_date"}.issubset(verified):
+        return 0.0
     total_weight = sum(_COVERAGE_FIELDS.values())
     known_weight = 0.0
     for field_name, weight in _COVERAGE_FIELDS.items():
         value = getattr(company, field_name, None)
-        if field_name == "current_director_count":
-            # NLC's own director rows are not proof of the RJSC-verified count.
-            if getattr(company, "directors_verified", False) is not True:
+        if value is None or field_name not in verified:
+            continue
+        if field_name in {"member_count", "current_director_count"}:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 continue
-        if value is not None:
-            known_weight += weight
+        known_weight += weight
     return min(1.0, known_weight / total_weight)
+
+def _rjsc_score_profile_inputs(company: CompanyProfile) -> dict[str, Any]:
+    """Hash only facts and catalogue identity that can affect RJSC scoring.
+
+    Non-RJSC profile fields, verified-fact keys, and catalogue metadata are
+    intentionally excluded. Their raw findings may remain available from the
+    evaluator, but they cannot perturb an RJSC score hash.
+    """
+    payload: dict[str, Any] = {
+        "company_id": company.company_id,
+        "company_name": company.company_name,
+        "company_type": company.company_type,
+        "incorporation_date": company.incorporation_date,
+        "financial_year_end": company.financial_year_end,
+        "coverage_inputs": {
+            field_name: getattr(company, field_name, None)
+            for field_name in _COVERAGE_FIELDS
+        },
+        "verified_fact_keys": sorted(
+            set(getattr(company, "verified_fact_keys", ()) or ())
+            & set(_COVERAGE_FIELDS)
+        ),
+        "catalogue_binding_required": bool(company.catalogue_binding_required),
+    }
+    for field_name in (
+        "catalogue_rule_versions",
+        "catalogue_rule_active",
+        "catalogue_rule_bases",
+        "catalogue_identity_conflicts",
+    ):
+        values = getattr(company, field_name, {}) or {}
+        payload[field_name] = {
+            rule_id: value
+            for rule_id, value in values.items()
+            if is_rjsc_rule_in_scope(str(rule_id))
+        }
+    return payload
+
+
+def _rjsc_scoring_categories() -> set[str]:
+    """Categories that contain at least one in-scope RJSC rule."""
+    return {
+        category
+        for category, (_cap, prefixes) in CATEGORY_CAPS.items()
+        if any(rule_id.startswith(prefixes) for rule_id in RJSC_IN_SCOPE_RULE_IDS)
+    }
+
 
 
 class NLCRuleEngine:
@@ -833,16 +936,33 @@ class NLCRuleEngine:
 
     def __init__(self, today: date | None = None):
         self._default_today = today
-        self.today = today or date.today()
+        self.today = today or business_date_today()
         self._flags: List[ComplianceFlag] = []
+
+    @staticmethod
+    def _facts_share_evidence_context(
+        company: CompanyProfile, first_key: str, second_key: str
+    ) -> bool:
+        """Require two facts used for one finding to share a document or source reference."""
+        contexts = getattr(company, "verified_fact_context", {}) or {}
+        first = contexts.get(first_key) or {}
+        second = contexts.get(second_key) or {}
+        first_document = first.get("document_id")
+        second_document = second.get("document_id")
+        if first_document and second_document and first_document == second_document:
+            return True
+        first_source = first.get("source_reference")
+        second_source = second.get("source_reference")
+        return bool(first_source and second_source and first_source == second_source)
 
     def evaluate(self, company: CompanyProfile, today: date | None = None) -> EngineOutput:
         """Evaluate a company profile. Thread-safety: create a fresh NLCRuleEngine() per call — self._flags is instance state."""
         self._flags = []
         self._rule_versions = dict(company.catalogue_rule_versions or {})
         self._rule_active = dict(company.catalogue_rule_active or {})
+        self._rule_bases = dict(company.catalogue_rule_bases or {})
         self._catalogue_binding_required = company.catalogue_binding_required is True
-        self.today = today or self._default_today or date.today()
+        self.today = today or self._default_today or business_date_today()
 
         self._run_incorporation_rules(company)
         self._run_auditor_rules(company)
@@ -865,18 +985,22 @@ class NLCRuleEngine:
         self._run_structural_change_rules(company)
         self._run_escalation_rules(company)
 
-        # A product-owned rule catalogue is not legal approval. Until each
-        # catalogue rule has independent Bangladesh-counsel verification,
-        # retain candidate signals as review prompts only. This central gate
-        # prevents any individual module from leaking an unverified RED/BLACK
-        # statutory finding or score deduction through the API/PDF/rescue path.
+        # Keep the full evaluator result available for audit and other regulatory
+        # workflows. The RJSC scope registry controls only RJSC decision paths.
+        rjsc_flags = filter_rjsc_items(self._flags)
+
+        # Product-owner approval authorizes the product's deterministic risk
+        # indicator. Independent counsel verification is tracked separately in
+        # VERIFIED_RULE_IDS and MUST NOT suppress product scoring. Preserve an
+        # explicit legal-review annotation for candidate findings without
+        # changing their evaluator state, severity, evidence or score impact.
         for flag in self._flags:
             if (
                 flag.rule_id in PRODUCT_SCORING_RULE_IDS
                 and flag.rule_id not in VERIFIED_RULE_IDS
             ):
-                original_detail = dict(flag.detail or {})
-                original_detail.update({
+                detail = dict(flag.detail or {})
+                detail.update({
                     "legal_validation_status": "PENDING_COUNSEL_APPROVAL",
                     "candidate_severity": str(getattr(flag.severity, "value", flag.severity)),
                     "candidate_state": str(getattr(flag.state, "value", flag.state)),
@@ -884,25 +1008,15 @@ class NLCRuleEngine:
                     "candidate_score_impact": flag.score_impact,
                     "statutory_finding_authorized": False,
                 })
-                flag.detail = original_detail
-                flag.severity = Severity.NOT_EVALUATED
-                flag.score_impact = 0
-                flag.state = RuleState.UNKNOWN
-                flag.eval_state = "UNKNOWN"
-                flag.is_black_override = False
-                flag.description = (
-                    "Candidate signal only — independent Bangladesh-counsel "
-                    "validation is pending. No statutory breach or score deduction "
-                    "is asserted. " + flag.description
-                )
+                flag.detail = detail
 
         # Coverage is calculated in _calculate_score via _input_coverage(company)
 
         stage = self._determine_lifecycle_stage(company)
-        score = self._calculate_score(self._flags, company)
-        rescue = self._generate_rescue_sequence(company, self._flags, score)
+        score = self._calculate_score(rjsc_flags, company)
+        rescue = self._generate_rescue_sequence(company, rjsc_flags, score)
         rescue_dispositions = self._build_rescue_dispositions(
-            self._flags, score, rescue
+            rjsc_flags, score, rescue
         )
 
         fdi_active = company.has_foreign_shareholder or company.is_fdi_registered
@@ -984,10 +1098,12 @@ class NLCRuleEngine:
             ))
 
 
-        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED") and "company_type" in verified and "current_director_count" in verified and c.directors_verified is True and bool(c.directors_verification_evidence_ref) and c.directors_verified_at is not None and bool(c.directors_verified_by) and c.current_director_count is not None:
             count = c.current_director_count
             if (c.company_type == "PRIVATE_LIMITED" and count == 2
-                    and (c.subsidiary_status_verified is not True
+                    and ("is_private_subsidiary_of_public_company" not in verified
+                         or c.subsidiary_status_verified is not True
                          or not c.subsidiary_status_evidence_ref
                          or c.subsidiary_status_verified_at is None
                          or not c.subsidiary_status_verified_by)):
@@ -1082,33 +1198,78 @@ class NLCRuleEngine:
                     conditional_applies=True,
                 ))
 
-        # MEM-001: Company operating with fewer than minimum members (Section 222)
-        member_count = c.member_count or 0
-        if member_count > 0:
+        # MEM-001: Section 222 requires a continuous six-month shortfall and
+        # member-specific knowledge before personal liability arises. A count
+        # alone cannot establish those elements or identify the liable member.
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        member_count = c.member_count
+        if (
+            c.company_type in ("PRIVATE_LIMITED", "PUBLIC_LIMITED")
+            and "company_type" in verified
+            and "member_count" in verified
+            and isinstance(member_count, int)
+            and not isinstance(member_count, bool)
+        ):
             min_members = 2 if c.company_type == "PRIVATE_LIMITED" else 7
             if member_count < min_members:
+                six_month_threshold_met = False
+                if (
+                    "below_minimum_members_since" in verified
+                    and "company_operating" in verified
+                    and c.below_minimum_members_since is not None
+                    and c.company_operating is True
+                ):
+                    six_month_threshold_met = (
+                        self.today > self._add_months(c.below_minimum_members_since, 6)
+                    )
                 self._add_flag(ComplianceFlag(
                     rule_id="MEM-001",
-                    flag_code="BELOW_MINIMUM_MEMBERS",
-                    severity=Severity.RED,
-                    score_impact=10,
+                    flag_code="BELOW_MINIMUM_MEMBERS_REQUIRES_LEGAL_REVIEW",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
                     revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
-                    description=f"Company has {member_count} members, below minimum {min_members}. Section 222: members personally liable.",
+                    description=(
+                        f"Verified membership is {member_count}, below the {min_members}-member "
+                        f"minimum. Section 222 requires the company to carry on business for "
+                        "more than six months with the reduced membership; personal liability "
+                        "also depends on each member's knowledge. "
+                        + (
+                            "The six-month and continuing-business facts are verified; "
+                            "member-specific knowledge and liability still require lawyer review."
+                            if six_month_threshold_met
+                            else "The six-month period and/or continuing-business condition is not established."
+                        )
+                    ),
                     statutory_basis="Section 222, Companies Act 1994 (Bangladesh)",
-                    detail={"member_count": member_count, "minimum": min_members}
+                    state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                    eval_state="UNKNOWN",
+                    detail={
+                        "member_count": member_count,
+                        "minimum": min_members,
+                        "below_minimum_members_since": (
+                            c.below_minimum_members_since.isoformat()
+                            if c.below_minimum_members_since else None
+                        ),
+                        "company_operating": c.company_operating,
+                        "six_month_threshold_met": six_month_threshold_met,
+                        "member_specific_knowledge_verified": False,
+                    },
                 ))
 
         # INC-007: Section 150 is not universal. It does not apply to
         # private companies or to companies that do not issue a prospectus
         # inviting public subscription (s.150(6)). Require verified scope.
         if (
-            c.company_type == "PUBLIC_LIMITED"
+            "company_type" in verified
+            and c.company_type == "PUBLIC_LIMITED"
             and c.section150_prospectus_issued is True
+            and "section150_prospectus_issued" in verified
             and c.section150_applicability_verified
             and bool(c.section150_applicability_evidence_ref)
             and c.business_commencement_declaration_verified
             and bool(c.business_commencement_declaration_evidence_ref)
             and c.business_commencement_declaration_filed is False
+            and "business_commencement_declaration_filed" in verified
         ):
             self._add_flag(ComplianceFlag(
                 rule_id="INC-007",
@@ -1128,30 +1289,73 @@ class NLCRuleEngine:
                 detail={"applicability_evidence_ref": c.section150_applicability_evidence_ref},
             ))
 
-        if c.trade_license_obtained is False:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if c.trade_license_obtained is False and "trade_license_obtained" in verified:
             self._add_flag(ComplianceFlag(
                 rule_id="TL-001",
-                flag_code="TRADE_LICENSE_NOT_OBTAINED",
+                flag_code="TRADE_LICENSE_VERIFIED_ABSENT",
                 severity=Severity.YELLOW,
                 score_impact=5,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description="Trade License not obtained from City Corporation/Municipality.",
+                description=(
+                    "An authorized document-backed fact was verified as showing "
+                    "that the required trade licence has not been obtained. Confirm "
+                    "the competent City Corporation or Paurashava and applicable "
+                    "business-activity scope."
+                ),
                 statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-                detail={"trade_license": False},
+                state=RuleState.VERIFIED_ABSENT,
+                eval_state="VIOLATION",
+                detail={"trade_license": False, "verified_fact_key": "trade_license_obtained"},
             ))
-        elif c.trade_license_expiry and c.trade_license_expiry < self.today:
+        elif (
+            c.trade_license_obtained is True
+            and "trade_license_obtained" in verified
+            and c.trade_license_expiry is not None
+            and "trade_license_expiry" in verified
+            and self._facts_share_evidence_context(
+                c, "trade_license_obtained", "trade_license_expiry"
+            )
+            and c.trade_license_expiry < self.today
+        ):
             days_expired = (self.today - c.trade_license_expiry).days
             sev = Severity.RED if days_expired > 90 else Severity.YELLOW
             imp = 10 if days_expired > 90 else 5
             self._add_flag(ComplianceFlag(
                 rule_id="TL-002",
-                flag_code="TRADE_LICENSE_EXPIRED",
+                flag_code="TRADE_LICENSE_VERIFIED_EXPIRED",
                 severity=sev,
                 score_impact=imp,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Trade License expired {days_expired} days ago. Must renew by 31 March annually.",
+                description=(
+                    f"The verified trade licence expired {days_expired} days ago. "
+                    "Confirm the current local-authority renewal rules and any grace period."
+                ),
                 statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
-                detail={"expired_days": days_expired},
+                state=RuleState.NON_COMPLIANT,
+                eval_state="VIOLATION",
+                detail={"expired_days": days_expired, "verified_fact_keys": ["trade_license_obtained", "trade_license_expiry"]},
+            ))
+        elif (
+            c.trade_license_obtained is True
+            and "trade_license_obtained" in verified
+            and c.trade_license_expiry is not None
+            and "trade_license_expiry" in verified
+            and not self._facts_share_evidence_context(
+                c, "trade_license_obtained", "trade_license_expiry"
+            )
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="TL-002",
+                flag_code="TRADE_LICENSE_FACTS_NOT_LINKED_TO_SAME_LICENCE",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description="Licence status and expiry are individually verified but are not linked to the same licence document or source reference; do not infer expiry.",
+                statutory_basis="Local Government (City Corporation) Act 2009 / Local Government (Paurashava) Act 2009",
+                state=RuleState.UNKNOWN,
+                eval_state="UNKNOWN",
+                detail={"verified_fact_keys": ["trade_license_obtained", "trade_license_expiry"]},
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -1178,11 +1382,13 @@ class NLCRuleEngine:
         # not 30 days. Using 30 days is legally incorrect for months with
         # 28/29/31 days.
         reg_date = c.incorporation_date
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
         appointment_verified = (
             c.first_auditor_appointment_verified is True
             and bool(c.first_auditor_appointment_evidence_ref)
             and c.first_auditor_appointment_verified_at is not None
             and bool(c.first_auditor_appointment_verified_by)
+            and {"incorporation_date", "first_auditor_appointed"}.issubset(verified)
         )
 
         def add_aud001_unknown(code: str, description: str) -> None:
@@ -1667,14 +1873,17 @@ class NLCRuleEngine:
                         detail={"days_to_agm": days_rem, "short_notice_consent": False},
                     ))
 
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
         attendance_verified = (
             c.agm_attendance_verified is True
             and bool(c.agm_attendance_evidence_ref)
+            and {"agm_held_this_cycle", "members_present_at_agm"}.issubset(verified)
         )
         quorum_basis_verified = (
             c.agm_quorum_basis_verified is True
             and bool(c.agm_quorum_evidence_ref)
             and c.agm_quorum_required is not None
+            and "agm_quorum_required" in verified
         )
         if c.agm_held_this_cycle and attendance_verified and not quorum_basis_verified:
             self._add_flag(ComplianceFlag(
@@ -1724,11 +1933,13 @@ class NLCRuleEngine:
     # ───────────────────────────────────────────────────────────────────
     def _run_annual_return_rules(self, c: CompanyProfile) -> None:
         if c.last_agm_date:
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
             filing_status_verified = (
                 c.annual_return_filing_status_verified is True
                 and bool(c.annual_return_filing_status_evidence_ref)
                 and c.annual_return_filing_status_verified_at is not None
                 and bool(c.annual_return_filing_status_verified_by)
+                and {"last_agm_date", "annual_return_filed"}.issubset(verified)
             )
             deadline = c.last_agm_date + timedelta(days=ANNUAL_RETURN_DEADLINE_DAYS)
             if not filing_status_verified:
@@ -1847,27 +2058,70 @@ class NLCRuleEngine:
             ))
 
         if c.annual_return_filed and c.annual_return_content_complete is False:
-            missing = []
-            if c.schedule_x_attached is False:
-                missing.append("Schedule X")
-            if c.balance_sheet_attached is False:
-                missing.append("Balance Sheet")
-            if c.profit_loss_attached is False:
-                missing.append("P&L Account")
-            if c.directors_list_attached is False:
-                missing.append("Directors List")
-            if c.shareholders_list_attached is False:
-                missing.append("Shareholders List")
-            self._add_flag(ComplianceFlag(
-                rule_id="AR-004",
-                flag_code="ANNUAL_RETURN_INCOMPLETE",
-                severity=Severity.YELLOW,
-                score_impact=8,
-                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Annual Return incomplete. Missing: {', '.join(missing)}. Section 36 + Schedule X require complete disclosure.",
-                statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
-                detail={"missing": missing}
-            ))
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
+            filing_status_verified = "annual_return_filed" in verified
+            content_verified = "annual_return_content_complete" in verified
+            missing = [
+                label
+                for field_name, label in (
+                    ("schedule_x_attached", "Schedule X"),
+                    ("balance_sheet_attached", "Balance Sheet"),
+                    ("profit_loss_attached", "P&L Account"),
+                    ("directors_list_attached", "Directors List"),
+                    ("shareholders_list_attached", "Shareholders List"),
+                )
+                if field_name in verified and getattr(c, field_name, None) is False
+            ]
+            same_filing_evidence = self._facts_share_evidence_context(
+                c, "annual_return_filed", "annual_return_content_complete"
+            )
+            if filing_status_verified and content_verified and same_filing_evidence:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-004",
+                    flag_code="ANNUAL_RETURN_VERIFIED_INCOMPLETE",
+                    severity=Severity.YELLOW,
+                    score_impact=8,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "Authenticated RJSC filing evidence and a verified content "
+                        "fact establish that the annual list/return is incomplete "
+                        "under Section 36 and Schedule X."
+                    ),
+                    statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.NON_COMPLIANT,
+                    eval_state="VIOLATION",
+                    detail={
+                        "missing": missing,
+                        "verified_fact_keys": sorted(
+                            verified.intersection({
+                                "annual_return_content_complete",
+                                "schedule_x_attached",
+                                "balance_sheet_attached",
+                                "profit_loss_attached",
+                                "directors_list_attached",
+                                "shareholders_list_attached",
+                            })
+                        ),
+                        "filing_status_fact_verified": True,
+                    },
+                ))
+            else:
+                self._add_flag(ComplianceFlag(
+                    rule_id="AR-004",
+                    flag_code="ANNUAL_RETURN_CONTENT_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "The profile reports incomplete annual-return content, but "
+                        "the filing receipt and content checklist are not both "
+                        "verified. This is an evidence-review prompt, not a breach."
+                    ),
+                    statutory_basis="Section 36, Schedule X, Companies Act 1994 (Bangladesh)",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"reported_missing": missing},
+                ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 4: DIRECTORS
@@ -2197,7 +2451,7 @@ class NLCRuleEngine:
                         "operative Articles, transfer class, notice, board powers and "
                         "section 38(7). Board approval is not a universal statutory requirement."
                     ),
-                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company's Articles",
+                    statutory_basis="Section 38(7), Companies Act 1994 (Bangladesh), and the company’s Articles",
                     state=RuleState.REQUIRES_LAWYER_JUDGMENT,
                     eval_state="UNKNOWN",
                     detail={"transfer_id": transfer.transfer_id},
@@ -2288,87 +2542,105 @@ class NLCRuleEngine:
     # MODULE 7: STATUTORY REGISTERS
     # ───────────────────────────────────────────────────────────────────
     def _run_register_rules(self, c: CompanyProfile) -> None:
-        aliases = {
-            "register_of_members": "members", "register_of_directors": "directors",
-            "register_of_share_transfers": "transfers", "register_of_charges": "charges",
-            "register_of_debenture_holders": "debentures",
-            "minutes_book_agm": "minutes_agm", "minutes_book_board": "minutes_board",
+        """Evaluate only register facts whose absence is explicitly verified.
+
+        The legacy maintained_registers array is an unattributed profile field.
+        It is not evidence that a statutory register does not exist.
+        """
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        register_fields = {
+            "members": "register_of_members_maintained",
+            "directors": "register_of_directors_maintained",
+            "charges": "register_of_charges_maintained",
+            "minutes_agm": "minutes_book_agm_maintained",
+            "minutes_board": "minutes_book_board_maintained",
         }
-        normalized = {aliases.get(r, r) for r in c.maintained_registers}
-        missing = [r for r in REQUIRED_REGISTERS if r not in normalized]
-        core_missing = [r for r in CORE_REGISTERS if r not in normalized]
-        non_core_missing = [r for r in missing if r not in CORE_REGISTERS]
-        
-        if non_core_missing and not core_missing:
+        verified_missing = {
+            register_name: field_name
+            for register_name, field_name in register_fields.items()
+            if field_name in verified and getattr(c, field_name, None) is False
+        }
+        core_names = {"members", "charges", "minutes_agm", "minutes_board"}
+        core_missing = sorted(core_names.intersection(verified_missing))
+        non_core_missing = sorted(set(verified_missing) - core_names)
+
+        if non_core_missing:
+            # The generic director-register inventory signal needs a separate
+            # proposition/evidence review; do not turn it into a scored breach.
             self._add_flag(ComplianceFlag(
                 rule_id="REG-001",
-                flag_code="STATUTORY_REGISTER_INCOMPLETE",
-                severity=Severity.YELLOW,
-                score_impact=5,
+                flag_code="STATUTORY_REGISTER_REVIEW_REQUIRED",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"{len(non_core_missing)} non-core register(s) missing: {', '.join(non_core_missing)}.",
+                description=(
+                    "A verified register-status fact requires review of the exact "
+                    "register duty, company scope, Articles and statutory source. "
+                    "This aggregate signal is not a confirmed statutory breach."
+                ),
                 statutory_basis=(
                     "Companies Act 1994 (Bangladesh) and applicable Articles; "
                     "individual register duties require their own statutory mapping"
                 ),
-                detail={"missing": non_core_missing}
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"verified_missing_registers": non_core_missing},
             ))
 
         if core_missing:
-            # Section 115(1) requires the internal directors' register;
-            # Section 115(2) separately requires the prescribed Registrar return
-            # and change notification (Form XII). DIR-001 evaluates the filing
-            # duty only; filing status does not prove the internal register exists.
-            severity = Severity.RED  # legal: REG-002 downgraded BLACK -> RED
-
-            # Categorize missing items by legal obligation type
-            internal_registers = []
-            for r in core_missing:
-                if r in ("members", "charges", "minutes_agm", "minutes_board"):
-                    internal_registers.append(r)
-
             parts = []
-            if "members" in internal_registers:
-                parts.append("Members register (Sec 34 — internal)")
-            if "charges" in internal_registers:
-                parts.append("Charges register (Sec 174 — internal)")
-            if "minutes_agm" in internal_registers or "minutes_board" in internal_registers:
-                parts.append("Meeting minutes (Sec 89 — internal)")
+            if "members" in core_missing:
+                parts.append("Members register (Section 34 — internal)")
+            if "charges" in core_missing:
+                parts.append("Charges register (Section 174 — internal)")
+            if "minutes_agm" in core_missing or "minutes_board" in core_missing:
+                parts.append("Meeting minutes (Section 89 — internal)")
 
             self._add_flag(ComplianceFlag(
                 rule_id="REG-002",
-                flag_code="CORE_REGISTERS_MISSING",
-                severity=severity,
+                flag_code="CORE_REGISTERS_VERIFIED_ABSENT",
+                severity=Severity.RED,
                 score_impact=12,
                 revenue_tier=RevenueTier.STRUCTURED_REGULARIZATION,
                 description=(
-                    f"Core statutory records missing: {', '.join(core_missing)}. "
+                    "Verified absence of core statutory records: "
+                    f"{', '.join(core_missing)}. "
                     f"Legal basis: {'; '.join(parts)}. "
-                    f"Director particulars/Form XII are evaluated separately by DIR-001 "
-                    f"under Section 115; they are not inferred from the internal "
-                    f"register inventory. Each missing internal record is assessed "
-                    f"independently."
+                    "Only the individually verified document-backed register facts "
+                    "are included; legacy register inventories and missing uploads "
+                    "do not establish absence."
                 ),
                 statutory_basis="Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
+                state=RuleState.VERIFIED_ABSENT,
+                eval_state="VIOLATION",
                 detail={
                     "missing_core": core_missing,
-                    "internal_registers": internal_registers,
-                    "rjsc_filings": [],
-                    "director_filing_rule_id": "DIR-001",
+                    "verified_fact_keys": sorted(verified_missing.values()),
                     "obligation_types_distinguished": True,
-                }
+                },
             ))
 
-        if c.register_location != "registered_office":
+        # Section 34(2) permits a notified alternative location. A verified
+        # non-office location is therefore a review prompt, not an automatic breach.
+        if (
+            "register_location" in verified
+            and c.register_location != "registered_office"
+        ):
             self._add_flag(ComplianceFlag(
                 rule_id="REG-003",
-                flag_code="REGISTERS_NOT_AT_REGISTERED_OFFICE",
-                severity=Severity.YELLOW,
-                score_impact=3,
+                flag_code="REGISTER_LOCATION_REQUIRES_NOTICE_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
                 revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                description=f"Registers at '{c.register_location}', not registered office. Section 34(2): must be at registered office.",
-                statutory_basis="Section 34(2), Companies Act 1994 (Bangladesh)",
-                detail={"location": c.register_location}
+                description=(
+                    "Verified register location differs from the registered office. "
+                    "Check Board authority, the alternative-location notice and the "
+                    "statutory inspection requirements before determining compliance."
+                ),
+                statutory_basis="Unresolved location proposition; Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={"location": c.register_location},
             ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2378,16 +2650,49 @@ class NLCRuleEngine:
         if c.registered_office_change_date and c.form_vi_filed is False:
             delay = (self.today - c.registered_office_change_date).days
             if delay > REGISTERED_OFFICE_DEADLINE_DAYS:
-                self._add_flag(ComplianceFlag(
-                    rule_id="OFF-001",
-                    flag_code="REGISTERED_OFFICE_CHANGE_NOT_FILED",
-                    severity=Severity.YELLOW if delay < 90 else Severity.RED,
-                    score_impact=3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Office change not filed via Form VI. Section 77: 28-day deadline. Overdue by {delay} days.",
-                    statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
-                    detail={"delay": delay, "form": "Form VI"}
-                ))
+                verified = set(getattr(c, "verified_fact_keys", ()) or ())
+                office_facts_verified = (
+                    {
+                        "registered_office_change_date",
+                        "form_vi_filed",
+                    }.issubset(verified)
+                    and self._facts_share_evidence_context(
+                        c, "registered_office_change_date", "form_vi_filed"
+                    )
+                )
+                if office_facts_verified:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="OFF-001",
+                        flag_code="REGISTERED_OFFICE_CHANGE_VERIFIED_NOT_FILED",
+                        severity=Severity.YELLOW if delay < 90 else Severity.RED,
+                        score_impact=3,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            f"Verified registered-office change has no verified Form VI "
+                            f"filing receipt within 28 days under Section 77; {delay} days elapsed."
+                        ),
+                        statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.VERIFIED_ABSENT,
+                        eval_state="VIOLATION",
+                        detail={"delay": delay, "form": "Form VI", "verified_fact_keys": ["registered_office_change_date", "form_vi_filed"]},
+                    ))
+                else:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="OFF-001",
+                        flag_code="REGISTERED_OFFICE_CHANGE_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "A registered-office change and missing Form VI are reported, "
+                            "but the change date and RJSC filing status are not both verified and linked to the same event. "
+                            "This is a review prompt, not a confirmed breach."
+                        ),
+                        statutory_basis="Section 77, Companies Act 1994 (Bangladesh)",
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                        detail={"delay_days_reported": delay},
+                    ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 9: CAPITAL & CHARGES
@@ -2626,17 +2931,53 @@ class NLCRuleEngine:
             ))
 
         if c.special_resolution_date and c.special_resolution_filed is False:
+            verified = set(getattr(c, "verified_fact_keys", ()) or ())
+            resolution_facts_verified = (
+                {
+                    "special_resolution_date",
+                    "special_resolution_filed",
+                }.issubset(verified)
+                and self._facts_share_evidence_context(
+                    c, "special_resolution_date", "special_resolution_filed"
+                )
+            )
             delay = (self.today - c.special_resolution_date).days
-            if delay > 15:
+            if delay > 15 and resolution_facts_verified:
                 self._add_flag(ComplianceFlag(
                     rule_id="CAP-004",
-                    flag_code="SPECIAL_RESOLUTION_NOT_FILED",
+                    flag_code="SPECIAL_RESOLUTION_VERIFIED_NOT_FILED",
                     severity=Severity.YELLOW if delay < 90 else Severity.RED,
                     score_impact=8,
                     revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description="Special resolution filing not evidenced within 15 days. Section 88(1); determine the resolution date and filing receipt.",
+                    description=(
+                        "A document-backed special-resolution date and RJSC filing "
+                        "status verify that the resolution copy was not filed within "
+                        "15 days under Section 88(1)."
+                    ),
                     statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
-                    detail={"delay": delay}
+                    state=RuleState.VERIFIED_ABSENT,
+                    eval_state="VIOLATION",
+                    detail={
+                        "delay": delay,
+                        "verified_fact_keys": ["special_resolution_date", "special_resolution_filed"],
+                    },
+                ))
+            elif delay > 15:
+                self._add_flag(ComplianceFlag(
+                    rule_id="CAP-004",
+                    flag_code="SPECIAL_RESOLUTION_FILING_REQUIRES_VERIFICATION",
+                    severity=Severity.NOT_EVALUATED,
+                    score_impact=0,
+                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                    description=(
+                        "The profile reports a special-resolution filing delay, but "
+                        "the resolution date and/or RJSC filing status is not verified and linked to the same resolution. "
+                        "Do not treat this as a breach."
+                    ),
+                    statutory_basis="Section 88(1), Companies Act 1994 (Bangladesh) — 15 days",
+                    state=RuleState.UNKNOWN,
+                    eval_state="UNKNOWN",
+                    detail={"delay_days_reported": delay},
                 ))
 
     # ───────────────────────────────────────────────────────────────────
@@ -2805,44 +3146,92 @@ class NLCRuleEngine:
     # MODULE 11: STRUCTURAL CHANGE
     # ───────────────────────────────────────────────────────────────────
     def _run_structural_change_rules(self, c: CompanyProfile) -> None:
-        if c.name_change_pending and c.name_change_date and c.name_change_sr_passed is False:
-            delay = (self.today - c.name_change_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="STR-001", flag_code="NAME_CHANGE_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Name change not filed. Section 11 applies to change of company name; special-resolution filing under Section 88(1) is within 15 days. Overdue {delay} days.",
-                    statutory_basis="Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
-                ))
+        """Report structural-change workflows without inferring an overdue filing.
 
-        if c.object_clause_change_pending and c.object_clause_change_date:
-            delay = (self.today - c.object_clause_change_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="STR-002", flag_code="OBJECT_CLAUSE_CHANGE_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Memorandum object-clause alteration not filed. Sections 12 and 88(1) apply to the resolution filing; court confirmation/registration requirements under Sections 15-16 must be assessed separately. Overdue {delay} days.",
-                    statutory_basis="Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
-                ))
+        The legacy profile has dates and pending flags but no authoritative
+        filing-receipt fields for each change type. Section 88(1) filing status
+        is evaluated separately by CAP-004 when both date and RJSC status are
+        verified. These aggregate workflow flags remain review-only.
+        """
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
 
-        if c.aoa_alteration_pending and c.aoa_alteration_date:
-            delay = (self.today - c.aoa_alteration_date).days
-            if delay > SPECIAL_RESOLUTION_DEADLINE_DAYS:
-                sev = Severity.RED if delay > 90 else Severity.YELLOW
-                self._add_flag(ComplianceFlag(
-                    rule_id="STR-003", flag_code="AOA_ALTERATION_NOT_FILED",
-                    severity=sev, score_impact=8 if delay > 90 else 3,
-                    revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                    description=f"Articles alteration not filed. Section 20 and the special-resolution filing requirement in Section 88(1) apply; confirm any further registration steps before calculating a deadline. Overdue {delay} days.",
-                    statutory_basis="Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
-                    detail={"delay_days": delay}
-                ))
+        if (
+            c.name_change_pending
+            and c.name_change_date
+            and {"name_change_pending", "name_change_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-001",
+                flag_code="NAME_CHANGE_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Name-change workflow reported. Verify the special resolution, "
+                    "Registrar approval, certificate of incorporation and Section 88 "
+                    "filing receipt; pending status alone does not establish default."
+                ),
+                statutory_basis="Sections 11 and 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.name_change_date.isoformat(),
+                    "verified_fact_keys": ["name_change_pending", "name_change_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
+
+        if (
+            c.object_clause_change_pending
+            and c.object_clause_change_date
+            and {"object_clause_change_pending", "object_clause_change_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-002",
+                flag_code="OBJECT_CLAUSE_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Object-clause alteration reported. Verify the special resolution, "
+                    "court confirmation where required, registration and filing receipts; "
+                    "a workflow date alone does not establish default."
+                ),
+                statutory_basis="Sections 12, 15-16 and 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.object_clause_change_date.isoformat(),
+                    "verified_fact_keys": ["object_clause_change_pending", "object_clause_change_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
+
+        if (
+            c.aoa_alteration_pending
+            and c.aoa_alteration_date
+            and {"aoa_alteration_pending", "aoa_alteration_date"}.issubset(verified)
+        ):
+            self._add_flag(ComplianceFlag(
+                rule_id="STR-003",
+                flag_code="AOA_ALTERATION_WORKFLOW_REQUIRES_REVIEW",
+                severity=Severity.NOT_EVALUATED,
+                score_impact=0,
+                revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                description=(
+                    "Articles alteration reported. Verify the special resolution, "
+                    "Registrar filing and any registration requirements; a workflow "
+                    "date alone does not establish default."
+                ),
+                statutory_basis="Sections 20 and 88(1), Companies Act 1994 (Bangladesh)",
+                state=RuleState.REQUIRES_LAWYER_JUDGMENT,
+                eval_state="UNKNOWN",
+                detail={
+                    "event_date": c.aoa_alteration_date.isoformat(),
+                    "verified_fact_keys": ["aoa_alteration_pending", "aoa_alteration_date"],
+                    "special_resolution_filing_checked_by": "CAP-004",
+                },
+            ))
 
     # ───────────────────────────────────────────────────────────────────
     # MODULE 12: ESCALATION
@@ -3239,6 +3628,9 @@ class NLCRuleEngine:
 
     # MODULE 15: BSEC CG CODE 2023
     def _run_bsec_rules(self, c: CompanyProfile) -> None:
+        verified = set(getattr(c, "verified_fact_keys", ()) or ())
+        if "company_type" not in verified:
+            return
         company_type = str(getattr(c.company_type, "value", c.company_type)).upper()
         # The Corporate Governance Code is not a default private-company
         # obligation. A contradictory positive listing flag on a private or
@@ -3740,7 +4132,6 @@ class NLCRuleEngine:
         pre_score = self._calculate_raw_score(self._flags)
         has_black_override = any(
             f.rule_id in PRODUCT_SCORING_RULE_IDS
-            and f.rule_id in VERIFIED_RULE_IDS
             and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
             and f.is_black_override
             and f.severity == Severity.BLACK
@@ -3753,7 +4144,6 @@ class NLCRuleEngine:
             black_count = len([
                 f for f in self._flags
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
-                and f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3806,12 +4196,12 @@ class NLCRuleEngine:
         """Return active, confirmed findings admitted by product release and evidence rules."""
         return [
             flag for flag in flags
-            if not flag.resolved
+            if is_rjsc_rule_in_scope(flag.rule_id)
+            and not flag.resolved
             and flag.conditional_applies
             and flag.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT)
             and flag.eval_state == "VIOLATION"
             and legal_score_is_released()
-            and flag.rule_id in VERIFIED_RULE_IDS
             and flag.rule_id in SCORE_DEDUCTION_RULE_IDS
             and not (
                 flag.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
@@ -3847,6 +4237,7 @@ class NLCRuleEngine:
         return self._score_from_deductions(self._category_deductions(scored))
 
     def _calculate_score(self, flags: List[ComplianceFlag], company: CompanyProfile) -> ScoreBreakdown:
+        flags = filter_rjsc_items(flags)
         active = [f for f in flags if not f.resolved and f.conditional_applies]
 
         # One eligibility filter and one category-cap implementation are
@@ -3877,7 +4268,6 @@ class NLCRuleEngine:
             critical = [
                 f for f in active
                 if f.rule_id in PRODUCT_SCORING_RULE_IDS
-                and f.rule_id in VERIFIED_RULE_IDS
                 and f.rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
                 and f.is_black_override
                 and f.severity == Severity.BLACK
@@ -3895,19 +4285,18 @@ class NLCRuleEngine:
         # product-allowlisted findings may still elevate the final risk band below.
         score_band = (
             Severity(self._score_to_band(final, force_black=bool(critical), coverage=coverage))
-            if legal_score_is_released() and _counsel_score_basis_is_verified()
+            if legal_score_is_released()
             else Severity.NOT_EVALUATED
         )
 
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
-        if legal_score_is_released() and _counsel_score_basis_is_verified() and not critical:
+        if legal_score_is_released() and not critical:
             severity_rank = {Severity.GREEN: 0, Severity.YELLOW: 1, Severity.RED: 2, Severity.BLACK: 3}
             max_flag_severity = Severity.GREEN
             for f in active:
                 if (
                     f.rule_id in PRODUCT_SCORING_RULE_IDS
-                    and f.rule_id in VERIFIED_RULE_IDS
                     and (
                         f.severity == Severity.RED
                         or (
@@ -3939,22 +4328,40 @@ class NLCRuleEngine:
             for f in active
         )
         hash_payload = {
-            "company_profile": asdict(company),
+            "company_profile": _rjsc_score_profile_inputs(company),
             "evaluation_date": self.today.isoformat(),
             "engine_version": RULE_ENGINE_VERSION,
             "ilrmf_version": ILRMF_VERSION,
             "scoring_spec_version": SCORING_SPEC_VERSION,
-            "verified_rule_ids": sorted(VERIFIED_RULE_IDS),
-            "product_scoring_rule_ids": sorted(PRODUCT_SCORING_RULE_IDS),
-            "score_deduction_rule_ids": sorted(SCORE_DEDUCTION_RULE_IDS),
-            "authorized_black_override_rule_ids": sorted(AUTHORIZED_BLACK_OVERRIDE_RULE_IDS),
+            "rjsc_scope": rjsc_scope_identity(),
+            "verified_rule_ids": sorted(
+                rule_id for rule_id in VERIFIED_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "product_scoring_rule_ids": sorted(
+                rule_id for rule_id in PRODUCT_SCORING_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "score_deduction_rule_ids": sorted(
+                rule_id for rule_id in SCORE_DEDUCTION_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
+            "authorized_black_override_rule_ids": sorted(
+                rule_id for rule_id in AUTHORIZED_BLACK_OVERRIDE_RULE_IDS
+                if is_rjsc_rule_in_scope(rule_id)
+            ),
             "category_caps": {
                 key: {"max_deduction": cap, "prefixes": list(prefixes)}
                 for key, (cap, prefixes) in sorted(CATEGORY_CAPS.items())
+                if key in _rjsc_scoring_categories()
             },
             "profile_coverage_weights": dict(sorted(_COVERAGE_FIELDS.items())),
             "coverage_basis": "WEIGHTED_PROFILE_INPUT_COMPLETENESS",
-            "category_deductions": deductions,
+            "category_deductions": {
+                key: value
+                for key, value in deductions.items()
+                if key in _rjsc_scoring_categories()
+            },
             "legal_score_release_switch": LEGAL_SCORE_RELEASED,
             "legal_score_released": legal_score_is_released(),
             "flags": flag_signatures,
@@ -3985,10 +4392,10 @@ class NLCRuleEngine:
             revenue_tier=REVENUE_TIER_MAP[band],
             active_flag_count=len(active),
             coverage=coverage,
-            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
-            green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.rule_id in VERIFIED_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            black_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.BLACK and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            red_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.RED and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            yellow_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.YELLOW and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
+            green_flag_count=len([f for f in active if legal_score_is_released() and f.rule_id in PRODUCT_SCORING_RULE_IDS and f.severity == Severity.GREEN and f.state in (RuleState.NON_COMPLIANT, RuleState.VERIFIED_ABSENT) and f.eval_state == "VIOLATION"]),
             bankruptcy_score=max(0, 5 - bnk_ded),
             labour_score=max(0, 5 - lbr_ded),
             bsec_score=max(0, 5 - bsec_ded),
@@ -4009,13 +4416,25 @@ class NLCRuleEngine:
         score: ScoreBreakdown,
         rescue_sequence: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Produce exactly one auditable action/no-action disposition per finding."""
+        """Produce one auditable disposition per in-scope RJSC finding.
+
+        Authorization fails closed when production registry integrity cannot
+        be established; that integrity failure is distinct from a paused
+        release switch, which keeps confirmed-step authorization.
+        """
+        flags = filter_rjsc_items(flags)
         step_by_rule: Dict[str, Dict[str, Any]] = {}
         for rescue_step in rescue_sequence:
             for rule_id in rescue_step.get("related_rules", []):
                 step_by_rule[rule_id] = rescue_step
 
         score_band = getattr(score.risk_band, "value", score.risk_band)
+        # Every rule id this workflow references must be a valid production
+        # registry id. Integrity is checked once and blocks authorization
+        # independently of the paused release switch.
+        registry_integrity_failure = rescue_registry_integrity_failure(
+            set(step_by_rule) | {flag.rule_id for flag in flags}
+        )
         dispositions: List[Dict[str, Any]] = []
         for flag in flags:
             state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
@@ -4023,8 +4442,19 @@ class NLCRuleEngine:
             severity = getattr(getattr(flag, "severity", None), "value", getattr(flag, "severity", None))
             step = step_by_rule.get(flag.rule_id)
 
+            detail = getattr(flag, "detail", None)
+            binding_reason = (
+                detail.get("rule_catalogue_binding")
+                if isinstance(detail, dict) else None
+            )
             if getattr(flag, "resolved", False):
                 disposition, reason = "NO_ACTION", "FINDING_RESOLVED"
+            elif binding_reason in {
+                "CATALOGUE_ENTRY_MISSING",
+                "RULE_INACTIVE",
+                "STATUTORY_BASIS_MISMATCH",
+            }:
+                disposition, reason = "BLOCKED", "CATALOGUE_IDENTITY_CONFLICT"
             elif (
                 not getattr(flag, "conditional_applies", True)
                 or state == RuleState.NOT_APPLICABLE.value
@@ -4057,16 +4487,23 @@ class NLCRuleEngine:
                 and score_band not in (Severity.RED.value, Severity.BLACK.value)
             ):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None and not legal_score_is_released():
-                # Deterministic candidate steps remain visible for professional
-                # review, but a disabled product score release can never activate them.
-                disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
+            elif registry_integrity_failure:
+                # Fail closed: production registry integrity is broken, so no
+                # referenced rule id can be proven a valid production id.
+                # This is distinct from a paused release switch, which keeps
+                # confirmed-step authorization below.
+                disposition, reason = "BLOCKED", "REGISTRY_INTEGRITY_FAILURE"
+            elif step is not None:
+                # Statutory action is authorized from a confirmed violation
+                # with a generated step, independently of product score
+                # publication and of counsel verification, while production
+                # registry integrity holds. A released score below the rescue
+                # threshold was already rejected above.
+                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif step is None and flag.rule_id != "TAX-004":
                 disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None:
-                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id == "TAX-004":
@@ -4088,23 +4525,31 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
+        """R-014: Generate rescue-step candidates from confirmed, applicable findings.
 
-        Candidate steps are not customer actions. The disposition gate keeps
-        them REVIEW_REQUIRED until product scoring is released; counsel-review status remains separate.
-        TAX-004 is aggregated into one step because its missed-quarter details
-        describe one remediation item. Missing quarter evidence does not itself
-        establish a missed payment.
+        Generation proceeds while product score release is paused and does not
+        require counsel verification. Whether a candidate is actionable is
+        decided separately by the disposition gate, which authorizes a
+        confirmed violation with a generated step as ACTION_REQUIRED
+        independently of score release and counsel verification while
+        production registry integrity holds; an integrity failure blocks
+        action as BLOCKED/REGISTRY_INTEGRITY_FAILURE. Only
+        confirmed RED/BLACK violations generate steps; UNKNOWN and
+        unresolved evidence states do not.
+        TAX-004 is aggregated because missed-quarter details describe one item.
+        Missing quarter evidence does not itself establish a missed payment.
         """
         # A released company risk band below RED cannot start a rescue plan.
-        # While release is paused, deterministic candidates may still be shown
-        # for review; the disposition gate prevents customer action.
+        # While release is paused, deterministic candidates are still
+        # generated from confirmed violations; the disposition gate
+        # authorizes them independently of the withheld score.
         score_band = getattr(score.risk_band, "value", score.risk_band)
         if legal_score_is_released() and score_band not in (
             Severity.RED.value, Severity.BLACK.value
         ):
             return []
 
+        flags = filter_rjsc_items(flags)
         flags = [
             f for f in flags
             if getattr(f, "eval_state", "VIOLATION") != "UNKNOWN"
@@ -4282,18 +4727,37 @@ class NLCRuleEngine:
         return 2              # Oct-Dec = Q2
 
     def _add_flag(self, flag: ComplianceFlag) -> None:
-        """Bind each finding to its database catalogue version and activation state."""
+        """Bind findings to the active catalogue and fail closed on identity drift."""
         if self._catalogue_binding_required:
             version = self._rule_versions.get(flag.rule_id)
             active = self._rule_active.get(flag.rule_id)
+            catalogue_basis = self._rule_bases.get(flag.rule_id)
+            basis_translation = str.maketrans({"’": "'", "‘": "'", "“": '"', "”": '"'})
+            flag_basis = " ".join(
+                str(flag.statutory_basis or "").translate(basis_translation).split()
+            ).casefold()
+            catalogue_basis_normalized = " ".join(
+                str(catalogue_basis or "").translate(basis_translation).split()
+            ).casefold()
+            identity_matches = bool(
+                flag_basis
+                and catalogue_basis_normalized
+                and flag_basis == catalogue_basis_normalized
+            )
             if version is not None:
                 flag.rule_version = str(version)
-            if version is None or active is not True:
+            if version is None or active is not True or not identity_matches:
                 detail = dict(flag.detail or {})
                 detail["rule_catalogue_binding"] = (
-                    "CATALOGUE_ENTRY_MISSING" if version is None else "RULE_INACTIVE"
+                    "CATALOGUE_ENTRY_MISSING"
+                    if version is None
+                    else "RULE_INACTIVE"
+                    if active is not True
+                    else "STATUTORY_BASIS_MISMATCH"
                 )
                 detail["engine_evaluator_version"] = RULE_ENGINE_VERSION
+                detail["engine_flag_statutory_basis"] = flag.statutory_basis
+                detail["catalogue_rule_statutory_basis"] = catalogue_basis
                 flag.detail = detail
                 flag.severity = Severity.NOT_EVALUATED
                 flag.score_impact = 0
@@ -4301,6 +4765,14 @@ class NLCRuleEngine:
                 flag.eval_state = "UNKNOWN"
                 flag.is_black_override = False
                 flag.conditional_applies = False
+                flag.applicability_state = "UNKNOWN"
+                flag.applicability_reason = (
+                    "Rule is inactive or missing from the active database catalogue; "
+                    "applicability cannot be established."
+                    if version is None or active is not True
+                    else "Engine finding statutory basis does not match the database catalogue identity; "
+                    "the finding is quarantined and must not be attributed by rule_id alone."
+                )
         self._flags.append(flag)
 
     def _graduated_agm_deduction(self, delay: int) -> int:

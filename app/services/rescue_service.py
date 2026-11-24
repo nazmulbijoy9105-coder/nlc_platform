@@ -29,22 +29,29 @@ from app.models.enums import (
     TaskPriority,
     TaskStatus,
 )
+from app.models.company import Company
 from app.models.rescue import RescuePlan, RescueStep
 from app.services.base import BaseService
 
 logger = logging.getLogger("nlc.rescue")
 
 
-def validate_rescue_engine_output(engine_output, *, expected_company_id=None) -> frozenset[str]:
-    """Reject rescue work not traceable to released, evidenced rule findings."""
-    from app.rule_engine.engine import (
-        PRODUCT_SCORING_RULE_IDS,
-        VERIFIED_RULE_IDS,
-        legal_score_is_released,
-    )
+class ActiveRescuePlanExistsError(ValueError):
+    """Raised when a caller attempts to create a second active company plan."""
 
-    if not legal_score_is_released():
-        raise PermissionError("Rescue generation is disabled while product scoring is disabled.")
+
+
+def validate_rescue_engine_output(
+    engine_output, *, expected_company_id=None, score_withheld: bool = False
+) -> frozenset[str]:
+    """Require a unique, in-scope, active finding before authorizing a workflow.
+
+    ``score_withheld`` lets a caller whose evaluation withheld its score (for
+    example because of a score-blocking catalogue conflict) narrow the global
+    release switch; it can never widen it.
+    """
+    from app.rule_engine.engine import PRODUCT_SCORING_RULE_IDS, legal_score_is_released
+    from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
 
     evaluated_company_id = getattr(engine_output, "company_id", None)
     has_engine_company_id = (
@@ -59,12 +66,20 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     score = getattr(engine_output, "score_breakdown", None)
     final_score = getattr(score, "final_score", None)
-    if isinstance(final_score, bool) or not isinstance(final_score, int) or not 0 <= final_score <= 100:
-        raise ValueError("Rescue requires a valid released score from 0 to 100.")
     risk_value = getattr(score, "risk_band", None)
     risk_band = getattr(risk_value, "value", risk_value)
-    if risk_band not in ("RED", "BLACK"):
-        raise ValueError("Rescue requires a released RED or BLACK evaluation.")
+    if final_score is not None and (
+        isinstance(final_score, bool) or not isinstance(final_score, int)
+        or not 0 <= final_score <= 100
+    ):
+        raise ValueError("Rescue score must be an integer from 0 to 100 when supplied.")
+    if risk_band is None:
+        risk_band = "NOT_EVALUATED"
+    if legal_score_is_released() and not score_withheld:
+        if final_score is None:
+            raise ValueError("A released rescue plan requires a score.")
+        if risk_band not in ("RED", "BLACK"):
+            raise ValueError("A released rescue plan requires a RED or BLACK risk band.")
 
     flags = getattr(engine_output, "flags", None)
     if not isinstance(flags, (list, tuple)):
@@ -75,6 +90,8 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
     for flag in flags:
         rule_id = getattr(flag, "rule_id", None)
         if not isinstance(rule_id, str) or not rule_id.strip():
+            continue
+        if not is_rjsc_rule_in_scope(rule_id):
             continue
         flags_by_rule.setdefault(rule_id, []).append(flag)
 
@@ -89,6 +106,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if (
             getattr(flag, "resolved", None) is False
             and getattr(flag, "conditional_applies", None) is True
+            and is_rjsc_rule_in_scope(rule_id)
             and rule_id in PRODUCT_SCORING_RULE_IDS
             and state in ("NON_COMPLIANT", "VERIFIED_ABSENT")
             and eval_state == "VIOLATION"
@@ -101,7 +119,7 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
 
     sequence = getattr(engine_output, "rescue_sequence", None)
     if not isinstance(sequence, list) or not sequence:
-        raise ValueError("No product-released rescue sequence exists.")
+        raise ValueError("No eligible rescue sequence exists.")
 
     referenced: set[str] = set()
     for step in sequence:
@@ -118,13 +136,9 @@ def validate_rescue_engine_output(engine_output, *, expected_company_id=None) ->
         if len(step_rules) != len(related):
             raise ValueError("Rescue action contains duplicate rule references.")
         for rule_id in step_rules:
-            if (
-                rule_id in PRODUCT_SCORING_RULE_IDS
-                and rule_id not in VERIFIED_RULE_IDS
-            ):
+            if not is_rjsc_rule_in_scope(rule_id):
                 raise PermissionError(
-                    "Rescue generation is disabled until each referenced rule "
-                    "has counsel approval."
+                    "RJSC rescue actions cannot reference out-of-scope or unclassified rules."
                 )
             if len(flags_by_rule.get(rule_id, [])) != 1 or rule_id not in eligible:
                 raise PermissionError(
@@ -156,6 +170,60 @@ class RescueService(BaseService[RescuePlan]):
         self,
         company_id: uuid.UUID,
         *,
+        engine_output,
+        assigned_staff_id: uuid.UUID | None = None,
+        created_by: uuid.UUID | None = None,
+        estimated_fee_bdt: float | None = None,
+        target_completion_date: date | None = None,
+        notes: str | None = None,
+        engagement_id: uuid.UUID | None = None,
+        score_withheld: bool = True,
+        replace_existing: bool = False,
+    ) -> RescuePlan:
+        """Serialize and atomically create a company's single active rescue plan.
+
+        The savepoint also protects any previously active plan: if any
+        application-level or database error occurs during generation, all
+        writes made by this attempt are rolled back before the error escapes.
+        """
+        # Every creation path locks the parent company row before checking
+        # active plans. PostgreSQL serializes competing requests on this row;
+        # the partial unique index remains the database-level backstop.
+        company_lock = await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
+        if company_lock.scalar_one_or_none() is None:
+            raise ValueError("Cannot create a rescue plan for an unknown company.")
+
+        active_plan = await self.db.execute(
+            select(RescuePlan.id).where(
+                RescuePlan.company_id == company_id,
+                RescuePlan.is_active.is_(True),
+            ).limit(1)
+        )
+        active_plan_id = active_plan.scalar_one_or_none()
+        if active_plan_id is not None and not replace_existing:
+            raise ActiveRescuePlanExistsError(
+                f"An active rescue plan (ID: {active_plan_id}) already exists for this company."
+            )
+
+        async with self.db.begin_nested():
+            return await self._generate_rescue_plan(
+                company_id,
+                engine_output=engine_output,
+                assigned_staff_id=assigned_staff_id,
+                created_by=created_by,
+                estimated_fee_bdt=estimated_fee_bdt,
+                target_completion_date=target_completion_date,
+                notes=notes,
+                engagement_id=engagement_id,
+                score_withheld=score_withheld,
+            )
+
+    async def _generate_rescue_plan(
+        self,
+        company_id: uuid.UUID,
+        *,
         engine_output,          # EngineOutput from C_rule_engine.py
         assigned_staff_id: uuid.UUID | None = None,
         created_by: uuid.UUID | None = None,
@@ -163,6 +231,7 @@ class RescueService(BaseService[RescuePlan]):
         target_completion_date: date | None = None,
         notes: str | None = None,
         engagement_id: uuid.UUID | None = None,  # RES-010
+        score_withheld: bool = True,
     ) -> RescuePlan:
         """
         Persist the rescue plan generated by the rule engine.
@@ -174,13 +243,10 @@ class RescueService(BaseService[RescuePlan]):
         # Service-level guard: callers other than the HTTP route (jobs,
         # internal services and future endpoints) must not create rescue work
         # from provisional engine output.
-        from app.rule_engine.engine import legal_score_is_released
-        if not legal_score_is_released():
-            raise PermissionError(
-                "Rescue generation is disabled because product scoring is disabled."
-            )
         source_rule_ids = validate_rescue_engine_output(
-            engine_output, expected_company_id=company_id
+            engine_output,
+            expected_company_id=company_id,
+            score_withheld=score_withheld,
         )
 
         rescue_data = engine_output.rescue_sequence
@@ -196,8 +262,19 @@ class RescueService(BaseService[RescuePlan]):
         )
 
         revenue_tier = RevenueTier.CORPORATE_RESCUE
-        score = engine_output.score_breakdown.final_score
-        risk_band = engine_output.score_breakdown.risk_band
+        from app.rule_engine.engine import legal_score_is_released
+        score_breakdown = getattr(engine_output, "score_breakdown", None)
+        raw_score = getattr(score_breakdown, "final_score", None)
+        risk_value = getattr(score_breakdown, "risk_band", None)
+        raw_risk_band = getattr(risk_value, "value", risk_value)
+        score_is_publishable = bool(
+            legal_score_is_released()
+            and not score_withheld
+            and raw_score is not None
+            and raw_risk_band != "NOT_EVALUATED"
+        )
+        score = raw_score if score_is_publishable else None
+        risk_band = raw_risk_band if score_is_publishable else "NOT_EVALUATED"
 
         plan = await self.create(
             company_id=company_id,
@@ -205,6 +282,7 @@ class RescueService(BaseService[RescuePlan]):
             revenue_tier=revenue_tier,
             initial_risk_band=risk_band,
             initial_score=score,
+            workflow_mode="STATUTORY_ACTION_AUTHORIZED",
             years_in_default=0,
             is_active=True,
             started_at=datetime.now(UTC),
@@ -371,8 +449,28 @@ class RescueService(BaseService[RescuePlan]):
         COMPLETE status triggers plan progress recalculation.
         Step 8 COMPLETE triggers full compliance re-evaluation.
         """
+        plan_lookup = await self.db.execute(
+            select(RescueStep.rescue_plan_id).where(RescueStep.id == step_id)
+        )
+        plan_id = plan_lookup.scalar_one_or_none()
+        if plan_id is None:
+            return None
+
+        # Progress is derived from every step of the plan. Serialize updates
+        # on the plan row so concurrent completions cannot each miss the
+        # other's change, overwrite its counts and skip the completion-
+        # triggered re-evaluation. Later reads must bypass any step state this
+        # session loaded before the lock was granted.
+        locked_plan = await self.db.execute(
+            select(RescuePlan.id).where(RescuePlan.id == plan_id).with_for_update()
+        )
+        if locked_plan.scalar_one_or_none() is None:
+            return None
+
         result = await self.db.execute(
-            select(RescueStep).where(RescueStep.id == step_id)
+            select(RescueStep)
+            .where(RescueStep.id == step_id)
+            .execution_options(populate_existing=True)
         )
         step = result.scalar_one_or_none()
         if not step:
@@ -403,7 +501,9 @@ class RescueService(BaseService[RescuePlan]):
     async def _update_plan_progress(self, plan_id: uuid.UUID) -> None:
         """Recalculate completed_steps, blocked_steps, completion_percentage."""
         result = await self.db.execute(
-            select(RescueStep).where(RescueStep.rescue_plan_id == plan_id)
+            select(RescueStep)
+            .where(RescueStep.rescue_plan_id == plan_id)
+            .execution_options(populate_existing=True)
         )
         all_steps = result.scalars().all()
         if not all_steps:

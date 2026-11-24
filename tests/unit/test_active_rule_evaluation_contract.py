@@ -20,13 +20,19 @@ ACTIVE_EVALUATION_RULE_IDS = {
 }
 
 
-def test_requested_rules_remain_product_scoring_enabled():
-    assert LEGAL_SCORE_RELEASED is False  # statutory scoring remains paused pending complete independent legal verification
-def test_requested_rules_remain_product_enabled_but_statutory_release_is_paused():
+def test_product_scoring_release_defaults_enabled_for_product_allowlist():
+    assert LEGAL_SCORE_RELEASED is True
+    assert legal_score_is_released() is True
+
+
+def test_product_allowlist_is_separate_from_counsel_verification(monkeypatch):
+    import app.rule_engine.engine as engine_module
+
     assert ACTIVE_EVALUATION_RULE_IDS <= PRODUCT_SCORING_RULE_IDS
-    assert LEGAL_SCORE_RELEASED is False
+    assert LEGAL_SCORE_RELEASED is True
     assert VERIFIED_RULE_IDS == frozenset()
-    assert legal_score_is_released() is False
+    assert legal_score_is_released() is True
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
 
 
 def test_legacy_rule_ids_are_preserved():
@@ -35,13 +41,14 @@ def test_legacy_rule_ids_are_preserved():
 
 
 def test_reg002_is_limited_to_internal_records():
-    assert set(CORE_REGISTERS) == {"members", "charges", "minutes_agm"}
+    assert set(CORE_REGISTERS) == {"members", "charges", "minutes_agm", "minutes_board"}
     assert "directors" not in REQUIRED_REGISTERS
     mapping = EVIDENCE_REGISTRY["REG-002"]
     assert mapping.source_section == "S34/S89/S174"
     assert "REGISTER_OF_MEMBERS_ENTRY" in mapping.primary_evidence
     assert "REGISTER_OF_CHARGES_ENTRY" in mapping.primary_evidence
     assert "AGM_MINUTES_SIGNED_BY_CHAIRMAN" in mapping.primary_evidence
+    assert "BOARD_MINUTES_SIGNED_BY_CHAIRMAN" in mapping.primary_evidence
     assert "FORM_XII_DIRECTOR_CHANGE" not in mapping.primary_evidence
     assert "RJSC_FILING_ACKNOWLEDGEMENT" not in mapping.primary_evidence
 
@@ -114,6 +121,7 @@ def test_latest_evaluation_run_lookup_is_company_scoped_and_ordered():
             compiled = str(statement)
             assert "compliance_evaluation_runs.company_id" in compiled
             assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in compiled
+            assert "compliance_evaluation_runs.id DESC" in compiled
             assert "LIMIT" in compiled
             return Result()
 
@@ -133,6 +141,22 @@ def test_all_85_product_rules_are_active_and_score_eligible():
     assert len(SCORE_DEDUCTION_RULE_IDS) == 85
     assert PRODUCT_SCORING_RULE_IDS == SCORE_DEDUCTION_RULE_IDS
     assert {"AR-001", "SH-002", "ESC-003"} <= PRODUCT_SCORING_RULE_IDS
+    assert VERIFIED_RULE_IDS == frozenset()
+
+
+def test_all_85_rules_can_be_assessed_and_scored_without_counsel_verification():
+    from app.rule_engine.engine import (
+        LEGAL_SCORE_RELEASED,
+        PRODUCT_SCORING_RULE_IDS,
+        SCORE_DEDUCTION_RULE_IDS,
+        VERIFIED_RULE_IDS,
+        legal_score_is_released,
+    )
+
+    assert LEGAL_SCORE_RELEASED is True
+    assert legal_score_is_released() is True
+    assert len(PRODUCT_SCORING_RULE_IDS) == 85
+    assert len(SCORE_DEDUCTION_RULE_IDS) == 85
     assert VERIFIED_RULE_IDS == frozenset()
 
 

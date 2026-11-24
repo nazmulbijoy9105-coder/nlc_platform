@@ -307,8 +307,13 @@ class TestCompanies:
 
     @pytest.mark.asyncio
     async def test_get_dashboard_kpis_exposes_evidence_review_while_score_release_is_paused(
-        self, api_client, admin_token
+        self, api_client, admin_token, monkeypatch
     ):
+        import app.rule_engine.engine as engine_module
+        import app.api.companies as companies_module
+
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+        monkeypatch.setattr(companies_module, "LEGAL_SCORE_RELEASED", False)
         resp = await api_client.get(
             "/api/v1/companies/dashboard/kpis",
             headers=_auth(admin_token),
@@ -325,8 +330,13 @@ class TestCompanies:
 
     @pytest.mark.asyncio
     async def test_manual_evaluation_and_customer_views_withhold_unreleased_score(
-        self, api_client, admin_token, db_company, db
+        self, api_client, admin_token, db_company, db, monkeypatch
     ):
+        import app.rule_engine.engine as engine_module
+        import app.api.companies as companies_module
+
+        monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
+        monkeypatch.setattr(companies_module, "LEGAL_SCORE_RELEASED", False)
         from sqlalchemy import select
         from app.models.compliance import ComplianceEvaluationRun, ComplianceScoreHistory
 
@@ -366,7 +376,8 @@ class TestCompanies:
             assert flag["severity"] == "NOT_EVALUATED"
             assert flag["score_impact"] == 0
             assert flag["legal_review_status"] == "NOT_LEGALLY_VERIFIED"
-            assert "No breach" in flag["rule_name"]
+            assert "pending independent counsel review" in flag["rule_name"].lower()
+            assert "No legal conclusion" in flag["rule_name"]
 
         history_response = await api_client.get(
             f"/api/v1/companies/{db_company.id}/score-history",
@@ -387,7 +398,14 @@ class TestCompanies:
         run = run_result.scalar_one()
         assert run.score is None
         assert run.risk_band == "NOT_EVALUATED"
-        assert run.score_breakdown_snapshot is None
+        assert run.score_breakdown_snapshot == {
+            "snapshot_schema_version": 1,
+            "status": "NOT_RELEASED",
+            "reason": "LEGAL_SCORE_RELEASE_GATE_CLOSED",
+            "score": None,
+            "risk_band": "NOT_EVALUATED",
+            "scoring_data": "WITHHELD",
+        }
 
         # A legacy completed snapshot must not make the customer API appear
         # released after the product/legal release gate has been closed.
@@ -637,19 +655,26 @@ class TestRescue:
         })
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_requires_red_band(
-        self, api_client, super_admin_tok, db_company
+    async def test_create_rescue_plan_fails_closed_on_catalogue_identity_conflicts(
+        self, api_client, super_admin_tok, db_company, monkeypatch
     ):
-        """A GREEN company cannot enter the RED/BLACK rescue workflow."""
-        # db_company is GREEN band
+        """An explicitly injected identity conflict must fail closed before later validation."""
+        from app.services import compliance_service
+
+        monkeypatch.setattr(
+            compliance_service,
+            "_score_blocking_catalogue_conflicts",
+            lambda _conflicts: {"AGM-001"},
+        )
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        # The score-release gate takes precedence over risk-band evaluation.
         assert resp.status_code == 409
-        assert "scoring is disabled" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert "catalogue/evaluator identity conflicts" in detail["message"]
+        assert detail["conflicted_rule_ids"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(
@@ -678,7 +703,7 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        assert resp.status_code in (201, 402, 409, 422), resp.text
+        assert resp.status_code in (201, 402, 403, 409, 422), resp.text
         assert "independently approved" not in resp.text
 
     @pytest.mark.asyncio
@@ -758,17 +783,16 @@ class TestRescue:
             headers=headers,
             json={"status": "IN_PROGRESS"},
         )
-        # Mutating an existing rescue plan remains disabled while score
-        # publication is paused, even if the plan ID does not exist.
-        assert update_step.status_code == 503
+        # Product scoring is released, but this fixture has no such plan.
+        assert update_step.status_code == 404
 
         engagement = await api_client.post(
             f"/api/v1/rescue/plans/{plan_id}/engagement",
             headers=headers,
             json={"confirmed_fee_bdt": 1000},
         )
-        # Commercial engagement creation is a mutation and stays withheld.
-        assert engagement.status_code == 503
+        # Product scoring is released, but this fixture has no such plan.
+        assert engagement.status_code == 404
 
     @pytest.mark.asyncio
     async def test_rescue_requires_auth(self, api_client):
@@ -800,7 +824,7 @@ class TestRescue:
             headers=_auth(super_admin_tok),
             json={"confirmed_fee_bdt": 1000, "payment_terms": "Test terms"},
         )
-        assert response.status_code == 503, response.text
+        assert response.status_code == 404, response.text
 
 
 # =============================================================================
@@ -1210,9 +1234,9 @@ class TestRules:
         assert resp.status_code == 200
         rules = resp.json()
         assert isinstance(rules, list)
-        # Product-owner configuration alone is not legal approval.
-        # No statutory BLACK override is active while the counsel register is empty.
-        assert rules == []
+        # Product BLACK-override authority is independent of counsel approval.
+        assert [item["rule_id"] for item in rules] == ["INC-003"]
+        assert rules[0]["verification_status"] == "PENDING"
 
     @pytest.mark.asyncio
     async def test_get_rule_summary(self, api_client, super_admin_token):
@@ -1320,20 +1344,19 @@ class TestRules:
                 # The storage sentinel is not a default severity or legal
                 # conclusion, so expose null and a separate product switch.
                 assert item["default_severity"] is None
-                assert item["product_scoring_enabled"] is False
+                assert item["product_scoring_enabled"] is True
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
             else:
-                # SH-002 is part of the 85-rule product-approved scoring
-                # catalogue. The deployment release switch is currently
-                # paused, so the API must preserve its canonical statutory
-                # basis while reporting product_scoring_enabled=False.
+                # SH-002 is owner-approved and score-eligible under the
+                # same evidence/state controls. Counsel verification remains
+                # independently pending and does not disable product scoring.
                 assert item["statutory_basis"] == (
                     "Section 158, Companies Act 1994 (Bangladesh)"
                 )
                 assert "Section 158" in item["description"]
                 assert item["default_severity"] is None
-                assert item["product_scoring_enabled"] is False
+                assert item["product_scoring_enabled"] is True
                 assert item["score_impact"] == 0
                 assert item["is_active"] is True
 

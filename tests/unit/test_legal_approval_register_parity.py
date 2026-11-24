@@ -1,4 +1,4 @@
-"""The counsel register is the sole release source for statutory rule findings."""
+"""The counsel register tracks legal approval separately from product score eligibility."""
 
 from __future__ import annotations
 
@@ -47,16 +47,14 @@ def test_85_rule_catalogue_matches_counsel_register_and_engine_allowlist():
     assert set(engine_module.PRODUCT_SCORING_RULE_IDS) == catalogue_ids
     assert set(engine_module.VERIFIED_RULE_IDS) == approved_ids
 
-    for rule_id, status, eligible in register_rows:
+    for rule_id, status, _legacy_score_eligible in register_rows:
         if rule_id in approved_ids:
             assert status == "VERIFIED"
-            assert eligible == "true"
         else:
             assert status == "REVIEW_REQUIRED"
-            assert eligible == "false"
 
 
-def test_unverified_statutory_candidate_is_downgraded_before_api_score_or_rescue(monkeypatch):
+def test_product_scoring_can_use_confirmed_facts_without_claiming_counsel_approval(monkeypatch):
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
@@ -70,17 +68,17 @@ def test_unverified_statutory_candidate_is_downgraded_before_api_score_or_rescue
         first_auditor_appointment_evidence_ref="AUDITOR-SEARCH-001",
         first_auditor_appointment_verified_at=date(2026, 11, 1),
         first_auditor_appointment_verified_by="reviewer-1",
+        verified_fact_keys=frozenset({"incorporation_date", "first_auditor_appointed"}),
     )
     output = NLCRuleEngine(today=date(2026, 11, 15)).evaluate(profile)
     matches = [flag for flag in output.flags if flag.rule_id == "AUD-001"]
     assert len(matches) == 1
 
     finding = matches[0]
-    assert finding.severity is Severity.NOT_EVALUATED
-    assert finding.state is RuleState.UNKNOWN
-    assert finding.eval_state == "UNKNOWN"
-    assert finding.score_impact == 0
-    assert finding.detail["legal_validation_status"] == "PENDING_COUNSEL_APPROVAL"
-    assert finding.detail["statutory_finding_authorized"] is False
-    assert finding.detail["candidate_state"] == RuleState.NON_COMPLIANT.value
-    assert output.score_breakdown.risk_band is Severity.NOT_EVALUATED
+    assert finding.severity is Severity.YELLOW
+    assert finding.state is RuleState.NON_COMPLIANT
+    assert finding.eval_state == "VIOLATION"
+    assert finding.score_impact > 0
+    assert engine_module.VERIFIED_RULE_IDS == frozenset()
+    # The product score is a risk indicator; independent legal approval remains absent.
+    assert output.score_breakdown.category_deductions["AUD"] > 0

@@ -204,20 +204,31 @@ def main() -> int:
 
     engine_source = engine_path.read_text(encoding="utf-8")
     seed_source = seed_path.read_text(encoding="utf-8")
-    if "UPDATE legal_rules SET is_active = TRUE" not in seed_source:
-        print("FAIL: seed_rules.py must activate existing canonical catalogue rows")
+    # Operator activation decisions are authoritative. The seeder is an
+    # insert-only bootstrap: it must never re-arm a disabled catalogue row.
+    # (Deactivation is an audited Super Admin decision via RulesService, and
+    # the engine already downgrades findings for inactive rows to
+    # RULE_INACTIVE / NOT_EVALUATED with zero score impact.)
+    if re.search(r"UPDATE\s+legal_rules\b[^;]*?is_active", seed_source, re.DOTALL):
+        print(
+            "FAIL: seed_rules.py must not write is_active on existing rows; "
+            "operator activation decisions are preserved"
+        )
+        return 1
+    if "UPDATE legal_rules" in seed_source:
+        print("FAIL: seed_rules.py must not update existing legal_rules rows at all")
         return 1
     if "TRUE, :now, :now" not in seed_source:
         print("FAIL: seed_rules.py must insert new canonical rows as active")
         return 1
 
-    expected_release_assignment = 'LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "false").strip().lower() in {"true", "1", "yes", "on"}'
+    expected_release_assignment = 'LEGAL_SCORE_RELEASED: bool = os.getenv("LEGAL_SCORE_RELEASED", "true").strip().lower() in {"true", "1", "yes", "on"}'
     if expected_release_assignment not in engine_source:
-        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to false")
+        print("FAIL: product release must use LEGAL_SCORE_RELEASED env var and default to true")
         return 1
     env_example = Path(".env.example").read_text(encoding="utf-8")
-    if not re.search(r"^LEGAL_SCORE_RELEASED=false$", env_example, re.MULTILINE):
-        print("FAIL: .env.example must keep product scoring disabled by default")
+    if not re.search(r"^LEGAL_SCORE_RELEASED=true$", env_example, re.MULTILINE):
+        print("FAIL: .env.example must enable product scoring by default")
         return 1
     release_tree = ast.parse(engine_source)
     release_function = next(

@@ -11,7 +11,6 @@ from scripts.seed_rules import ILRMF_RULES
 
 pytestmark = [pytest.mark.integration]
 
-
 def _enum_value(value):
     return value.value if hasattr(value, "value") else str(value)
 
@@ -31,13 +30,20 @@ async def test_postgres_registry_ids_match_engine_and_seed_catalogue(db):
     database_by_id = {row.rule_id: row for row in rows}
 
     assert len(seed_by_id) == 85
+    assert engine_ids == seed_ids
     assert len(database_by_id) == 85
-    assert set(database_by_id) == seed_ids == engine_ids
+    assert set(database_by_id) == seed_ids
 
     # Every database row, including the retained inactive legacy row, must be
-    # quarantined until independent legal approval is recorded.
+    # remain fail-closed for individual scoring and verification while all 85
+    # catalogue IDs are active for public catalogue parity.
     all_rows = (await db.execute(select(LegalRule))).scalars().all()
     assert all_rows
+    assert len(all_rows) == 86
+    active_rows = {row.rule_id for row in all_rows if row.is_active is True}
+    inactive_rows = {row.rule_id for row in all_rows if row.is_active is not True}
+    assert active_rows == seed_ids
+    assert inactive_rows == {"INC-002"}
     unsafe = [
         {
             "rule_id": row.rule_id,

@@ -80,3 +80,63 @@ def test_archive_rls_is_applied_after_archive_and_quarantine_writes():
     assert 'f"ALTER TABLE public.{ARCHIVE_TABLE} FORCE ROW LEVEL SECURITY"' in source
     assert "payload_sha256" in source
     assert "ON CONFLICT (legacy_identity_key) DO NOTHING" not in source
+
+
+def test_canonical_alias_registry_rejects_overlapping_resolved_mappings():
+    migration_path = (
+        ROOT / "alembic" / "versions" / "0118_legal_rule_alias_overlap_guard.py"
+    )
+    source = migration_path.read_text(encoding="utf-8")
+
+    for marker in (
+        'revision = "0118_legal_rule_alias_overlap_guard"',
+        'down_revision = "0117_canonical_registry_runtime_read"',
+        "prevent_legal_rule_alias_overlap",
+        "trg_legal_rule_alias_no_overlap",
+        "NEW.resolution_status <> 'RESOLVED'",
+        "existing.resolution_status = 'RESOLVED'",
+        "existing.source_namespace = NEW.source_namespace",
+        "existing.historical_rule_id = NEW.historical_rule_id",
+        "daterange(",
+        "hashtextextended(",
+        "pg_advisory_xact_lock(",
+        "USING ERRCODE = '23P01'",
+        "REVOKE ALL ON FUNCTION public.prevent_legal_rule_alias_overlap()",
+    ):
+        assert marker in source
+
+    # Unresolved/ambiguous records remain representable; only a second
+    # overlapping RESOLVED claim is rejected by the database trigger.
+    assert "NEW.resolution_status <> 'RESOLVED'" in source
+    assert "existing.resolution_status = 'RESOLVED'" in source
+
+
+def test_alias_overlap_guard_requires_read_committed_isolation():
+    migration = ROOT / "alembic" / "versions" / "0118_legal_rule_alias_overlap_guard.py"
+    source = migration.read_text(encoding="utf-8")
+    assert "current_setting('transaction_isolation')" in source
+    assert "READ COMMITTED" in source
+    assert "USING ERRCODE = '25000'" in source
+
+def test_inc001_accepts_observed_section11_legacy_tuple_for_quarantine():
+    source = MIGRATION.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    fingerprints_node = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id == "INC001_LEGACY_FINGERPRINTS"
+    )
+
+    fingerprints = ast.literal_eval(fingerprints_node.value)
+
+    observed_legacy_tuple = (
+        "Memorandum and Articles Not Filed",
+        "Section 11, Companies Act 1994 (Bangladesh)",
+        "moa_aoa_filed == False",
+    )
+
+    assert observed_legacy_tuple in fingerprints

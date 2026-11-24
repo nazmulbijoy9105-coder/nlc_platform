@@ -6,9 +6,11 @@ NLC - Legal Compliance & Rescue Platform
 Layer 2: Statutory Rule Registry
 Populated with canonical legal data from seed corpus.
 """
+import re
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 
 class RuleState(str, Enum):
@@ -52,12 +54,17 @@ class StatutoryRule:
     evidence_required: Tuple[str, ...]
     severity: Severity
     score_impact: int
-    applies_if: Optional[str] = None      # company fact that must be True, else NOT_APPLICABLE
+    applies_if: Optional[str] = None      # one required Boolean fact (legacy-compatible)
     exceptions: Tuple[str, ...] = ()      # company facts that, if True, make it NOT_APPLICABLE
+    applies_if_all: Tuple[str, ...] = ()  # all named Boolean facts must be True
+    applies_if_lt: Tuple[Tuple[str, float], ...] = ()  # numeric facts must be below thresholds
+    applicability_unresolved: bool = False  # descriptive scope not yet executable
+    applicability_notes: str = ""
 
     @property
     def evaluation_states(self) -> Tuple[RuleState, ...]:
-        if self.applies_if or self.exceptions:
+        if (self.applies_if or self.applies_if_all or self.applies_if_lt
+                or self.applicability_unresolved or self.exceptions):
             return _BASE_STATES + (RuleState.NOT_APPLICABLE,)
         return _BASE_STATES
 
@@ -117,6 +124,58 @@ if len(STATUTORY_RULE_REGISTRY) != len(_RULES):
     raise RuntimeError("duplicate rule_id in statutory rule registry")
 
 
+def evaluate_applicability(rule: StatutoryRule, facts: Mapping[str, Any]) -> Optional[RuleState]:
+    """Return UNKNOWN/NOT_APPLICABLE when scope cannot be established; None means applicable.
+
+    Applicability is declarative: free-text expressions are never evaluated.
+    For conjunctions, a known-false predicate establishes NOT_APPLICABLE even if
+    another predicate is missing; otherwise any missing/invalid required fact is UNKNOWN.
+    """
+    if rule.applicability_unresolved:
+        return RuleState.UNKNOWN
+
+    missing_exceptions = []
+    for exception in rule.exceptions:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", exception):
+            return RuleState.UNKNOWN
+        candidate_keys: Tuple[str, ...] = (exception, exception.lower())
+        if exception == "DORMANT_STRIKE_OFF":
+            candidate_keys += ("is_dormant",)
+        present_key = next((key for key in candidate_keys if key in facts), None)
+        if present_key is None or not isinstance(facts[present_key], bool):
+            missing_exceptions.append(exception)
+        elif facts[present_key] is True:
+            return RuleState.NOT_APPLICABLE
+
+    missing = list(missing_exceptions)
+    false_conditions = []
+    required = ((rule.applies_if,) if rule.applies_if else ()) + rule.applies_if_all
+    for fact_key in required:
+        value = facts.get(fact_key)
+        if not isinstance(value, bool):
+            missing.append(fact_key)
+        elif value is False:
+            false_conditions.append(fact_key)
+
+    for fact_key, threshold in rule.applies_if_lt:
+        value = facts.get(fact_key)
+        if value is None or isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+            missing.append(fact_key)
+            continue
+        numeric_value = Decimal(str(value))
+        numeric_threshold = Decimal(str(threshold))
+        if not numeric_value.is_finite():
+            missing.append(fact_key)
+        elif numeric_value >= numeric_threshold:
+            false_conditions.append(f"{fact_key} < {threshold:g}")
+
+    if false_conditions:
+        return RuleState.NOT_APPLICABLE
+    if missing:
+        return RuleState.UNKNOWN
+    return None
+
+
 def get_rule(rule_id: str) -> Optional[StatutoryRule]:
     """Retrieve a statutory rule by its ID."""
     return STATUTORY_RULE_REGISTRY.get(rule_id)
@@ -174,7 +233,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "requirement": "No AD-bank encashment-certificate record is present. This is an internal evidence-review signal only; it does not prove a breach. Verify the applicable GFET paragraph, current Bangladesh Bank circulars, foreign-currency-account retention rules and zone-specific exceptions. CONDITIONAL: foreign-shareholder cases only.",
         "provision": "UNVERIFIED CANDIDATE — GFET-2018 Vol.1, Chapter 9, paragraph 2(A); FE Circular No.10 (21 June 2023); FEID Circular No.01 (27 January 2025) and subsequent applicable circulars",
         "provision_status": ProvisionStatus.RECONCILE,
-        "applicability": "has_foreign_shareholder == True",
+        "applicability": "has_foreign_shareholder",
         "exceptions": [],
         "evidence_required": [
             "INC-005:SUBSCRIPTION_OR_ALLOTMENT_RECORD",
@@ -195,6 +254,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "provision": "UNVERIFIED CANDIDATE — BIDA Guidelines for permission to establish foreign commercial offices and issue work permits in Bangladesh (2023); exact operative clause/version and current amendments require verification",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
+        "applicability_all": ["has_foreign_shareholder", "bida_registered"],
+        "applicability_lt": {"remittance_amount_usd": 50000},
         "exceptions": [],
         "evidence_required": ["DOCUMENTARY_EVIDENCE"],
         "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT],
@@ -626,7 +687,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
         "rule_id": "REG-002",
         "legal_domain": "Corporate",
         "law": "Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
-        "requirement": "Core internal records missing: register of members (Section 34), AGM minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.",
+        "requirement": "Core internal records missing: register of members (Section 34), general and Board meeting minutes (Section 89), and register of charges (Section 174). Director particulars/Form XII are a separate RJSC filing obligation evaluated by DIR-001 under Section 115; they are not inferred from the internal register inventory.",
         "provision": "UNVERIFIED CANDIDATE — Sections 34, 89, 174, Companies Act 1994 (Bangladesh)",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
@@ -640,9 +701,9 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "REG-003": {
         "rule_id": "REG-003",
         "legal_domain": "Corporate",
-        "law": "Section 34(2), Companies Act 1994 (Bangladesh)",
-        "requirement": "Statutory registers not at registered office. Section 34(2): registers must be at registered office unless RJSC notified of alternative location. Alternative must be in Bangladesh and Board-approved. Registers open to inspection during business hours.",
-        "provision": "UNVERIFIED CANDIDATE — Section 34(2), Companies Act 1994 (Bangladesh)",
+        "law": "Unresolved location proposition; Companies Act 1994 (Bangladesh)",
+        "requirement": "A verified profile location differs from the registered office. The cited Section 34(2) is a penalty provision, not a location authority. Do not infer a breach; confirm the operative location requirement, any alternative-location notice and the Articles from current primary sources.",
+        "provision": "UNVERIFIED CANDIDATE — UNRESOLVED: Section 34(2) is not relied on as location authority; primary-source/counsel review required",
         "provision_status": ProvisionStatus.RECONCILE,
         "applicability": "ALL_ACTIVE_COMPANIES",
         "exceptions": [],
@@ -1247,7 +1308,7 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
     "DIR-007": {"rule_id": "DIR-007", "legal_domain": "Corporate", "law": "Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review", "requirement": "Written consent to act as director must be filed with the Registrar within 30 days after appointment under section 93(2). Distinguish pre-appointment consent under section 92 and reconcile the current RJSC Form IX instructions before assessment.", "provision": "UNVERIFIED CANDIDATE — Section 93(2), Companies Act 1994 (Bangladesh); section 92/Form IX mapping requires review", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-008": {"rule_id": "DIR-008", "legal_domain": "Corporate", "law": "Section 104, Companies Act 1994 (Bangladesh)", "requirement": "Review prompt only: verify the exact office held, statutory exclusions, company relationship and whether general-meeting consent was obtained. A profile boolean alone cannot establish breach.", "provision": "UNVERIFIED CANDIDATE — Section 104, Companies Act 1994 (Bangladesh)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "DIR-010": {"rule_id": "DIR-010", "legal_domain": "Corporate", "law": "Section 110, Companies Act 1994 (Bangladesh)", "requirement": "Review prompt only: verify current appointment instrument, term, reappointment, approval and continuity before assessing the five-year-at-a-time limit.", "provision": "UNVERIFIED CANDIDATE — Section 110, Companies Act 1994 (Bangladesh)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
-    "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Company below minimum members. Section 222: private < 2, public < 7.", "provision": "UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
+    "MEM-001": {"rule_id": "MEM-001", "legal_domain": "Corporate", "law": "Section 222, Companies Act 1994 (Bangladesh)", "requirement": "Section 222 applies only where membership falls below two for a private company or seven for another company and the company carries on business with the reduced membership for more than six months. Personal liability is limited to a member who remained during that period and knew of the shortfall; a headcount alone cannot establish breach or identify a liable member.", "provision": "UNVERIFIED CANDIDATE — Section 222, Companies Act 1994 (Bangladesh)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "CONDITIONAL — private company <2; other company <7; more than six months carrying on business; member-specific knowledge", "exceptions": [], "evidence_required": ["MEMBERSHIP_REGISTER", "BUSINESS_ACTIVITY_PROOF", "MEMBER_SPECIFIC_KNOWLEDGE_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
     "INC-007": {"rule_id": "INC-007", "legal_domain": "Corporate", "law": "Section 150(1) and (6), Companies Act 1994 (Bangladesh)", "requirement": "Section 150 commencement declaration is not universal: subsection (6) excludes private companies and companies that do not issue a prospectus inviting public subscription. Review only where public-company status, prospectus issue and every section 150 condition are independently verified.", "provision": "UNVERIFIED CANDIDATE — Section 150(1) and (6), Companies Act 1994 (Bangladesh)", "provision_status": ProvisionStatus.RECONCILE, "applicability": "ALL_ACTIVE_COMPANIES", "exceptions": [], "evidence_required": ["DOCUMENTARY_EVIDENCE"], "evaluation_states": [RuleState.UNKNOWN, RuleState.REQUIRES_LAWYER_JUDGMENT], "severity": "NOT_EVALUATED", "score_impact": 0, "invariants": ["R-007", "R-008", "R-014", "R-019"]},
 
 }
@@ -1255,7 +1316,8 @@ _LEGACY_RULE_DICTS: Dict[str, Dict[str, Any]] = {
 _LEGACY_AUTHORITY = {"Corporate": "RJSC", "Tax": "NBR", "Labour": "LABOUR_DEPT"}  # UNVERIFIED default
 _LEGACY_AUTHORITY_OVERRIDE: Dict[str, str] = {}   # rule_id -> authority; fill after review
 _LEGACY_KEYS = frozenset({"rule_id", "legal_domain", "law", "requirement", "provision",
-    "provision_status", "applicability", "exceptions", "evidence_required",
+    "provision_status", "applicability", "applicability_all", "applicability_lt",
+    "exceptions", "evidence_required",
     "evaluation_states", "severity", "score_impact", "invariants"})
 
 
@@ -1285,13 +1347,42 @@ def _legacy_rule(key: str, d: Dict[str, Any]) -> StatutoryRule:
     # DOCUMENTARY_EVIDENCE-only gate silently dropped those three rules and
     # left STATUTORY_RULE_REGISTRY at 82 while the engine exposes 85.
     auth = _LEGACY_AUTHORITY_OVERRIDE.get(key) or _LEGACY_AUTHORITY[d["legal_domain"]]
-    applies_if = None if applicability == "ALL_ACTIVE_COMPANIES" else applicability
+    # Only a simple identifier is an executable legacy Boolean fact. Descriptive
+    # applicability text remains visible but fail-closed until a typed contract exists.
+    applies_if = None
+    applicability_unresolved = False
+    applicability_notes = ""
+    if applicability != "ALL_ACTIVE_COMPANIES":
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", applicability):
+            applies_if = applicability
+        else:
+            applicability_unresolved = True
+            applicability_notes = applicability
+
+    applies_if_all = d.get("applicability_all", ())
+    if not isinstance(applies_if_all, (list, tuple)) or any(
+        not isinstance(item, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", item)
+        for item in applies_if_all
+    ):
+        raise RuntimeError(f"{key}: applicability_all must contain fact identifiers")
+    applies_if_lt_raw = d.get("applicability_lt", {})
+    if not isinstance(applies_if_lt_raw, dict) or any(
+        not isinstance(fact, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", fact)
+        or isinstance(limit, bool) or not isinstance(limit, (int, float))
+        for fact, limit in applies_if_lt_raw.items()
+    ):
+        raise RuntimeError(f"{key}: applicability_lt must map fact identifiers to numeric limits")
+
     return StatutoryRule(
         key, d["legal_domain"], d["law"], d["requirement"], d["provision"],
         d["provision_status"], auth, tuple(evidence_required),
         Severity(d["severity"]), d["score_impact"],
         applies_if=applies_if,
         exceptions=tuple(exceptions),
+        applies_if_all=tuple(applies_if_all),
+        applies_if_lt=tuple(sorted(applies_if_lt_raw.items())),
+        applicability_unresolved=applicability_unresolved,
+        applicability_notes=applicability_notes,
     )
 
 
@@ -1325,6 +1416,10 @@ def as_dict(rule: StatutoryRule) -> dict:
         "severity": rule.severity,
         "score_impact": rule.score_impact,
         "applies_if": rule.applies_if,
+        "applies_if_all": rule.applies_if_all,
+        "applies_if_lt": rule.applies_if_lt,
+        "applicability_unresolved": rule.applicability_unresolved,
+        "applicability_notes": rule.applicability_notes,
         "exceptions": rule.exceptions,
         "evaluation_states": rule.evaluation_states,
         "invariants": rule.invariants,

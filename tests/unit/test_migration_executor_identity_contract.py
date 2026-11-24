@@ -16,7 +16,8 @@ def test_production_migration_login_is_separate_from_owner_privileges():
     source = ALEMBIC_ENV.read_text(encoding="utf-8")
 
     assert 'session_user != "nlc_migration_user"' in source
-    assert 'current_user != session_user' in source
+    assert 'current_user not in {' in source
+    assert '"nlc_migration_owner"' in source
     assert "rolcanlogin, rolsuper, rolcreatedb, rolcreaterole" in source
     assert "NOCREATEDB" in source
     assert "NOCREATEROLE" in source
@@ -31,6 +32,8 @@ def test_migration_owner_is_non_login_and_assumed_only_with_set_option():
     assert "membership is None or tuple(membership) != (False, False, True)" in source
     assert 'SET ROLE nlc_migration_owner' in source
     assert 'assumed_role != "nlc_migration_owner"' in source
+    assert 'if current_user == session_user:' in source
+    assert 'RESET ROLE' in source
 
 
 def test_migration_preflight_requires_object_ownership_before_ddl():

@@ -19,15 +19,40 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Audit Neon role memberships
+      - name: Obtain read-only production audit connection
         env:
-          NEON_ROLE_AUDIT_DATABASE_URL: ${{ secrets.NEON_ROLE_AUDIT_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: rapid-bonus-26545234
+          NEON_PRODUCTION_BRANCH_ID: br-purple-fog-aodj8s04
+          NEON_PRODUCTION_ENDPOINT_ID: ep-broad-darkness-aoou0pie
         run: |
           set -euo pipefail
-          if [[ -z "${NEON_ROLE_AUDIT_DATABASE_URL}" ]]; then
-            echo "::error::Configure NEON_ROLE_AUDIT_DATABASE_URL with a read-only credential for the intended Neon branch/database."
+          if [[ -z "${NEON_API_KEY:-}" ]]; then
+            echo "::error::NEON_API_KEY is required to obtain the scoped nlc_ci_audit_role connection."
             exit 1
           fi
-          psql "${NEON_ROLE_AUDIT_DATABASE_URL}" \
-            -X -v ON_ERROR_STOP=1 \
-            -f scripts/audit_nlc_role_memberships.sql
+          API="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}"
+          AUTH=(-H "Authorization: Bearer ${NEON_API_KEY}" -H "Accept: application/json")
+          BRANCH=$(curl --silent --show-error --fail "${AUTH[@]}" "${API}/branches/${NEON_PRODUCTION_BRANCH_ID}")
+          if [[ "$(jq -r '.branch.name // empty' <<<"${BRANCH}")" != "production" || "$(jq -r '.branch.default // false' <<<"${BRANCH}")" != "true" ]]; then
+            echo "::error::Role audit refused: Neon target is not the default production branch."
+            exit 1
+          fi
+          ENDPOINT=$(curl --silent --show-error --fail "${AUTH[@]}" "${API}/endpoints/${NEON_PRODUCTION_ENDPOINT_ID}")
+          if [[ "$(jq -r '.endpoint.branch_id // empty' <<<"${ENDPOINT}")" != "${NEON_PRODUCTION_BRANCH_ID}" ]]; then
+            echo "::error::Role audit refused: endpoint does not belong to production branch."
+            exit 1
+          fi
+          AUDIT_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
+            --data-urlencode "branch_id=${NEON_PRODUCTION_BRANCH_ID}" \
+            --data-urlencode "endpoint_id=${NEON_PRODUCTION_ENDPOINT_ID}" \
+            --data-urlencode "database_name=neondb" \
+            --data-urlencode "role_name=nlc_ci_audit_role" \
+            --data-urlencode "pooled=false" \
+            "${API}/connection_uri" | jq -r '.uri // empty')
+          if [[ -z "${AUDIT_URL}" ]]; then
+            echo "::error::Neon did not return a direct nlc_ci_audit_role connection URI."
+            exit 1
+          fi
+          echo "::add-mask::${AUDIT_URL}"
+          PGOPTIONS="-c default_transaction_read_only=on" psql "${AUDIT_URL}" -X -v ON_ERROR_STOP=1 -f scripts/audit_nlc_role_memberships.sql

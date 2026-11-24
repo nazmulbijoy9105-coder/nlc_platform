@@ -1,13 +1,12 @@
 """Database/API/engine rule-registry parity against the seeded integration database."""
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models.rules import LegalRule
 from tools.audit_rule_parity import get_engine_rules, get_seed_rules
 
 
 pytestmark = [pytest.mark.integration]
-
 
 @pytest.mark.asyncio
 async def test_rule_registry_matches_engine_seed_database_and_super_admin_api(
@@ -25,5 +24,6 @@ async def test_rule_registry_matches_engine_seed_database_and_super_admin_api(
     api_ids = {item["rule_id"] for item in response.json()}
 
     assert engine_ids == seed_ids
+    assert len(database_ids) == 85
     assert database_ids == seed_ids
     assert api_ids == database_ids

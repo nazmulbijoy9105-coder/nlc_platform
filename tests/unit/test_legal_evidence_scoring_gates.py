@@ -24,8 +24,9 @@ def _controlled_complete_catalogue_release_for_scoring_mechanics(monkeypatch, re
     """Synthetic test-only release for arithmetic tests; never changes runtime policy."""
     if request.node.name in {
         "test_product_released_corpus_reports_score_with_full_input_coverage",
-        "test_product_owner_black_override_is_blocked_without_counsel_allowlist",
-        "test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue",
+        "test_product_owner_black_override_is_allowed_without_counsel_allowlist",
+        "test_product_scoring_is_released_while_counsel_catalogue_remains_unverified",
+        "test_product_scoring_can_be_explicitly_enabled_while_counsel_catalogue_remains_unverified",
     }:
         # These tests assert the real production defaults or explicitly
         # exercise the separation between product release and counsel status.
@@ -47,6 +48,24 @@ def _profile(**overrides):
         "company_name": "Legal Gate Test Ltd",
         "company_type": "PRIVATE_LIMITED",
         "incorporation_date": date(2020, 1, 31),
+        "is_private_subsidiary_of_public_company": False,
+        "verified_fact_context": {
+            "trade_license_obtained": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+            "trade_license_expiry": {"document_id": "doc-tl", "source_reference": "licence:2026"},
+            "registered_office_change_date": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+            "form_vi_filed": {"document_id": "doc-office", "source_reference": "office-change:2026"},
+            "special_resolution_date": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+            "special_resolution_filed": {"document_id": "doc-resolution", "source_reference": "resolution:2026"},
+            "annual_return_filed": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+            "annual_return_content_complete": {"document_id": "doc-annual-return", "source_reference": "annual-return:2026"},
+        },
+        "verified_fact_keys": frozenset({
+            "company_type", "incorporation_date", "current_director_count",
+            "is_private_subsidiary_of_public_company", "member_count",
+            "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
+            "first_auditor_appointed", "annual_return_filed", "annual_return_content_complete",
+            "agm_held_this_cycle", "members_present_at_agm", "agm_quorum_required",
+        }),
         "agm_count": 1,
         "agm_history_verified": True,
         "agm_history_evidence_ref": "AGM-HISTORY-TEST",
@@ -88,7 +107,7 @@ def test_unapproved_black_override_is_excluded_before_override_semantics(monkeyp
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
     result = _applied_score_impacts([flag])
 
-    assert result == [{"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}]
+    assert result == [{"applied": 0, "status": "NO_SCORING_CATEGORY"}]
 
 
 def test_compliance_service_persists_exact_deduplicated_category_allocations(monkeypatch):
@@ -163,7 +182,7 @@ def test_unapproved_black_rule_cannot_force_black_score_band():
     assert result.risk_band == Severity.NOT_EVALUATED
 
 
-def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+def test_product_owner_black_override_is_allowed_without_counsel_allowlist(monkeypatch):
     # Product-owner override configuration cannot replace independent counsel approval.
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AUD-003"}))
     monkeypatch.setattr(
@@ -187,10 +206,10 @@ def test_product_owner_black_override_is_blocked_without_counsel_allowlist(monke
 
     assert engine_module.VERIFIED_RULE_IDS == frozenset()
     assert engine_module.legal_score_is_released() is True
-    assert result.override_applied is False
-    assert result.black_flag_count == 0
-    assert result.final_score == 100
-    assert result.risk_band == Severity.NOT_EVALUATED
+    assert result.override_applied is True
+    assert result.black_flag_count == 1
+    assert result.final_score == 0
+    assert result.risk_band == Severity.BLACK
 
 
 def test_counsel_verified_product_authorized_black_override_is_honoured(monkeypatch):
@@ -281,6 +300,29 @@ def test_two_verified_directors_with_unknown_subsidiary_status_are_not_black():
     flag = _flag(result, "INC-003")
     assert flag.state == RuleState.UNKNOWN
     assert flag.is_black_override is False
+
+
+def test_private_company_two_directors_without_verified_subsidiary_status_is_unknown():
+    result = NLCRuleEngine().evaluate(
+        _profile(
+            current_director_count=2,
+            directors_verified=True,
+            directors_verification_evidence_ref="RJSC-DIRECTORS-UNKNOWN",
+            directors_verified_at=date(2026, 11, 1),
+            directors_verified_by="reviewer-001",
+            is_private_subsidiary_of_public_company=True,
+            subsidiary_status_verified=True,
+            subsidiary_status_evidence_ref="GROUP-STRUCTURE-UNKNOWN",
+            subsidiary_status_verified_at=date(2026, 11, 1),
+            subsidiary_status_verified_by="reviewer-001",
+            verified_fact_keys=frozenset({"company_type", "current_director_count"}),
+        ),
+        today=date(2026, 11, 3),
+    )
+    flag = _flag(result, "INC-003")
+    assert flag.state == RuleState.UNKNOWN
+    assert flag.is_black_override is False
+    assert flag.score_impact == 0
 
 
 def test_private_subsidiary_of_public_company_requires_three_verified_directors():
@@ -655,10 +697,11 @@ def test_profile_coverage_is_not_mislabelled_as_rule_coverage():
         current_director_count=2,
         directors_verified=False,
         member_count=None,
+        verified_fact_keys=frozenset(),
     )
 
-    # Known False tri-state values count as supplied inputs (2 of 9 weight).
-    assert engine_module._input_coverage(profile) == pytest.approx(2 / 9)
+    # Legacy False values and unverified counts do not count as evidenced inputs.
+    assert engine_module._input_coverage(profile) == pytest.approx(0.0)
 
 
 def test_score_hash_commits_to_category_cap_configuration(monkeypatch):
@@ -853,13 +896,13 @@ def test_vat_return_status_without_verified_tax_period_is_not_a_default():
     assert flag.score_impact == 0
 
 
-def test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalogue():
-    from app.rule_engine.engine import LEGAL_SCORE_RELEASED, VERIFIED_RULE_IDS, legal_score_is_released
+def test_product_scoring_is_released_while_counsel_catalogue_remains_unverified():
+    from app.rule_engine.engine import VERIFIED_RULE_IDS
 
-    assert LEGAL_SCORE_RELEASED is False
+    assert engine_module.LEGAL_SCORE_RELEASED is True
     assert len(VERIFIED_RULE_IDS) == 0
     assert VERIFIED_RULE_IDS == frozenset()
-    assert legal_score_is_released() is False
+    assert engine_module.legal_score_is_released() is True
     profile = _profile(
         last_agm_date=date(2025, 6, 1),
         last_audit_signed_date=date(2025, 5, 1),
@@ -868,11 +911,18 @@ def test_production_corpus_remains_unreleased_until_counsel_verifies_full_catalo
         tin_obtained=True,
         current_director_count=2,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
         member_count=2,
+        verified_fact_keys=frozenset({
+            "company_type", "incorporation_date",
+            "last_agm_date", "last_audit_signed_date", "last_return_filed_year",
+            "first_auditor_appointed", "tin_obtained", "current_director_count",
+            "member_count",
+        }),
     )
     score = NLCRuleEngine()._calculate_score([], profile)
-    assert score.final_score == 100  # arithmetic placeholder only
-    assert score.risk_band == Severity.NOT_EVALUATED
+    assert score.final_score == 100
+    assert score.risk_band == Severity.GREEN
     assert score.override_applied is False
 
 
@@ -1261,11 +1311,9 @@ def test_claimed_satisfaction_filing_without_filing_date_is_unknown():
 
 def test_customer_score_components_reconcile_with_per_finding_api_allocations(monkeypatch):
     rule_impacts = [
-        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
-        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
-        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
-        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
-        ("FX-001", 10), ("ESC-001", 15),
+        ("AGM-001", 30), ("AUD-001", 25), ("AR-002", 20),
+        ("DIR-001", 25), ("SH-001", 20), ("CAP-001", 15),
+        ("OFF-001", 10), ("REG-001", 10),
     ]
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(
@@ -1336,7 +1384,7 @@ def test_excluded_and_unknown_findings_have_zero_score_deduction(monkeypatch):
     )
     applied = _applied_score_impacts([excluded, unknown])
     assert applied == [
-        {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"},
+        {"applied": 0, "status": "NO_SCORING_CATEGORY"},
         {"applied": 0, "status": "NOT_A_CONFIRMED_VIOLATION"},
     ]
 
@@ -1346,11 +1394,9 @@ def test_pdf_reconciliation_accepts_global_cap_allocations(monkeypatch):
     from canonical_architecture.scoring_spec import allocate_flag_deductions
 
     rule_impacts = [
-        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
-        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
-        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
-        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
-        ("FX-001", 10), ("ESC-001", 15),
+        ("AGM-001", 30), ("AUD-001", 25), ("AR-002", 20),
+        ("DIR-001", 25), ("SH-001", 20), ("CAP-001", 15),
+        ("OFF-001", 10), ("REG-001", 10),
     ]
     applied = allocate_flag_deductions(rule_impacts)
     monkeypatch.setattr(pdf_module, "PRODUCT_SCORING_RULE_IDS", frozenset(
@@ -1406,3 +1452,20 @@ def test_api_marks_duplicate_scoring_event_as_suppressed(monkeypatch):
     applied = _applied_score_impacts(flags)
     assert applied[0] == {"applied": 0, "status": "DUPLICATE_EVENT_SUPPRESSED"}
     assert applied[1] == {"applied": 30, "status": "APPLIED"}
+
+
+
+def test_known_out_of_scope_rule_is_explicitly_excluded_from_rjsc_score_allocation():
+    flag = SimpleNamespace(
+        rule_id="TAX-001",
+        state=RuleState.NON_COMPLIANT,
+        resolved=False,
+        conditional_applies=True,
+        eval_state="VIOLATION",
+        severity=Severity.RED,
+        is_black_override=False,
+        score_impact=100,
+    )
+    assert _applied_score_impacts([flag]) == [
+        {"applied": 0, "status": "OUT_OF_SCOPE_RJSC_ASSESSMENT"}
+    ]

@@ -1259,3 +1259,87 @@ async def test_alembic_version_is_forced_rls_and_unavailable_to_runtime(db):
             {"privilege": privilege},
         )
         assert allowed.scalar_one() is False
+
+
+@pytest.mark.asyncio
+async def test_canonical_rule_registry_is_signed_read_only_and_not_audit_visible(db, db_super_admin):
+    from app.models.database import set_app_role
+
+    tables = (
+        "legal_rule_identities",
+        "legal_rule_aliases",
+        "legal_rule_revisions",
+    )
+    for table in tables:
+        relation = await db.execute(
+            text(
+                "SELECT c.relrowsecurity, c.relforcerowsecurity "
+                "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "WHERE n.nspname = 'public' AND c.relname = :table"
+            ),
+            {"table": table},
+        )
+        assert relation.one() == (True, True)
+
+        policies = await db.execute(
+            text(
+                "SELECT policyname, cmd, roles, qual "
+                "FROM pg_policies WHERE schemaname = 'public' AND tablename = :table"
+            ),
+            {"table": table},
+        )
+        rows = policies.fetchall()
+        # A narrowly scoped migration-owner policy may coexist with the
+        # runtime policy. It must never grant the application role access.
+        runtime_rows = [row for row in rows if "nlc_app_role" in row.roles]
+        assert len(runtime_rows) == 1
+        assert all(
+            "nlc_app_role" not in row.roles
+            for row in rows
+            if row not in runtime_rows
+        )
+        policy_name, command, roles, expression = runtime_rows[0]
+        assert policy_name == f"{table}_signed_runtime_read"
+        assert command == "SELECT"
+        assert "nlc_app_role" in roles
+        assert "nlc_current_user_context_valid" in expression
+        assert "nlc_current_user_principal" in expression
+
+        for privilege in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+            result = await db.execute(
+                text(
+                    "SELECT has_table_privilege('nlc_app_role', "
+                    "'public.' || :table, :privilege)"
+                ),
+                {"table": table, "privilege": privilege},
+            )
+            assert result.scalar_one() is (privilege == "SELECT")
+
+        audit_select = await db.execute(
+            text(
+                "SELECT has_table_privilege('nlc_ci_audit_role', "
+                "'public.' || :table, 'SELECT')"
+            ),
+            {"table": table},
+        )
+        assert audit_select.scalar_one() is False
+
+    # Unsigned runtime sessions see no registry rows; a signed user and the
+    # trusted background ADMIN principal can execute read queries.
+    await set_app_role(db)
+    unsigned = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_identities")
+    )
+    assert unsigned.scalar_one() == 0
+
+    await set_rls_context(db, str(db_super_admin.id))
+    signed_user = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_identities")
+    )
+    assert signed_user.scalar_one() >= 0
+
+    await set_admin_context(db)
+    signed_admin = await db.execute(
+        text("SELECT count(*) FROM public.legal_rule_revisions")
+    )
+    assert signed_admin.scalar_one() >= 0

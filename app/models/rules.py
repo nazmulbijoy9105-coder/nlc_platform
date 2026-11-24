@@ -28,7 +28,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .database import Base
+from .base import Base
 from .enums import RevenueTier, RuleType, SeverityLevel
 from .mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -134,6 +134,20 @@ class LegalRuleVersion(UUIDPrimaryKeyMixin, Base):
     Append-only — no UPDATE or DELETE.
     """
     __tablename__ = "legal_rule_versions"
+    __table_args__ = (
+        CheckConstraint(
+            """(
+                actor_type = 'USER'
+                AND changed_by IS NOT NULL
+                AND migration_revision IS NULL
+            ) OR (
+                actor_type = 'MIGRATION'
+                AND changed_by IS NULL
+                AND migration_revision IS NOT NULL
+            )""",
+            name="ck_legal_rule_versions_actor_provenance",
+        ),
+    )
 
     rule_id: Mapped[str] = mapped_column(
         String(50), ForeignKey("legal_rules.rule_id"),
@@ -144,8 +158,14 @@ class LegalRuleVersion(UUIDPrimaryKeyMixin, Base):
         Text, nullable=False,
         comment="Mandatory: why was this rule changed?"
     )
-    changed_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    actor_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="USER"
+    )
+    migration_revision: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
     )
     changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

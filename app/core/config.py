@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from typing import List
 
 from pydantic import model_validator
@@ -59,9 +60,25 @@ class Settings(BaseSettings):
             self.REQUIRE_RLS_APP_ROLE = True
         return self
 
+    def _runtime_database_url(self) -> str:
+        """Resolve only the application connection; never leak migration credentials."""
+        app_url = self.APP_DATABASE_URL.strip()
+        if not app_url:
+            if self.REQUIRE_RLS_APP_ROLE:
+                raise RuntimeError(
+                    "APP_DATABASE_URL is required for the runtime database; "
+                    "DATABASE_URL is reserved for migrations/maintenance."
+                )
+            app_url = self.DATABASE_URL.strip()
+        if not app_url:
+            raise RuntimeError("No runtime database URL is configured.")
+        return app_url
+
     @property
     def ASYNC_DATABASE_URL(self) -> str:
-        url = self.DATABASE_URL
+        # Backwards-compatible runtime alias. Alembic resolves its own
+        # MIGRATION_DATABASE_URL and must not consume this application setting.
+        url = self._runtime_database_url()
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql+asyncpg://", 1)
         if url.startswith("postgresql://"):
@@ -70,16 +87,39 @@ class Settings(BaseSettings):
 
     @property
     def ASYNC_APP_DATABASE_URL(self) -> str:
-        url = self.APP_DATABASE_URL or self.DATABASE_URL
+        """Return the restricted application connection URL.
+
+        Production and Render must never use DATABASE_URL as a runtime
+        fallback because it may hold migration/maintenance privileges.
+        """
+        url = self.APP_DATABASE_URL.strip()
+
+        is_production_runtime = (
+            _RENDER_RUNTIME
+            or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+        )
+
+        if not url:
+            if is_production_runtime:
+                raise RuntimeError(
+                    "APP_DATABASE_URL is required for production runtime access; "
+                    "DATABASE_URL must never be used as a runtime fallback."
+                )
+
+            # Development-only compatibility fallback.
+            url = self.DATABASE_URL.strip()
+
+        url = self._runtime_database_url()
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql+asyncpg://", 1)
         if url.startswith("postgresql://"):
             return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
         return url
 
     @property
     def SYNC_DATABASE_URL(self) -> str:
-        url = self.DATABASE_URL
+        url = self._runtime_database_url()
         if "+asyncpg" in url:
             return url.replace("+asyncpg", "", 1)
         if url.startswith("postgres://"):
@@ -138,8 +178,6 @@ class Settings(BaseSettings):
     max_login_attempts: int = 5
     lockout_minutes: int = 30
     max_page_size: int = 100
-
-from functools import lru_cache
 
 
 @lru_cache

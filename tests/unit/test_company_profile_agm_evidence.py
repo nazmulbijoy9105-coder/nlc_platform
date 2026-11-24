@@ -180,6 +180,7 @@ def test_verified_zero_directors_triggers_minimum_director_rule():
         company_id="verified-director-test",
         company_name="Verified Director Test Ltd",
         incorporation_date=date(today.year - 2, 1, 1),
+        verified_fact_keys=frozenset({"company_type", "incorporation_date", "current_director_count"}),
         current_director_count=0,
         directors_verified=True,
         directors_verification_evidence_ref="RJSC-DIRECTORS-001",
@@ -221,7 +222,7 @@ def test_score_impact_reporting_respects_product_release_gate_and_category_caps(
     # gate is still closed; TAX-001 is not in the internal allowlist.
     assert applied[0] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
     assert applied[1] == {"applied": 0, "status": "LEGAL_SCORE_NOT_RELEASED"}
-    assert applied[2] == {"applied": 0, "status": "EXCLUDED_FROM_PRODUCT_SCORING"}
+    assert applied[2] == {"applied": 0, "status": "OUT_OF_SCOPE_RJSC_ASSESSMENT"}
 
 
 def test_unknown_flags_are_not_reported_as_applied_deductions():
@@ -272,8 +273,12 @@ def test_unverified_director_rows_do_not_inflate_evidence_coverage():
     verified = CompanyProfile(
         company_id="coverage-verified",
         company_name="Coverage Test Ltd",
+        company_type="PRIVATE_LIMITED",
+        incorporation_date=date(2020, 1, 1),
         current_director_count=3,
         directors_verified=True,
+        directors_verification_evidence_ref="RJSC-DIRECTOR-LIST-TEST",
+        verified_fact_keys=frozenset({"company_type", "incorporation_date", "current_director_count"}),
     )
 
     assert _input_coverage(unverified) == 0.0
@@ -295,7 +300,7 @@ def test_non_catalogue_black_surcharge_is_excluded_from_product_scoring(monkeypa
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
     assert _applied_score_impacts([flag])[0] == {
         "applied": 0,
-        "status": "EXCLUDED_FROM_PRODUCT_SCORING",
+        "status": "OUT_OF_SCOPE_RJSC_ASSESSMENT",
     }
 
 

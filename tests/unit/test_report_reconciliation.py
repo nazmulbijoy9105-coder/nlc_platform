@@ -11,12 +11,14 @@ from canonical_architecture.scoring_spec import allocate_flag_deductions
 WHEN = datetime(2026, 10, 30, 12, 0, 0)
 
 
-def _company(score=75, band="RED", name="Test Co"):
+def _company(score=80, band="RED", name="Test Co"):
     return SimpleNamespace(
         company_name=name,
         registration_number="TEST-FE8A8D55",
         current_compliance_score=score,
         current_risk_band=band,
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
 
@@ -54,7 +56,7 @@ FLAGS = [
 
 
 def test_cap_adjustment_row_rendered(monkeypatch):
-    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
+    _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001"})
     page = build_compliance_report_html(_company(), FLAGS, WHEN)
     assert "Category cap applied (REG)" in page
     assert "raw deduction 12 pts capped to 10 pts" in page
@@ -62,9 +64,9 @@ def test_cap_adjustment_row_rendered(monkeypatch):
 
 def test_reconciliation_line_matches_score(monkeypatch):
     _enable_authorized_score_for_report_test(monkeypatch, {"REG-002", "AUD-001", "TL-001"})
-    page = build_compliance_report_html(_company(score=75), FLAGS, WHEN)
-    assert "effective deductions -25 pts" in page
-    assert "indicated score 75/100" in page
+    page = build_compliance_report_html(_company(score=80), FLAGS, WHEN)
+    assert "effective deductions -20 pts" in page
+    assert "indicated score 80/100" in page
 
 
 def test_no_caps_no_adjustment_rows(monkeypatch):
@@ -159,20 +161,18 @@ def test_real_evaluation_snapshot_reconciles_nominal_and_applied_impacts(monkeyp
         ),
     ]
 
-    page = build_compliance_report_html(_company(score=75), snapshot_flags, WHEN)
+    page = build_compliance_report_html(_company(score=80), snapshot_flags, WHEN)
     assert "raw deduction 12 pts capped to 10 pts" in page
-    assert "effective deductions -25 pts" in page
-    assert "indicated score 75/100" in page
+    assert "effective deductions -20 pts" in page
+    assert "indicated score 80/100" in page
 
 
 
 def test_global_budget_allocation_reconciles_each_persisted_finding(monkeypatch):
     findings = [
-        ("TAX-001", 15), ("AGM-001", 30), ("AUD-001", 25),
-        ("AR-002", 20), ("DIR-001", 25), ("SH-001", 20),
-        ("CAP-001", 15), ("OFF-001", 10), ("REG-001", 10),
-        ("BNK-001", 20), ("LBR-001", 10), ("BSEC-001", 15),
-        ("FX-001", 10), ("ESC-001", 15),
+        ("AGM-001", 30), ("AUD-001", 25), ("AR-002", 20),
+        ("DIR-001", 25), ("SH-001", 20), ("CAP-001", 15),
+        ("OFF-001", 10), ("REG-001", 10),
     ]
     applied = allocate_flag_deductions(findings)
     _enable_authorized_score_for_report_test(

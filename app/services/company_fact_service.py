@@ -12,13 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company import Company
 from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import business_date_today, is_internal_profile_fact_key
 from app.models.documents import Document
 from app.compliance.fact_provenance import coerce_company_profile_fact_value
+from app.services.score_invalidation import invalidate_company_score
 
 
 class CompanyFactService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    async def _mark_company_facts_changed(self, company_id: uuid.UUID) -> None:
+        """Clear cached statutory results whenever source facts change."""
+        await invalidate_company_score(self.db, company_id)
 
     @staticmethod
     def _normalize_fact_key(fact_key: str) -> str:
@@ -29,12 +35,14 @@ class CompanyFactService:
 
         normalized = fact_key.strip()
         allowed = {
-            item.name for item in fields(CompanyProfile)
+            item.name
+            for item in fields(CompanyProfile)
+            if not is_internal_profile_fact_key(item.name)
         } - {"company_id", "company_name"}
         if normalized not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail="fact_key must be a supported CompanyProfile field; company identity fields are read-only.",
+                detail="fact_key must be a supported CompanyProfile fact; company identity and reviewer/system metadata are read-only.",
             )
         annotation = get_type_hints(CompanyProfile).get(normalized)
         candidates = get_args(annotation) or (annotation,)
@@ -71,6 +79,8 @@ class CompanyFactService:
         self, *, company_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date, source_reference: str | None = None,
     ) -> CompanyFact:
+        if observed_on > business_date_today():
+            raise HTTPException(status_code=422, detail="observed_on cannot be in the future.")
         normalized_key = self._normalize_fact_key(fact_key)
         try:
             fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
@@ -89,6 +99,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=company_id,
@@ -104,6 +115,8 @@ class CompanyFactService:
         self, *, document_id: uuid.UUID, fact_key: str, fact_value: Any,
         actor_id: uuid.UUID, observed_on: date,
     ) -> CompanyFact:
+        if observed_on > business_date_today():
+            raise HTTPException(status_code=422, detail="observed_on cannot be in the future.")
         result = await self.db.execute(
             select(Document).where(Document.id == document_id, Document.is_active.is_(True))
         )
@@ -146,6 +159,7 @@ class CompanyFactService:
         )
         self.db.add(fact)
         await self.db.flush()
+        await self._mark_company_facts_changed(document.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=document.company_id,
@@ -218,6 +232,7 @@ class CompanyFactService:
         fact.verification_status = decision
         fact.verification_note = note
         await self.db.flush()
+        await self._mark_company_facts_changed(fact.company_id)
         from app.services.domain_events import DomainEventType, publish_domain_event
         await publish_domain_event(
             self.db, company_id=fact.company_id,

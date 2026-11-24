@@ -345,20 +345,48 @@ async def logout(
     current_user: dict = Depends(get_current_user),
     token: str = Depends(oauth2_scheme),
 ):
-    """Revoke the current access token and, when supplied, its refresh token."""
+    """Revoke the current access token and, when supplied, its refresh token.
+
+    Never report a successful logout when Redis failed to persist revocation:
+    the access token would otherwise remain usable until its expiry.
+    """
     from app.core.token_blacklist import revoke
 
     access_payload = decode_token(token, expected_type="access") or {}
     access_jti = access_payload.get("jti")
-    access_revoked = bool(access_jti) and revoke(str(access_jti), access_payload.get("exp"))
+    if (
+        not isinstance(access_jti, str)
+        or not access_jti
+        or access_payload.get("sub") != current_user.get("sub")
+    ):
+        raise HTTPException(status_code=401, detail="Invalid access token for logout")
+
+    access_revoked = revoke(access_jti, access_payload.get("exp"))
+    if not access_revoked:
+        raise HTTPException(
+            status_code=503,
+            detail="Logout could not revoke the access token. The session may remain active; retry.",
+        )
 
     refresh_revoked = False
     if body.refresh_token:
         refresh_payload = decode_token(body.refresh_token, expected_type="refresh")
         if refresh_payload and refresh_payload.get("sub") == current_user.get("sub"):
             refresh_jti = refresh_payload.get("jti")
-            if refresh_jti:
-                refresh_revoked = revoke(str(refresh_jti), refresh_payload.get("exp"))
+            if not isinstance(refresh_jti, str) or not refresh_jti:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid refresh token supplied for logout",
+                )
+            refresh_revoked = revoke(refresh_jti, refresh_payload.get("exp"))
+            if not refresh_revoked:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Access token was revoked, but refresh-token revocation failed. "
+                        "The refresh session may remain active; retry."
+                    ),
+                )
 
     return {
         "status": "logged_out",

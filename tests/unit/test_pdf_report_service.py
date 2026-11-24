@@ -1,11 +1,11 @@
 """Unit tests for the compliance report PDF service (no database required)."""
 import asyncio
 import re
-from uuid import uuid4
 import zlib
 from datetime import datetime
 from enum import Enum
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, Response
@@ -35,6 +35,7 @@ COMPANY = SimpleNamespace(
     current_compliance_score=85,
     current_risk_band="GREEN",
     last_evaluated_at=datetime(2026, 10, 20, 1, 0),
+    updated_at=datetime(2026, 10, 20, 1, 0),
 )
 FLAGS = [
     SimpleNamespace(
@@ -146,7 +147,7 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="",
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
@@ -185,9 +186,13 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
 
     class FakeDB:
         async def execute(self, statement):
-            if str(statement).strip().lower().startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
+            sql = str(statement).strip().lower()
+            if sql.startswith("select compliance_evaluation_runs.id, compliance_evaluation_runs.score_hash"):
                 return SimpleNamespace(one_or_none=lambda: None)
-            return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            if "compliance_evaluation_runs" in sql:
+                captured["snapshot_query"] = str(statement)
+                return SimpleNamespace(scalar_one_or_none=lambda: snapshot)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     response = asyncio.run(
         PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
@@ -197,8 +202,9 @@ def test_endpoint_returns_pdf_response_with_safe_headers_and_escaped_html(monkey
     assert response.status_code == 200
     assert response.media_type == "application/pdf"
     assert response.body == b"%PDF-1.7 stub"
+    assert "ORDER BY compliance_evaluation_runs.calculated_at DESC" in captured["snapshot_query"]
     assert response.headers["x-snapshot-hash"] == snapshot.score_hash
-    assert response.headers["x-engine-version"] == "test-engine-v1"
+    assert response.headers["x-engine-version"] == report_module.RULE_ENGINE_VERSION
     assert (
         response.headers["content-disposition"]
         == 'attachment; filename="compliance_report_C-1_X-Evil_1_2020.pdf"'
@@ -263,6 +269,37 @@ def test_html_builder_suppresses_stale_score_flags_and_rescue_while_release_clos
 def test_html_builder_includes_logo_only_when_given():
     page = build_compliance_report_html(COMPANY, FLAGS, WHEN, logo_uri="file:///x/logo.png")
     assert '<img class="logo" src="file:///x/logo.png"' in page
+
+
+@pytest.mark.parametrize(
+    ("initial_score", "expected"),
+    [
+        (None, "NOT EVALUATED"),
+        (0, "0/100"),
+        (87, "87/100"),
+        ("absent", "NOT EVALUATED"),
+    ],
+)
+def test_rescue_section_initial_score_label(initial_score, expected):
+    plan = SimpleNamespace(
+        steps=[],
+        started_at=None,
+        target_completion_date=None,
+        completed_steps=0,
+        total_steps=0,
+        blocked_steps=0,
+        completion_percentage=0,
+        plan_name="Plan",
+        initial_risk_band="NOT_EVALUATED",
+    )
+    if initial_score != "absent":
+        plan.initial_score = initial_score
+
+    html = report_module._render_rescue_section(plan)
+
+    assert f"<strong>Initial score:</strong> {expected}" in html
+    if expected == "NOT EVALUATED":
+        assert "/100" not in html
 
 
 def test_asset_uri_rejects_missing_and_traversal():
@@ -463,7 +500,7 @@ def test_endpoint_rejects_missing_snapshot(monkeypatch):
 
 
 
-def test_pdf_product_black_override_is_blocked_without_counsel_allowlist(monkeypatch):
+def test_pdf_product_black_override_uses_product_authorization_without_counsel_gate(monkeypatch):
     monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"INC-003"}))
     monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset())
@@ -478,8 +515,8 @@ def test_pdf_product_black_override_is_blocked_without_counsel_allowlist(monkeyp
         conditional_applies=True,
     )
 
-    assert report_module._legal_score_is_released() is False
-    assert report_module._verified_flag_score([black]) == (0, False)
+    assert report_module._legal_score_is_released() is True
+    assert report_module._verified_flag_score([black]) == (0, True)
 
 
 
@@ -519,6 +556,8 @@ def test_pdf_separates_unverified_findings_from_verified_score_report(monkeypatc
         registration_number="P-1",
         current_compliance_score=90,
         current_risk_band="GREEN",
+        last_evaluated_at=WHEN,
+        updated_at=WHEN,
     )
 
     page = build_compliance_report_html(
@@ -568,7 +607,7 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
         calculated_at=WHEN,
         evaluation_status="COMPLETED",
         score_hash="f" * 64,
-        engine_version="test-engine-v1",
+        engine_version=report_module.RULE_ENGINE_VERSION,
         trigger_source="UNIT_TEST",
         fact_provenance_snapshot=[],
         score_breakdown_snapshot={
@@ -604,3 +643,81 @@ def test_endpoint_withholds_pdf_when_evaluation_score_hash_is_tampered(monkeypat
 
     assert exc.value.status_code == 409
     assert "SCORE_HASH_MISMATCH" in exc.value.detail
+
+
+def test_html_builder_withholds_score_when_company_data_changed_after_evaluation(monkeypatch):
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+    stale_company = SimpleNamespace(
+        **{
+            **COMPANY.__dict__,
+            "updated_at": datetime(2026, 10, 20, 1, 0, 1),
+        }
+    )
+
+    page = build_compliance_report_html(stale_company, FLAGS, WHEN)
+
+    assert "NOT EVALUATED" in page
+    assert "85 / 100" not in page
+    assert "AGM overdue" not in page
+
+
+def test_endpoint_withholds_pdf_when_latest_run_is_pending_even_if_old_score_is_cached(monkeypatch):
+    _patch_services(monkeypatch)
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001"}))
+    monkeypatch.setattr(report_module, "VERIFIED_RULE_IDS", frozenset({"AGM-001"}))
+
+    pending_latest_run = SimpleNamespace(
+        evaluation_status="PENDING",
+        score_hash=None,
+        engine_version=None,
+        flags_snapshot=[],
+        rule_outcomes_snapshot=None,
+        rule_catalogue_count=0,
+        calculated_at=datetime(2026, 10, 21, 1, 0),
+    )
+
+    class FakeDB:
+        async def execute(self, statement):
+            if "compliance_evaluation_runs" in str(statement).lower():
+                return SimpleNamespace(scalar_one_or_none=lambda: pending_latest_run)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(
+            PDFReportService(db=FakeDB()).generate_company_compliance_pdf(str(uuid4()))
+        )
+
+    assert exc.value.status_code == 409
+    assert "latest evaluation run is incomplete" in exc.value.detail
+
+
+
+def test_out_of_scope_flag_cannot_contribute_to_pdf_rjsc_score(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(report_module, "LEGAL_SCORE_RELEASED", True)
+    monkeypatch.setattr(
+        report_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001", "TAX-001"})
+    )
+    monkeypatch.setattr(
+        report_module, "SCORE_DEDUCTION_RULE_IDS", frozenset({"AGM-001", "TAX-001"})
+    )
+    monkeypatch.setattr(report_module, "AUTHORIZED_BLACK_OVERRIDE_RULE_IDS", frozenset())
+
+    tax_flag = SimpleNamespace(
+        rule_id="TAX-001",
+        state="NON_COMPLIANT",
+        eval_state="VIOLATION",
+        flag_status="ACTIVE",
+        resolved=False,
+        conditional_applies=True,
+        severity="BLACK",
+        score_impact=100,
+        score_impact_applied=100,
+    )
+    assert report_module._verified_flag_score([tax_flag]) == (100, False)

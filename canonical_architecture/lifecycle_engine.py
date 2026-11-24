@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Sequence, Union
 
-from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule
+from canonical_architecture.statutory_rules import (
+    STATUTORY_RULE_REGISTRY, RuleState, StatutoryRule, evaluate_applicability,
+)
+from canonical_architecture.evaluator import EvidenceStatus, evaluate_rule
 from canonical_architecture.statutory_rescue import STATUTORY_RESCUE_REGISTRY
 from canonical_architecture.legal_reconciliation import LEGAL_RECONCILIATION
 
@@ -28,16 +31,11 @@ class CanonicalLifecycleEngine:
         """R-020: Record immutable trace of decisions/actions."""
         self.audit_trail.append({"action": action, "details": details})
 
-    def _is_applicable(self, rule: StatutoryRule, evidence: Mapping[str, Any]) -> bool:
-        """Honour applies_if and exceptions (R-004)."""
-        if rule.applies_if and not evidence.get(rule.applies_if):
-            return False
-        for exc in rule.exceptions:
-            if evidence.get(exc) or evidence.get(exc.lower()) or (
-                evidence.get("is_dormant") and exc == "DORMANT_STRIKE_OFF"
-            ):
-                return False
-        return True
+    def _applicability_state(
+        self, rule: StatutoryRule, facts: Mapping[str, Any]
+    ) -> RuleState | None:
+        """Use the same three-state applicability contract as the canonical evaluator."""
+        return evaluate_applicability(rule, facts)
 
     def _evidence_satisfies(self, rule: StatutoryRule, evidence: EvidenceInput) -> bool:
         if isinstance(evidence, Mapping):
@@ -63,17 +61,55 @@ class CanonicalLifecycleEngine:
             return True
         return False
 
-    def evaluate_finding(self, rule_id: str, evidence: EvidenceInput) -> RuleState:
+    def evaluate_finding(
+        self,
+        rule_id: str,
+        evidence: EvidenceInput,
+        facts: Mapping[str, Any] | None = None,
+    ) -> RuleState:
+        """Evaluate scope facts separately from evidence.
+
+        Facts are the authoritative applicability input when supplied.
+        For backward compatibility, callers that omit facts retain the
+        historical behaviour where a mapping may contain both facts and
+        evidence keys.
+        """
         rule = self.rule_registry.get(rule_id)
         if rule is None:
             return RuleState.UNKNOWN
-        evidence_map: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
-        if not self._is_applicable(rule, evidence_map):
-            return RuleState.NOT_APPLICABLE
-        if not evidence:
-            return RuleState.UNKNOWN
-        verified = self._evidence_satisfies(rule, evidence)
-        return RuleState.COMPLIANT if verified else RuleState.NON_COMPLIANT
+        legacy_combined_map: Mapping[str, Any] = (
+            evidence if isinstance(evidence, Mapping) else {}
+        )
+        applicability_facts = legacy_combined_map if facts is None else facts
+        applicability = self._applicability_state(rule, applicability_facts)
+        if applicability is not None:
+            return applicability
+        if isinstance(evidence, Mapping):
+            evidence_statuses: Dict[str, EvidenceStatus] = {}
+            for key in rule.evidence_required:
+                short = key.split(":")[-1] if ":" in key else key
+                value = evidence.get(key)
+                if value is None:
+                    value = evidence.get(short)
+                if value is None:
+                    value = evidence.get(short.lower())
+                # Never coerce caller data (including strings or booleans) into
+                # a trusted verification state. The enum instance must be
+                # supplied by the trusted evidence-verification layer.
+                if value is EvidenceStatus.VERIFIED_PRESENT:
+                    evidence_statuses[key] = EvidenceStatus.VERIFIED_PRESENT
+                elif value is EvidenceStatus.VERIFIED_ABSENT:
+                    evidence_statuses[key] = EvidenceStatus.VERIFIED_ABSENT
+                elif value is EvidenceStatus.CONFLICTING:
+                    evidence_statuses[key] = EvidenceStatus.CONFLICTING
+                else:
+                    evidence_statuses[key] = EvidenceStatus.UNVERIFIED
+            return evaluate_rule(rule, applicability_facts, evidence_statuses).state
+
+        # Unkeyed evidence sequences cannot prove that every required evidence
+        # item was verified. Keep the result UNKNOWN until evidence is mapped
+        # to canonical evidence keys and carries an explicit verified state.
+        return RuleState.UNKNOWN
 
     def generate_rescue_plan(self, active_findings: List[str]) -> List[Dict[str, Any]]:
         steps: List[Dict[str, Any]] = []
@@ -105,9 +141,10 @@ class CanonicalLifecycleEngine:
         rule_id: str,
         evidence: EvidenceInput,
         verification_recorded: bool = False,
+        facts: Mapping[str, Any] | None = None,
     ) -> RuleState:
         self._audit("EVIDENCE_SUBMITTED", {"rule_id": rule_id})
-        new_state = self.evaluate_finding(rule_id, evidence)
+        new_state = self.evaluate_finding(rule_id, evidence, facts=facts)
         if new_state is RuleState.COMPLIANT and verification_recorded:
             self._audit("RESCUE_CLOSED", {"rule_id": rule_id, "reason": "Verified compliant"})
         return new_state
