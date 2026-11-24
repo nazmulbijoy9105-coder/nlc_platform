@@ -49,6 +49,8 @@ def normalize_rls_report(report: object) -> dict:
     findings = []
     for row in results:
         status = row.get("status")
+        if not isinstance(status, str):
+            raise ValueError(f"unexpected result status: {status!r}")
         if status == "PASS":
             continue
         severity = _RLS_SEVERITY.get(status)
@@ -241,6 +243,16 @@ def main() -> int:
     all_findings = []
     for result in results:
         if not result.get("ok"):
+            all_findings.append({
+                "check_id": "VERIFIER_EXECUTION",
+                "file": result.get("script", "unknown"),
+                "line": 0,
+                "severity": "FAIL",
+                "detail": result.get("stderr") or result.get("stdout_tail") or (
+                    "Verification script failed without diagnostic output."
+                ),
+                "_source_script": result.get("script", "unknown"),
+            })
             continue
         for finding in result["report"].get("findings", []):
             finding["_source_script"] = result["script"]
