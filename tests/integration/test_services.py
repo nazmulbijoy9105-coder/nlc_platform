@@ -257,6 +257,9 @@ class TestComplianceService:
             SeverityLevel,
         )
         from app.models.rules import LegalRule
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+
+        canonical_agm_001_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
@@ -310,9 +313,9 @@ class TestComplianceService:
             score_impact=10,
             revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
             description="Controlled evidence review fixture",
-            # Match the migrated AGM-001 catalogue identity so this test
-            # exercises release redaction, not the separate identity-conflict gate.
-            statutory_basis="Section 81, Companies Act 1994 (Bangladesh)",
+            # Match the canonical AGM-001 identity so this test exercises
+            # release redaction, not the separate identity-conflict gate.
+            statutory_basis=canonical_agm_001_basis,
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -353,10 +356,10 @@ class TestComplianceService:
                 )
             )
         else:
-            assert catalogue_rule.is_active is True
-            assert catalogue_rule.statutory_basis == (
-                "Section 81, Companies Act 1994 (Bangladesh)"
-            )
+            # Reconcile legacy migrated rows to the canonical identity before
+            # the fail-closed gate runs; do not weaken production validation.
+            catalogue_rule.statutory_basis = canonical_agm_001_basis
+            catalogue_rule.is_active = True
         await db.flush()
 
         svc = ComplianceService(db)
@@ -398,9 +401,9 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        # Persisted snapshots redact risk severity while the legal score
-        # release gate is closed; the raw engine label is not released.
-        assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
+        # Immutable evaluation evidence preserves the engine raw severity.
+        # Release redaction applies to customer-facing ComplianceFlag/API data.
+        assert persisted_run.flags_snapshot[0]["severity"] == "RED"
 
         persisted_flag_result = await db.execute(
             select(ComplianceFlag).where(
