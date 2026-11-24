@@ -122,6 +122,7 @@ def test_migration_creates_partial_unique_active_plan_index():
     assert "unique=True" in migration
     assert 'postgresql_where=sa.text("is_active IS TRUE")' in migration
     assert "HAVING count(*) > 1" in migration
+    assert "LOCK TABLE rescue_plans IN SHARE ROW EXCLUSIVE MODE" in migration
     assert "Cannot enforce one active rescue plan per company" in migration
 
 
@@ -134,7 +135,10 @@ def test_migration_refuses_to_hide_existing_duplicate_active_plans(monkeypatch):
 
     calls = []
     duplicate = (str(uuid.uuid4()), 2)
-    bind = SimpleNamespace(execute=lambda statement: SimpleNamespace(all=lambda: [duplicate]))
+    def execute(statement):
+        calls.append(str(statement))
+        return SimpleNamespace(all=lambda: [duplicate])
+    bind = SimpleNamespace(execute=execute)
     fake_op = SimpleNamespace(
         get_bind=lambda: bind,
         create_index=lambda *args, **kwargs: calls.append((args, kwargs)),
@@ -143,7 +147,9 @@ def test_migration_refuses_to_hide_existing_duplicate_active_plans(monkeypatch):
 
     with pytest.raises(RuntimeError, match="duplicate active plans"):
         migration.upgrade()
-    assert calls == []
+    assert len(calls) == 2
+    assert calls[0] == "LOCK TABLE rescue_plans IN SHARE ROW EXCLUSIVE MODE"
+    assert "HAVING count(*) > 1" in calls[1]
 
 
 def test_orm_model_declares_the_same_partial_unique_index():
@@ -165,17 +171,24 @@ def test_migration_creates_index_after_clean_preflight(monkeypatch):
     spec.loader.exec_module(migration)
 
     calls = []
-    bind = SimpleNamespace(execute=lambda statement: SimpleNamespace(all=lambda: []))
+    def execute(statement):
+        calls.append(("execute", str(statement)))
+        return SimpleNamespace(all=lambda: [])
+    bind = SimpleNamespace(execute=execute)
+    def create_index(*args, **kwargs):
+        calls.append(("create_index", args, kwargs))
     fake_op = SimpleNamespace(
         get_bind=lambda: bind,
-        create_index=lambda *args, **kwargs: calls.append((args, kwargs)),
+        create_index=create_index,
     )
     monkeypatch.setattr(migration, "op", fake_op)
 
     migration.upgrade()
 
-    assert len(calls) == 1
-    args, kwargs = calls[0]
+    assert [call[0] for call in calls] == ["execute", "execute", "create_index"]
+    assert calls[0][1] == "LOCK TABLE rescue_plans IN SHARE ROW EXCLUSIVE MODE"
+    assert "HAVING count(*) > 1" in calls[1][1]
+    _, args, kwargs = calls[2]
     assert args[:3] == (
         "uq_rescue_plans_one_active_per_company",
         "rescue_plans",
