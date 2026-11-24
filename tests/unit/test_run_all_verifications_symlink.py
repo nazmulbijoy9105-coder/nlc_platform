@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -121,3 +122,47 @@ def test_run_script_records_invalid_report_utf8_as_failure(tmp_path, monkeypatch
     assert result["ok"] is False
     assert "could not parse output json" in result["stderr"].lower()
     assert "utf-8" in result["stderr"].lower()
+
+
+def test_normalize_rls_report_rejects_non_string_status():
+    with pytest.raises(ValueError, match="unexpected result status"):
+        run_all_verifications.normalize_rls_report({
+            "results": [{"status": [], "check_id": "RLS-TEST"}]
+        })
+
+
+def test_failed_verifier_is_a_consolidated_failure_and_nonzero_exit(
+    tmp_path, monkeypatch
+):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(
+        run_all_verifications,
+        "SCRIPTS",
+        ["verify_rls.py"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["run_all_verifications.py", str(repo), "--output-dir", str(out)],
+    )
+    monkeypatch.setattr(
+        run_all_verifications,
+        "run_script",
+        lambda *args, **kwargs: {
+            "script": "verify_rls.py",
+            "ok": False,
+            "stderr": "malformed RLS report",
+            "stdout_tail": "",
+        },
+    )
+
+    assert run_all_verifications.main() == 1
+
+    report = json.loads((out / "all_findings.json").read_text(encoding="utf-8"))
+    assert report["fail_count"] == 1
+    assert report["findings"][0]["check_id"] == "VERIFIER_EXECUTION"
+    assert report["findings"][0]["severity"] == "FAIL"
+    assert report["findings"][0]["detail"] == "malformed RLS report"
