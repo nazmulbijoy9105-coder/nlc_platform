@@ -52,6 +52,7 @@ class RescuePlan(FullMixin, Base):
             "company_id",
             unique=True,
             postgresql_where=text("is_active IS TRUE"),
+            sqlite_where=text("is_active IS TRUE"),
         ),
     )
 
