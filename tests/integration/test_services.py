@@ -1124,7 +1124,7 @@ def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
     assert "BLOCKED" in html
 
 
-def test_rescue_output_validation_requires_product_release_and_unique_evidenced_findings(monkeypatch):
+def test_rescue_output_validation_is_score_independent_and_requires_unique_evidenced_findings(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState, Severity
     from app.services.rescue_service import validate_rescue_engine_output
@@ -1149,8 +1149,12 @@ def test_rescue_output_validation_requires_product_release_and_unique_evidenced_
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    with pytest.raises(PermissionError, match="disabled"):
-        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+    # Candidate validation is deliberately score-release independent. The
+    # engine's rescue disposition remains REVIEW_REQUIRED until counsel
+    # verification is present; validating the candidate must not activate it.
+    assert validate_rescue_engine_output(
+        output, expected_company_id="tenant-001"
+    ) == frozenset({"AGM-001"})
 
     # A released fixture must approve every rule in its product catalogue.
     monkeypatch.setattr(
