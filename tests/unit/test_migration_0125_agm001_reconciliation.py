@@ -44,7 +44,7 @@ def test_agm001_release_redaction_fixture_uses_migrated_catalogue_identity():
     assert "catalogue_rule.statutory_basis == canonical_agm_basis" in fixture
     assert "_catalogue_identity_conflicts([catalogue_rule])" in fixture
     assert '"MATCHED_CATALOGUE_IDENTITY"' in fixture
-    assert "catalogue_rule.statutory_basis =" not in fixture
+    assert "\n        catalogue_rule.statutory_basis = " not in fixture
     assert "LegalRule(" not in fixture
     assert fixture.index('"MATCHED_CATALOGUE_IDENTITY"') < fixture.index(
         '["score_impact_applied"] == 0'
