@@ -203,11 +203,11 @@ def main(argv: list[str] | None = None) -> int:
             seen_numbers[number] = title
 
         statuses = item_statuses(block)
-        if len(statuses) != 1 or statuses[0].strip().upper() not in ALLOWED_STATUSES:
+        if len(statuses) != 1 or statuses[0].strip() not in ALLOWED_STATUSES:
             failures.append(
                 f"item must contain exactly one Status: OPEN or Status: CLOSED line: {title}"
             )
-        elif statuses[0].strip().upper() == "OPEN":
+        elif statuses[0].strip() == "OPEN":
             if structure_only:
                 open_items.append(title)
             else:
