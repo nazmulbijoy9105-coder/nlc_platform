@@ -118,8 +118,42 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
     for field in sorted(BEFORE_IMAGE_FIELDS - MIGRATION_MUTATED_FIELDS):
         assert before[field] == current[field], field
 
+    # 0125 records the pre-migration version; its current catalogue version
+    # is one increment later. 0128 then records that complete intermediate
+    # row and advances the catalogue version a second time.
     version_parts = str(history["version"]).split(".")
     assert all(part.isdigit() for part in version_parts)
+    version_parts[-1] = str(int(version_parts[-1]) + 1)
+    version_after_0125 = ".".join(version_parts)
+
+    history_0128_rows = (
+        await db.execute(
+            text(
+                """
+                SELECT version, change_reason, changed_by, actor_type,
+                       migration_revision, previous_definition
+                  FROM public.legal_rule_versions
+                 WHERE rule_id = 'AGM-001'
+                   AND migration_revision = '0128_agm001_calendar_month_definition'
+                """
+            )
+        )
+    ).mappings().all()
+    assert len(history_0128_rows) == 1
+    history_0128 = history_0128_rows[0]
+    before_0128 = _json_object(history_0128["previous_definition"])
+    assert history_0128["actor_type"] == "MIGRATION"
+    assert history_0128["changed_by"] is None
+    assert history_0128["migration_revision"] == (
+        "0128_agm001_calendar_month_definition"
+    )
+    assert history_0128["change_reason"]
+    assert history_0128["version"] == version_after_0125
+    assert before_0128["rule_version"] == version_after_0125
+    assert before_0128["statutory_basis"] == CANONICAL_BASIS
+    assert before_0128["description"] == before["description"]
+    assert before_0128["rule_condition"] == before["rule_condition"]
+
     version_parts[-1] = str(int(version_parts[-1]) + 1)
     assert current["rule_version"] == ".".join(version_parts)
     assert current["statutory_basis"] == CANONICAL_BASIS
