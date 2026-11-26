@@ -11,12 +11,16 @@ def test_render_web_service_starts_api_without_running_alembic():
 
     assert (
         'dockerCommand: sh -c \'exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-10000}"'
-        ' --proxy-headers --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}"\'' in render_config
+        ' --proxy-headers --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}"\'' in render_config
     )
     assert "ENV PORT=10000" in dockerfile
     assert "EXPOSE 10000" in dockerfile
     assert 'CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port' in dockerfile
     assert "--proxy-headers" in dockerfile
+    for source in (dockerfile, render_config):
+        assert ":-*" not in source
+    assert "ENV FORWARDED_ALLOW_IPS=*" not in dockerfile
+    assert 'ENV FORWARDED_ALLOW_IPS="*"' not in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert "CMD curl -fsS" in dockerfile
     assert "alembic upgrade head" not in render_config
