@@ -151,17 +151,15 @@ def _item_number(block: str) -> int | None:
 def main(argv: list[str] | None = None) -> int:
     """Run the closure gate.
 
-    Default (fail-closed production gate): every numbered item must carry a
-    ``Status: CLOSED`` line, every referenced ``docs/`` evidence file must
-    exist, no item number may repeat, and a live ``pip-audit`` must report zero
-    vulnerabilities. Used by the production-release and deploy workflows.
+    Default (fail-closed production gate): require exactly one ``Status:
+    CLOSED`` per item, all required finding numbers, no duplicates or
+    unexpected numbers, existing referenced evidence files, and a live
+    ``pip-audit`` report with zero vulnerabilities.
 
-    ``--structure-only``: skip the live pip-audit and allow ``Status: OPEN``
-    (reported as info, not a failure). Still fails on duplicate item numbers,
-    missing/malformed status lines, and missing evidence files. Used by the PR
-    CI job so the closure document's structural integrity is checked on every
-    pull request without forcing every OPEN item closed or running the slow
-    live audit (the live audit remains a release-gate concern).
+    ``--structure-only``: skip the live pip-audit and permit exactly one
+    ``Status: OPEN`` or ``Status: CLOSED`` per required item. It still
+    rejects malformed/conflicting statuses, missing or duplicate findings,
+    unexpected numbers, and missing evidence files.
     """
     args = sys.argv[1:] if argv is None else argv
     structure_only = "--structure-only" in args
@@ -188,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
 
     failures: list[str] = []
     open_items: list[str] = []
-    seen_numbers: dict[str, str] = {}
+    seen_numbers: dict[int, str] = {}
     for block in blocks:
         title = block.splitlines()[0].strip()
         number = _item_number(block)
