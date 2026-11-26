@@ -14,8 +14,12 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --upgrade "pip==24.0" setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# requirements.txt is the complete, exactly pinned set verified by the dependency
+# audit. Install binary wheels only: do not execute source-build backends or resolve
+# unpinned build-system dependencies. pip is a pinned, temporary builder tool only.
+RUN pip install --upgrade "pip==24.0" && \
+    pip install --no-cache-dir --no-deps --only-binary=:all: -r requirements.txt && \
+    pip uninstall -y pip
 
 # STAGE 2: runtime-base
 FROM python:3.11-slim-bookworm AS runtime-base

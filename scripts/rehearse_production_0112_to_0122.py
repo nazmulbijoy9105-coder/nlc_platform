@@ -558,7 +558,13 @@ async def _audit_view_parity() -> dict[str, Any]:
         )
         failed = [key for key in required_true if result.get(key) is not True]
         actual_revision = result.get("alembic_revision")
-        if actual_revision not in {HEAD_REVISION, AGM_PRE_0125_REVISION, PREVIOUS_REVISION} or failed:
+        if actual_revision not in {
+            HEAD_REVISION,
+            AGM_PRE_0125_REVISION,
+            AGM_POST_0125_REVISION,
+            AGM_POST_0126_REVISION,
+            PREVIOUS_REVISION,
+        } or failed:
             raise RuntimeError(
                 f"Restricted audit view parity failed: revision={actual_revision!r}; "
                 f"failed={failed!r}"
@@ -589,7 +595,12 @@ async def _audit_view_parity() -> dict[str, Any]:
             raise RuntimeError(
                 f"Restricted audit view canonical identity counts mismatch: {actual_identity_counts!r}"
             )
-        if actual_revision in {HEAD_REVISION, AGM_PRE_0125_REVISION}:
+        if actual_revision in {
+            HEAD_REVISION,
+            AGM_PRE_0125_REVISION,
+            AGM_POST_0125_REVISION,
+            AGM_POST_0126_REVISION,
+        }:
             if result.get("active_legal_rule_rows") != 85:
                 raise RuntimeError(
                     "0125 requires exactly 85 active catalogue rows "

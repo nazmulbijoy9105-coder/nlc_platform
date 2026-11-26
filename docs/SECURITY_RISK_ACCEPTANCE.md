@@ -1,6 +1,7 @@
 # Security Remediation Status
 
 Updated: 2026-11-25
+Updated: 2026-11-26
 
 This document records the remediation state for the dependency and application
 security findings tracked in the security/remediate-12-findings pull request.
@@ -125,3 +126,20 @@ No production deployment is claimed by this document alone. The closure above
 is recorded with the evidence referenced in each item; deployment still
 requires the complete backend CI, final-image verification, and the gated
 release workflow to pass.
+1. **Pillow's bundled Brotli copy:** the production target is pinned to the reviewed CPython 3.11/Linux x86_64 wheel. CI #5780 built the final runtime image and verified both bundled Brotli libraries and the loaded decoder are 1.2.1. Other production platforms remain blocked until separately reviewed.
+   Evidence: [final-image and runtime verification](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+2. **Full dependency graph:** `pip-audit 2.10.1` resolved and audited 222 dependencies from `requirements.txt` on CPython 3.11/Linux x86_64 against both PyPI and OSV. Both machine-readable reports contain zero vulnerable dependencies and zero known vulnerabilities.
+   Evidence: [dependency audit reports, hashes and environment](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+3. **Compatibility:** CI #5780 on main commit `8913f52d122ea8c7d28f5797122cccc0d224e55a` passed the complete unit and integration test jobs after installing `requirements.txt`, plus lint and Docker runtime smoke.
+   Evidence: [backend compatibility verification](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+4. **Defusedxml license classifier:** the actual `defusedxml==0.7.1` wheel metadata declares PSFL and the OSI-approved Python Software Foundation License classifier. However, the repository has no root LICENSE file, project license declaration, or separate dependency-license policy. The package metadata is verified; NLC policy acceptance is not. Obtain explicit project-owner confirmation before closure.
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md).
+   Status: OPEN
+5. **Tornado:** the resolved dependency graph confirms `tornado==6.6.1`; both PyPI and OSV audits report no known vulnerabilities for the resolved graph.
+   Evidence: [resolved Tornado version and advisory results](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+
+The Python dependency audit is clean against both PyPI and OSV for the resolved 222-package graph; this is not a whole-system scan and does not replace operating-system or bundled-native-library verification. Pillow's bundled Brotli payload and the upgraded backend compatibility suite have separate passing final-image and CI evidence. Defusedxml's PSFL metadata is verified, but project license-policy approval remains open. Production release must remain blocked until item 4 is explicitly resolved.

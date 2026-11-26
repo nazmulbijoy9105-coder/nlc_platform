@@ -6,6 +6,7 @@ import ast
 import asyncio
 from pathlib import Path
 
+from tools.audit_production_release_parity import EXPECTED_REVISION as PRODUCTION_AUDIT_EXPECTED_REVISION
 from scripts.rehearse_restored_neon_branch import (
     EXPECTED_HEAD_REVISION,
     EXPECTED_PRE_IDENTITY_REVISION,
@@ -229,3 +230,26 @@ def test_production_rehearsal_active_catalogue_guard_names_0125():
     ).read_text(encoding="utf-8")
     assert '"0125 requires exactly 85 active catalogue rows "' in source
     assert '"0124 requires exactly 85 active catalogue rows "' not in source
+
+
+def test_production_parity_audit_is_pinned_to_the_repository_head():
+    assert PRODUCTION_AUDIT_EXPECTED_REVISION == EXPECTED_HEAD_REVISION
+    assert PRODUCTION_AUDIT_EXPECTED_REVISION == "0127_one_active_rescue_plan_per_company"
+
+
+def test_production_rehearsal_audit_accepts_all_supported_resume_heads():
+    source = (ROOT / "scripts/rehearse_production_0112_to_0122.py").read_text(
+        encoding="utf-8"
+    )
+    accepted_revisions = (
+        "HEAD_REVISION",
+        "AGM_PRE_0125_REVISION",
+        "AGM_POST_0125_REVISION",
+        "AGM_POST_0126_REVISION",
+        "PREVIOUS_REVISION",
+    )
+    gate_start = source.index("if actual_revision not in {")
+    gate_end = source.index("or failed:", gate_start)
+    gate = source[gate_start:gate_end]
+    for revision in accepted_revisions:
+        assert revision in gate
