@@ -345,6 +345,29 @@ class _LegacyExecutionBind:
         if sql.startswith("SELECT count(*)") and "legal_rule_versions" in sql:
             return _WriteResult()
         if sql.startswith("INSERT INTO public.legal_rule_versions"):
+            expected_sql = (
+                "INSERT INTO public.legal_rule_versions "
+                "(rule_id, version, change_reason, changed_by, changed_at, "
+                "previous_definition, sro_reference, actor_type, migration_revision) "
+                "VALUES (:rule_id, :previous_version, :change_reason, NULL, "
+                "now(), CAST(:previous_definition AS jsonb), NULL, "
+                "'MIGRATION', :migration_revision)"
+            )
+            assert sql == expected_sql, "unexpected rule-version INSERT semantics"
+            assert params == {
+                "rule_id": MIGRATION_0125.RULE_ID,
+                "previous_version": self.current["rule_version"],
+                "change_reason": MIGRATION_0125.CHANGE_REASON,
+                "migration_revision": MIGRATION_0125.revision,
+                "previous_definition": json.dumps(
+                    self.current["previous_definition"],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    default=str,
+                ),
+            }
+            before_image = json.loads(params["previous_definition"])
+            assert before_image == self.current["previous_definition"]
             self.writes.append((sql, copy.deepcopy(params)))
             self.history.append({
                 "version": params["previous_version"],
@@ -352,11 +375,37 @@ class _LegacyExecutionBind:
                 "changed_by": None,
                 "actor_type": "MIGRATION",
                 "migration_revision": params["migration_revision"],
-                "previous_definition": json.loads(params["previous_definition"]),
+                "previous_definition": before_image,
             })
             return _WriteResult()
         if sql.startswith("UPDATE public.legal_rules"):
+            expected_sql = (
+                "UPDATE public.legal_rules "
+                "SET statutory_basis = :canonical_basis, "
+                "rule_version = :next_version, "
+                "last_modified_at = now(), updated_at = now() "
+                "WHERE rule_id = :rule_id "
+                "AND statutory_basis = :legacy_basis "
+                "AND rule_version = :previous_version "
+                "AND is_active IS TRUE"
+            )
+            assert sql == expected_sql, "unexpected or insufficiently scoped rule UPDATE"
+            assert params == {
+                "canonical_basis": MIGRATION_0125.CANONICAL_BASIS,
+                "next_version": "1.0.1",
+                "rule_id": MIGRATION_0125.RULE_ID,
+                "legacy_basis": MIGRATION_0125.LEGACY_BASIS,
+                "previous_version": "1.0.0",
+            }
+            matches_predicates = (
+                self.current.get("rule_id") == params["rule_id"]
+                and self.current.get("statutory_basis") == params["legacy_basis"]
+                and self.current.get("rule_version") == params["previous_version"]
+                and self.current.get("is_active") is True
+            )
             self.writes.append((sql, copy.deepcopy(params)))
+            if not matches_predicates:
+                return _WriteResult(rowcount=0)
             self.current["statutory_basis"] = params["canonical_basis"]
             self.current["rule_version"] = params["next_version"]
             return _WriteResult(rowcount=1)
@@ -374,6 +423,7 @@ class _LegacyExecutionBind:
 
 def _legacy_current_row(**overrides):
     row = {
+        "rule_id": MIGRATION_0125.RULE_ID,
         **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION),
         "statutory_basis": MIGRATION_0125.LEGACY_BASIS,
         "rule_version": "1.0.0",
@@ -386,6 +436,51 @@ def _legacy_current_row(**overrides):
     }
     row.update(overrides)
     return row
+
+
+def test_legacy_execution_fake_rejects_update_with_dropped_predicates():
+    bind = _LegacyExecutionBind(_legacy_current_row())
+    unsafe_sql = (
+        "UPDATE public.legal_rules "
+        "SET statutory_basis = :canonical_basis, rule_version = :next_version"
+    )
+    with pytest.raises(AssertionError, match="UPDATE semantics"):
+        bind.execute(
+            unsafe_sql,
+            {
+                "canonical_basis": MIGRATION_0125.CANONICAL_BASIS,
+                "next_version": "1.0.1",
+                "rule_id": MIGRATION_0125.RULE_ID,
+                "legacy_basis": MIGRATION_0125.LEGACY_BASIS,
+                "previous_version": "1.0.0",
+            },
+        )
+    assert bind.current["statutory_basis"] == MIGRATION_0125.LEGACY_BASIS
+    assert bind.current["rule_version"] == "1.0.0"
+
+
+def test_legacy_execution_fake_rejects_incorrect_migration_provenance():
+    bind = _LegacyExecutionBind(_legacy_current_row())
+    unsafe_sql = (
+        "INSERT INTO public.legal_rule_versions "
+        "(rule_id, version, change_reason, changed_by, changed_at, "
+        "previous_definition, sro_reference, actor_type, migration_revision) "
+        "VALUES (:rule_id, :previous_version, :change_reason, NULL, "
+        "now(), CAST(:previous_definition AS jsonb), NULL, "
+        "'USER', :migration_revision)"
+    )
+    with pytest.raises(AssertionError, match="INSERT semantics"):
+        bind.execute(
+            unsafe_sql,
+            {
+                "rule_id": MIGRATION_0125.RULE_ID,
+                "previous_version": "1.0.0",
+                "change_reason": MIGRATION_0125.CHANGE_REASON,
+                "migration_revision": MIGRATION_0125.revision,
+                "previous_definition": json.dumps(_legacy_before_image()),
+            },
+        )
+    assert bind.history == []
 
 
 def test_agm001_upgrade_executes_reconciliation_and_advances_version(monkeypatch):
