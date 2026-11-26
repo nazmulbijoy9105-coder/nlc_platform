@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "audit_tool": "pip-audit 2.10.1",
+  "audit_run": {
+    "run_id": 45866008549,
+    "url": "https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/45866008549",
+    "workflow_head_sha": "ea1f8c5ad6e57a12eacd40cc4d2491859c28b248",
+    "pull_request": 428,
+    "pull_request_merge_sha": "d91fd4231532d382a1d6a23afec8eac0b0766bec"
+  },
+  "environment": {
+    "python": "CPython 3.11.18",
+    "platform": "Linux x86_64, glibc 2.43",
+    "requirements_sha256": "958a651f4196b57624288acdd9e901c424668330a49ede74b63df9e5ae80fe3e"
+  },
+  "advisory_sources": {
+    "pypi": {
+      "dependency_count": 222,
+      "vulnerable_dependency_count": 0,
+      "vulnerability_count": 0,
+      "report_sha256": "7732fdfbf1c4b6baf3d9715a034e84edd4bed3c87a3f8c83a79d0fe9406aacf0"
+    },
+    "osv": {
+      "dependency_count": 222,
+      "vulnerable_dependency_count": 0,
+      "vulnerability_count": 0,
+      "report_sha256": "7732fdfbf1c4b6baf3d9715a034e84edd4bed3c87a3f8c83a79d0fe9406aacf0"
+    }
+  },
+  "resolved_versions": {
+    "pillow": "13.0.0",
+    "tornado": "6.6.1",
+    "fastapi": "0.165.0",
+    "starlette": "1.10.0",
+    "filelock": "4.2.12",
+    "defusedxml": "0.7.1",
+    "apscheduler": "3.11.3"
+  },
+  "artifact": {
+    "id": 15139453869,
+    "name": "nlc-dependency-security-audit-d91fd4231532d382a1d6a23afec8eac0b0766bec",
+    "url": "https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/45866008549",
+    "sha256": "16796efac40b60b7ef54fe506d41a8728462c375a96a671be35d2af46960ab84",
+    "expires_at": "2027-02-24T17:14:23Z"
+  },
+  "defusedxml_license_metadata": {
+    "license": "PSFL",
+    "classifier": "License :: OSI Approved :: Python Software Foundation License",
+    "project_policy_approval": "NOT CONFIRMED"
+  }
+}
