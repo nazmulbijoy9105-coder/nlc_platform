@@ -176,8 +176,17 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     summary_result = MagicMock()
     summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
+    from types import SimpleNamespace
+
     flags_result = MagicMock()
-    flags_result.all.return_value = [("AGM-001", "RED"), ("TAX-001", "YELLOW")]
+    flags_result.one.return_value = SimpleNamespace(
+        total_active=0,
+        black=0,
+        red=0,
+        yellow=0,
+        pending_review=1,
+        not_evaluated=1,
+    )
     db = MagicMock()
     db.execute = AsyncMock(side_effect=[summary_result, flags_result])
 
@@ -187,6 +196,7 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     assert result["black"] == result["red"] == result["yellow"] == 0
     assert result["pending_review"] == 1
     assert result["pending_review_flags"] == 1
+    assert result["not_evaluated"] == 1
 
 
 def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):
