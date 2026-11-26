@@ -19,7 +19,7 @@ CURRENT_AUDIT_REPORT = Path("artifacts/security/pip-audit-current.json")
 
 BACKTICK_REF = re.compile(r"\x60(docs/[^\x60]+)\x60")
 INLINE_LINK = re.compile(
-    r"\]\(\s*(<[^>\n]*>|[^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)"
+    r'''\]\(\s*(<[^>\n]*>|[^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)'''
 )
 REFERENCE_DEFINITION = re.compile(
     r"^ {0,3}\[([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)", re.MULTILINE
