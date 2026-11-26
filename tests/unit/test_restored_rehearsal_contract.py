@@ -49,7 +49,7 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
-    assert EXPECTED_HEAD_REVISION == "0127_one_active_rescue_plan_per_company"
+    assert EXPECTED_HEAD_REVISION == "0128_agm001_calendar_month_definition"
     assert EXPECTED_START_REVISION == "0042_dedup_key"
 
 
@@ -234,7 +234,7 @@ def test_production_rehearsal_active_catalogue_guard_names_0125():
 
 def test_production_parity_audit_is_pinned_to_the_repository_head():
     assert PRODUCTION_AUDIT_EXPECTED_REVISION == EXPECTED_HEAD_REVISION
-    assert PRODUCTION_AUDIT_EXPECTED_REVISION == "0127_one_active_rescue_plan_per_company"
+    assert PRODUCTION_AUDIT_EXPECTED_REVISION == "0128_agm001_calendar_month_definition"
 
 
 def test_production_rehearsal_audit_accepts_all_supported_resume_heads():
