@@ -20,6 +20,7 @@ permissions:
 concurrency:
   group: dependency-audit-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   pip-audit:
@@ -29,6 +30,8 @@ jobs:
     steps:
       - name: Check out exact revision
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up production-compatible Python
         uses: actions/setup-python@v6
@@ -106,9 +109,60 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
+          from packaging.markers import default_environment
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name, parse_wheel_filename
+          from urllib.parse import urlsplit
 
           root = Path("artifacts/security-audit")
           summary = {"reports": {}, "required_versions": {}, "errors": []}
+
+          # Fail closed unless every active production requirement is immutable:
+          # exact == pin, or a direct wheel URL protected by a SHA-256 fragment.
+          pinned_requirements = []
+          environment = default_environment()
+          for line_number, raw in enumerate(Path("requirements.txt").read_text(encoding="utf-8").splitlines(), 1):
+              line = raw.strip()
+              if not line or line.startswith("#"):
+                  continue
+              try:
+                  requirement = Requirement(line)
+              except Exception as exc:
+                  summary["errors"].append(f"requirements.txt:{line_number}: invalid requirement: {exc}")
+                  continue
+              if requirement.marker and not requirement.marker.evaluate(environment):
+                  continue
+              if requirement.url:
+                  fragment = urlsplit(requirement.url).fragment
+                  if "sha256=" not in fragment:
+                      summary["errors"].append(
+                          f"requirements.txt:{line_number}: direct URL lacks SHA-256 pin"
+                      )
+                      continue
+                  try:
+                      _, version, _, _ = parse_wheel_filename(
+                          Path(urlsplit(requirement.url).path).name
+                      )
+                  except Exception as exc:
+                      summary["errors"].append(
+                          f"requirements.txt:{line_number}: direct URL is not a versioned wheel: {exc}"
+                      )
+                      continue
+                  pinned_requirements.append((canonicalize_name(requirement.name), str(version)))
+                  continue
+              specifiers = list(requirement.specifier)
+              if (
+                  len(specifiers) != 1
+                  or specifiers[0].operator != "=="
+                  or "*" in specifiers[0].version
+              ):
+                  summary["errors"].append(
+                      f"requirements.txt:{line_number}: {requirement.name} must use one exact == pin"
+                  )
+                  continue
+              pinned_requirements.append(
+                  (canonicalize_name(requirement.name), specifiers[0].version)
+              )
           for name in ("pypi", "osv"):
               path = root / f"pip-audit-{name}.json"
               if not path.is_file() or not path.stat().st_size:
@@ -136,10 +190,16 @@ jobs:
                   "vulnerable_dependencies": vulnerable,
               }
               versions = {
-                  str(dep.get("name", "")).lower().replace("_", "-"): dep.get("version")
+                  canonicalize_name(str(dep.get("name", ""))): dep.get("version")
                   for dep in dependencies
               }
               if name == "pypi":
+                  for package, expected in pinned_requirements:
+                      actual = versions.get(package)
+                      if actual != expected:
+                          summary["errors"].append(
+                              f"resolved {package}={actual!r}; requirements pin expects {expected}"
+                          )
                   summary["required_versions"] = {
                       key: versions.get(key)
                       for key in ("tornado", "pillow", "fastapi", "starlette", "filelock")
