@@ -9,10 +9,14 @@ def test_render_web_service_starts_api_without_running_alembic():
         ROOT / ".github" / "workflows" / "deploy-vercel-backend.yml"
     ).read_text(encoding="utf-8")
 
-    assert 'dockerCommand: sh -c \'exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-10000}"\'' in render_config
+    assert (
+        'dockerCommand: sh -c \'exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-10000}"'
+        ' --proxy-headers --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}"\'' in render_config
+    )
     assert "ENV PORT=10000" in dockerfile
     assert "EXPOSE 10000" in dockerfile
     assert 'CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port' in dockerfile
+    assert "--proxy-headers" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert "CMD curl -fsS" in dockerfile
     assert "alembic upgrade head" not in render_config
