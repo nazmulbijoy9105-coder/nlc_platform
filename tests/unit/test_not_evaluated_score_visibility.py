@@ -168,7 +168,9 @@ def test_unverified_unknown_product_flag_never_exposes_score_impact(monkeypatch)
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
     import asyncio
+    from types import SimpleNamespace
     from unittest.mock import AsyncMock, MagicMock
+
     import app.rule_engine.engine as engine_module
     from app.services.compliance_service import ComplianceService
 
@@ -177,7 +179,14 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     summary_result = MagicMock()
     summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
     flags_result = MagicMock()
-    flags_result.all.return_value = [("AGM-001", "RED"), ("TAX-001", "YELLOW")]
+    flags_result.one.return_value = SimpleNamespace(
+        total_active=0,
+        black=0,
+        red=0,
+        yellow=0,
+        pending_review=1,
+        not_evaluated=1,
+    )
     db = MagicMock()
     db.execute = AsyncMock(side_effect=[summary_result, flags_result])
 
@@ -187,6 +196,7 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     assert result["black"] == result["red"] == result["yellow"] == 0
     assert result["pending_review"] == 1
     assert result["pending_review_flags"] == 1
+    assert result["not_evaluated"] == 1
 
 
 def test_release_switch_without_product_scoring_rules_hides_company_score(monkeypatch):

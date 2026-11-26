@@ -26,7 +26,6 @@ from app.core.dependencies import (
 )
 from app.models.charges import CompanyCharge
 from app.models.compliance import ComplianceEvaluationRun
-from app.models.rules import LegalRule
 from app.models.company import Company, CompanyUserAccess
 from app.models.domain_event import DomainEventOutbox
 from app.models.enums import CompanyStatus, CompanyType, RevenueTier, RiskBand, UserRole
@@ -952,10 +951,13 @@ async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for
     flags = await svc.get_active_flags(company_id)
     # Hide stale active rows whenever their current catalogue identity cannot
     # be bound. They remain auditable in storage but cannot leak as violations.
-    from app.services.compliance_service import _catalogue_identity_conflicts
+    from app.services.compliance_service import (
+        _catalogue_identity_conflicts,
+        _catalogue_identity_query,
+    )
     catalogue_rows = list((
-        await db.execute(select(LegalRule).order_by(LegalRule.rule_id))
-    ).scalars().all())
+        await db.execute(_catalogue_identity_query())
+    ).all())
     conflicted_rule_ids = set(_catalogue_identity_conflicts(catalogue_rows))
     return [
         _flag_to_response(flag)
