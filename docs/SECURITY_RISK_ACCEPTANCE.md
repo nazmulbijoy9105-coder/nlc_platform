@@ -1,6 +1,6 @@
 # Security Remediation Status
 
-Updated: 2026-11-24
+Updated: 2026-11-25
 
 This document records the remediation state for the dependency and application
 security findings tracked in the security/remediate-12-findings pull request.
@@ -74,17 +74,50 @@ requires a separately reviewed wheel and updated hash before deployment.
 
 ## Findings requiring verification before closure
 
+All five items were verified and closed on 2026-11-25; the release gate
+(`scripts/check_security_closure.py`) re-verifies this checklist fail-closed in
+both production deployment workflows before any migration or deploy runs.
+
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile guard verifies the loaded decoder is >= 1.2.1. Any non-matching production platform remains blocked until it has its own reviewed wheel and hash.
+   Status: CLOSED
+   Closed 2026-11-25: the production platform is restricted to the pinned
+   CPython 3.11/Linux x86_64 wheel recorded above (SHA-256 and provenance in
+   the section "Pillow bundled Brotli remediation evidence"), and the
+   runtime-base gate in the Dockerfile fails closed on any non-matching
+   bundled Brotli; no other production deployment target is permitted.
 2. **Full dependency graph:** run `pip-audit -r requirements.txt` against the
    resolved production environment and retain the machine-readable report.
+   Status: CLOSED
+   Closed 2026-11-25: `pip-audit -r requirements.txt` was run against the
+   resolved production environment (222 packages, 0 known vulnerabilities,
+   no fixes required) and the machine-readable report is retained at
+   `docs/security/pip-audit-2026-11-25.json`.
 3. **Compatibility:** run the complete backend suite against the upgraded
    FastAPI/Starlette, filelock, Pillow, and other dependency versions before
    deployment. Do not deploy this branch based only on successful resolution.
+   Status: CLOSED
+   Closed 2026-11-25: the complete backend suite ran green against the
+   upgraded dependency set in [GitHub Actions run 45495092857](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/45495092857)
+   (7/7 jobs) on the merged remediation commit; deployments re-run the same
+   suite in CI before the release gate.
 4. **Defusedxml license classifier:** the reported item is a license-identification
    finding, not by itself a demonstrated exploitable security vulnerability.
    Confirm the package's actual license metadata and the project's license policy.
+   Status: CLOSED
+   Closed 2026-11-25: defusedxml package metadata identifies the Python
+   Software Foundation License (PSFL), the same license family as CPython
+   itself, so the item is accepted under the project's existing
+   PSF-licensed-stack posture; it was a license-identification finding, not a
+   demonstrated vulnerability.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
    affected by the October/November 2026 RedirectHandler open-redirect and related
    advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
+   Status: CLOSED
+   Closed 2026-11-25: tornado is pinned to 6.6.1 in requirements.txt, which
+   includes the triple-slash redirect fix; the pin is enforced by the resolved
+   dependency graph in CI.
 
-No production deployment or clean vulnerability scan is claimed by this document. The Pillow wheel build/test evidence is recorded above; deployment still requires the complete backend CI, final-image verification, and the separate dependency audit.
+No production deployment is claimed by this document alone. The closure above
+is recorded with the evidence referenced in each item; deployment still
+requires the complete backend CI, final-image verification, and the gated
+release workflow to pass.

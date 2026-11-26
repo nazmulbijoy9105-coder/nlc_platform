@@ -101,4 +101,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 
 # Schema changes are applied by the CI-gated migration step before Render deploy.
 # The API container never receives the privileged migration credential.
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-10000}\""]
+# --proxy-headers: behind the Render edge proxy, client.host is derived from
+# X-Forwarded-For of the trusted proxy so per-attacker rate-limit keying works
+# (audit finding F-02). FORWARDED_ALLOW_IPS can tighten the trust set.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-10000}\" --proxy-headers --forwarded-allow-ips \"${FORWARDED_ALLOW_IPS:-*}\""]
