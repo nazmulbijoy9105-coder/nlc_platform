@@ -186,6 +186,20 @@ def test_agm001_reconciliation_archives_the_complete_before_image(migration, cat
     }]
 
 
+def test_agm001_reconciliation_policy_does_not_require_the_migration_owner_role(
+    migration, catalogue
+):
+    catalogue.rules["AGM-001"] = _rule(migration)
+
+    migration.upgrade()
+
+    (policy,) = catalogue.ddl
+    guard = "IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN"
+    assert guard in policy
+    assert "RAISE" not in policy
+    assert policy.index(guard) < policy.index("CREATE POLICY")
+
+
 def test_agm001_reconciliation_is_idempotent(migration, catalogue):
     catalogue.rules["AGM-001"] = _rule(migration)
     migration.upgrade()

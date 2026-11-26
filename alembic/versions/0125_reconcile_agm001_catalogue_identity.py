@@ -64,20 +64,20 @@ def upgrade() -> None:
 
     # The archive is FORCE-RLS and append-only. Permit this exact migration
     # principal to append the before-image; runtime and audit roles remain denied.
+    # Production runs only as nlc_migration_owner (alembic/env.py enforces it),
+    # so the policy is created whenever the role exists, as in 0115 and 0123.
+    # Databases without the role must append through RLS bypass or the INSERT
+    # below fails and rolls the migration back.
     op.execute("""
         DO $policy$
         BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner'
-            ) THEN
-                RAISE EXCEPTION
-                    '0125 requires the dedicated nlc_migration_owner role';
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN
+                EXECUTE 'DROP POLICY IF EXISTS legal_rule_identity_archive_migration_insert '
+                    || 'ON public.legal_rule_identity_archive';
+                EXECUTE 'CREATE POLICY legal_rule_identity_archive_migration_insert '
+                    || 'ON public.legal_rule_identity_archive FOR INSERT TO nlc_migration_owner '
+                    || 'WITH CHECK (current_user = ''nlc_migration_owner'')';
             END IF;
-            EXECUTE 'DROP POLICY IF EXISTS legal_rule_identity_archive_migration_insert '
-                || 'ON public.legal_rule_identity_archive';
-            EXECUTE 'CREATE POLICY legal_rule_identity_archive_migration_insert '
-                || 'ON public.legal_rule_identity_archive FOR INSERT TO nlc_migration_owner '
-                || 'WITH CHECK (current_user = ''nlc_migration_owner'')';
         END
         $policy$
     """)
