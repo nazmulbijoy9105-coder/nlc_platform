@@ -1,6 +1,6 @@
 """Release gate for the SECURITY_RISK_ACCEPTANCE closure checklist (audit F-12).
 
-The controlled production release workflow runs this script and fails closed
+Both production deployment workflows run this script and fail closed
 unless every numbered item in the document's "Findings requiring verification
 before closure" section carries a ``Status: CLOSED`` line (the status value
 must be exactly ``CLOSED``; ``NOT CLOSED``, ``OPEN`` or a missing status all
