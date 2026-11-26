@@ -16,7 +16,10 @@ def test_render_web_service_starts_api_without_running_alembic():
     assert "ENV PORT=10000" in dockerfile
     assert "EXPOSE 10000" in dockerfile
     assert 'CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port' in dockerfile
-    assert "--proxy-headers" in dockerfile
+    api_cmd = next(
+        line for line in dockerfile.splitlines() if line.startswith('CMD ["sh", "-c", "exec uvicorn')
+    )
+    assert "--proxy-headers --forwarded-allow-ips" in api_cmd
     for source in (dockerfile, render_config):
         assert ":-*" not in source
     assert "ENV FORWARDED_ALLOW_IPS=*" not in dockerfile
