@@ -131,3 +131,5 @@ def test_build_limiter_configures_bounded_redis_timeouts(monkeypatch):
         "socket_connect_timeout": 1.0,
         "socket_timeout": 1.0,
     }
+    assert captured["in_memory_fallback"] == ["10/minute"]
+    assert captured["in_memory_fallback_enabled"] is False
