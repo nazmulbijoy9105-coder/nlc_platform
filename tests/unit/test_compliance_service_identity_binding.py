@@ -361,3 +361,14 @@ def test_duplicate_active_out_of_scope_catalogue_rows_are_inert(rule_id):
         _active_catalogue_rows_for_rjsc_ledger(rows)
     )
 
+
+def test_catalogue_identity_query_projects_only_binding_columns():
+    from app.services.compliance_service import _catalogue_identity_query
+
+    assert tuple(_catalogue_identity_query().selected_columns.keys()) == (
+        "rule_id",
+        "rule_version",
+        "is_active",
+        "statutory_basis",
+        "verification_status",
+    )
