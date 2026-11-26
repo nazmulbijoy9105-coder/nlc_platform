@@ -316,3 +316,127 @@ def test_agm001_reconciliation_uses_version_ledger_without_changing_identity_arc
     assert "INSERT INTO public.legal_rule_versions" in migration
     assert "INSERT INTO public.legal_rule_identity_archive" not in migration
     assert 'result.get("identity_archive_rows") != 2' in parity_audit
+
+
+class _WriteResult(_Result):
+    def __init__(self, rowcount=0, rows=()):
+        super().__init__(rows)
+        self.rowcount = rowcount
+
+    def scalar_one(self):
+        return 0
+
+
+class _LegacyExecutionBind:
+    """Small SQL-aware fake that exercises the migration's real upgrade path."""
+
+    def __init__(self, current):
+        self.current = copy.deepcopy(current)
+        self.history = []
+        self.writes = []
+        self.archive_writes = []
+
+    def execute(self, statement, params=None):
+        sql = " ".join(str(statement).split())
+        params = params or {}
+        if sql.startswith("SELECT to_jsonb(rule)"):
+            return _Result([self.current])
+        if sql.startswith("SELECT count(*)") and "legal_rule_versions" in sql:
+            return _WriteResult()
+        if sql.startswith("INSERT INTO public.legal_rule_versions"):
+            self.writes.append((sql, copy.deepcopy(params)))
+            self.history.append({
+                "version": params["previous_version"],
+                "change_reason": params["change_reason"],
+                "changed_by": None,
+                "actor_type": "MIGRATION",
+                "migration_revision": params["migration_revision"],
+                "previous_definition": json.loads(params["previous_definition"]),
+            })
+            return _WriteResult()
+        if sql.startswith("UPDATE public.legal_rules"):
+            self.writes.append((sql, copy.deepcopy(params)))
+            self.current["statutory_basis"] = params["canonical_basis"]
+            self.current["rule_version"] = params["next_version"]
+            return _WriteResult(rowcount=1)
+        if sql.startswith("SELECT rule.rule_name"):
+            return _Result([self.current])
+        if "legal_rule_identity_archive" in sql or sql.startswith(
+            "INSERT INTO public.legal_rule_identity_archive"
+        ):
+            self.archive_writes.append(sql)
+            return _WriteResult()
+        raise AssertionError(f"unexpected SQL in migration execution: {sql}")
+
+
+def _legacy_current_row(**overrides):
+    row = {
+        **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION),
+        "statutory_basis": MIGRATION_0125.LEGACY_BASIS,
+        "rule_version": "1.0.0",
+        "previous_definition": {
+            "rule_id": MIGRATION_0125.RULE_ID,
+            "statutory_basis": MIGRATION_0125.LEGACY_BASIS,
+            "rule_version": "1.0.0",
+            **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION),
+        },
+    }
+    row.update(overrides)
+    return row
+
+
+def test_agm001_upgrade_executes_reconciliation_and_advances_version(monkeypatch):
+    bind = _LegacyExecutionBind(_legacy_current_row())
+    _install_fake_op(monkeypatch, bind)
+
+    MIGRATION_0125.upgrade()
+
+    assert bind.current["statutory_basis"] == MIGRATION_0125.CANONICAL_BASIS
+    assert bind.current["rule_version"] == "1.0.1"
+    assert len(bind.history) == 1
+    assert bind.history[0]["version"] == "1.0.0"
+    assert bind.history[0]["actor_type"] == "MIGRATION"
+    assert bind.history[0]["changed_by"] is None
+    assert bind.history[0]["migration_revision"] == MIGRATION_0125.revision
+    assert bind.history[0]["previous_definition"] == _legacy_before_image()
+    assert len([sql for sql, _ in bind.writes if sql.startswith("UPDATE")]) == 1
+    assert bind.archive_writes == []
+
+
+@pytest.mark.parametrize(
+    ("overrides", "field"),
+    [
+        pytest.param(
+            {"rule_condition": {
+                **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION["rule_condition"]),
+                "trigger": "first_agm_held == False AND days_since_incorporation > 549",
+            }},
+            "trigger",
+            id="changed-548-day-trigger",
+        ),
+        pytest.param({"is_active": False}, "active state", id="inactive-legacy-row"),
+        pytest.param({"rule_type": "POLICY"}, "rule_type", id="wrong-legacy-rule-type"),
+    ],
+)
+def test_agm001_upgrade_rejects_drifted_legacy_definition_before_writes(
+    monkeypatch, overrides, field
+):
+    bind = _LegacyExecutionBind(_legacy_current_row(**overrides))
+    _install_fake_op(monkeypatch, bind)
+
+    with pytest.raises(RuntimeError, match="conflicting AGM-001 legal definition"):
+        MIGRATION_0125.upgrade()
+
+    assert bind.writes == []
+    assert bind.history == []
+    assert bind.current["statutory_basis"] == MIGRATION_0125.LEGACY_BASIS
+    assert bind.archive_writes == []
+
+
+def test_agm001_legacy_rule_type_contract_is_explicit():
+    assert MIGRATION_0125.LEGACY_DEFINITION["rule_type"] == "DEADLINE"
+    assert MIGRATION_0125.LEGACY_DEFINITION["is_active"] is True
+    assert (
+        MIGRATION_0125.LEGACY_DEFINITION["rule_condition"]["trigger"]
+        == "first_agm_held == False AND days_since_incorporation > 548"
+    )
