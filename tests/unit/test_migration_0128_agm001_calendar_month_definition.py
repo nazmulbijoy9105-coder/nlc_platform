@@ -208,6 +208,16 @@ def test_0128_rejects_non_migration_0125_provenance(monkeypatch):
     assert bind.writes == []
 
 
+def test_0128_rejects_changed_0125_change_reason(monkeypatch):
+    bind = _Bind(history=[_history_row(change_reason="operator edited history")])
+    _install(monkeypatch, bind)
+
+    with pytest.raises(RuntimeError, match="invalid 0125"):
+        MIGRATION.upgrade()
+
+    assert bind.writes == []
+
+
 def test_0128_refuses_existing_0128_history_with_legacy_catalogue(monkeypatch):
     bind = _Bind(migration_count=1)
     _install(monkeypatch, bind)
