@@ -1,7 +1,6 @@
 """Release gate for the SECURITY_RISK_ACCEPTANCE closure checklist (audit F-12).
 
-Both production deployment workflows run this script and fail closed
-The controlled production release workflow runs this script and fails closed
+Both production deployment workflows run this script and fail closed.
 unless every numbered item in the document's "Findings requiring verification
 before closure" section carries a ``Status: CLOSED`` line (the status value
 must be exactly ``CLOSED``; ``NOT CLOSED``, ``OPEN`` or a missing status all
@@ -69,9 +68,18 @@ def is_closed(block: str) -> bool:
     return bool(statuses) and all(status == CLOSED_MARKER for status in statuses)
 
 
-def referenced_evidence_paths(body: str) -> list[str]:
+def referenced_evidence_paths(body: str, document: str | None = None) -> list[str]:
     refs = list(BACKTICK_REF.findall(body))
-    destinations = INLINE_LINK.findall(body) + REFERENCE_LINK.findall(body)
+    destinations = INLINE_LINK.findall(body)
+    definitions = {
+        label.strip().casefold(): destination
+        for label, destination in REFERENCE_DEFINITION.findall(document or body)
+    }
+    for link_text, reference_label in REFERENCE_USE.findall(body):
+        label = reference_label.strip() or link_text.strip()
+        destination = definitions.get(label.casefold())
+        if destination is not None:
+            destinations.append(destination)
     for destination in destinations:
         path = link_evidence_path(destination)
         if path is not None:
@@ -102,7 +110,7 @@ def main() -> int:
         if not is_closed(block):
             failures.append(f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}")
 
-    for ref in referenced_evidence_paths(body):
+    for ref in referenced_evidence_paths(body, text):
         if not Path(ref).is_file():
             failures.append(f"missing evidence file: {ref}")
 
