@@ -12,6 +12,8 @@ from urllib.parse import unquote
 DOC_PATH = Path("docs/SECURITY_RISK_ACCEPTANCE.md")
 SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
+ALLOWED_STATUSES = frozenset({"OPEN", CLOSED_MARKER})
+EXPECTED_FINDING_NUMBERS = frozenset({1, 2, 3, 4, 5})
 STATUS_LINE = re.compile(r"^(?:(?:[-+]|\d+\.)\s+)?status\s*:\s*(.*?)\s*$", re.IGNORECASE)
 EVIDENCE_ROOT = "docs/"
 REQUIREMENTS_PATH = Path("requirements.txt")
@@ -137,13 +139,13 @@ def audit_current_dependencies() -> tuple[bool, str]:
     )
 
 
-def _item_number(block: str) -> str | None:
-    """Return the leading ``N.`` number of a closure block, or None."""
+def _item_number(block: str) -> int | None:
+    """Return the leading Markdown ``N.`` number, normalized as an integer."""
     lines = block.splitlines()
     if not lines:
         return None
-    match = re.match(r"(\d+)\.\s", lines[0])
-    return match.group(1) if match else None
+    match = re.match(r"^ {0,3}(\d+)\.\s", lines[0])
+    return int(match.group(1)) if match else None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -172,9 +174,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: section {SECTION_TITLE!r} not found in {DOC_PATH}")
         return 1
     body = text.split(SECTION_TITLE, 1)[1].split("\n## ", 1)[0]
+    # Markdown permits up to three leading spaces before a top-level
+    # ordered-list marker. Split each marker so indented duplicates cannot be
+    # swallowed into the preceding item's block.
     blocks = [
-        block for block in re.split(r"\n(?=\d+\.\s)", body.strip("\n"))
-        if re.match(r"\d+\.\s", block)
+        block
+        for block in re.split(r"(?m)(?=^ {0,3}\d+\.\s)", body.strip("\n"))
+        if _item_number(block) is not None
     ]
     if not blocks:
         print("FAIL: no numbered closure items found")
@@ -186,21 +192,41 @@ def main(argv: list[str] | None = None) -> int:
     for block in blocks:
         title = block.splitlines()[0].strip()
         number = _item_number(block)
-        if number is not None:
-            if number in seen_numbers:
-                failures.append(
-                    f"duplicate closure item {number}: {title!r} repeats "
-                    f"{seen_numbers[number]!r}"
-                )
-            else:
-                seen_numbers[number] = title
-        if not is_closed(block):
-            if structure_only and item_statuses(block):
+        if number is None:
+            failures.append(f"closure item has no valid leading number: {title!r}")
+        elif number in seen_numbers:
+            failures.append(
+                f"duplicate closure item {number}: {title!r} repeats "
+                f"{seen_numbers[number]!r}"
+            )
+        else:
+            seen_numbers[number] = title
+
+        statuses = item_statuses(block)
+        if len(statuses) != 1 or statuses[0].strip().upper() not in ALLOWED_STATUSES:
+            failures.append(
+                f"item must contain exactly one Status: OPEN or Status: CLOSED line: {title}"
+            )
+        elif statuses[0].strip().upper() == "OPEN":
+            if structure_only:
                 open_items.append(title)
             else:
                 failures.append(
                     f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}"
                 )
+    missing_numbers = EXPECTED_FINDING_NUMBERS - set(seen_numbers)
+    unexpected_numbers = set(seen_numbers) - EXPECTED_FINDING_NUMBERS
+    if missing_numbers:
+        failures.append(
+            "missing required closure item(s): "
+            + ", ".join(str(number) for number in sorted(missing_numbers))
+        )
+    if unexpected_numbers:
+        failures.append(
+            "unexpected closure item number(s): "
+            + ", ".join(str(number) for number in sorted(unexpected_numbers))
+        )
+
     for ref in referenced_evidence_paths(body, text):
         if not Path(ref).is_file():
             failures.append(f"missing evidence file: {ref}")
