@@ -47,12 +47,19 @@ def link_evidence_path(destination: str) -> str | None:
     return normalized if normalized.startswith(EVIDENCE_ROOT) else None
 
 
+def _without_fenced_code(value: str) -> str:
+    """Remove fenced code blocks before interpreting closure records."""
+    return re.sub(r"(?ms)^ {0,3}((?:\x60){3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[ \t]*$", "", value)
+
+
 def item_statuses(block: str) -> list[str]:
     statuses = []
-    for line in block.splitlines():
-        match = STATUS_LINE.match(re.sub(r"[*_\x60]", "", line).strip())
+    for line in _without_fenced_code(block).splitlines():
+        match = STATUS_LINE.match(line.strip())
         if match:
-            statuses.append(match.group(1))
+            value = match.group(1).strip()
+            wrapped = re.fullmatch(r"(?:\*\*|__|\x60)?(OPEN|CLOSED)(?:\*\*|__|\x60)?", value)
+            statuses.append(wrapped.group(1) if wrapped else value)
     return statuses
 
 
@@ -140,12 +147,22 @@ def audit_current_dependencies() -> tuple[bool, str]:
 
 
 def _item_number(block: str) -> int | None:
-    """Return the leading Markdown ``N.`` number, normalized as an integer."""
+    """Return an ASCII, column-zero top-level ordered-list number."""
     lines = block.splitlines()
     if not lines:
         return None
-    match = re.match(r"^ {0,3}(\d+)\.\s", lines[0])
+    match = re.match(r"^([0-9]+)\.\s", lines[0])
     return int(match.group(1)) if match else None
+
+
+def _has_description(block: str) -> bool:
+    """Require meaningful item text apart from its marker and status metadata."""
+    lines = _without_fenced_code(block).splitlines()
+    if not lines:
+        return False
+    first = re.sub(r"^[0-9]+\.\s+", "", lines[0]).strip()
+    remaining = [line.strip() for line in lines[1:] if not STATUS_LINE.match(line.strip())]
+    return bool(first or any(remaining))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -172,12 +189,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: section {SECTION_TITLE!r} not found in {DOC_PATH}")
         return 1
     body = text.split(SECTION_TITLE, 1)[1].split("\n## ", 1)[0]
-    # Markdown permits up to three leading spaces before a top-level
-    # ordered-list marker. Split each marker so indented duplicates cannot be
-    # swallowed into the preceding item's block.
+    # Ignore fenced examples. Only column-zero ASCII ordered-list markers
+    # are closure records; indented markers are nested list content.
+    body_without_code = _without_fenced_code(body)
     blocks = [
         block
-        for block in re.split(r"(?m)(?=^ {0,3}\d+\.\s)", body.strip("\n"))
+        for block in re.split(r"(?m)(?=^[0-9]+\.\s)", body_without_code.strip("\n"))
         if _item_number(block) is not None
     ]
     if not blocks:
@@ -200,6 +217,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             seen_numbers[number] = title
 
+        if not _has_description(block):
+            failures.append(f"closure item has no description: {title}")
         statuses = item_statuses(block)
         if len(statuses) != 1 or statuses[0].strip() not in ALLOWED_STATUSES:
             failures.append(
