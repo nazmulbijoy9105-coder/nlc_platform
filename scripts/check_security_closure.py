@@ -3,16 +3,61 @@
 The controlled production release workflow runs this script and fails closed
 unless every numbered item in the document's "Findings requiring verification
 before closure" section is marked CLOSED and every evidence artifact the
-section references under docs/ exists in the repository.
+section references under docs/ exists in the repository. References are
+backticked docs/ paths and Markdown link destinations (inline and reference
+style) that resolve under docs/.
 """
 from __future__ import annotations
 
+import posixpath
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 DOC_PATH = Path("docs/SECURITY_RISK_ACCEPTANCE.md")
 SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
+EVIDENCE_ROOT = "docs/"
+
+BACKTICK_REF = re.compile(r"`(docs/[^`]+)`")
+INLINE_LINK = re.compile(
+    r"\]\(\s*(<[^>\n]*>|[^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)"
+)
+REFERENCE_LINK = re.compile(r"^ {0,3}\[[^\]\n]+\]:\s*(<[^>\n]*>|\S+)", re.MULTILINE)
+URL_SCHEME = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
+
+
+def link_evidence_path(destination: str) -> str | None:
+    """Map a Markdown link destination to a repo-relative docs/ path, if it is one.
+
+    External URLs and pure anchors are not evidence files. As with backticked
+    references, a destination starting with docs/ is repo-root relative; any other
+    relative destination is resolved against the directory of DOC_PATH.
+    """
+    dest = destination.strip()
+    if dest.startswith("<") and dest.endswith(">"):
+        dest = dest[1:-1].strip()
+    dest = unquote(re.split(r"[?#]", dest, maxsplit=1)[0])
+    if not dest or URL_SCHEME.match(dest):
+        return None
+    if dest.startswith("/"):
+        candidate = dest.lstrip("/")
+    elif dest.startswith(EVIDENCE_ROOT):
+        candidate = dest
+    else:
+        candidate = posixpath.join(DOC_PATH.parent.as_posix(), dest)
+    normalized = posixpath.normpath(candidate)
+    return normalized if normalized.startswith(EVIDENCE_ROOT) else None
+
+
+def referenced_evidence_paths(body: str) -> list[str]:
+    refs = list(BACKTICK_REF.findall(body))
+    destinations = INLINE_LINK.findall(body) + REFERENCE_LINK.findall(body)
+    for destination in destinations:
+        path = link_evidence_path(destination)
+        if path is not None:
+            refs.append(path)
+    return list(dict.fromkeys(refs))
 
 
 def main() -> int:
@@ -38,7 +83,7 @@ def main() -> int:
         if CLOSED_MARKER not in block:
             failures.append(f"item not CLOSED: {title}")
 
-    for ref in re.findall(r"`(docs/[^`]+)`", body):
+    for ref in referenced_evidence_paths(body):
         if not Path(ref).is_file():
             failures.append(f"missing evidence file: {ref}")
 
