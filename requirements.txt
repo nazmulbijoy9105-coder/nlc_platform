@@ -211,7 +211,7 @@ tzlocal==5.4.4
 ujson==6.0.0
 urllib3==2.8.0
 uvicorn==0.54.0
-uvloop==0.23.0
+uvloop==0.23.0 ; sys_platform != "win32"
 vine==5.1.0
 virtualenv==21.15.11
 watchfiles==1.1.1
