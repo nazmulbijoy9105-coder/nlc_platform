@@ -108,6 +108,7 @@ jobs:
         run: |
           python - <<'PY'
           import json
+          import re
           from pathlib import Path
           from packaging.markers import default_environment
           from packaging.requirements import Requirement
@@ -134,7 +135,7 @@ jobs:
                   continue
               if requirement.url:
                   fragment = urlsplit(requirement.url).fragment
-                  if "sha256=" not in fragment:
+                  if re.fullmatch(r"sha256=[0-9a-fA-F]{64}", fragment) is None:
                       summary["errors"].append(
                           f"requirements.txt:{line_number}: direct URL lacks SHA-256 pin"
                       )
