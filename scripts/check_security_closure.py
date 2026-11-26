@@ -84,12 +84,25 @@ def audit_current_dependencies() -> tuple[bool, str]:
         return False, f"production requirements file is missing: {REQUIREMENTS_PATH}"
     CURRENT_AUDIT_REPORT.parent.mkdir(parents=True, exist_ok=True)
     CURRENT_AUDIT_REPORT.unlink(missing_ok=True)
-    command = [
-        sys.executable, "-m", "pip_audit", "-r", str(REQUIREMENTS_PATH),
-        "--format", "json",
-    ]
+    # The executable and all options are fixed; REQUIREMENTS_PATH is a
+    # repository-controlled constant (not request or environment input).
+    # Keep the argv literal at the call site so static analyzers can inspect it.
+    # shell=False (the default) ensures no shell expansion or command parsing.
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip_audit",
+                "-r",
+                str(REQUIREMENTS_PATH),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
     except OSError as exc:
         return False, f"could not execute pip-audit: {exc}"
     try:
