@@ -1,7 +1,6 @@
 """Release gate for the SECURITY_RISK_ACCEPTANCE closure checklist (audit F-12).
 
-Both production deployment workflows run this script and fail closed.
-unless every numbered item in the document's "Findings requiring verification
+Both production deployment workflows run this script and fail closed unless every numbered item in the document's "Findings requiring verification
 before closure" section carries a ``Status: CLOSED`` line (the status value
 must be exactly ``CLOSED``; ``NOT CLOSED``, ``OPEN`` or a missing status all
 fail) and every evidence artifact the section references under docs/ exists in
@@ -26,7 +25,10 @@ BACKTICK_REF = re.compile(r"`(docs/[^`]+)`")
 INLINE_LINK = re.compile(
     r"\]\(\s*(<[^>\n]*>|[^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)"
 )
-REFERENCE_LINK = re.compile(r"^ {0,3}\[[^\]\n]+\]:\s*(<[^>\n]*>|\S+)", re.MULTILINE)
+REFERENCE_DEFINITION = re.compile(
+    r"^ {0,3}\[([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)", re.MULTILINE
+)
+REFERENCE_USE = re.compile(r"!? \[([^\]\n]+)\]\[([^\]\n]*)\]".replace(" ", ""))
 URL_SCHEME = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
 
 
