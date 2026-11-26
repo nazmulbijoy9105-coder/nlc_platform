@@ -54,7 +54,7 @@ def _history_before_image():
     return {
         "rule_id": MIGRATION.RULE_ID,
         "statutory_basis": MIGRATION.LEGACY_BASIS,
-        "rule_version": "1.0.0",
+        "rule_version": "1.1",
         **_legacy_definition(),
     }
 
@@ -63,7 +63,7 @@ def _current_row(**overrides):
     row = {
         "rule_id": MIGRATION.RULE_ID,
         "statutory_basis": MIGRATION.CANONICAL_BASIS,
-        "rule_version": MIGRATION.PREVIOUS_VERSION,
+        "rule_version": "1.2",
         **_legacy_definition(),
         "default_severity": "NOT_EVALUATED",
         "score_impact": 0,
@@ -76,7 +76,7 @@ def _current_row(**overrides):
 
 def _history_row(**overrides):
     row = {
-        "version": "1.0.0",
+        "version": "1.1",
         "change_reason": MIGRATION.PREVIOUS_CHANGE_REASON,
         "changed_by": None,
         "actor_type": "MIGRATION",
@@ -152,13 +152,13 @@ def test_0128_reconciles_exact_0125_state_and_preserves_complete_before_image(mo
 
     assert bind.current["description"] == MIGRATION.CANONICAL_DESCRIPTION
     assert bind.current["rule_condition"] == MIGRATION.CANONICAL_CONDITION
-    assert bind.current["rule_version"] == "1.0.2"
+    assert bind.current["rule_version"] == "1.3"
     assert bind.current["statutory_basis"] == MIGRATION.CANONICAL_BASIS
     assert bind.current["score_impact"] == original["score_impact"]
     assert bind.current["default_severity"] == original["default_severity"]
     assert len(bind.version_history) == 1
     history = bind.version_history[0]
-    assert history["version"] == "1.0.1"
+    assert history["version"] == "1.2"
     assert history["actor_type"] == "MIGRATION"
     assert history["changed_by"] is None
     assert history["migration_revision"] == MIGRATION.revision
@@ -171,7 +171,7 @@ def test_0128_reconciles_exact_0125_state_and_preserves_complete_before_image(mo
     [
         {"description": "operator-edited definition"},
         {"rule_condition": {"trigger": "days_since_incorporation > 549"}},
-        {"rule_version": "1.0.3"},
+        {"rule_version": "1.2.1"},
         {"statutory_basis": "Section 81, Companies Act 1994 (Bangladesh)"},
         {"is_active": False},
         {"rule_type": "POLICY"},
@@ -241,4 +241,5 @@ def test_0128_is_the_single_forward_head_and_matches_seed_rule():
     assert 'down_revision = "0127_one_active_rescue_plan_per_company"' in migration
     assert MIGRATION.CANONICAL_DESCRIPTION in seed
     assert MIGRATION.CANONICAL_CONDITION["trigger"] in seed
-    assert "days_since_incorporation > 548" not in migration
+    assert "days_since_incorporation > 548" not in MIGRATION.CANONICAL_CONDITION["trigger"]
+    assert "add_calendar_months(incorporation_date, 18)" in MIGRATION.CANONICAL_CONDITION["trigger"]
