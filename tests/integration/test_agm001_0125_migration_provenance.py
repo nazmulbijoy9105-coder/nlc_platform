@@ -149,8 +149,11 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
     )
     assert history_0128["change_reason"]
     assert history_0128["version"] == version_after_0125
+    assert set(before_0128) == BEFORE_IMAGE_FIELDS
     assert before_0128["rule_version"] == version_after_0125
     assert before_0128["statutory_basis"] == CANONICAL_BASIS
+    for field in sorted(BEFORE_IMAGE_FIELDS - MIGRATION_MUTATED_FIELDS):
+        assert before_0128[field] == current[field], field
     assert before_0128["description"] == before["description"]
     assert before_0128["rule_condition"] == before["rule_condition"]
 
