@@ -335,6 +335,7 @@ class _LegacyExecutionBind:
         self.history = []
         self.writes = []
         self.archive_writes = []
+        self.identity_archive_rows = 2
 
     def execute(self, statement, params=None):
         sql = " ".join(str(statement).split())
@@ -401,25 +402,25 @@ def test_agm001_upgrade_executes_reconciliation_and_advances_version(monkeypatch
     assert bind.history[0]["previous_definition"] == _legacy_before_image()
     assert len([sql for sql, _ in bind.writes if sql.startswith("UPDATE")]) == 1
     assert bind.archive_writes == []
+    assert bind.identity_archive_rows == 2
 
 
 @pytest.mark.parametrize(
-    ("overrides", "field"),
+    "overrides",
     [
         pytest.param(
             {"rule_condition": {
                 **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION["rule_condition"]),
                 "trigger": "first_agm_held == False AND days_since_incorporation > 549",
             }},
-            "trigger",
             id="changed-548-day-trigger",
         ),
-        pytest.param({"is_active": False}, "active state", id="inactive-legacy-row"),
-        pytest.param({"rule_type": "POLICY"}, "rule_type", id="wrong-legacy-rule-type"),
+        pytest.param({"is_active": False}, id="inactive-legacy-row"),
+        pytest.param({"rule_type": "POLICY"}, id="wrong-legacy-rule-type"),
     ],
 )
 def test_agm001_upgrade_rejects_drifted_legacy_definition_before_writes(
-    monkeypatch, overrides, field
+    monkeypatch, overrides
 ):
     bind = _LegacyExecutionBind(_legacy_current_row(**overrides))
     _install_fake_op(monkeypatch, bind)
@@ -431,6 +432,7 @@ def test_agm001_upgrade_rejects_drifted_legacy_definition_before_writes(
     assert bind.history == []
     assert bind.current["statutory_basis"] == MIGRATION_0125.LEGACY_BASIS
     assert bind.archive_writes == []
+    assert bind.identity_archive_rows == 2
 
 
 def test_agm001_legacy_rule_type_contract_is_explicit():
