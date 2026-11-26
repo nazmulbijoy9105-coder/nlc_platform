@@ -145,10 +145,7 @@ def test_agm001_release_redaction_fixture_uses_migrated_catalogue_identity():
     fixture = source[start : boundary.start() if boundary else None]
 
     assert "catalogue_rule = catalogue_result.scalar_one()" in fixture
-    assert (
-        "catalogue_rule.statutory_basis == canonical_agm_001_basis" in fixture
-        or "catalogue_rule.statutory_basis == canonical_agm_basis" in fixture
-    )
+    assert "catalogue_rule.statutory_basis == canonical_agm_001_basis" in fixture
     assert "_catalogue_identity_conflicts([catalogue_rule])" in fixture
     assert '"MATCHED_CATALOGUE_IDENTITY"' in fixture
     assert "\n        catalogue_rule.statutory_basis = " not in fixture
