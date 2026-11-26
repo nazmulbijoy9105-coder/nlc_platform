@@ -243,20 +243,43 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
             continue
         if existing is None or row.is_active is True:
             rows_by_id[row.rule_id] = row
+    # AGM-001 has a semantic identity contract as well as a citation.  The
+    # evaluator and seed catalogue use the 18-calendar-month definition; a
+    # matching Section 81(1) string must never bless a drifted row (including
+    # the historical 548-day approximation).
+    from scripts.seed_rules import ILRMF_RULES
+
+    canonical_catalogue_rules = {
+        item["rule_id"]: item for item in ILRMF_RULES
+    }
     conflicts: dict[str, dict] = {}
     for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
         row = rows_by_id.get(rule_id)
         engine_basis = getattr(canonical_rule, "law", None)
+        reason = None
+        catalogue_basis = getattr(row, "statutory_basis", None) if row else None
         if row is None:
             reason = "CATALOGUE_ENTRY_MISSING"
-            catalogue_basis = None
         elif row.is_active is not True:
             reason = "RULE_INACTIVE"
-            catalogue_basis = row.statutory_basis
         elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
             reason = "STATUTORY_BASIS_MISMATCH"
-            catalogue_basis = row.statutory_basis
-        else:
+        elif rule_id == "AGM-001":
+            expected = canonical_catalogue_rules.get(rule_id)
+            actual_rule_type = getattr(row.rule_type, "value", row.rule_type)
+            actual_condition = row.rule_condition
+            if isinstance(actual_condition, str):
+                import json
+                actual_condition = json.loads(actual_condition)
+            definition_matches = expected is not None and (
+                row.rule_name == expected["rule_name"]
+                and str(actual_rule_type) == str(expected["rule_type"])
+                and row.description == expected["description"]
+                and actual_condition == expected["rule_condition"]
+            )
+            if not definition_matches:
+                reason = "RULE_DEFINITION_MISMATCH"
+        if reason is None:
             continue
         conflicts[rule_id] = {
             "rule_id": rule_id,
