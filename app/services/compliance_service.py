@@ -633,7 +633,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
-        catalogue_rows = list((
+        catalogue_rows: list[LegalRule] = list((
             await self.db.execute(_catalogue_snapshot_query())
         ).scalars().all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
