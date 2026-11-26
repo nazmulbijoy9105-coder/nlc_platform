@@ -21,6 +21,8 @@ def _write_doc(root: Path, items: str) -> None:
 def repo(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(closure, "audit_current_dependencies", lambda: (True, "test audit passed"))
+    # Most tests use one synthetic item; completeness tests restore 1..5.
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1}))
     return tmp_path
 
 
@@ -322,3 +324,46 @@ def test_structure_only_does_not_run_live_audit(tmp_path, monkeypatch):
 
     assert closure.main(["--structure-only"]) == 0
     assert calls["count"] == 0
+
+
+def test_leading_zero_duplicate_numbers_are_normalized(repo, capsys):
+    _write_doc(repo, "1. First\n   Status: CLOSED\n01. Duplicate with leading zero\n   Status: CLOSED")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_indented_markdown_item_is_split_and_duplicate_detected(repo, capsys):
+    _write_doc(repo, "1. First\n   Status: CLOSED\n   1. Indented duplicate\n   Status: CLOSED")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_required_findings_cannot_be_removed(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2, 3, 4, 5}))
+    _write_doc(
+        repo,
+        "1. First\n   Status: CLOSED\n2. Second\n   Status: CLOSED\n"
+        "3. Third\n   Status: CLOSED\n5. Fifth\n   Status: CLOSED",
+    )
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "missing required closure item(s): 4" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "status_lines",
+    [
+        "Status:",
+        "Status: PENDING",
+        "Status: CLOSED\n   Status: OPEN",
+        "Status: closed",
+        "Status: OPEN pending",
+    ],
+)
+def test_structure_only_rejects_malformed_or_conflicting_statuses(repo, capsys, status_lines):
+    _write_doc(repo, f"1. Item\n   {status_lines}")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "exactly one Status: OPEN or Status: CLOSED" in capsys.readouterr().out
