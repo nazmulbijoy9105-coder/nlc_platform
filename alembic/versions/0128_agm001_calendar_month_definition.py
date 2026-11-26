@@ -22,6 +22,11 @@ RULE_ID = "AGM-001"
 LEGACY_BASIS = "Section 81, Companies Act 1994 (Bangladesh)"
 CANONICAL_BASIS = "Section 81(1), Companies Act 1994 (Bangladesh)"
 PREVIOUS_REVISION = "0125_reconcile_agm001_statutory_basis"
+PREVIOUS_CHANGE_REASON = (
+    "Reconcile the exact known legacy AGM-001 citation to the canonical "
+    "Section 81(1) registry identity; preserve the complete prior catalogue "
+    "definition and advance its rule version for auditability."
+)
 PREVIOUS_VERSION = "1.0.1"
 NEXT_VERSION = "1.0.2"
 
@@ -90,6 +95,7 @@ def _validate_0125_history(bind):
         record["actor_type"] != "MIGRATION"
         or record["changed_by"] is not None
         or record["migration_revision"] != PREVIOUS_REVISION
+        or record["change_reason"] != PREVIOUS_CHANGE_REASON
         or not record["version"]
     ):
         raise RuntimeError("0128 found invalid 0125 AGM-001 migration provenance")
