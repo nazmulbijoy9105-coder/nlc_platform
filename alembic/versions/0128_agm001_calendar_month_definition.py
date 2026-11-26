@@ -27,8 +27,8 @@ PREVIOUS_CHANGE_REASON = (
     "Section 81(1) registry identity; preserve the complete prior catalogue "
     "definition and advance its rule version for auditability."
 )
-PREVIOUS_VERSION = "1.0.1"
-NEXT_VERSION = "1.0.2"
+
+
 
 LEGACY_DESCRIPTION = (
     "First AGM not held within 18 months (548 days) of incorporation. "
@@ -62,6 +62,19 @@ CHANGE_REASON = (
     "seed corpus and evaluator; preserve the complete prior row and migration "
     "provenance in legal_rule_versions."
 )
+
+
+def _next_version(previous_version: str) -> str:
+    if not previous_version:
+        raise RuntimeError("0128 refuses an empty AGM-001 rule_version")
+    parts = previous_version.split(".")
+    if any(not part.isdigit() for part in parts):
+        raise RuntimeError(
+            "0128 refuses to advance non-numeric AGM-001 rule_version: "
+            f"{previous_version!r}"
+        )
+    parts[-1] = str(int(parts[-1]) + 1)
+    return ".".join(parts)
 
 
 def _as_object(value, label):
@@ -118,11 +131,6 @@ def _validate_0125_history(bind):
             "0128 refuses: 0125 history does not prove the exact known "
             "legacy AGM-001 definition"
         )
-    if record["version"] != "1.0.0":
-        raise RuntimeError(
-            "0128 refuses unexpected 0125 before-image version: "
-            f"{record['version']!r}"
-        )
     return before
 
 
@@ -144,9 +152,11 @@ def upgrade() -> None:
 
     previous = _as_object(current["previous_definition"], "locked before-image")
     history_before = _validate_0125_history(bind)
+    expected_previous_version = _next_version(history_before["rule_version"])
+    expected_next_version = _next_version(expected_previous_version)
     if (
         previous.get("statutory_basis") != CANONICAL_BASIS
-        or previous.get("rule_version") != PREVIOUS_VERSION
+        or previous.get("rule_version") != expected_previous_version
         or previous.get("rule_name") != "First AGM Default"
         or previous.get("rule_type") != "DEADLINE"
         or previous.get("description") != LEGACY_DESCRIPTION
@@ -196,7 +206,7 @@ def upgrade() -> None:
         ),
         {
             "rule_id": RULE_ID,
-            "previous_version": PREVIOUS_VERSION,
+            "previous_version": expected_previous_version,
             "change_reason": CHANGE_REASON,
             "previous_definition": json.dumps(
                 previous, sort_keys=True, separators=(",", ":"), default=str
@@ -229,10 +239,10 @@ def upgrade() -> None:
             "canonical_condition": json.dumps(
                 CANONICAL_CONDITION, sort_keys=True, separators=(",", ":")
             ),
-            "next_version": NEXT_VERSION,
+            "next_version": expected_next_version,
             "rule_id": RULE_ID,
             "canonical_basis": CANONICAL_BASIS,
-            "previous_version": PREVIOUS_VERSION,
+            "previous_version": expected_previous_version,
             "rule_name": "First AGM Default",
             "legacy_description": LEGACY_DESCRIPTION,
             "legacy_condition": json.dumps(
@@ -262,7 +272,7 @@ def upgrade() -> None:
         or actual["statutory_basis"] != CANONICAL_BASIS
         or actual["description"] != CANONICAL_DESCRIPTION
         or actual["rule_condition"] != CANONICAL_CONDITION
-        or actual["rule_version"] != NEXT_VERSION
+        or actual["rule_version"] != expected_next_version
         or actual["rule_name"] != "First AGM Default"
         or actual["rule_type"] != "DEADLINE"
         or actual["is_active"] is not True
