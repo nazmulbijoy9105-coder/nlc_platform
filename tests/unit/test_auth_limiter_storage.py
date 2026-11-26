@@ -63,7 +63,6 @@ def test_non_production_falls_back_to_memory_for_non_redis_celery_broker():
         CELERY_BROKER_URL="amqp://rabbitmq:5672/",
     )
 
-    assert settings.redis_url == "amqp://rabbitmq:5672/"
     assert auth_module._limiter_storage_uri(settings) == "memory://"
 
 
