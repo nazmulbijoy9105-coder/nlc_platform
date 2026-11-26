@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
@@ -48,9 +48,15 @@ def _build_limiter() -> Limiter:
     selected when no Redis URL is configured outside production. If the storage
     backend dies at runtime, the in-memory fallback keeps breached requests
     rejected instead of surfacing backend errors.
+
+    Header emission is enabled so 429 responses carry ``Retry-After``. SlowAPI
+    then writes rate-limit headers onto every limited endpoint's response, so
+    each ``@limiter.limit`` endpoint must declare a ``response: Response``
+    parameter.
     """
     return Limiter(
         key_func=get_remote_address,
+        headers_enabled=True,
         storage_uri=_limiter_storage_uri(get_settings()),
         in_memory_fallback=["10/minute", "5/minute"],
     )
@@ -117,7 +123,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("10/minute")
-async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
+async def login(request: Request, response: Response, body: LoginBody, db=Depends(get_auth_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
     svc = UserService(db)
@@ -262,6 +268,7 @@ class VerifyTOTPSetupRequest(BaseModel):
 @limiter.limit("5/minute")
 async def confirm_2fa_setup(
     request: Request,
+    response: Response,
     body: VerifyTOTPSetupRequest,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db_for_user),
@@ -285,7 +292,9 @@ async def confirm_2fa_setup(
 
 @router.post("/verify-2fa", response_model=LoginResponse)
 @limiter.limit("5/minute")
-async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db)):
+async def verify_2fa(
+    request: Request, response: Response, body: Verify2FARequest, db=Depends(get_db)
+):
     """Verify a single-use 2FA challenge and then issue full tokens."""
     payload = decode_token(body.temp_token, expected_type="temp")
     jti = payload.get("jti") if payload else None
