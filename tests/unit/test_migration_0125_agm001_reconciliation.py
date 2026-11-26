@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import importlib.util
 import json
@@ -5,6 +6,7 @@ import re
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
+import uuid
 
 import pytest
 
@@ -279,18 +281,6 @@ def test_release_redaction_fixture_uses_migrated_catalogue_without_mutating_it()
     assert "MATCHED_CATALOGUE_IDENTITY" in fixture
     assert "score_impact_applied" in fixture
     assert "NOT_EVALUATED_PRODUCT_SCORING_DISABLED" in fixture
-import copy
-import importlib.util
-import json
-import re
-import uuid
-from pathlib import Path
-from types import SimpleNamespace
-
-import pytest
-
-ROOT = Path(__file__).resolve().parents[2]
-
 
 def _load_migration_0125():
     spec = importlib.util.spec_from_file_location(
