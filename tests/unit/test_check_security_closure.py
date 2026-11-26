@@ -5,6 +5,8 @@ import pytest
 from scripts import check_security_closure as closure
 
 SECTION = closure.SECTION_TITLE
+# Keep a stable reference so direct audit tests bypass the main()-only fixture stub.
+_AUDIT_CURRENT_DEPENDENCIES = closure.audit_current_dependencies
 
 
 def _write_doc(root: Path, items: str) -> None:
@@ -196,7 +198,7 @@ def test_live_dependency_audit_writes_fresh_report_and_passes(repo, monkeypatch)
         lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(report), stderr=""),
     )
 
-    ok, message = closure.audit_current_dependencies()
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
 
     assert ok is True
     assert "packages=1" in message
@@ -224,7 +226,7 @@ def test_live_dependency_audit_fails_on_vulnerability(repo, monkeypatch):
         lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout=json.dumps(report), stderr=""),
     )
 
-    ok, message = closure.audit_current_dependencies()
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
 
     assert ok is False
     assert "vulnerabilities=1" in message
@@ -243,7 +245,7 @@ def test_live_dependency_audit_fails_on_invalid_json(repo, monkeypatch):
         lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="not-json", stderr=""),
     )
 
-    ok, message = closure.audit_current_dependencies()
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
 
     assert ok is False
     assert "valid JSON" in message
@@ -252,7 +254,7 @@ def test_live_dependency_audit_fails_on_invalid_json(repo, monkeypatch):
 def test_live_dependency_audit_fails_when_requirements_are_missing(repo, monkeypatch):
     monkeypatch.setattr(closure, "REQUIREMENTS_PATH", repo / "missing-requirements.txt")
 
-    ok, message = closure.audit_current_dependencies()
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
 
     assert ok is False
     assert "requirements file is missing" in message
