@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
@@ -27,13 +28,24 @@ from app.services.user_service import UserService
 
 
 def _limiter_storage_uri(settings) -> str:
-    redis_url = (settings.redis_url or "").strip()
-    if settings.is_production_runtime:
-        if not redis_url or redis_url.lower().startswith("memory:"):
+    # Rate-limit storage must never inherit CELERY_BROKER_URL: Celery supports
+    # brokers (for example AMQP) that are not valid SlowAPI Redis backends.
+    redis_url = (settings.REDIS_URL or "").strip()
+    parsed_scheme = urlsplit(redis_url).scheme.lower() if redis_url else ""
+    if redis_url and parsed_scheme not in {"redis", "rediss"}:
+        if settings.is_production_runtime:
             raise RuntimeError(
-                "A shared Redis URL (REDIS_URL or CELERY_BROKER_URL) is required for the "
-                "auth rate limiter in production; the process-local memory:// store would "
-                "multiply the login allowance across replicas and is reserved for development."
+                "REDIS_URL for the auth rate limiter must use redis:// or rediss://; "
+                "CELERY_BROKER_URL is not a substitute."
+            )
+        return "memory://"
+
+    if settings.is_production_runtime:
+        if not redis_url:
+            raise RuntimeError(
+                "A dedicated REDIS_URL is required for the auth rate limiter in production; "
+                "CELERY_BROKER_URL is not a substitute and process-local memory storage "
+                "would multiply the login allowance across replicas."
             )
         return redis_url
     return redis_url or "memory://"
@@ -42,9 +54,10 @@ def _limiter_storage_uri(settings) -> str:
 def _build_limiter() -> Limiter:
     """Build the auth rate limiter (audit finding F-02).
 
-    Mounts the shared Redis storage so buckets survive restarts and are shared
-    across replicas. Production and Render runtimes must configure Redis and
-    refuse to start without it; the process-local ``memory://`` store is only
+    Mounts the dedicated REDIS_URL storage so buckets survive restarts and are shared
+    across replicas. CELERY_BROKER_URL is never used as a limiter backend.
+    Production and Render runtimes must configure Redis and refuse to start without it;
+    the process-local ``memory://`` store is only
     selected when no Redis URL is configured outside production. If the storage
     backend dies at runtime, the in-memory fallback keeps breached requests
     rejected instead of surfacing backend errors.
