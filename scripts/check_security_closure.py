@@ -12,19 +12,19 @@ from urllib.parse import unquote
 DOC_PATH = Path("docs/SECURITY_RISK_ACCEPTANCE.md")
 SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
-STATUS_LINE = re.compile(r"^(?:(?:[-+]|\\d+\\.)\\s+)?status\\s*:\\s*(.*?)\\s*$", re.IGNORECASE)
+STATUS_LINE = re.compile(r"^(?:(?:[-+]|\d+\.)\s+)?status\s*:\s*(.*?)\s*$", re.IGNORECASE)
 EVIDENCE_ROOT = "docs/"
 REQUIREMENTS_PATH = Path("requirements.txt")
 CURRENT_AUDIT_REPORT = Path("artifacts/security/pip-audit-current.json")
 
-BACKTICK_REF = re.compile(r"`(docs/[^\`]+)`")
+BACKTICK_REF = re.compile(r"\x60(docs/[^\x60]+)\x60")
 INLINE_LINK = re.compile(
-    r"\\]\\(\\s*(<[^>\\n]*>|[^()\\s]*(?:\\([^()\\s]*\\)[^()\\s]*)*)(?:\\s+(?:\"[^\"]*\"|'[^']*'))?\\s*\\)"
+    r"\]\(\s*(<[^>\n]*>|[^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)"
 )
 REFERENCE_DEFINITION = re.compile(
-    r"^ {0,3}\\[([^\\]\\n]+)\\]:\\s*(<[^>\\n]*>|\\S+)", re.MULTILINE
+    r"^ {0,3}\[([^\]\n]+)\]:\s*(<[^>\n]*>|\S+)", re.MULTILINE
 )
-REFERENCE_USE = re.compile(r"!?\\[([^\\]\\n]+)\\]\\[([^\\]\\n]*)\\]")
+REFERENCE_USE = re.compile(r"!?\[([^\]\n]+)\]\[([^\]\n]*)\]")
 URL_SCHEME = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
 
 
@@ -48,7 +48,7 @@ def link_evidence_path(destination: str) -> str | None:
 def item_statuses(block: str) -> list[str]:
     statuses = []
     for line in block.splitlines():
-        match = STATUS_LINE.match(re.sub(r"[*_`]", "", line).strip())
+        match = STATUS_LINE.match(re.sub(r"[*_\x60]", "", line).strip())
         if match:
             statuses.append(match.group(1))
     return statuses
@@ -109,7 +109,7 @@ def audit_current_dependencies() -> tuple[bool, str]:
     ):
         return False, "pip-audit JSON contains an empty or malformed dependency inventory"
     CURRENT_AUDIT_REPORT.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\\n", encoding="utf-8"
+        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     vulnerability_count = sum(len(item["vulns"]) for item in dependencies)
     if result.returncode != 0 or vulnerability_count:
@@ -132,10 +132,10 @@ def main() -> int:
     if SECTION_TITLE not in text:
         print(f"FAIL: section {SECTION_TITLE!r} not found in {DOC_PATH}")
         return 1
-    body = text.split(SECTION_TITLE, 1)[1].split("\\n## ", 1)[0]
+    body = text.split(SECTION_TITLE, 1)[1].split("\n## ", 1)[0]
     blocks = [
-        block for block in re.split(r"\\n(?=\\d+\\.\\s)", body.strip("\\n"))
-        if re.match(r"\\d+\\.\\s", block)
+        block for block in re.split(r"\n(?=\d+\.\s)", body.strip("\n"))
+        if re.match(r"\d+\.\s", block)
     ]
     if not blocks:
         print("FAIL: no numbered closure items found")
