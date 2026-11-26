@@ -58,6 +58,13 @@ def _build_limiter() -> Limiter:
         key_func=get_remote_address,
         headers_enabled=True,
         storage_uri=_limiter_storage_uri(get_settings()),
+        # SlowAPI performs synchronous storage operations while decorating
+        # async routes. Bound both connection establishment and Redis commands
+        # so an unresponsive Redis server cannot stall the worker indefinitely.
+        storage_options={
+            "socket_connect_timeout": 1.0,
+            "socket_timeout": 1.0,
+        },
         in_memory_fallback=["10/minute", "5/minute"],
     )
 
