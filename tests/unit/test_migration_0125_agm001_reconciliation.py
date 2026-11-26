@@ -197,7 +197,8 @@ def test_agm001_reconciliation_policy_does_not_require_the_migration_owner_role(
     guard = "IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN"
     assert guard in policy
     assert "RAISE" not in policy
-    assert policy.index(guard) < policy.index("CREATE POLICY")
+    guard_start = policy.index(guard)
+    assert guard_start < policy.index("CREATE POLICY") < policy.index("END IF", guard_start)
 
 
 def test_agm001_reconciliation_is_idempotent(migration, catalogue):
