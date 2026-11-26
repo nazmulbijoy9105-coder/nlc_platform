@@ -6,12 +6,50 @@ not source-code snippets.
 """
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import text
 
 
 LEGACY_BASIS = "Section 81, Companies Act 1994 (Bangladesh)"
 CANONICAL_BASIS = "Section 81(1), Companies Act 1994 (Bangladesh)"
 MIGRATION_REVISION = "0125_reconcile_agm001_statutory_basis"
+
+# Every legal_rules column at 0125; the before-image is to_jsonb(rule).
+BEFORE_IMAGE_FIELDS = frozenset(
+    {
+        "id",
+        "rule_id",
+        "rule_name",
+        "rule_type",
+        "statutory_basis",
+        "statutory_effective_date",
+        "description",
+        "verification_status",
+        "verified_by",
+        "verified_at",
+        "verification_notes",
+        "rule_condition",
+        "default_severity",
+        "score_impact",
+        "revenue_tier",
+        "is_black_override",
+        "rule_version",
+        "is_active",
+        "created_by",
+        "last_modified_by",
+        "last_modified_at",
+        "created_at",
+        "updated_at",
+    }
+)
+MIGRATION_MUTATED_FIELDS = frozenset(
+    {"statutory_basis", "rule_version", "last_modified_at", "updated_at"}
+)
+
+
+def _json_object(value):
+    return json.loads(value) if isinstance(value, str) else value
 
 
 async def test_0125_persists_complete_agm001_before_image_and_version(db):
@@ -32,15 +70,27 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
 
     assert len(history_rows) == 1
     history = history_rows[0]
-    before = history["previous_definition"]
-    if isinstance(before, str):
-        import json
-        before = json.loads(before)
+    before = _json_object(history["previous_definition"])
+
+    current = _json_object(
+        (
+            await db.execute(
+                text(
+                    """
+                    SELECT to_jsonb(rule) AS row_json
+                      FROM public.legal_rules AS rule
+                     WHERE rule.rule_id = 'AGM-001'
+                    """
+                )
+            )
+        ).scalar_one()
+    )
 
     assert history["actor_type"] == "MIGRATION"
     assert history["changed_by"] is None
     assert history["migration_revision"] == MIGRATION_REVISION
     assert history["change_reason"]
+    assert set(before) == BEFORE_IMAGE_FIELDS
     assert before["rule_id"] == "AGM-001"
     assert before["statutory_basis"] == LEGACY_BASIS
     assert before["rule_name"] == "First AGM Default"
@@ -58,18 +108,8 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
     assert before["is_active"] is True
     assert before["rule_version"] == history["version"]
 
-    current = (
-        await db.execute(
-            text(
-                """
-                SELECT statutory_basis, rule_version, rule_name, rule_type,
-                       description, rule_condition, is_active
-                  FROM public.legal_rules
-                 WHERE rule_id = 'AGM-001'
-                """
-            )
-        )
-    ).mappings().one()
+    for field in sorted(BEFORE_IMAGE_FIELDS - MIGRATION_MUTATED_FIELDS):
+        assert before[field] == current[field], field
 
     version_parts = str(history["version"]).split(".")
     assert all(part.isdigit() for part in version_parts)
