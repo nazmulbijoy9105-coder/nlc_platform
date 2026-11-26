@@ -43,8 +43,20 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Require all security-closure items to be CLOSED (audit F-12)
+      - name: Install pinned pip-audit release-gate tool
+        run: python -m pip install --disable-pip-version-check --no-cache-dir "pip-audit==2.7.1"
+
+      - name: Require all security-closure items to be CLOSED and audit current dependencies (audit F-12)
         run: python scripts/check_security_closure.py
+
+      - name: Retain live dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-security-dependency-audit
+          path: artifacts/security/pip-audit-current.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Install migration and parity dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt

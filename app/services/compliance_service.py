@@ -27,7 +27,7 @@ from dataclasses import fields as dataclass_fields
 from datetime import UTC, datetime
 from typing import NamedTuple
 
-from sqlalchemy import select, text, update
+from sqlalchemy import and_, false, func, select, text, true, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
@@ -223,6 +223,25 @@ def _rjsc_catalogue_binding_snapshot(catalogue_rows, catalogue_identity_conflict
             "correctness or independent counsel approval."
         ),
     }
+
+
+def _catalogue_identity_query():
+    """Select only fields needed to bind the canonical legal-rule catalogue."""
+    return select(
+        LegalRule.rule_id,
+        LegalRule.rule_version,
+        LegalRule.is_active,
+        LegalRule.statutory_basis,
+        LegalRule.verification_status,
+    ).order_by(LegalRule.rule_id)
+
+def _catalogue_snapshot_query():
+    """Load complete ORM rule records required by immutable outcome snapshots.
+
+    Do not replace this with _catalogue_identity_query(): the snapshot builder
+    also consumes verification provenance such as verified_by/verified_at.
+    """
+    return select(LegalRule).order_by(LegalRule.rule_id)
 
 
 def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
@@ -651,10 +670,8 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # Bind the evaluator to the exact active/inactive catalogue snapshot
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
-        catalogue_rows = list((
-            await self.db.execute(
-                select(LegalRule).order_by(LegalRule.rule_id)
-            )
+        catalogue_rows: list[LegalRule] = list((
+            await self.db.execute(_catalogue_snapshot_query())
         ).scalars().all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
@@ -1606,7 +1623,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
     async def get_flag_summary(self, company_id: uuid.UUID) -> dict:
         """
         Return the existing view metadata plus canonical active-flag counts.
-        Severity counts are calculated from active ORM flags, not inferred
+        Severity counts are calculated from active flag rows in SQL, not inferred
         from risk-band or score values.
         """
         from app.models.enums import FlagStatus
@@ -1620,51 +1637,73 @@ class ComplianceService(BaseService[ComplianceFlag]):
         row = result.mappings().one_or_none()
         summary = dict(row) if row else {}
 
-        flags_result = await self.db.execute(
-            select(ComplianceFlag.rule_id, ComplianceFlag.severity).where(
-                ComplianceFlag.company_id == company_id,
-                ComplianceFlag.flag_status == FlagStatus.ACTIVE,
-            )
-        )
-        rows = flags_result.all()
         from app.rule_engine.engine import (
             PRODUCT_SCORING_RULE_IDS,
             VERIFIED_RULE_IDS,
             legal_score_is_released,
         )
-        from canonical_architecture.rjsc_scope import is_rjsc_rule_in_scope
+        from canonical_architecture.rjsc_scope import RJSC_IN_SCOPE_RULE_IDS
+
         score_released = legal_score_is_released()
-        product_severities = [
-            str(getattr(severity, "value", severity)).upper()
-            for rule_id, severity in rows
-            if score_released and is_rjsc_rule_in_scope(rule_id)
-            and rule_id in PRODUCT_SCORING_RULE_IDS
-        ]
-        pending_review_count = sum(
-            1 for rule_id, _severity in rows
-            if is_rjsc_rule_in_scope(rule_id) and rule_id not in VERIFIED_RULE_IDS
+        rjsc_rule_ids = sorted(RJSC_IN_SCOPE_RULE_IDS)
+        product_rule_ids = sorted(
+            set(PRODUCT_SCORING_RULE_IDS).intersection(RJSC_IN_SCOPE_RULE_IDS)
         )
-        not_evaluated_count = sum(
-            1 for rule_id, _ in rows
-            if is_rjsc_rule_in_scope(rule_id)
-            and (not score_released or rule_id not in PRODUCT_SCORING_RULE_IDS)
+        verified_rule_ids = sorted(
+            set(VERIFIED_RULE_IDS).intersection(RJSC_IN_SCOPE_RULE_IDS)
         )
-        black_count = product_severities.count("BLACK")
-        red_count = product_severities.count("RED")
-        yellow_count = product_severities.count("YELLOW")
+        product_filter = (
+            ComplianceFlag.rule_id.in_(product_rule_ids)
+            if score_released
+            else false()
+        )
+        flags_result = await self.db.execute(
+            select(
+                func.count().filter(product_filter).label("total_active"),
+                func.count().filter(
+                    and_(product_filter, ComplianceFlag.severity == SeverityLevel.BLACK)
+                ).label("black"),
+                func.count().filter(
+                    and_(product_filter, ComplianceFlag.severity == SeverityLevel.RED)
+                ).label("red"),
+                func.count().filter(
+                    and_(product_filter, ComplianceFlag.severity == SeverityLevel.YELLOW)
+                ).label("yellow"),
+                func.count().filter(
+                    and_(
+                        ComplianceFlag.rule_id.in_(rjsc_rule_ids),
+                        ~ComplianceFlag.rule_id.in_(verified_rule_ids),
+                    )
+                ).label("pending_review"),
+                func.count().filter(
+                    and_(
+                        ComplianceFlag.rule_id.in_(rjsc_rule_ids),
+                        (
+                            true()
+                            if not score_released
+                            else ~ComplianceFlag.rule_id.in_(product_rule_ids)
+                        ),
+                    )
+                ).label("not_evaluated"),
+            ).where(
+                ComplianceFlag.company_id == company_id,
+                ComplianceFlag.flag_status == FlagStatus.ACTIVE,
+            )
+        )
+        counts = flags_result.one()
         summary.update({
             # Product scoring and counsel review are independent dimensions.
-            "total_active": len(product_severities),
-            "total_active_flags": len(product_severities),
-            "pending_review": pending_review_count,
-            "pending_review_flags": pending_review_count,
-            "black": black_count,
-            "red": red_count,
-            "yellow": yellow_count,
-            "black_flags": black_count,
-            "red_flags": red_count,
-            "yellow_flags": yellow_count,
-            "not_evaluated": not_evaluated_count,
+            "total_active": int(counts.total_active or 0),
+            "total_active_flags": int(counts.total_active or 0),
+            "pending_review": int(counts.pending_review or 0),
+            "pending_review_flags": int(counts.pending_review or 0),
+            "black": int(counts.black or 0),
+            "red": int(counts.red or 0),
+            "yellow": int(counts.yellow or 0),
+            "black_flags": int(counts.black or 0),
+            "red_flags": int(counts.red or 0),
+            "yellow_flags": int(counts.yellow or 0),
+            "not_evaluated": int(counts.not_evaluated or 0),
         })
         return summary
 

@@ -18,7 +18,7 @@ billiard==4.3.0
 blinker==1.9.0
 boolean.py==5.0
 boto3==1.43.106
-celery-redbeat==2.2.0
+celery-redbeat==2.4.2
 botocore==1.43.106
 brotli==1.2.1
 build==1.6.1
@@ -211,6 +211,7 @@ tzlocal==5.4.4
 ujson==6.0.0
 urllib3==2.8.0
 uvicorn==0.54.0
+uvloop==0.23.0 ; sys_platform != "win32"
 vine==5.1.0
 virtualenv==21.15.11
 watchfiles==1.1.1
@@ -222,4 +223,4 @@ Werkzeug==3.1.9
 wrapt==2.1.2
 zopfli==0.4.1
 
-apscheduler>=3.11.0
+APScheduler==3.11.3

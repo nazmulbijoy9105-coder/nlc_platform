@@ -1,0 +1,13 @@
+{
+  "name": "defusedxml",
+  "version": "0.7.1",
+  "license": "PSFL",
+  "license_expression": null,
+  "license_classifiers": [
+    "License :: OSI Approved :: Python Software Foundation License"
+  ],
+  "source_wheel": "defusedxml-0.7.1-py2.py3-none-any.whl",
+  "source_wheel_sha256": "a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61",
+  "metadata_sha256": "6250b1de03a1a3fa55f1b58b19b481134905be53921448614c988d4f25578024",
+  "project_license_policy_approval": "NOT CONFIRMED"
+}

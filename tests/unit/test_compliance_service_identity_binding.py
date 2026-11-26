@@ -405,3 +405,35 @@ def test_agm001_matching_citation_does_not_hide_definition_drift(field, drifted_
     assert conflicts["AGM-001"]["binding_reason"] == "RULE_DEFINITION_MISMATCH"
     assert conflicts["AGM-001"]["catalogue_is_active"] is True
     assert "AGM-001" in _score_blocking_catalogue_conflicts(conflicts)
+
+def test_catalogue_identity_query_projects_only_binding_columns():
+    from app.models.rules import LegalRule
+    from app.services.compliance_service import _catalogue_identity_query
+
+    expected_columns = (
+        "rule_id",
+        "rule_version",
+        "is_active",
+        "statutory_basis",
+        "verification_status",
+    )
+    descriptions = _catalogue_identity_query().column_descriptions
+
+    assert tuple(description["name"] for description in descriptions) == expected_columns
+    assert all(
+        description["expr"] is getattr(LegalRule, name)
+        and description["entity"] is LegalRule
+        for description, name in zip(descriptions, expected_columns, strict=True)
+    )
+
+
+def test_evaluation_snapshot_query_loads_complete_legal_rule_records():
+    from app.models.rules import LegalRule
+    from app.services.compliance_service import _catalogue_snapshot_query
+
+    (description,) = _catalogue_snapshot_query().column_descriptions
+
+    assert description["expr"] is LegalRule
+    assert description["entity"] is LegalRule
+    assert hasattr(LegalRule, "verified_by")
+    assert hasattr(LegalRule, "verified_at")

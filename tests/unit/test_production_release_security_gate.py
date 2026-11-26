@@ -42,6 +42,17 @@ def test_controlled_production_release_checks_security_closure_before_operations
     gate = steps[gate_index]
     assert not gate.get("continue-on-error")
     assert "if" not in gate
+    assert any(
+        step.get("name") == "Install pinned pip-audit release-gate tool"
+        and index < gate_index
+        for index, step in enumerate(steps)
+    )
+    assert any(
+        step.get("uses") == "actions/upload-artifact@v4"
+        and step.get("with", {}).get("path") == "artifacts/security/pip-audit-current.json"
+        and index > gate_index
+        for index, step in enumerate(steps)
+    )
 
 
 def test_ci_triggered_render_deploy_checks_security_closure_before_migrations():
@@ -53,3 +64,15 @@ def test_ci_triggered_render_deploy_checks_security_closure_before_migrations():
     gate = steps[gate_index]
     assert gate.get("if") == "steps.freshness.outputs.current == 'true'"
     assert not gate.get("continue-on-error")
+    assert any(
+        step.get("name") == "Install pinned pip-audit release-gate tool"
+        and index < gate_index
+        and step.get("if") == "steps.freshness.outputs.current == 'true'"
+        for index, step in enumerate(steps)
+    )
+    assert any(
+        step.get("uses") == "actions/upload-artifact@v4"
+        and step.get("with", {}).get("path") == "artifacts/security/pip-audit-current.json"
+        and index > gate_index
+        for index, step in enumerate(steps)
+    )

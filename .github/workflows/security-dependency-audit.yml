@@ -1,0 +1,303 @@
+name: Full dependency security audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "requirements.txt"
+      - "Dockerfile"
+      - ".github/workflows/security-dependency-audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "requirements.txt"
+      - "Dockerfile"
+      - ".github/workflows/security-dependency-audit.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  pip-audit:
+    name: Resolve and audit production requirements (Python 3.11 / Linux x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up production-compatible Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install pinned audit tool
+        run: |
+          python -m pip install --upgrade "pip==24.0"
+          python -m pip install "pip-audit==2.10.1"
+
+      - name: Record audit environment
+        run: |
+          mkdir -p artifacts/security-audit
+          python - <<'PY'
+          import json
+          import platform
+          import sys
+          from pathlib import Path
+          import pip_audit
+
+          payload = {
+              "python": sys.version,
+              "implementation": platform.python_implementation(),
+              "platform": platform.platform(),
+              "machine": platform.machine(),
+              "pip_audit": getattr(pip_audit, "__version__", "unknown"),
+              "requirements_sha256": __import__("hashlib").sha256(
+                  Path("requirements.txt").read_bytes()
+              ).hexdigest(),
+              "git_sha": __import__("os").environ.get("GITHUB_SHA"),
+          }
+          Path("artifacts/security-audit/environment.json").write_text(
+              json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(payload, indent=2))
+          PY
+
+      - name: Audit requirements against PyPI advisory database
+        id: pypi_audit
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          set +e
+          pip-audit --strict --progress-spinner off --format=json \
+            --requirement requirements.txt \
+            > artifacts/security-audit/pip-audit-pypi.json \
+            2> artifacts/security-audit/pip-audit-pypi.stderr.log
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "PyPI pip-audit exit code: $status"
+          exit "$status"
+
+      - name: Audit requirements against OSV
+        id: osv_audit
+        if: always()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          set +e
+          pip-audit --strict --progress-spinner off --vulnerability-service osv \
+            --format=json --requirement requirements.txt \
+            > artifacts/security-audit/pip-audit-osv.json \
+            2> artifacts/security-audit/pip-audit-osv.stderr.log
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "OSV pip-audit exit code: $status"
+          exit "$status"
+
+      - name: Verify resolved critical dependency versions and summarize reports
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+          from packaging.markers import default_environment
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name, parse_wheel_filename
+          from urllib.parse import urlsplit
+
+          root = Path("artifacts/security-audit")
+          summary = {"reports": {}, "required_versions": {}, "errors": []}
+
+          # Fail closed unless every active production requirement is immutable:
+          # exact == pin, or a direct wheel URL protected by a SHA-256 fragment.
+          pinned_requirements = []
+          environment = default_environment()
+          for line_number, raw in enumerate(Path("requirements.txt").read_text(encoding="utf-8").splitlines(), 1):
+              line = raw.strip()
+              if not line or line.startswith("#"):
+                  continue
+              try:
+                  requirement = Requirement(line)
+              except Exception as exc:
+                  summary["errors"].append(f"requirements.txt:{line_number}: invalid requirement: {exc}")
+                  continue
+              if requirement.marker and not requirement.marker.evaluate(environment):
+                  continue
+              if requirement.url:
+                  fragment = urlsplit(requirement.url).fragment
+                  if re.fullmatch(r"sha256=[0-9a-fA-F]{64}", fragment) is None:
+                      summary["errors"].append(
+                          f"requirements.txt:{line_number}: direct URL lacks SHA-256 pin"
+                      )
+                      continue
+                  try:
+                      _, version, _, _ = parse_wheel_filename(
+                          Path(urlsplit(requirement.url).path).name
+                      )
+                  except Exception as exc:
+                      summary["errors"].append(
+                          f"requirements.txt:{line_number}: direct URL is not a versioned wheel: {exc}"
+                      )
+                      continue
+                  pinned_requirements.append((canonicalize_name(requirement.name), str(version)))
+                  continue
+              specifiers = list(requirement.specifier)
+              if (
+                  len(specifiers) != 1
+                  or specifiers[0].operator != "=="
+                  or "*" in specifiers[0].version
+              ):
+                  summary["errors"].append(
+                      f"requirements.txt:{line_number}: {requirement.name} must use one exact == pin"
+                  )
+                  continue
+              pinned_requirements.append(
+                  (canonicalize_name(requirement.name), specifiers[0].version)
+              )
+          pinned_versions = {}
+          for package, version in pinned_requirements:
+              if package in pinned_versions and pinned_versions[package] != version:
+                  summary["errors"].append(
+                      f"multiple active pins for {package}: {pinned_versions[package]} and {version}"
+                  )
+              pinned_versions[package] = version
+          summary["pinned_requirement_count"] = len(pinned_versions)
+
+          for name in ("pypi", "osv"):
+              path = root / f"pip-audit-{name}.json"
+              if not path.is_file() or not path.stat().st_size:
+                  summary["errors"].append(f"{name}: missing or empty JSON report")
+                  continue
+              try:
+                  report = json.loads(path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  summary["errors"].append(f"{name}: invalid JSON: {exc}")
+                  continue
+              dependencies = report.get("dependencies")
+              if not isinstance(dependencies, list):
+                  summary["errors"].append(f"{name}: missing dependencies array")
+                  continue
+              vulnerable = [
+                  {"name": dep.get("name"), "version": dep.get("version"),
+                   "vulnerabilities": dep.get("vulns", [])}
+                  for dep in dependencies
+                  if dep.get("vulns")
+              ]
+              summary["reports"][name] = {
+                  "dependency_count": len(dependencies),
+                  "vulnerable_dependency_count": len(vulnerable),
+                  "vulnerability_count": sum(len(x["vulnerabilities"]) for x in vulnerable),
+                  "vulnerable_dependencies": vulnerable,
+              }
+              versions = {
+                  canonicalize_name(str(dep.get("name", ""))): dep.get("version")
+                  for dep in dependencies
+              }
+              for package, actual in versions.items():
+                  if package not in pinned_versions:
+                      summary["errors"].append(
+                          f"{name}: resolved package {package} has no active exact requirements pin"
+                      )
+              for package, expected in pinned_versions.items():
+                  actual = versions.get(package)
+                  if actual != expected:
+                      summary["errors"].append(
+                          f"{name}: resolved {package}={actual!r}; requirements pin expects {expected}"
+                      )
+              if name == "pypi":
+                  summary["required_versions"] = {
+                      key: versions.get(key)
+                      for key in ("tornado", "pillow", "fastapi", "starlette", "filelock")
+                  }
+                  for package, expected in {
+                      "tornado": "6.6.1",
+                      "pillow": "13.0.0",
+                      "fastapi": "0.165.0",
+                      "starlette": "1.10.0",
+                      "filelock": "4.2.12",
+                  }.items():
+                      actual = versions.get(package)
+                      if actual != expected:
+                          summary["errors"].append(
+                              f"resolved {package}={actual!r}; expected {expected}"
+                          )
+          (root / "summary.json").write_text(
+              json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(summary, indent=2))
+          if summary["errors"]:
+              raise SystemExit("Audit report validation failed")
+          PY
+
+      - name: Capture Defusedxml 0.7.1 distribution license metadata
+        if: always()
+        run: |
+          python -m pip download --no-deps --only-binary=:all: \
+            --dest artifacts/security-audit defusedxml==0.7.1
+          python - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          root = Path("artifacts/security-audit")
+          wheels = list(root.glob("defusedxml-0.7.1-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"Expected one Defusedxml wheel, found {len(wheels)}")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              metadata_path = next(
+                  name for name in archive.namelist()
+                  if name.endswith(".dist-info/METADATA")
+              )
+              lines = archive.read(metadata_path).decode("utf-8").splitlines()
+          metadata = {
+              "name": next((x.split(": ", 1)[1] for x in lines if x.startswith("Name: ")), None),
+              "version": next((x.split(": ", 1)[1] for x in lines if x.startswith("Version: ")), None),
+              "license": next((x.split(": ", 1)[1] for x in lines if x.startswith("License: ")), None),
+              "license_expression": next((x.split(": ", 1)[1] for x in lines if x.startswith("License-Expression: ")), None),
+              "license_classifiers": [x.split(": ", 1)[1] for x in lines if x.startswith("Classifier: License ::")],
+              "wheel": wheels[0].name,
+          }
+          (root / "defusedxml-license-metadata.json").write_text(
+              json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(metadata, indent=2))
+          PY
+
+      - name: Hash retained audit evidence
+        if: always()
+        run: |
+          (
+            cd artifacts/security-audit
+            find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' \
+              | sort -z \
+              | xargs -0 -r sha256sum > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
+
+      - name: Upload machine-readable audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-dependency-security-audit-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/security-audit/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce clean and complete dependency audit
+        if: always()
+        env:
+          PYPI_OUTCOME: ${{ steps.pypi_audit.outcome }}
+          OSV_OUTCOME: ${{ steps.osv_audit.outcome }}
+        run: |
+          test "$PYPI_OUTCOME" = "success"
+          test "$OSV_OUTCOME" = "success"

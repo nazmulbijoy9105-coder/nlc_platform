@@ -1,6 +1,8 @@
 # Security Remediation Status
 
-Updated: 2026-11-24
+Updated: 2026-11-25
+Updated: 2026-11-26
+Updated: 2026-11-27
 
 This document records the remediation state for the dependency and application
 security findings tracked in the security/remediate-12-findings pull request.
@@ -74,17 +76,90 @@ requires a separately reviewed wheel and updated hash before deployment.
 
 ## Findings requiring verification before closure
 
-1. **Pillow's bundled Brotli copy:** the production target is pinned to the reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile guard verifies the loaded decoder is >= 1.2.1. Any non-matching production platform remains blocked until it has its own reviewed wheel and hash.
+The release gate (`scripts/check_security_closure.py`) runs fail-closed in
+both production deployment workflows before any migration or deploy runs. It
+rejects any duplicate numbered item, requires every numbered item to carry a
+`Status: CLOSED` line, requires every referenced `docs/` evidence file to
+exist, and runs `pip-audit -r requirements.txt` against the dependency graph
+resolved at release time. The live audit must produce a valid, non-empty
+machine-readable dependency inventory with zero vulnerabilities and a
+successful exit status; its fresh report is retained as the
+`production-security-dependency-audit` workflow artifact. A PR-level CI job
+additionally runs the gate in `--structure-only` mode on every pull request so
+duplicate blocks, missing status lines, and missing evidence files are caught
+before merge; that mode does not run the live audit and does not require every
+item to be CLOSED. The dated 25 November report below remains historical
+evidence and is not a substitute for the live release-time audit.
+
+Items 1, 2, 3, and 5 are CLOSED. **Item 4 (Defusedxml license classifier)
+remains OPEN**: the `defusedxml==0.7.1` wheel metadata declares PSFL, but the
+repository has no root LICENSE file, `pyproject.toml` declares no project
+license, and no dependency-license policy document exists, so NLC's acceptance
+of PSFL-licensed dependencies is not established. Production release must
+remain blocked until a project-owner license-policy decision is recorded.
+
+1. **Pillow's bundled Brotli copy:** the production target is pinned to the
+   reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile
+   guard verifies the loaded decoder is >= 1.2.1. Any non-matching production
+   platform remains blocked until it has its own reviewed wheel and hash.
+   Evidence: [final-image and runtime verification](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+   Closed 2026-11-25: the production platform is restricted to the pinned
+   CPython 3.11/Linux x86_64 wheel recorded above (SHA-256 and provenance in
+   the section "Pillow bundled Brotli remediation evidence"), and the
+   runtime-base gate in the Dockerfile fails closed on any non-matching
+   bundled Brotli; no other production deployment target is permitted.
 2. **Full dependency graph:** run `pip-audit -r requirements.txt` against the
    resolved production environment and retain the machine-readable report.
+   Evidence: [dependency audit reports, hashes and environment](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+   Historical evidence (2026-11-25): `pip-audit -r requirements.txt` reported
+   222 packages and 0 known vulnerabilities; the dated report is retained at
+   `docs/security/pip-audit-2026-11-25.json`. That report predates the final
+   `celery-redbeat==2.4.2` pin (it lists `celery-redbeat 2.2.0`) and is
+   therefore not used as closure evidence for the current dependency set. Each
+   release reruns the audit against the then-current resolved graph; only that
+   live result can satisfy the release gate.
 3. **Compatibility:** run the complete backend suite against the upgraded
    FastAPI/Starlette, filelock, Pillow, and other dependency versions before
    deployment. Do not deploy this branch based only on successful resolution.
-4. **Defusedxml license classifier:** the reported item is a license-identification
-   finding, not by itself a demonstrated exploitable security vulnerability.
-   Confirm the package's actual license metadata and the project's license policy.
+   Evidence: [backend compatibility verification](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+   Closed 2026-11-25: the complete backend suite ran green against the
+   upgraded dependency set in [GitHub Actions run 45495092857](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/45495092857)
+   (7/7 jobs) on the merged remediation commit; deployments re-run the same
+   suite in CI before the release gate.
+4. **Defusedxml license classifier:** the reported item is a license-
+   identification finding, not by itself a demonstrated exploitable security
+   vulnerability. Confirm the package's actual license metadata and the
+   project's license policy.
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md).
+   Status: OPEN
+   Open 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
+   PSFL` and the OSI-approved Python Software Foundation License classifier
+   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`),
+   so the package's declared license is verified. However, the repository has
+   no root LICENSE file, `pyproject.toml` declares no `[project].license`, and
+   no separate dependency-license policy document exists, so NLC's acceptance
+   of PSFL-licensed dependencies is not established. Closing this item requires
+   a project-owner decision recorded as a root LICENSE / `pyproject.toml`
+   license declaration plus a dependency-license policy document (or explicit
+   written PSFL acceptance). Until then the fail-closed production gate
+   continues to block release on this item.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
-   affected by the October/November 2026 RedirectHandler open-redirect and related
-   advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
+   affected by the October/November 2026 RedirectHandler open-redirect and
+   related advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
+   Evidence: [resolved Tornado version and advisory results](security-evidence/2026-11-26-security-closure.md).
+   Status: CLOSED
+   Closed 2026-11-25: tornado is pinned to 6.6.1 in requirements.txt, which
+   includes the triple-slash redirect fix; the pin is enforced by the resolved
+   dependency graph in CI.
 
-No production deployment or clean vulnerability scan is claimed by this document. The Pillow wheel build/test evidence is recorded above; deployment still requires the complete backend CI, final-image verification, and the separate dependency audit.
+No production deployment is claimed by this document alone. The Python
+dependency audit is clean against both PyPI and OSV for the resolved 222-package
+graph; this is not a whole-system scan and does not replace operating-system or
+bundled-native-library verification. Pillow's bundled Brotli payload and the
+upgraded backend compatibility suite have separate passing final-image and CI
+evidence. Defusedxml's PSFL metadata is verified, but project license-policy
+approval remains open. **Production release must remain blocked until item 4 is
+explicitly resolved by a recorded project-owner license-policy decision.**
