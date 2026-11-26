@@ -361,3 +361,47 @@ def test_duplicate_active_out_of_scope_catalogue_rows_are_inert(rule_id):
         _active_catalogue_rows_for_rjsc_ledger(rows)
     )
 
+@pytest.mark.parametrize(
+    "field,drifted_value",
+    [
+        ("rule_name", "Operator-renamed AGM rule"),
+        ("rule_type", "POLICY"),
+        ("description", "First AGM deadline: fixed 548 days"),
+        (
+            "rule_condition",
+            {
+                "check_fn": "check_agm_001",
+                "trigger": "first_agm_held == False AND days_since_incorporation > 548",
+                "data_points": ["incorporation_date", "first_agm_held", "agm_count"],
+            },
+        ),
+    ],
+)
+def test_agm001_matching_citation_does_not_hide_definition_drift(field, drifted_value):
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import _catalogue_identity_conflicts
+
+    canonical_agm = next(rule for rule in ILRMF_RULES if rule["rule_id"] == "AGM-001")
+    rows = [
+        SimpleNamespace(
+            rule_id=rule_id,
+            rule_version="2.3",
+            is_active=True,
+            statutory_basis=rule.law,
+            rule_name=canonical_agm["rule_name"] if rule_id == "AGM-001" else rule_id,
+            rule_type=canonical_agm["rule_type"] if rule_id == "AGM-001" else "DEADLINE",
+            description=canonical_agm["description"] if rule_id == "AGM-001" else "test",
+            rule_condition=canonical_agm["rule_condition"] if rule_id == "AGM-001" else {},
+        )
+        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+    ]
+    agm_row = next(row for row in rows if row.rule_id == "AGM-001")
+    assert agm_row.statutory_basis == STATUTORY_RULE_REGISTRY["AGM-001"].law
+    assert "AGM-001" not in _catalogue_identity_conflicts(rows)
+
+    setattr(agm_row, field, drifted_value)
+    conflicts = _catalogue_identity_conflicts(rows)
+
+    assert conflicts["AGM-001"]["binding_reason"] == "RULE_DEFINITION_MISMATCH"
+    assert conflicts["AGM-001"]["catalogue_is_active"] is True
+    assert "AGM-001" in _score_blocking_catalogue_conflicts(conflicts)
