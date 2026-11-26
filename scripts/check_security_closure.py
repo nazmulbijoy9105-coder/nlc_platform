@@ -137,7 +137,33 @@ def audit_current_dependencies() -> tuple[bool, str]:
     )
 
 
-def main() -> int:
+def _item_number(block: str) -> str | None:
+    """Return the leading ``N.`` number of a closure block, or None."""
+    lines = block.splitlines()
+    if not lines:
+        return None
+    match = re.match(r"(\d+)\.\s", lines[0])
+    return match.group(1) if match else None
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the closure gate.
+
+    Default (fail-closed production gate): every numbered item must carry a
+    ``Status: CLOSED`` line, every referenced ``docs/`` evidence file must
+    exist, no item number may repeat, and a live ``pip-audit`` must report zero
+    vulnerabilities. Used by the production-release and deploy workflows.
+
+    ``--structure-only``: skip the live pip-audit and allow ``Status: OPEN``
+    (reported as info, not a failure). Still fails on duplicate item numbers,
+    missing/malformed status lines, and missing evidence files. Used by the PR
+    CI job so the closure document's structural integrity is checked on every
+    pull request without forcing every OPEN item closed or running the slow
+    live audit (the live audit remains a release-gate concern).
+    """
+    args = sys.argv[1:] if argv is None else argv
+    structure_only = "--structure-only" in args
+
     if not DOC_PATH.is_file():
         print(f"FAIL: {DOC_PATH} is missing")
         return 1
@@ -155,27 +181,59 @@ def main() -> int:
         return 1
 
     failures: list[str] = []
+    open_items: list[str] = []
+    seen_numbers: dict[str, str] = {}
     for block in blocks:
         title = block.splitlines()[0].strip()
+        number = _item_number(block)
+        if number is not None:
+            if number in seen_numbers:
+                failures.append(
+                    f"duplicate closure item {number}: {title!r} repeats "
+                    f"{seen_numbers[number]!r}"
+                )
+            else:
+                seen_numbers[number] = title
         if not is_closed(block):
-            failures.append(f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}")
+            if structure_only and item_statuses(block):
+                open_items.append(title)
+            else:
+                failures.append(
+                    f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}"
+                )
     for ref in referenced_evidence_paths(body, text):
         if not Path(ref).is_file():
             failures.append(f"missing evidence file: {ref}")
 
-    audit_ok, audit_message = audit_current_dependencies()
-    print(("OK: " if audit_ok else "FAIL: ") + audit_message)
-    if not audit_ok:
-        failures.append(audit_message)
+    if not structure_only:
+        audit_ok, audit_message = audit_current_dependencies()
+        print(("OK: " if audit_ok else "FAIL: ") + audit_message)
+        if not audit_ok:
+            failures.append(audit_message)
+
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")
+        label = "structure check" if structure_only else "security-acceptance closure check"
         print(
-            f"Security-acceptance closure check failed ({len(failures)} issue(s)); "
+            f"{label} failed ({len(failures)} issue(s)); "
             "production release must not proceed."
         )
         return 1
-    print(f"OK: all {len(blocks)} closure item(s) CLOSED; evidence exists; live audit passed.")
+
+    if structure_only:
+        print(
+            f"OK (structure-only): {len(blocks)} closure item(s), "
+            f"{len(seen_numbers)} unique; {len(open_items)} OPEN item(s) "
+            "(production gate will block until CLOSED)."
+        )
+        for title in open_items:
+            print(f"  OPEN: {title}")
+    else:
+        print(
+            f"OK: all {len(blocks)} closure item(s) CLOSED; evidence exists; "
+            "live audit passed."
+        )
     return 0
 
 
