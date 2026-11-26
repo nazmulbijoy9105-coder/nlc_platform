@@ -67,7 +67,48 @@ jobs:
           trap cleanup EXIT
 
           # This is a preserved backup, never the production/default branch.
-          parent_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$NEON_PARENT_BRANCH_ID")
+          response_file=$(mktemp)
+          trap 'rm -f "$response_file"; cleanup' EXIT
+          neon_request() {
+            local method="$1"
+            local url="$2"
+            local payload="${3:-}"
+            local http_status=""
+            local response_body=""
+            for attempt in $(seq 1 8); do
+              if [[ "$method" == "POST" ]]; then
+                http_status=$(curl --silent --show-error --request POST \
+                  "${AUTH[@]}" -H "Content-Type: application/json" \
+                  --data "$payload" -o "$response_file" -w "%{http_code}" "$url") || {
+                    echo "::error::Neon $method request failed at transport level." >&2
+                    return 1
+                  }
+              else
+                http_status=$(curl --silent --show-error \
+                  "${AUTH[@]}" -o "$response_file" -w "%{http_code}" "$url") || {
+                    echo "::error::Neon $method request failed at transport level." >&2
+                    return 1
+                  }
+              fi
+              response_body=$(cat "$response_file")
+              if [[ "$http_status" == "423" ]]; then
+                delay=$((attempt * 10))
+                echo "Neon API is locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)." >&2
+                sleep "$delay"
+                continue
+              fi
+              if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+                echo "::error::Neon $method request returned HTTP $http_status: $response_body" >&2
+                return 1
+              fi
+              printf '%s' "$response_body"
+              return 0
+            done
+            echo "::error::Neon API remained locked after bounded HTTP 423 retries." >&2
+            return 1
+          }
+
+          parent_json=$(neon_request GET "$API/branches/$NEON_PARENT_BRANCH_ID")
           parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
           parent_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$parent_json")
           if [[ "$parent_name" != "nlc-prod-backup-2026-11-20-before-0122" || "$parent_default" != "false" ]]; then
@@ -78,34 +119,7 @@ jobs:
           # A unique disposable branch prevents stale IDs and concurrent-run collisions.
           BRANCH_NAME="nlc-0112-to-0128-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           payload=$(jq -n --arg name "$BRANCH_NAME" --arg parent "$NEON_PARENT_BRANCH_ID"             '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
-          created=""
-          response_file=$(mktemp)
-          trap 'rm -f "$response_file"; cleanup' EXIT
-          for attempt in $(seq 1 8); do
-            http_status=$(curl --silent --show-error --request POST \
-              "${AUTH[@]}" -H "Content-Type: application/json" \
-              --data "$payload" -o "$response_file" -w "%{http_code}" "$API/branches") || {
-                echo "::error::Neon branch creation request failed at transport level."
-                exit 1
-              }
-            response_body=$(cat "$response_file")
-            if [[ "$http_status" == "423" ]]; then
-              delay=$((attempt * 10))
-              echo "Neon branch API is locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)."
-              sleep "$delay"
-              continue
-            fi
-            if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
-              echo "::error::Neon branch creation returned HTTP $http_status: $response_body"
-              exit 1
-            fi
-            created="$response_body"
-            break
-          done
-          if [[ -z "$created" ]]; then
-            echo "::error::Neon branch API remained locked after bounded HTTP 423 retries."
-            exit 1
-          fi
+          created=$(neon_request POST "$API/branches" "$payload")
           BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
           ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
           if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
@@ -113,7 +127,7 @@ jobs:
             exit 1
           fi
 
-          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$BRANCH_ID")
+          branch_json=$(neon_request GET "$API/branches/$BRANCH_ID")
           branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
           branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
           branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
@@ -122,7 +136,7 @@ jobs:
             exit 1
           fi
 
-          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$ENDPOINT_ID")
+          endpoint_json=$(neon_request GET "$API/endpoints/$ENDPOINT_ID")
           endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
           if [[ "$endpoint_branch" != "$BRANCH_ID" ]]; then
             echo "::error::Read-write endpoint does not belong to the disposable rehearsal branch."
