@@ -629,7 +629,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             await self.db.execute(
                 _catalogue_identity_query()
             )
-        ).scalars().all())
+        ).all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
         profile.catalogue_rule_versions = {
