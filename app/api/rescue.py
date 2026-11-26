@@ -248,7 +248,7 @@ async def create_rescue_plan(
     # ordinary compliance evaluation. Never run an unbound rescue profile.
     catalogue_rows = list((
         await db.execute(_catalogue_identity_query())
-    ).scalars().all())
+    ).all())
     catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
     profile.catalogue_binding_required = True
     profile.catalogue_rule_versions = {
