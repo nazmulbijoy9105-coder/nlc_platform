@@ -1,7 +1,110 @@
+import copy
+import importlib.util
+import json
 import re
+import uuid
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_migration_0125():
+    spec = importlib.util.spec_from_file_location(
+        "migration_0125_agm001_under_test",
+        ROOT / "alembic" / "versions" / "0125_reconcile_agm001_statutory_basis.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+MIGRATION_0125 = _load_migration_0125()
+
+
+class _Result:
+    def __init__(self, rows=()):
+        self._rows = list(rows)
+
+    def mappings(self):
+        return self
+
+    def one_or_none(self):
+        return self._rows[0] if self._rows else None
+
+    def all(self):
+        return list(self._rows)
+
+
+class _FakeBind:
+    def __init__(self, current, history):
+        self.current = current
+        self.history = history
+        self.writes = []
+
+    def execute(self, statement, params=None):
+        sql = " ".join(str(statement).split())
+        if sql.startswith(("INSERT", "UPDATE")):
+            self.writes.append(sql)
+            return _Result()
+        if "FOR UPDATE" in sql:
+            return _Result([self.current])
+        if sql.startswith("SELECT version") and "legal_rule_versions" in sql:
+            return _Result(self.history)
+        raise AssertionError(f"unexpected SQL: {sql}")
+
+
+def _install_fake_op(monkeypatch, bind):
+    def noop(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        MIGRATION_0125,
+        "op",
+        SimpleNamespace(
+            get_bind=lambda: bind,
+            add_column=noop,
+            alter_column=noop,
+            create_check_constraint=noop,
+        ),
+    )
+
+
+def _legacy_before_image(**overrides):
+    image = {
+        "rule_id": MIGRATION_0125.RULE_ID,
+        "statutory_basis": MIGRATION_0125.LEGACY_BASIS,
+        "rule_version": "1.0.0",
+        **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION),
+    }
+    image.update(overrides)
+    return image
+
+
+def _history_row(**overrides):
+    row = {
+        "version": "1.0.0",
+        "change_reason": MIGRATION_0125.CHANGE_REASON,
+        "changed_by": None,
+        "actor_type": "MIGRATION",
+        "migration_revision": MIGRATION_0125.revision,
+        "previous_definition": _legacy_before_image(),
+    }
+    row.update(overrides)
+    return row
+
+
+def _canonical_row(**overrides):
+    row = {
+        **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION),
+        "statutory_basis": MIGRATION_0125.CANONICAL_BASIS,
+        "rule_version": "1.0.1",
+    }
+    row.update(overrides)
+    return row
 
 
 def test_agm001_migration_is_fingerprint_scoped_and_version_audited():
@@ -54,25 +157,139 @@ def test_agm001_release_redaction_fixture_uses_migrated_catalogue_identity():
         '["score_impact_applied"] == 0'
     )
 
-def test_agm001_canonical_row_requires_its_own_verified_migration_history():
-    migration = (
-        ROOT / "alembic/versions/0125_reconcile_agm001_statutory_basis.py"
-    ).read_text(encoding="utf-8")
 
-    canonical_branch = migration.index(
-        'if current["statutory_basis"] == CANONICAL_BASIS:'
+def _drifted_trigger_before_image():
+    image = _legacy_before_image()
+    image["rule_condition"]["trigger"] = (
+        "first_agm_held == False AND days_since_incorporation > 549"
     )
-    history_validation = migration.index(
-        "_validate_migration_history(bind, current)", canonical_branch
-    )
-    early_return = migration.index("return", history_validation)
-    assert canonical_branch < history_validation < early_return
-    assert "if len(history) != 1:" in migration
-    assert 'record["actor_type"] != "MIGRATION"' in migration
-    assert 'previous.get("statutory_basis") != LEGACY_BASIS' in migration
-    assert "_definition(" in migration
-    assert "expected_version = _next_version(str(record[\"version\"]))" in migration
-    assert 'current_row["rule_version"] != expected_version' in migration
+    return image
+
+
+def test_agm001_canonical_row_is_accepted_with_exactly_one_valid_migration_history(
+    monkeypatch,
+):
+    bind = _FakeBind(_canonical_row(), [_history_row()])
+    _install_fake_op(monkeypatch, bind)
+
+    MIGRATION_0125.upgrade()
+
+    assert bind.writes == []
+
+
+def test_agm001_canonical_row_accepts_json_text_before_image(monkeypatch):
+    history = _history_row(previous_definition=json.dumps(_legacy_before_image()))
+    bind = _FakeBind(_canonical_row(), [history])
+    _install_fake_op(monkeypatch, bind)
+
+    MIGRATION_0125.upgrade()
+
+    assert bind.writes == []
+
+
+@pytest.mark.parametrize(
+    ("current_overrides", "history", "message"),
+    [
+        pytest.param({}, [], "found 0", id="no-history"),
+        pytest.param(
+            {}, [_history_row(), _history_row()], "found 2", id="duplicate-history"
+        ),
+        pytest.param(
+            {},
+            [_history_row(actor_type="USER")],
+            "provenance is invalid",
+            id="user-actor",
+        ),
+        pytest.param(
+            {},
+            [_history_row(changed_by=uuid.uuid4())],
+            "provenance is invalid",
+            id="named-changer",
+        ),
+        pytest.param(
+            {},
+            [_history_row(migration_revision="0001_another_revision")],
+            "provenance is invalid",
+            id="other-revision",
+        ),
+        pytest.param(
+            {},
+            [_history_row(change_reason="Manual citation edit")],
+            "provenance is invalid",
+            id="other-reason",
+        ),
+        pytest.param(
+            {},
+            [_history_row(previous_definition=None)],
+            "not a JSON object",
+            id="missing-before-image",
+        ),
+        pytest.param(
+            {},
+            [_history_row(previous_definition=_legacy_before_image(rule_id="AGM-002"))],
+            "another rule ID",
+            id="other-rule-before-image",
+        ),
+        pytest.param(
+            {},
+            [
+                _history_row(
+                    previous_definition=_legacy_before_image(
+                        statutory_basis=MIGRATION_0125.CANONICAL_BASIS
+                    )
+                )
+            ],
+            "exact legacy citation",
+            id="before-image-not-legacy-citation",
+        ),
+        pytest.param(
+            {},
+            [_history_row(version="0.9.0")],
+            "does not match its before-image",
+            id="before-image-version-mismatch",
+        ),
+        pytest.param(
+            {},
+            [_history_row(previous_definition=_drifted_trigger_before_image())],
+            "exact known legacy definition",
+            id="before-image-drifted-trigger",
+        ),
+        pytest.param(
+            {},
+            [
+                _history_row(
+                    previous_definition=_legacy_before_image(
+                        description="First AGM not held within 18 months."
+                    )
+                )
+            ],
+            "exact known legacy definition",
+            id="before-image-drifted-description",
+        ),
+        pytest.param(
+            {"rule_version": "1.0.0"},
+            [_history_row()],
+            "does not follow its migration history",
+            id="version-not-advanced",
+        ),
+        pytest.param(
+            {"rule_version": "1.0.2"},
+            [_history_row()],
+            "does not follow its migration history",
+            id="version-skipped-ahead",
+        ),
+    ],
+)
+def test_agm001_canonical_row_is_rejected_without_valid_migration_history(
+    monkeypatch, current_overrides, history, message
+):
+    bind = _FakeBind(_canonical_row(**current_overrides), history)
+    _install_fake_op(monkeypatch, bind)
+
+    with pytest.raises(RuntimeError, match=message):
+        MIGRATION_0125.upgrade()
+
+    assert bind.writes == []
 
 
 def test_agm001_reconciliation_rejects_any_drift_from_exact_legacy_definition():
