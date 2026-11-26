@@ -3,10 +3,10 @@ import hashlib
 import importlib.util
 import json
 import re
+import uuid
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-import uuid
 
 import pytest
 
