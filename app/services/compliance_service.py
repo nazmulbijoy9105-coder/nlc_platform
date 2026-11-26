@@ -225,6 +225,17 @@ def _rjsc_catalogue_binding_snapshot(catalogue_rows, catalogue_identity_conflict
     }
 
 
+def _catalogue_identity_query():
+    """Select only fields needed to bind the canonical legal-rule catalogue."""
+    return select(
+        LegalRule.rule_id,
+        LegalRule.rule_version,
+        LegalRule.is_active,
+        LegalRule.statutory_basis,
+        LegalRule.verification_status,
+    ).order_by(LegalRule.rule_id)
+
+
 def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     """Compare the complete DB snapshot with every canonical evaluator identity."""
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
@@ -616,7 +627,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
         catalogue_rows = list((
             await self.db.execute(
-                select(LegalRule).order_by(LegalRule.rule_id)
+                _catalogue_identity_query()
             )
         ).scalars().all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
