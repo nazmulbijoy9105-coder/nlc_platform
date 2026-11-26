@@ -203,7 +203,7 @@ jobs:
         run: |
           (
             cd artifacts/security-audit
-            find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\\0' \
+            find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' \
               | sort -z \
               | xargs -0 -r sha256sum > SHA256SUMS
             sha256sum -c SHA256SUMS
