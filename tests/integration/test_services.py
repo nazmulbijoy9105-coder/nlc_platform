@@ -323,10 +323,6 @@ class TestComplianceService:
         )
         mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
 
-        # Use the row produced by the real Alembic migration chain. This test
-        # Bind the fixture finding to a real active catalogue identity. Without
-        # this row, the fail-closed identity gate correctly quarantines AGM-001
-        # and no customer-facing ComplianceFlag row should be created.
         # Use the row produced by the real Alembic migration chain. The test
         # must not seed or rewrite catalogue data to make identity binding pass.
         catalogue_result = await db.execute(
@@ -334,10 +330,6 @@ class TestComplianceService:
         )
         catalogue_rule = catalogue_result.scalar_one()
         assert catalogue_rule.is_active is True
-        assert catalogue_rule.statutory_basis == canonical_agm_basis
-
-        # Exercise the same catalogue reconciliation helper used by evaluation
-        # before invoking the mocked engine. A quarantined identity must fail here.
         assert catalogue_rule.statutory_basis == canonical_agm_001_basis
 
         # The migration must reconcile the real catalogue row before evaluation.
@@ -363,9 +355,6 @@ class TestComplianceService:
         assert len(result["review_findings"]) == 1
         assert result["review_findings"][0]["rule_id"] == "AGM-001"
 
-        # Identity binding is asserted independently of release redaction:
-        # the finding must be attributed to the migrated canonical catalogue row.
-        # Identity binding is asserted independently of release redaction.
         # Identity binding is independent of release redaction: the finding
         # must bind to the migrated canonical catalogue identity.
         assert (
@@ -373,9 +362,6 @@ class TestComplianceService:
             == "MATCHED_CATALOGUE_IDENTITY"
         )
 
-        # Release-redaction contract: a matched identity is still withheld
-        # from customer-facing scoring while the product release is paused.
-        # Release-redaction assertions cannot pass on a quarantined identity.
         # Release-redaction assertions are kept separate from identity checks.
         assert result["review_findings"][0]["score_impact_applied"] == 0
         assert "No statutory conclusion" in result["review_findings"][0]["message"]
