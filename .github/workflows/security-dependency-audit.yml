@@ -198,6 +198,13 @@ jobs:
           print(json.dumps(metadata, indent=2))
           PY
 
+      - name: Hash retained audit evidence
+        if: always()
+        run: |
+          find artifacts/security-audit -maxdepth 1 -type f ! -name SHA256SUMS -print0 \
+            | sort -z \
+            | xargs -0 -r sha256sum > artifacts/security-audit/SHA256SUMS
+
       - name: Upload machine-readable audit evidence
         if: always()
         uses: actions/upload-artifact@v4
