@@ -74,9 +74,13 @@ requires a separately reviewed wheel and updated hash before deployment.
 
 ## Findings requiring verification before closure
 
-All five items were verified and closed on 2026-11-25; the release gate
-(`scripts/check_security_closure.py`) re-verifies this checklist fail-closed in
-both production deployment workflows before any migration or deploy runs.
+All five items were verified and closed on 2026-11-25. The release gate
+(`scripts/check_security_closure.py`) runs fail-closed in both production
+deployment workflows before any migration or deploy runs. It only checks that
+every numbered item carries a `Status: CLOSED` line and that every `docs/`
+evidence file referenced in this section exists; it does not re-verify the
+findings or the contents of the evidence, which remain the responsibility of
+the reviewers who closed them.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile guard verifies the loaded decoder is >= 1.2.1. Any non-matching production platform remains blocked until it has its own reviewed wheel and hash.
    Status: CLOSED
