@@ -25,19 +25,33 @@ from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
 
+
+def _limiter_storage_uri(settings) -> str:
+    redis_url = (settings.redis_url or "").strip()
+    if settings.is_production_runtime:
+        if not redis_url or redis_url.lower().startswith("memory:"):
+            raise RuntimeError(
+                "A shared Redis URL (REDIS_URL or CELERY_BROKER_URL) is required for the "
+                "auth rate limiter in production; the process-local memory:// store would "
+                "multiply the login allowance across replicas and is reserved for development."
+            )
+        return redis_url
+    return redis_url or "memory://"
+
+
 def _build_limiter() -> Limiter:
     """Build the auth rate limiter (audit finding F-02).
 
-    Mounts the shared Redis storage when a Redis URL is configured so
-    buckets survive restarts and are shared across replicas, with the
-    in-process store only as the local/fallback carrier. If the storage
+    Mounts the shared Redis storage so buckets survive restarts and are shared
+    across replicas. Production and Render runtimes must configure Redis and
+    refuse to start without it; the process-local ``memory://`` store is only
+    selected when no Redis URL is configured outside production. If the storage
     backend dies at runtime, the in-memory fallback keeps breached requests
     rejected instead of surfacing backend errors.
     """
-    settings = get_settings()
     return Limiter(
         key_func=get_remote_address,
-        storage_uri=settings.redis_url or "memory://",
+        storage_uri=_limiter_storage_uri(get_settings()),
         in_memory_fallback=["10/minute", "5/minute"],
     )
 

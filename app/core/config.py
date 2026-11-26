@@ -60,6 +60,10 @@ class Settings(BaseSettings):
             self.REQUIRE_RLS_APP_ROLE = True
         return self
 
+    @property
+    def is_production_runtime(self) -> bool:
+        return _RENDER_RUNTIME or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+
     def _runtime_database_url(self) -> str:
         """Resolve only the application connection; never leak migration credentials."""
         app_url = self.APP_DATABASE_URL.strip()
