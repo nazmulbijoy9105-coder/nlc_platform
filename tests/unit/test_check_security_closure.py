@@ -258,3 +258,67 @@ def test_live_dependency_audit_fails_when_requirements_are_missing(repo, monkeyp
 
     assert ok is False
     assert "requirements file is missing" in message
+
+
+def test_duplicate_closure_item_fails_closed(repo, capsys):
+    # Regression guard for PR #432: a superseded block left in place made the
+    # gate see two item-1 blocks. The fail-closed gate must reject duplicates.
+    _write_doc(
+        repo,
+        "1. First\n   Status: CLOSED\n1. Duplicate first\n   Status: CLOSED",
+    )
+
+    assert closure.main([]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_structure_only_passes_with_an_open_item(repo, capsys):
+    # The PR-level structural job must not force every item CLOSED; an OPEN
+    # item is reported as info, not a failure (the production gate still blocks).
+    _write_doc(repo, "1. Closed\n   Status: CLOSED\n2. Pending\n   Status: OPEN")
+
+    assert closure.main(["--structure-only"]) == 0
+    out = capsys.readouterr().out
+    assert "OPEN: 2. Pending" in out
+    assert "1 OPEN item(s)" in out
+
+
+def test_structure_only_fails_on_duplicate_item(repo, capsys):
+    _write_doc(
+        repo,
+        "1. First\n   Status: CLOSED\n1. Duplicate\n   Status: CLOSED",
+    )
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_structure_only_fails_on_missing_status(repo, capsys):
+    _write_doc(repo, "1. Item with no status line\n   some prose only")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+
+
+def test_structure_only_fails_on_missing_evidence(repo, capsys):
+    _write_doc(repo, "1. Item: see `docs/evidence/report.md`\n   Status: CLOSED")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "missing evidence file: docs/evidence/report.md" in capsys.readouterr().out
+
+
+def test_structure_only_does_not_run_live_audit(tmp_path, monkeypatch):
+    # The structural job must not depend on pip-audit or requirements.txt.
+    monkeypatch.chdir(tmp_path)
+    _write_doc(tmp_path, "1. Closed\n   Status: CLOSED")
+
+    calls = {"count": 0}
+
+    def boom() -> tuple[bool, str]:
+        calls["count"] += 1
+        return False, "audit must not run in structure-only mode"
+
+    monkeypatch.setattr(closure, "audit_current_dependencies", boom)
+
+    assert closure.main(["--structure-only"]) == 0
+    assert calls["count"] == 0
