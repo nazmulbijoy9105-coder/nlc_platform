@@ -1,26 +1,35 @@
-"""The controlled production release must run the security-closure gate first (audit F-12)."""
-
 from pathlib import Path
 
 import yaml
 
+
 ROOT = Path(__file__).resolve().parents[2]
-RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "production-release.yml"
 GATE_COMMAND = "python scripts/check_security_closure.py"
 
 
-def _steps() -> list[dict]:
-    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
-    return workflow["jobs"]["release"]["steps"]
+def _workflow_steps(path: str, job_name: str) -> list[dict]:
+    workflow = yaml.safe_load((ROOT / path).read_text(encoding="utf-8"))
+    return workflow["jobs"][job_name]["steps"]
 
 
-def test_security_closure_gate_runs_before_any_production_step():
-    steps = _steps()
-    gate_index = next(
-        i for i, step in enumerate(steps) if step.get("run", "").strip() == GATE_COMMAND
+def _gate_index(steps: list[dict]) -> int:
+    matches = [
+        index
+        for index, step in enumerate(steps)
+        if step.get("run", "").strip() == GATE_COMMAND
+    ]
+    assert len(matches) == 1, f"expected exactly one security gate, found {len(matches)}"
+    return matches[0]
+
+
+def test_controlled_production_release_checks_security_closure_before_operations():
+    steps = _workflow_steps(".github/workflows/production-release.yml", "release")
+    gate_index = _gate_index(steps)
+
+    assert any(
+        step.get("uses", "").startswith("actions/checkout")
+        for step in steps[:gate_index]
     )
-
-    assert any(step.get("uses", "").startswith("actions/checkout") for step in steps[:gate_index])
     names = [step.get("name", "") for step in steps]
     for production_step in (
         "Verify production branch, preserved backup and Render target",
@@ -30,9 +39,17 @@ def test_security_closure_gate_runs_before_any_production_step():
     ):
         assert gate_index < names.index(production_step), production_step
 
-
-def test_security_closure_gate_failure_blocks_the_release():
-    gate = next(step for step in _steps() if step.get("run", "").strip() == GATE_COMMAND)
-
+    gate = steps[gate_index]
     assert not gate.get("continue-on-error")
     assert "if" not in gate
+
+
+def test_ci_triggered_render_deploy_checks_security_closure_before_migrations():
+    steps = _workflow_steps(".github/workflows/deploy-vercel-backend.yml", "deploy-render")
+    gate_index = _gate_index(steps)
+    names = [step.get("name", "") for step in steps]
+
+    assert gate_index < names.index("Apply production migrations before Render deploy")
+    gate = steps[gate_index]
+    assert gate.get("if") == "steps.freshness.outputs.current == 'true'"
+    assert not gate.get("continue-on-error")

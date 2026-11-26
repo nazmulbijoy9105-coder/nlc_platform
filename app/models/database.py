@@ -12,8 +12,6 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from fastapi import HTTPException, Request
-
 from app.db_url import is_render_runtime, normalize_asyncpg_url
 from app.models.base import Base
 from sqlalchemy import text
@@ -141,50 +139,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             await set_app_role(session)
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
-
-
-
-
-async def get_db_for_user(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """
-    FastAPI dependency: session with RLS context for the authenticated user.
-    Extracts user_id from JWT Bearer token. Falls back to ANONYMOUS.
-    """
-    from app.core.security import decode_token
-
-    principal = "ANONYMOUS"
-    auth_header = request.headers.get("authorization", "")
-    if auth_header:
-        if not auth_header.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Invalid authorization header")
-        payload = decode_token(auth_header[7:], expected_type="access")
-        jti = payload.get("jti") if payload else None
-        if not payload or not isinstance(jti, str) or not jti:
-            raise HTTPException(status_code=401, detail="Invalid or expired access token")
-        from starlette.concurrency import run_in_threadpool
-        from app.core.token_blacklist import BlacklistUnavailable, is_revoked
-        try:
-            if await run_in_threadpool(is_revoked, jti, fail_closed=True):
-                raise HTTPException(status_code=401, detail="Token has been revoked")
-        except BlacklistUnavailable as exc:
-            raise HTTPException(status_code=503, detail="Authentication service temporarily unavailable") from exc
-        principal = payload.get("sub") or payload.get("user_id") or ""
-        if not principal:
-            raise HTTPException(status_code=401, detail="Access token has no user identity")
-
-    async with AsyncSessionLocal() as session:
-        try:
-            if principal == "ANONYMOUS":
-                await _set_signed_rls_principal(session, principal)
-            else:
-                await set_rls_context(session, principal)
             yield session
             await session.commit()
         except Exception:
