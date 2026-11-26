@@ -299,15 +299,22 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
         elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
             reason = "STATUTORY_BASIS_MISMATCH"
         elif rule_id == "AGM-001":
-            actual_rule_type = getattr(row.rule_type, "value", row.rule_type)
-            actual_condition = row.rule_condition
+            # Partial row-like objects are used by legacy callers and tests;
+            # missing identity fields must fail closed, not raise AttributeError
+            # or accidentally establish a canonical binding.
+            actual_rule_type = getattr(row, "rule_type", None)
+            actual_rule_type = getattr(actual_rule_type, "value", actual_rule_type)
+            actual_condition = getattr(row, "rule_condition", None)
             if isinstance(actual_condition, str):
                 import json
-                actual_condition = json.loads(actual_condition)
+                try:
+                    actual_condition = json.loads(actual_condition)
+                except (TypeError, ValueError):
+                    actual_condition = None
             definition_matches = (
-                row.rule_name == canonical_agm001_definition["rule_name"]
+                getattr(row, "rule_name", None) == canonical_agm001_definition["rule_name"]
                 and str(actual_rule_type) == canonical_agm001_definition["rule_type"]
-                and row.description == canonical_agm001_definition["description"]
+                and getattr(row, "description", None) == canonical_agm001_definition["description"]
                 and actual_condition == canonical_agm001_definition["rule_condition"]
             )
             if not definition_matches:
