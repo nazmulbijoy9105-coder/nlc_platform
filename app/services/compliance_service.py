@@ -27,7 +27,7 @@ from dataclasses import fields as dataclass_fields
 from datetime import UTC, datetime
 from typing import NamedTuple
 
-from sqlalchemy import and_, false, func, or_, select, text, true, update
+from sqlalchemy import and_, false, func, select, text, true, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
