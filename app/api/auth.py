@@ -82,6 +82,7 @@ def _build_limiter() -> Limiter:
         # Fallback is intentionally disabled: process-local counters cannot
         # preserve shared Redis quota across workers.
         in_memory_fallback=["10/minute"],
+        in_memory_fallback_enabled=False,
     )
 
 
