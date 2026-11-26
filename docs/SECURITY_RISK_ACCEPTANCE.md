@@ -77,11 +77,15 @@ requires a separately reviewed wheel and updated hash before deployment.
 
 All five items were verified and closed on 2026-11-25. The release gate
 (`scripts/check_security_closure.py`) runs fail-closed in both production
-deployment workflows before any migration or deploy runs. It only checks that
-every numbered item carries a `Status: CLOSED` line and that every `docs/`
-evidence file referenced in this section exists; it does not re-verify the
-findings or the contents of the evidence, which remain the responsibility of
-the reviewers who closed them.
+deployment workflows before any migration or deploy runs. It checks every numbered item's `Status: CLOSED` marker and referenced
+`docs/` evidence files, and additionally runs `pip-audit -r requirements.txt`
+against the dependency graph resolved at release time. The live audit must
+produce a valid, non-empty machine-readable dependency inventory with zero
+vulnerabilities and a successful exit status. Its fresh report is retained as
+the `production-security-dependency-audit` workflow artifact. The dated
+25 November report below remains historical evidence and is not used as a
+substitute for the live release-time audit. Other finding-specific evidence
+remains subject to the documented review and release checks.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile guard verifies the loaded decoder is >= 1.2.1. Any non-matching production platform remains blocked until it has its own reviewed wheel and hash.
    Status: CLOSED
@@ -93,10 +97,11 @@ the reviewers who closed them.
 2. **Full dependency graph:** run `pip-audit -r requirements.txt` against the
    resolved production environment and retain the machine-readable report.
    Status: CLOSED
-   Closed 2026-11-25: `pip-audit -r requirements.txt` was run against the
-   resolved production environment (222 packages, 0 known vulnerabilities,
-   no fixes required) and the machine-readable report is retained at
-   `docs/security/pip-audit-2026-11-25.json`.
+   Historical evidence (2026-11-25): `pip-audit -r requirements.txt` reported
+   222 packages and 0 known vulnerabilities; the dated report is retained at
+   `docs/security/pip-audit-2026-11-25.json`. Each release now reruns the
+   audit against the then-current resolved graph; only that live result can
+   satisfy the release gate.
 3. **Compatibility:** run the complete backend suite against the upgraded
    FastAPI/Starlette, filelock, Pillow, and other dependency versions before
    deployment. Do not deploy this branch based only on successful resolution.
