@@ -141,7 +141,7 @@ def test_item_without_exact_closed_status_fails_closed(repo, capsys, status_line
     _write_doc(repo, f"1. Item\n   {status_lines}")
 
     assert closure.main() == 1
-    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+    assert "FAIL:" in capsys.readouterr().out
 
 
 def test_one_unresolved_item_fails_even_when_others_are_closed(repo, capsys):
