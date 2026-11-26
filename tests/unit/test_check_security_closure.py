@@ -387,8 +387,8 @@ def test_empty_closure_record_fails(repo, capsys):
     assert "no description" in capsys.readouterr().out
 
 
-def test_unicode_decimal_marker_does_not_count(repo, capsys):
-    closure.EXPECTED_FINDING_NUMBERS = frozenset({1, 2})
+def test_unicode_decimal_marker_does_not_count(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2}))
     _write_doc(repo, "1. First\n   Status: CLOSED\n٢. Second\n   Status: CLOSED")
     assert closure.main(["--structure-only"]) == 1
     assert "missing required closure item(s): 2" in capsys.readouterr().out
