@@ -64,3 +64,23 @@ def test_build_limiter_uses_memory_storage_in_development_without_redis(monkeypa
     limiter = auth_module._build_limiter()
 
     assert limiter._storage_uri == "memory://"
+
+
+def test_build_limiter_configures_bounded_redis_timeouts(monkeypatch):
+    settings = _settings(ENVIRONMENT="production", redis_url=REDIS_URL)
+    captured = {}
+
+    class LimiterStub:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(auth_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(auth_module, "Limiter", LimiterStub)
+
+    auth_module._build_limiter()
+
+    assert captured["storage_uri"] == REDIS_URL
+    assert captured["storage_options"] == {
+        "socket_connect_timeout": 1.0,
+        "socket_timeout": 1.0,
+    }
