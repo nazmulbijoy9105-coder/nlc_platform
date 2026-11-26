@@ -168,7 +168,9 @@ def test_unverified_unknown_product_flag_never_exposes_score_impact(monkeypatch)
 
 def test_flag_summary_separates_pending_review_from_released_findings(monkeypatch):
     import asyncio
+    from types import SimpleNamespace
     from unittest.mock import AsyncMock, MagicMock
+
     import app.rule_engine.engine as engine_module
     from app.services.compliance_service import ComplianceService
 
@@ -176,8 +178,6 @@ def test_flag_summary_separates_pending_review_from_released_findings(monkeypatc
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", {"AGM-001"})
     summary_result = MagicMock()
     summary_result.mappings.return_value.one_or_none.return_value = {"total_active": 2}
-    from types import SimpleNamespace
-
     flags_result = MagicMock()
     flags_result.one.return_value = SimpleNamespace(
         total_active=0,
