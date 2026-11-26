@@ -957,7 +957,7 @@ async def get_flags(company_id: uuid.UUID, db: AsyncSession = Depends(get_db_for
     )
     catalogue_rows = list((
         await db.execute(_catalogue_identity_query())
-    ).scalars().all())
+    ).all())
     conflicted_rule_ids = set(_catalogue_identity_conflicts(catalogue_rows))
     return [
         _flag_to_response(flag)
