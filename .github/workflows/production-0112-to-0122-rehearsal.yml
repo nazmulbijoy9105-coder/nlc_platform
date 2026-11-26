@@ -79,10 +79,33 @@ jobs:
           BRANCH_NAME="nlc-0112-to-0128-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           payload=$(jq -n --arg name "$BRANCH_NAME" --arg parent "$NEON_PARENT_BRANCH_ID"             '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
           created=""
+          response_file=$(mktemp)
+          trap 'rm -f "$response_file"; cleanup' EXIT
           for attempt in $(seq 1 8); do
-            response=$(curl --silent --show-error --request POST \
+            http_status=$(curl --silent --show-error --request POST \
               "${AUTH[@]}" -H "Content-Type: application/json" \
-              --data "$payload" -w 
+              --data "$payload" -o "$response_file" -w "%{http_code}" "$API/branches") || {
+                echo "::error::Neon branch creation request failed at transport level."
+                exit 1
+              }
+            response_body=$(cat "$response_file")
+            if [[ "$http_status" == "423" ]]; then
+              delay=$((attempt * 10))
+              echo "Neon branch API is locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)."
+              sleep "$delay"
+              continue
+            fi
+            if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+              echo "::error::Neon branch creation returned HTTP $http_status: $response_body"
+              exit 1
+            fi
+            created="$response_body"
+            break
+          done
+          if [[ -z "$created" ]]; then
+            echo "::error::Neon branch API remained locked after bounded HTTP 423 retries."
+            exit 1
+          fi
           BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
           ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
           if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
