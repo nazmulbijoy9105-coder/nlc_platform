@@ -341,9 +341,15 @@ async def _postflight(
             version_parts[-1] = str(int(version_parts[-1]) + 1)
             expected_0128_history_version = ".".join(version_parts)
             version_parts[-1] = str(int(version_parts[-1]) + 1)
-            expected_final_version = ".".join(version_parts)
+            stable_fields = set(before_0128 or {}) - {
+                "statutory_basis", "description", "rule_condition", "rule_version",
+                "last_modified_at", "updated_at",
+            }
             if (
-                history_0128_row["actor_type"] != "MIGRATION"
+                not isinstance(before_0128, dict)
+                or set(before_0128) != set(original)
+                or any(before_0128.get(field) != original.get(field) for field in stable_fields)
+                or history_0128_row["actor_type"] != "MIGRATION"
                 or history_0128_row["changed_by"] is not None
                 or history_0128_row["migration_revision"] != "0128_agm001_calendar_month_definition"
                 or not history_0128_row["change_reason"]
