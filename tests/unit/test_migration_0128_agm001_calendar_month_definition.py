@@ -77,7 +77,7 @@ def _current_row(**overrides):
 def _history_row(**overrides):
     row = {
         "version": "1.0.0",
-        "change_reason": "0125 historical citation reconciliation",
+        "change_reason": MIGRATION.PREVIOUS_CHANGE_REASON,
         "changed_by": None,
         "actor_type": "MIGRATION",
         "migration_revision": MIGRATION.PREVIOUS_REVISION,
