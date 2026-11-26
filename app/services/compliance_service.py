@@ -235,6 +235,14 @@ def _catalogue_identity_query():
         LegalRule.verification_status,
     ).order_by(LegalRule.rule_id)
 
+def _catalogue_snapshot_query():
+    """Load complete ORM rule records required by immutable outcome snapshots.
+
+    Do not replace this with _catalogue_identity_query(): the snapshot builder
+    also consumes verification provenance such as verified_by/verified_at.
+    """
+    return select(LegalRule).order_by(LegalRule.rule_id)
+
 
 def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     """Compare the complete DB snapshot with every canonical evaluator identity."""
@@ -626,9 +634,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # used for this run. Engine logic remains deployed Python; DB metadata
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
         catalogue_rows = list((
-            await self.db.execute(
-                select(LegalRule).order_by(LegalRule.rule_id)
-            )
+            await self.db.execute(_catalogue_snapshot_query())
         ).scalars().all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
