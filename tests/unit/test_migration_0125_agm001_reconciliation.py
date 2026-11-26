@@ -360,6 +360,8 @@ class _LegacyExecutionBind:
             self.current["statutory_basis"] = params["canonical_basis"]
             self.current["rule_version"] = params["next_version"]
             return _WriteResult(rowcount=1)
+        if sql.startswith("SELECT version") and "legal_rule_versions" in sql:
+            return _Result(self.history)
         if sql.startswith("SELECT rule.rule_name"):
             return _Result([self.current])
         if "legal_rule_identity_archive" in sql or sql.startswith(
