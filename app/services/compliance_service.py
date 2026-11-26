@@ -247,10 +247,25 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
     # evaluator and seed catalogue use the 18-calendar-month definition; a
     # matching Section 81(1) string must never bless a drifted row (including
     # the historical 548-day approximation).
-    from scripts.seed_rules import ILRMF_RULES
-
-    canonical_catalogue_rules = {
-        item["rule_id"]: item for item in ILRMF_RULES
+    canonical_agm001_definition = {
+        "rule_name": "First AGM Default",
+        "rule_type": "DEADLINE",
+        "description": (
+            "First AGM must be held within 18 calendar months of incorporation. "
+            "Calculate with calendar-month arithmetic; do not use a fixed-day approximation."
+        ),
+        "rule_condition": {
+            "check_fn": "check_agm_001",
+            "trigger": (
+                "agm_history_verified == True AND agm_count == 0 AND "
+                "today > add_calendar_months(incorporation_date, 18)"
+            ),
+            "data_points": [
+                "agm_history_verified",
+                "incorporation_date",
+                "agm_count",
+            ],
+        },
     }
     conflicts: dict[str, dict] = {}
     for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
@@ -265,17 +280,16 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
         elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
             reason = "STATUTORY_BASIS_MISMATCH"
         elif rule_id == "AGM-001":
-            expected = canonical_catalogue_rules.get(rule_id)
             actual_rule_type = getattr(row.rule_type, "value", row.rule_type)
             actual_condition = row.rule_condition
             if isinstance(actual_condition, str):
                 import json
                 actual_condition = json.loads(actual_condition)
-            definition_matches = expected is not None and (
-                row.rule_name == expected["rule_name"]
-                and str(actual_rule_type) == str(expected["rule_type"])
-                and row.description == expected["description"]
-                and actual_condition == expected["rule_condition"]
+            definition_matches = (
+                row.rule_name == canonical_agm001_definition["rule_name"]
+                and str(actual_rule_type) == canonical_agm001_definition["rule_type"]
+                and row.description == canonical_agm001_definition["description"]
+                and actual_condition == canonical_agm001_definition["rule_condition"]
             )
             if not definition_matches:
                 reason = "RULE_DEFINITION_MISMATCH"
