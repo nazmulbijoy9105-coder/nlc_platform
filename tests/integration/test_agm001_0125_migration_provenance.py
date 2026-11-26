@@ -44,7 +44,14 @@ BEFORE_IMAGE_FIELDS = frozenset(
     }
 )
 MIGRATION_MUTATED_FIELDS = frozenset(
-    {"statutory_basis", "rule_version", "last_modified_at", "updated_at"}
+    {
+        "statutory_basis",
+        "description",
+        "rule_condition",
+        "rule_version",
+        "last_modified_at",
+        "updated_at",
+    }
 )
 
 
@@ -118,6 +125,20 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
     assert current["statutory_basis"] == CANONICAL_BASIS
     assert current["rule_name"] == before["rule_name"]
     assert current["rule_type"] == before["rule_type"]
-    assert current["description"] == before["description"]
-    assert current["rule_condition"] == before["rule_condition"]
+    assert current["description"] == (
+        "First AGM must be held within 18 calendar months of incorporation. "
+        "Calculate with calendar-month arithmetic; do not use a fixed-day approximation."
+    )
+    assert current["rule_condition"] == {
+        "check_fn": "check_agm_001",
+        "trigger": (
+            "agm_history_verified == True AND agm_count == 0 AND "
+            "today > add_calendar_months(incorporation_date, 18)"
+        ),
+        "data_points": [
+            "agm_history_verified",
+            "incorporation_date",
+            "agm_count",
+        ],
+    }
     assert current["is_active"] is True
