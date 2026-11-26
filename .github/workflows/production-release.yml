@@ -43,6 +43,9 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Require all security-closure items to be CLOSED (audit F-12)
+        run: python scripts/check_security_closure.py
+
       - name: Install migration and parity dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt
 
