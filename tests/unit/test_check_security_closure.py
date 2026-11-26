@@ -5,6 +5,8 @@ import pytest
 from scripts import check_security_closure as closure
 
 SECTION = closure.SECTION_TITLE
+# Keep a stable reference so direct audit tests bypass the main()-only fixture stub.
+_AUDIT_CURRENT_DEPENDENCIES = closure.audit_current_dependencies
 
 
 def _write_doc(root: Path, items: str) -> None:
@@ -18,6 +20,7 @@ def _write_doc(root: Path, items: str) -> None:
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(closure, "audit_current_dependencies", lambda: (True, "test audit passed"))
     return tmp_path
 
 
@@ -174,3 +177,84 @@ def test_collapsed_reference_link_definition_outside_section_passes(repo):
     )
 
     assert closure.main() == 0
+
+
+
+def test_live_dependency_audit_writes_fresh_report_and_passes(repo, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    requirements = repo / "requirements.txt"
+    requirements.write_text("example==1.0", encoding="utf-8")
+    report_path = repo / "artifacts" / "security" / "pip-audit-current.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("stale report", encoding="utf-8")
+    report = {"dependencies": [{"name": "example", "version": "1.0", "vulns": []}], "fixes": []}
+    monkeypatch.setattr(closure, "REQUIREMENTS_PATH", requirements)
+    monkeypatch.setattr(closure, "CURRENT_AUDIT_REPORT", report_path)
+    monkeypatch.setattr(
+        closure.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout=json.dumps(report), stderr=""),
+    )
+
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
+
+    assert ok is True
+    assert "packages=1" in message
+    assert json.loads(report_path.read_text(encoding="utf-8")) == report
+
+
+def test_live_dependency_audit_fails_on_vulnerability(repo, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    requirements = repo / "requirements.txt"
+    requirements.write_text("example==1.0", encoding="utf-8")
+    report_path = repo / "artifacts" / "security" / "pip-audit-current.json"
+    report = {
+        "dependencies": [
+            {"name": "example", "version": "1.0", "vulns": [{"id": "PYSEC-TEST"}]}
+        ],
+        "fixes": [],
+    }
+    monkeypatch.setattr(closure, "REQUIREMENTS_PATH", requirements)
+    monkeypatch.setattr(closure, "CURRENT_AUDIT_REPORT", report_path)
+    monkeypatch.setattr(
+        closure.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout=json.dumps(report), stderr=""),
+    )
+
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
+
+    assert ok is False
+    assert "vulnerabilities=1" in message
+    assert report_path.is_file()
+
+
+def test_live_dependency_audit_fails_on_invalid_json(repo, monkeypatch):
+    from types import SimpleNamespace
+
+    requirements = repo / "requirements.txt"
+    requirements.write_text("example==1.0", encoding="utf-8")
+    monkeypatch.setattr(closure, "REQUIREMENTS_PATH", requirements)
+    monkeypatch.setattr(
+        closure.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="not-json", stderr=""),
+    )
+
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
+
+    assert ok is False
+    assert "valid JSON" in message
+
+
+def test_live_dependency_audit_fails_when_requirements_are_missing(repo, monkeypatch):
+    monkeypatch.setattr(closure, "REQUIREMENTS_PATH", repo / "missing-requirements.txt")
+
+    ok, message = _AUDIT_CURRENT_DEPENDENCIES()
+
+    assert ok is False
+    assert "requirements file is missing" in message

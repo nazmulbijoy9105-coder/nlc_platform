@@ -99,10 +99,16 @@ CMD ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info", "--sche
 FROM runtime-base AS api
 # Render injects PORT (default 10000). Keep the local fallback aligned.
 ENV PORT=10000
+ENV FORWARDED_ALLOW_IPS="127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT:-10000}/api/v1/health/live" || exit 1
 
 # Schema changes are applied by the CI-gated migration step before Render deploy.
 # The API container never receives the privileged migration credential.
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-10000}\""]
+# Honour X-Forwarded-For only from TCP peers in FORWARDED_ALLOW_IPS (the
+# platform's private/loopback proxy hop). The rightmost entry outside that list
+# is the client; caller-supplied leading entries cannot choose the limit key (F-02).
+# Never set FORWARDED_ALLOW_IPS to "*". Add public edge-proxy ranges to the list
+# if Render's X-Forwarded-For carries them after the client address.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-10000}\" --proxy-headers --forwarded-allow-ips \"${FORWARDED_ALLOW_IPS:-127.0.0.1}\""]
