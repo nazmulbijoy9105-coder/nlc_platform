@@ -2,7 +2,7 @@
 
 ## Full dependency audit
 
-<badge>PASS — zero package advisories</badge>
+**Audit outcome: PASS — zero package advisories.**
 
 - Workflow: [Full dependency security audit, run #4](https://github.com/nazmulbijoy9105-coder/nlc_platform/actions/runs/45866008549)
 - Audit tool: `pip-audit 2.10.1`
