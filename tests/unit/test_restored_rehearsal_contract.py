@@ -48,6 +48,7 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
+    assert EXPECTED_HEAD_REVISION == "0127_one_active_rescue_plan_per_company"
     assert EXPECTED_START_REVISION == "0042_dedup_key"
 
 
@@ -178,3 +179,53 @@ def test_role_preflight_passes_only_noinherit_roles_without_memberships():
 
     assert result["status"] == "PASS"
     assert result["restricted_memberships"] == []
+
+def test_0125_agm001_migration_records_prior_definition_and_advances_version():
+    migration = (
+        ROOT / "alembic/versions/0125_reconcile_agm001_statutory_basis.py"
+    ).read_text(encoding="utf-8")
+
+    history_insert = migration.index(
+        "INSERT INTO public.legal_rule_versions"
+    )
+    catalogue_update = migration.index(
+        "UPDATE public.legal_rules"
+    )
+    assert history_insert < catalogue_update
+    assert "to_jsonb(rule) AS previous_definition" in migration
+    assert "previous_version" in migration
+    assert "changed_by" in migration
+    assert "actor_type" in migration
+    assert "'MIGRATION'" in migration
+    assert "migration_revision" in migration
+    assert "op.alter_column(" in migration
+    assert 'nullable=True' in migration
+    assert "rule_version = :next_version" in migration
+    assert "last_modified_at = now()" in migration
+    assert "last_modified_by = :changed_by" not in migration
+
+
+def test_0125_migration_actor_does_not_require_a_bootstrap_user():
+    migration = (
+        ROOT / "alembic/versions/0125_reconcile_agm001_statutory_basis.py"
+    ).read_text(encoding="utf-8")
+    model = (ROOT / "app/models/rules.py").read_text(encoding="utf-8")
+
+    assert "changed_by, changed_at" in migration
+    assert "VALUES" in migration
+    assert "'MIGRATION', :migration_revision" in migration
+    assert "COALESCE(" not in migration
+    assert "active SUPER_ADMIN user is available" not in migration
+    assert "changed_by IS NULL" in migration
+    assert "migration_revision IS NOT NULL" in migration
+    assert "changed_by: Mapped[uuid.UUID | None]" in model
+    assert 'server_default="USER"' in model
+    assert "ck_legal_rule_versions_actor_provenance" in model
+
+
+def test_production_rehearsal_active_catalogue_guard_names_0125():
+    source = (
+        ROOT / "scripts/rehearse_production_0112_to_0122.py"
+    ).read_text(encoding="utf-8")
+    assert '"0125 requires exactly 85 active catalogue rows "' in source
+    assert '"0124 requires exactly 85 active catalogue rows "' not in source

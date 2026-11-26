@@ -60,6 +60,10 @@ class Settings(BaseSettings):
             self.REQUIRE_RLS_APP_ROLE = True
         return self
 
+    @property
+    def is_production_runtime(self) -> bool:
+        return _RENDER_RUNTIME or self.ENVIRONMENT.strip().lower() in {"prod", "production"}
+
     def _runtime_database_url(self) -> str:
         """Resolve only the application connection; never leak migration credentials."""
         app_url = self.APP_DATABASE_URL.strip()
@@ -140,12 +144,15 @@ class Settings(BaseSettings):
     ADMIN_LAST_NAME: str = os.getenv("ADMIN_LAST_NAME", "Admin")
 
     # Redis
-    # FIX 1: Use lowercase 'redis_url' to match main.py
     aws_s3_bucket: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "ap-southeast-1"
-    # FIX 2: Read from 'CELERY_BROKER_URL' to match Render Dashboard
+    # Dedicated Redis endpoint for Redis-backed features such as auth throttling.
+    # Keep it separate from CELERY_BROKER_URL, which may use AMQP or another
+    # non-Redis transport.
+    REDIS_URL: str = ""
+    # Backwards-compatible Celery/Redis URL alias used by existing worker code.
     redis_url: str = (
         os.getenv("CELERY_BROKER_URL")
         or os.getenv("REDIS_URL")

@@ -1,12 +1,14 @@
 import os
+from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.core.dependencies import get_auth_db, get_db_for_user
 from app.core.security import (
     create_access_token,
@@ -24,7 +26,67 @@ from app.models.user import User
 from app.services.notification_service import ActivityService
 from app.services.user_service import UserService
 
-_limiter = Limiter(key_func=get_remote_address)
+
+def _limiter_storage_uri(settings) -> str:
+    # Rate-limit storage must never inherit CELERY_BROKER_URL: Celery supports
+    # brokers (for example AMQP) that are not valid SlowAPI Redis backends.
+    redis_url = (settings.REDIS_URL or "").strip()
+    parsed_scheme = urlsplit(redis_url).scheme.lower() if redis_url else ""
+    if redis_url and parsed_scheme not in {"redis", "rediss"}:
+        if settings.is_production_runtime:
+            raise RuntimeError(
+                "REDIS_URL for the auth rate limiter must use redis:// or rediss://; "
+                "CELERY_BROKER_URL is not a substitute."
+            )
+        return "memory://"
+
+    if settings.is_production_runtime:
+        if not redis_url:
+            raise RuntimeError(
+                "A dedicated REDIS_URL is required for the auth rate limiter in production; "
+                "CELERY_BROKER_URL is not a substitute and process-local memory storage "
+                "would multiply the login allowance across replicas."
+            )
+        return redis_url
+    return redis_url or "memory://"
+
+
+def _build_limiter() -> Limiter:
+    """Build the auth rate limiter (audit finding F-02).
+
+    Mounts the dedicated REDIS_URL storage so buckets survive restarts and are shared
+    across replicas. CELERY_BROKER_URL is never used as a limiter backend.
+    Production and Render runtimes must configure Redis and refuse to start without it;
+    the process-local ``memory://`` store is only selected outside production.
+    Runtime Redis failures are deliberately not downgraded to process-local
+    counters: doing so would reset the shared quota independently on each worker.
+
+    Header emission is enabled so 429 responses carry ``Retry-After``. SlowAPI
+    then writes rate-limit headers onto every limited endpoint's response, so
+    each ``@limiter.limit`` endpoint must declare a ``response: Response``
+    parameter.
+    """
+    return Limiter(
+        key_func=get_remote_address,
+        headers_enabled=True,
+        storage_uri=_limiter_storage_uri(get_settings()),
+        # SlowAPI performs synchronous storage operations while decorating
+        # async routes. Bound both connection establishment and Redis commands
+        # so an unresponsive Redis server cannot stall the worker indefinitely.
+        storage_options={
+            "socket_connect_timeout": 1.0,
+            "socket_timeout": 1.0,
+        },
+        # One global fallback ceiling preserves login at 10/minute. The
+        # route-specific 5/minute decorators remain the stricter 2FA limits.
+        # Fallback is intentionally disabled: process-local counters cannot
+        # preserve shared Redis quota across workers.
+        in_memory_fallback=["10/minute"],
+        in_memory_fallback_enabled=False,
+    )
+
+
+limiter = _build_limiter()
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -84,8 +146,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/login", response_model=LoginResponse)
-@_limiter.limit("10/minute")
-async def login(request: Request,body: LoginBody, db=Depends(get_auth_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, response: Response, body: LoginBody, db=Depends(get_auth_db)):
     """Login with lockout protection, failed attempt tracking, and 2FA support."""
     from app.services.user_service import UserService
     svc = UserService(db)
@@ -227,9 +289,10 @@ class VerifyTOTPSetupRequest(BaseModel):
 
 
 @router.post("/2fa/confirm")
-@_limiter.limit("5/minute")
+@limiter.limit("5/minute")
 async def confirm_2fa_setup(
     request: Request,
+    response: Response,
     body: VerifyTOTPSetupRequest,
     current_user: dict = Depends(get_current_user),
     db=Depends(get_db_for_user),
@@ -252,8 +315,10 @@ async def confirm_2fa_setup(
 
 
 @router.post("/verify-2fa", response_model=LoginResponse)
-@_limiter.limit("5/minute")
-async def verify_2fa(request: Request, body: Verify2FARequest, db=Depends(get_db)):
+@limiter.limit("5/minute")
+async def verify_2fa(
+    request: Request, response: Response, body: Verify2FARequest, db=Depends(get_db)
+):
     """Verify a single-use 2FA challenge and then issue full tokens."""
     payload = decode_token(body.temp_token, expected_type="temp")
     jti = payload.get("jti") if payload else None

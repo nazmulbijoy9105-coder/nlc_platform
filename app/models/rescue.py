@@ -17,10 +17,12 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -44,6 +46,15 @@ class RescuePlan(FullMixin, Base):
     Completing all steps triggers full compliance re-evaluation.
     """
     __tablename__ = "rescue_plans"
+    __table_args__ = (
+        Index(
+            "uq_rescue_plans_one_active_per_company",
+            "company_id",
+            unique=True,
+            postgresql_where=text("is_active IS TRUE"),
+            sqlite_where=text("is_active IS TRUE"),
+        ),
+    )
 
     # RES-010: link rescue plan to commercial engagement
     engagement_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -64,13 +75,18 @@ class RescuePlan(FullMixin, Base):
         Enum(RevenueTier, name="revenue_tier"), nullable=False
     )
     initial_risk_band: Mapped[str] = mapped_column(
-        String(20), nullable=False,
-        comment="Risk band that triggered rescue (RED or BLACK)"
+        String(20), nullable=False, default="NOT_EVALUATED",
+        comment="Risk band at plan creation; NOT_EVALUATED for score-independent review plans"
     )
-    initial_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    initial_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    workflow_mode: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="STATUTORY_ACTION_AUTHORIZED",
+        server_default="STATUTORY_ACTION_AUTHORIZED",
+        comment="Rescue workflow authorization mode; STATUTORY_ACTION_AUTHORIZED is the only persisted value. Review work is not a score or legal conclusion"
+    )
     source_rule_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list,
-        comment="Released statutory rule IDs supporting this rescue plan",
+        comment="Eligible RJSC rule IDs linked to active evidence-supported findings",
     )
     years_in_default: Mapped[int] = mapped_column(Integer, default=0)
 

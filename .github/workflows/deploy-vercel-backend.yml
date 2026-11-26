@@ -48,6 +48,10 @@ jobs:
             echo "Skipping stale CI result $TARGET_SHA; current main is $CURRENT_MAIN_SHA."
           fi
 
+      - name: Require all security-closure items to be CLOSED (audit F-12)
+        if: steps.freshness.outputs.current == 'true'
+        run: python scripts/check_security_closure.py
+
       # Migrations run from the CI-tested image, before any production deploy.
       # The credential is a GitHub Actions secret, not a Render API env var.
       - name: Apply production migrations before Render deploy

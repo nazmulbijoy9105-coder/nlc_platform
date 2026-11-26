@@ -1,10 +1,10 @@
-name: Controlled Production Release 0112 to 0123
+name: Controlled Production Release 0112 to 0127
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_release:
-        description: Type APPLY_0123_AND_DEPLOY to authorize the controlled production release
+        description: Type APPLY_0127_AND_DEPLOY to authorize the controlled production release
         required: true
         type: string
       api_url:
@@ -43,15 +43,20 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Require all security-closure items to be CLOSED (audit F-12)
+        run: python scripts/check_security_closure.py
+
       - name: Install migration and parity dependencies
         run: python -m pip install --no-cache-dir -r requirements.txt
 
       - name: Require explicit release confirmation and credentials
         shell: bash
+        env:
+          CONFIRM_PRODUCTION_RELEASE: ${{ inputs.confirm_production_release }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.confirm_production_release }}" != "APPLY_0123_AND_DEPLOY" ]]; then
-            echo "::error::Type APPLY_0123_AND_DEPLOY exactly to authorize this production operation."
+          if [[ "$CONFIRM_PRODUCTION_RELEASE" != "APPLY_0127_AND_DEPLOY" ]]; then
+            echo "::error::Type APPLY_0127_AND_DEPLOY exactly to authorize this production operation."
             exit 1
           fi
           for key in NEON_API_KEY RENDER_API_KEY; do
@@ -185,13 +190,12 @@ jobs:
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts-pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts-pre-migration-health.json >/dev/null
 
-      - name: Apply and verify production migrations 0112 through 0123
+      - name: Apply and verify production migrations 0112 through 0127
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          REPORT_PATH=artifacts/neon-production-0112-to-0123.json \
-            python scripts/rehearse_production_0112_to_0122.py
+          python scripts/rehearse_production_0112_to_0122.py
           mkdir -p artifacts
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
@@ -215,38 +219,129 @@ jobs:
         run: |
           set -euo pipefail
           RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
-          RESPONSE=$(curl --silent --show-error --fail --request POST \
-            --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          DEPLOY_URL="https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"
+          RESPONSE_FILE=$(mktemp)
+          trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+          # Timestamp the request so a prior deployment of the same SHA can never
+          # be mistaken for the deployment requested by this workflow.
+          REQUEST_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          HTTP_STATUS=$(curl --silent --show-error \
+            --output "$RESPONSE_FILE" --write-out '%{http_code}' \
+            --request POST --url "$DEPLOY_URL" \
             "${RENDER_AUTH[@]}" -H "Content-Type: application/json" \
             --data "{\"commitId\":\"$EXPECTED_DEPLOYED_SHA\",\"clearCache\":\"do_not_clear\"}")
+          RESPONSE=$(cat "$RESPONSE_FILE")
+          echo "Render trigger HTTP status=$HTTP_STATUS"
+          if [[ -n "$RESPONSE" ]] && ! jq -e 'type == "object"' <<<"$RESPONSE" >/dev/null; then
+            echo "::error::Render trigger returned a non-object JSON response."
+            exit 1
+          fi
+          if [[ -z "$RESPONSE" ]]; then
+            echo "Render trigger response body is empty."
+          else
+            echo "Render trigger response body:"
+            jq '{id, deploy: (if (.deploy|type) == "object" then {id: .deploy.id} else .deploy end), status, commit: .commit}' <<<"$RESPONSE"
+          fi
 
-          DEPLOY_ID=$(jq -r '.id // .deploy.id // empty' <<<"$RESPONSE")
+          case "$HTTP_STATUS" in
+            200|201|202) ;;
+            *)
+              echo "::error::Render deploy trigger returned unexpected HTTP status $HTTP_STATUS."
+              exit 1
+              ;;
+          esac
+
+          DEPLOY_ID=""
+          if [[ -n "$RESPONSE" ]]; then
+            DEPLOY_ID=$(jq -r '.id // .deploy.id // empty' <<<"$RESPONSE")
+          fi
+
+          # A 202 response may mean Render queued this request behind an
+          # in-progress deploy and omitted the ID. Resolve only a deployment
+          # created at/after this request for the exact requested commit.
           if [[ -z "$DEPLOY_ID" ]]; then
-            echo "::error::Render did not return a deploy ID."
+            echo "No deploy ID in trigger response; resolving the queued deployment by exact commit and request timestamp."
+            for attempt in $(seq 1 60); do
+              CURSOR=""
+              MATCH=""
+              for page in $(seq 1 5); do
+                LIST_URL="$DEPLOY_URL?limit=100"
+                if [[ -n "$CURSOR" ]]; then
+                  LIST_URL="$LIST_URL&cursor=$CURSOR"
+                fi
+                LIST=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" "$LIST_URL")
+                jq -e 'type == "array"' <<<"$LIST" >/dev/null || {
+                  echo "::error::Render deploy list response was not a JSON array."
+                  exit 1
+                }
+
+                MATCH=$(jq -r --arg sha "$EXPECTED_DEPLOYED_SHA" --arg since "$REQUEST_STARTED_AT" '
+                  [ .[]
+                    | (.deploy // .) as $d
+                    | select(($d.commit.id // "") == $sha)
+                    | select(($d.createdAt // "") >= $since)
+                    | select(($d.id // "") != "")
+                  ]
+                  | sort_by(.createdAt // "")
+                  | last
+                  | .id // empty
+                ' <<<"$LIST")
+                if [[ -n "$MATCH" ]]; then
+                  DEPLOY_ID="$MATCH"
+                  break
+                fi
+
+                NEXT_CURSOR=$(jq -r 'if length > 0 then (.[-1].cursor // empty) else empty end' <<<"$LIST")
+                if [[ -z "$NEXT_CURSOR" || "$NEXT_CURSOR" == "$CURSOR" ]]; then
+                  break
+                fi
+                CURSOR="$NEXT_CURSOR"
+              done
+
+              if [[ -n "$DEPLOY_ID" ]]; then
+                echo "Resolved exact-SHA deployment ID=$DEPLOY_ID on lookup attempt=$attempt"
+                break
+              fi
+              echo "No matching post-request deployment yet (attempt=$attempt/60)."
+              sleep 15
+            done
+          fi
+
+          if [[ -z "$DEPLOY_ID" ]]; then
+            echo "::error::No deployment for exact SHA $EXPECTED_DEPLOYED_SHA appeared after $REQUEST_STARTED_AT within the 15-minute lookup window."
             exit 1
           fi
           echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
 
+          # Verify the selected deployment itself, never a service-level or
+          # unrelated latest deployment.
           for attempt in $(seq 1 60); do
             DEPLOY=$(curl --silent --show-error --fail "${RENDER_AUTH[@]}" \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID")
+              "$DEPLOY_URL/$DEPLOY_ID")
+            jq -e 'type == "object"' <<<"$DEPLOY" >/dev/null || {
+              echo "::error::Render retrieve-deploy response was not a JSON object."
+              exit 1
+            }
             STATUS=$(jq -r '.status // empty' <<<"$DEPLOY")
             DEPLOYED_SHA=$(jq -r '.commit.id // empty' <<<"$DEPLOY")
-            echo "Render deploy status=$STATUS sha=$DEPLOYED_SHA attempt=$attempt"
+            echo "Render deploy id=$DEPLOY_ID status=$STATUS sha=$DEPLOYED_SHA attempt=$attempt"
+
+            if [[ "$DEPLOYED_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+              echo "::error::Selected Render deploy SHA mismatch: expected $EXPECTED_DEPLOYED_SHA, got $DEPLOYED_SHA"
+              exit 1
+            fi
             if [[ "$STATUS" == "live" ]]; then
-              if [[ "$DEPLOYED_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
-                echo "::error::Render live SHA mismatch: expected $EXPECTED_DEPLOYED_SHA, got $DEPLOYED_SHA"
-                exit 1
-              fi
+              echo "Verified Render deployment $DEPLOY_ID is live at $EXPECTED_DEPLOYED_SHA."
               exit 0
             fi
             if [[ "$STATUS" == "build_failed" || "$STATUS" == "update_failed" || "$STATUS" == "canceled" || "$STATUS" == "pre_deploy_failed" ]]; then
-              echo "::error::Render deployment failed with status $STATUS"
+              echo "::error::Render deployment $DEPLOY_ID failed with status $STATUS."
               exit 1
             fi
             sleep 15
           done
-          echo "::error::Render deployment did not become live within 15 minutes."
+          echo "::error::Render deployment $DEPLOY_ID did not become live within 15 minutes."
           exit 1
 
       - name: Verify deployed API readiness and exact SHA
@@ -276,6 +371,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-release-0123-evidence
+          name: nlc-production-release-0127-evidence
           path: artifacts/*.json
           if-no-files-found: warn

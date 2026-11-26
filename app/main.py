@@ -29,6 +29,8 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api import (
@@ -437,6 +439,11 @@ def create_app() -> FastAPI:
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore
     app.add_exception_handler(Exception, unhandled_exception_handler)
+    # Rate limiting (audit finding F-02): publish the shared auth limiter on
+    # app.state and convert breaches into 429 responses with Retry-After
+    # headers instead of unhandled 500s.
+    app.state.limiter = auth.limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # ------------------------------------------------------------------
     # Routers
@@ -496,4 +503,3 @@ def create_app() -> FastAPI:
 # WSGI/ASGI entrypoint
 # ---------------------------------------------------------------------------
 app = create_app()
-

@@ -13,6 +13,29 @@ def _dependency_calls(dependant):
         yield from _dependency_calls(dependency)
 
 
+def _registered_api_routes(app):
+    """Flatten FastAPI's lazy included-router wrappers into effective routes."""
+    registered = []
+
+    def collect(routes):
+        for route in routes:
+            if isinstance(route, APIRoute):
+                registered.append(route)
+                continue
+            effective_candidates = getattr(route, "effective_candidates", None)
+            if effective_candidates is None:
+                continue
+            for candidate in effective_candidates():
+                original_route = getattr(candidate, "original_route", None)
+                if isinstance(original_route, APIRoute):
+                    registered.append(candidate)
+                elif hasattr(candidate, "effective_candidates"):
+                    collect([candidate])
+
+    collect(app.routes)
+    return registered
+
+
 def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
     protected_modules = (
         "companies",
@@ -34,9 +57,7 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
     import importlib
 
     app = create_app()
-    registered = [
-        route for route in app.routes if isinstance(route, APIRoute)
-    ]
+    registered = _registered_api_routes(app)
     mount_prefixes = {
         "companies": "/companies",
         "portfolio_compliance": "",
@@ -101,9 +122,8 @@ def test_every_route_in_each_protected_router_has_verified_jwt_dependency():
 def test_company_live_coverage_endpoint_is_company_scoped_and_authenticated():
     app = create_app()
     route = next(
-        route for route in app.routes
-        if isinstance(route, APIRoute)
-        and route.path == "/api/v1/companies/{company_id}/rule-coverage"
+        route for route in _registered_api_routes(app)
+        if route.path == "/api/v1/companies/{company_id}/rule-coverage"
     )
     calls = set(_dependency_calls(route.dependant))
     assert verify_access_token in calls

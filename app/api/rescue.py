@@ -11,16 +11,18 @@ Endpoints:
   GET   /rescue/plans                       List all rescue plans (ADMIN_STAFF+)
 
 Business rules:
-  - Rescue plans may only be created for companies in BLACK or RED band
+  - Score-independent statutory workflows require eligible, active, evidence-supported RJSC findings
   - Only one active rescue plan per company at a time
   - Step 8 completion triggers automatic compliance re-evaluation via Celery
-  - Engagement creation is admin-only (revenue tracking)
+  - Engagement creation is admin-only (revenue tracking) and withheld while
+    product score publication is disabled
 """
 
 
 import uuid
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import structlog
@@ -35,11 +37,11 @@ from app.core.dependencies import (
     require_company_access,
     require_roles,
 )
-from app.models.enums import RiskBand
 from app.models.user import User
+from app.models.company import Company
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
-from app.services.rescue_service import RescueService
+from app.services.rescue_service import ActiveRescuePlanExistsError, RescueService
 async def _assert_rescue_entitlement(
     company_id: uuid.UUID, current_user: User, db: AsyncSession
 ) -> None:
@@ -62,15 +64,19 @@ async def _assert_rescue_entitlement(
 router = APIRouter()
 
 
-def _require_legal_release() -> None:
-    """Prevent rescue actions while product scoring is disabled."""
+def _require_commercial_engagement_release() -> None:
+    """Withhold commercial engagements while product scoring is disabled.
+
+    Statutory-action rescue workflows are not score-gated; only the commercial
+    engagement record is.
+    """
     from app.rule_engine.engine import legal_score_is_released
 
     if not legal_score_is_released():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "Rescue plans are withheld because product scoring is disabled."
+                "Commercial engagements are withheld because product scoring is disabled."
             ),
         )
 
@@ -119,6 +125,7 @@ class RescueStepResponse(BaseModel):
 
 class RescuePlanResponse(BaseModel):
     plan_id: str
+    workflow_mode: str
     company_id: str
     company_name: str | None
     status: str
@@ -161,6 +168,7 @@ def _step_to_response(step) -> RescueStepResponse:
 def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     return RescuePlanResponse(
         plan_id=str(plan.id),
+        workflow_mode=getattr(plan, "workflow_mode", "STATUTORY_ACTION_AUTHORIZED"),
         company_id=str(plan.company_id),
         company_name=company.company_name if company else None,
         status=("ACTIVE" if getattr(plan, "is_active", True) else "CLOSED"),
@@ -189,7 +197,7 @@ def _plan_to_response(plan, company=None) -> RescuePlanResponse:
     response_model=RescuePlanResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles("ADMIN_STAFF", "SUPER_ADMIN", "LEGAL_STAFF")), Depends(require_entitlement("corporate_rescue"))],
-    summary="Generate a corporate rescue plan for a BLACK or RED band company",
+    summary="Generate an authorized RJSC statutory-action workflow from eligible findings",
 )
 async def create_rescue_plan(
     body: RescuePlanCreateRequest,
@@ -197,13 +205,6 @@ async def create_rescue_plan(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    from app.rule_engine.engine import legal_score_is_released
-    if not legal_score_is_released():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Automated rescue generation is withheld because product scoring is disabled.",
-        )
-
     company_svc = CompanyService(db)
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
@@ -212,15 +213,10 @@ async def create_rescue_plan(
     await _assert_rescue_entitlement(body.company_id, current_user, db)
     company = await company_svc.get_by_id_or_404(body.company_id)
 
-    # Enforce: rescue plans only for RED or BLACK companies
-    if company.current_risk_band not in (RiskBand.RED, RiskBand.BLACK, "RED", "BLACK"):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Rescue plans may only be created for companies in RED or BLACK band. "
-                f"'{company.company_name}' is currently in {company.current_risk_band} band."
-            ),
-        )
+    # Serialize the preflight check with every other rescue-plan creator.
+    await db.execute(
+        select(Company.id).where(Company.id == body.company_id).with_for_update()
+    )
 
     # Check for existing active plan
     existing = await rescue_svc.get_active_plan(body.company_id)
@@ -242,7 +238,6 @@ async def create_rescue_plan(
         _reconcile_engine_output_identity_conflicts,
     )
     from app.models.rules import LegalRule
-    from sqlalchemy import select
 
     profile_data = await company_svc.build_company_profile(body.company_id)
     if not profile_data:
@@ -274,8 +269,8 @@ async def create_rescue_plan(
     )
     from app.services.compliance_service import _score_blocking_catalogue_conflicts
 
-    # Rescue is a score-derived action. Block it for every unresolved canonical
-    # evaluator/catalogue identity, including conflicts with no emitted finding.
+    # Preserve canonical identity integrity even though workflow authorization
+    # is independent of score publication.
     conflicted_rule_ids = sorted(
         _score_blocking_catalogue_conflicts(catalogue_identity_conflicts)
     )
@@ -295,21 +290,42 @@ async def create_rescue_plan(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                "A rescue plan requires a product-released RED or BLACK evaluation and an "
-                "active, applicable, evidence-supported finding."
+                "A rescue plan requires an active, applicable, evidence-supported finding "
+                "and an eligible RJSC rescue sequence."
             ),
         )
+
+    # A rescue candidate may be actionable independently of product-score
+    # publication. Never copy the raw engine score into the plan unless this
+    # exact evaluation has a publishable score.
+    from app.rule_engine.engine import legal_score_is_released
+
+    score_breakdown = getattr(engine_output, "score_breakdown", None)
+    risk_band_value = getattr(score_breakdown, "risk_band", None)
+    risk_band_name = getattr(risk_band_value, "value", risk_band_value)
+    score_publishable = bool(
+        legal_score_is_released()
+        and score_breakdown is not None
+        and getattr(score_breakdown, "final_score", None) is not None
+        and risk_band_name != "NOT_EVALUATED"
+    )
 
     try:
         plan = await rescue_svc.generate_rescue_plan(  # type: ignore
             company_id=body.company_id,
             engine_output=engine_output,
+            score_withheld=not score_publishable,
             created_by=current_user.id,
             assigned_staff_id=body.assigned_staff_id,
             estimated_fee_bdt=body.estimated_fee_bdt,
             target_completion_date=date.fromisoformat(body.target_completion_date) if body.target_completion_date else None,
             engagement_id=None,  # RES-010: explicit linkage, populated by service
         )
+    except ActiveRescuePlanExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -355,7 +371,6 @@ async def list_rescue_plans(
     """
     # Historical rescue plans remain readable while statutory score publication
     # is paused. Creation and mutation endpoints retain the release gate.
-    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
     from app.models.rescue import RescuePlan
@@ -423,7 +438,6 @@ async def get_rescue_plan(
     db: AsyncSession = Depends(get_db_for_user),
 ):
     # Read-only retrieval of historical plans is safe while score release is paused.
-    from sqlalchemy import select
     from sqlalchemy.orm import selectinload
 
     from app.models.rescue import RescuePlan
@@ -463,7 +477,7 @@ async def update_rescue_step(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    _require_legal_release()
+    # Score publication does not gate this explicitly authorized workflow.
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 
@@ -537,7 +551,7 @@ async def create_engagement_from_rescue(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
-    _require_legal_release()
+    _require_commercial_engagement_release()
     rescue_svc = RescueService(db)
     activity = ActivityService(db)
 

@@ -25,6 +25,7 @@ import uuid
 from fastapi.encoders import jsonable_encoder
 from dataclasses import fields as dataclass_fields
 from datetime import UTC, datetime
+from typing import NamedTuple
 
 from sqlalchemy import select, text, update
 
@@ -59,6 +60,18 @@ from app.services.notification_service import NotificationService
 from canonical_architecture.scoring_spec import allocate_flag_deductions, category_for_rule, duplicate_event_indices, SCORING_SPEC_VERSION
 
 logger = logging.getLogger("nlc.compliance")
+
+
+class RescueWorkflowOutcome(NamedTuple):
+    """What the evaluation's automatic rescue-workflow step did, and why.
+
+    status is one of NOT_APPLICABLE, PLAN_CREATED, ACTIVE_PLAN_RETAINED,
+    NOT_ENTITLED, BLOCKED_CATALOGUE_CONFLICTS or GENERATION_FAILED; note is the
+    error text persisted on the company for the two blocked/failed statuses.
+    """
+
+    status: str
+    note: str | None = None
 
 
 
@@ -509,9 +522,16 @@ class ComplianceService(BaseService[ComplianceFlag]):
         )
         from app.services.company_service import CompanyService
 
-        # ── Step 1: Build profile ──────────────────────────────────
+        # ── Step 1: Lock the company, then build the profile ───────
+        # Serialize before reading any input: an evaluation or profile change
+        # committed while this one waits is then visible to it, so stale output
+        # cannot replace newer score or rescue state. The refresh overwrites
+        # company state this session loaded before it waited.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
         company_svc = CompanyService(self.db)
-        profile_data = await company_svc.build_company_profile(company_id)
+        profile_data = await company_svc.build_company_profile(company_id, refresh=True)
         if not profile_data:
             raise ValueError(f"Company {company_id} not found or inactive.")
 
@@ -692,7 +712,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         api_raw_total = output.score_breakdown.raw_total if score_is_released else None
 
         # ── Step 3: Persist results ────────────────────────────────
-        evaluation_run = await self._persist_evaluation(
+        evaluation_run, rescue_workflow = await self._persist_evaluation(
             company_id, output, trigger_source,
             fact_provenance_snapshot=fact_provenance_snapshot,
             applicability_results=applicability_results,
@@ -846,8 +866,13 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 "override_applied": output.score_breakdown.override_applied if score_is_released else False,
                 "override_reason": output.score_breakdown.override_reason if score_is_released else None,
             },
+            # rescue_required is the score-derived need; the statutory-action
+            # workflow is authorized independently, so its sequence and status
+            # are reported whether or not scoring is released.
             "rescue_required": bool(score_is_released and _is_rescue_required(output)),
-            "rescue_sequence": output.rescue_sequence if score_is_released else None,
+            "rescue_sequence": list(output.rescue_sequence or []),
+            "rescue_workflow_status": rescue_workflow.status,
+            "rescue_workflow_note": rescue_workflow.note,
             "engine_version":  output.engine_version,
             "ilrmf_version":   output.ilrmf_version,
             "evaluation_run_id": str(evaluation_run.id),
@@ -855,6 +880,125 @@ class ComplianceService(BaseService[ComplianceFlag]):
             "evaluation_run_status": evaluation_run.evaluation_status,
             "evaluation_calculated_at": evaluation_run.calculated_at.isoformat(),
         }
+
+    async def _start_rescue_workflow(
+        self,
+        company_id: uuid.UUID,
+        output,
+        *,
+        score_withheld: bool,
+        score_blocking_conflicts: set[str],
+    ) -> RescueWorkflowOutcome:
+        """Create the evaluation's rescue plan for a company entitled to it.
+
+        Workflow creation is independent of score publication but not of the
+        ``corporate_rescue`` entitlement or of unresolved RJSC catalogue
+        identity conflicts, which block it exactly as they block the rescue
+        API. Privileged staff can still create a plan for an unentitled
+        company explicitly through that API.
+        Returns the outcome; its note, when set, is persisted on the company.
+        """
+        from app.services.rescue_service import RescueService
+        from app.services.subscription_service import SubscriptionService
+
+        if score_blocking_conflicts:
+            conflicted_rule_ids = sorted(score_blocking_conflicts)
+            logger.warning(
+                "rescue_plan_blocked_catalogue_conflicts company=%s rule_ids=%s",
+                company_id, conflicted_rule_ids,
+            )
+            return RescueWorkflowOutcome(
+                "BLOCKED_CATALOGUE_CONFLICTS",
+                (
+                    "Rescue generation blocked by unresolved RJSC catalogue/evaluator "
+                    f"identity conflicts: {', '.join(conflicted_rule_ids)}"
+                )[:500],
+            )
+
+        # Check entitlement before even inspecting or replacing an active
+        # workflow. Automatic evaluation must never mutate rescue state for a
+        # company that has not purchased the feature.
+        try:
+            entitled = await SubscriptionService(self.db).has_entitlement(
+                company_id=company_id,
+                feature_code="corporate_rescue",
+            )
+        except Exception as exc:
+            logger.error(
+                "rescue_entitlement_check_failed company=%s error=%s",
+                company_id, exc, exc_info=True,
+            )
+            return RescueWorkflowOutcome(
+                "GENERATION_FAILED", f"entitlement check failed: {exc}"[:500]
+            )
+        if not entitled:
+            logger.info(
+                "rescue_plan_skipped_no_entitlement company=%s", company_id
+            )
+            return RescueWorkflowOutcome("NOT_ENTITLED")
+
+        # Serialize the active-plan decision with manual API requests and
+        # other evaluations. The lock is held through plan persistence.
+        await self.db.execute(
+            select(Company.id).where(Company.id == company_id).with_for_update()
+        )
+        rescue_svc = RescueService(self.db)
+        replace_existing = False
+        existing_plan = await rescue_svc.get_active_plan(company_id)
+        if existing_plan:
+            new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
+            old_titles = {st.step_title for st in existing_plan.steps}
+            untouched = existing_plan.completed_steps == 0 and all(
+                getattr(st.step_status, 'value', st.step_status) == 'PENDING' for st in existing_plan.steps
+            )
+            if new_titles and new_titles != old_titles:
+                if untouched:
+                    existing_plan = None
+                    replace_existing = True
+                else:
+                    logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
+        if existing_plan:
+            return RescueWorkflowOutcome("ACTIVE_PLAN_RETAINED")
+
+        try:
+            assigned_staff_result = await self.db.execute(
+                select(Company.assigned_staff_id).where(Company.id == company_id)
+            )
+            assigned_staff_id = assigned_staff_result.scalar_one_or_none()
+            # The savepoint keeps a failed generation from leaving a partial
+            # active workflow (plan without steps, deactivated predecessor) in
+            # the evaluation's transaction.
+            async with self.db.begin_nested():
+                await rescue_svc.generate_rescue_plan(
+                    company_id=company_id,
+                    engine_output=output,
+                    assigned_staff_id=assigned_staff_id,
+                    created_by=getattr(self, '_current_user_id', None),
+                    engagement_id=None,  # RES-010: explicit linkage, populated by service
+                    score_withheld=score_withheld,
+                    replace_existing=replace_existing,
+                )
+        except ValueError as e:
+            # Engine produced actionable RED/BLACK flags but no rescue
+            # sequence — data-integrity issue, not transient. Persist
+            # the failure so ops/dashboard can see it.
+            actionable = [
+                (f.rule_id, str(f.severity))
+                for f in output.flags
+                if not f.resolved and str(f.severity) in ('BLACK', 'RED')
+            ]
+            logger.error(
+                "rescue_plan_value_error company=%s reason=%s actionable_flags=%s",
+                company_id, e, actionable,
+            )
+            return RescueWorkflowOutcome("GENERATION_FAILED", str(e)[:500])
+        except Exception as e:
+            logger.error(
+                "rescue_plan_unexpected_error company=%s error=%s",
+                company_id, e, exc_info=True,
+            )
+            return RescueWorkflowOutcome("GENERATION_FAILED", f'unexpected: {e}'[:500])
+        return RescueWorkflowOutcome("PLAN_CREATED")
 
     async def _persist_evaluation(
         self,
@@ -865,7 +1009,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
         applicability_results: dict[str, dict] | None = None,
         catalogue_snapshot: list[LegalRule] | None = None,
         catalogue_identity_conflicts: dict[str, dict] | None = None,
-    ) -> ComplianceEvaluationRun:
+    ) -> tuple[ComplianceEvaluationRun, RescueWorkflowOutcome]:
         """
         Persist all evaluation results to DB atomically.
         Order: resolve old flags → insert new flags → score snapshot → update company.
@@ -1340,57 +1484,19 @@ class ComplianceService(BaseService[ComplianceFlag]):
             # the cached score fail closed until a new evaluation completes.
             "updated_at":               now,
         }
-        if rescue_required:
-            company_svc_update["rescue_triggered_at"] = now
+        rescue_workflow = RescueWorkflowOutcome("NOT_APPLICABLE")
+        if rescue_required or bool(getattr(output, "rescue_sequence", None)):
+            if rescue_required:
+                company_svc_update["rescue_triggered_at"] = now
             
-            # Auto-create RescuePlan if not already active
-            from app.services.rescue_service import RescueService
-            rescue_svc = RescueService(self.db)
-            existing_plan = await rescue_svc.get_active_plan(company_id)
-            if existing_plan:
-                new_titles = {st.get('title') for st in (getattr(output, 'rescue_sequence', None) or [])}
-                old_titles = {st.step_title for st in existing_plan.steps}
-                untouched = existing_plan.completed_steps == 0 and all(
-                    getattr(st.step_status, 'value', st.step_status) == 'PENDING' for st in existing_plan.steps
-                )
-                if new_titles and new_titles != old_titles:
-                    if untouched:
-                        existing_plan = None
-                    else:
-                        logger.warning(f'Rescue plan out of sync with findings for company {company_id}; plan has progress, not regenerated')
-            if not existing_plan:
-                try:
-                    assigned_staff_result = await self.db.execute(
-                        select(Company.assigned_staff_id).where(Company.id == company_id)
-                    )
-                    assigned_staff_id = assigned_staff_result.scalar_one_or_none()
-                    await rescue_svc.generate_rescue_plan(
-                        company_id=company_id,
-                        engine_output=output,
-                        assigned_staff_id=assigned_staff_id,
-                        created_by=getattr(self, '_current_user_id', None),
-                        engagement_id=None,  # RES-010: explicit linkage, populated by service
-                    )
-                except ValueError as e:
-                    # Engine produced actionable RED/BLACK flags but no rescue
-                    # sequence — data-integrity issue, not transient. Persist
-                    # the failure so ops/dashboard can see it.
-                    actionable = [
-                        (f.rule_id, str(f.severity))
-                        for f in output.flags
-                        if not f.resolved and str(f.severity) in ('BLACK', 'RED')
-                    ]
-                    logger.error(
-                        "rescue_plan_value_error company=%s reason=%s actionable_flags=%s",
-                        company_id, e, actionable,
-                    )
-                    company_svc_update['rescue_generation_error'] = str(e)[:500]
-                except Exception as e:
-                    logger.error(
-                        "rescue_plan_unexpected_error company=%s error=%s",
-                        company_id, e, exc_info=True,
-                    )
-                    company_svc_update['rescue_generation_error'] = f'unexpected: {e}'[:500]
+            rescue_workflow = await self._start_rescue_workflow(
+                company_id,
+                output,
+                score_withheld=score_for_current is None,
+                score_blocking_conflicts=score_blocking_identity_conflicts,
+            )
+            if rescue_workflow.note:
+                company_svc_update['rescue_generation_error'] = rescue_workflow.note
 
         await self.db.execute(
             update(Company)
@@ -1408,7 +1514,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
             notif_svc = NotificationService(self.db)
             await notif_svc.queue_for_new_flags(company_id, notification_flags)
 
-        return evaluation_run
+        return evaluation_run, rescue_workflow
 
     # ── Flag Management ───────────────────────────────────────────
 

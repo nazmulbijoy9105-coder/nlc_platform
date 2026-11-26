@@ -77,5 +77,7 @@ async def test_rule_version_snapshot_preserves_material_legal_definition_fields(
         "last_modified_by": str(last_modified_by),
         "last_modified_at": "2026-10-20T09:30:00",
     }
+    assert snapshot.actor_type == "USER"
+    assert snapshot.migration_revision is None
     db.add.assert_called_once_with(snapshot)
     db.flush.assert_awaited_once()

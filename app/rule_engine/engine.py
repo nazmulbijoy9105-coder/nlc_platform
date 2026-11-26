@@ -793,6 +793,31 @@ def legal_score_is_released() -> bool:
     )
 
 
+def rescue_registry_integrity_failure(referenced_rule_ids) -> bool:
+    """Return whether production registry integrity blocks rescue authorization.
+
+    The production statutory registry is the only source of valid rule
+    identities: a rule id is authorizable only as a valid production id, and
+    every rule id this workflow references must be one. Scope parity must
+    hold exactly, and any referenced id missing from the production registry
+    is an integrity failure.
+
+    This is distinct from a paused release switch: a paused switch keeps
+    score-independent rescue authorization per the approved contract, while
+    an integrity failure fails closed and blocks action.
+    """
+    try:
+        from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+        registry_ids = frozenset(STATUTORY_RULE_REGISTRY)
+        assert_rjsc_scope_parity(STATUTORY_RULE_REGISTRY)
+    except Exception:
+        return True
+    for rule_id in referenced_rule_ids:
+        if not isinstance(rule_id, str) or rule_id not in registry_ids:
+            return True
+    return False
+
+
 REVENUE_TIER_MAP = {
     Severity.GREEN: RevenueTier.COMPLIANCE_PACKAGE,
     Severity.YELLOW: RevenueTier.COMPLIANCE_PACKAGE,
@@ -4391,7 +4416,12 @@ class NLCRuleEngine:
         score: ScoreBreakdown,
         rescue_sequence: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Produce one auditable disposition per in-scope RJSC finding."""
+        """Produce one auditable disposition per in-scope RJSC finding.
+
+        Authorization fails closed when production registry integrity cannot
+        be established; that integrity failure is distinct from a paused
+        release switch, which keeps confirmed-step authorization.
+        """
         flags = filter_rjsc_items(flags)
         step_by_rule: Dict[str, Dict[str, Any]] = {}
         for rescue_step in rescue_sequence:
@@ -4399,6 +4429,12 @@ class NLCRuleEngine:
                 step_by_rule[rule_id] = rescue_step
 
         score_band = getattr(score.risk_band, "value", score.risk_band)
+        # Every rule id this workflow references must be a valid production
+        # registry id. Integrity is checked once and blocks authorization
+        # independently of the paused release switch.
+        registry_integrity_failure = rescue_registry_integrity_failure(
+            set(step_by_rule) | {flag.rule_id for flag in flags}
+        )
         dispositions: List[Dict[str, Any]] = []
         for flag in flags:
             state = getattr(getattr(flag, "state", None), "value", getattr(flag, "state", None))
@@ -4451,21 +4487,23 @@ class NLCRuleEngine:
                 and score_band not in (Severity.RED.value, Severity.BLACK.value)
             ):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None and not legal_score_is_released():
-                # Candidate steps remain visible for professional review, but a
-                # disabled product score release can never activate them.
-                disposition, reason = "REVIEW_REQUIRED", "PRODUCT_SCORE_RELEASE_DISABLED"
-            elif step is not None and flag.rule_id not in VERIFIED_RULE_IDS:
-                # Product scoring and independent legal approval are separate.
-                # Unverified rules may contribute to the product indicator, but
-                # must not activate statutory rescue actions before counsel review.
-                disposition, reason = "REVIEW_REQUIRED", "COUNSEL_APPROVAL_REQUIRED"
+            elif registry_integrity_failure:
+                # Fail closed: production registry integrity is broken, so no
+                # referenced rule id can be proven a valid production id.
+                # This is distinct from a paused release switch, which keeps
+                # confirmed-step authorization below.
+                disposition, reason = "BLOCKED", "REGISTRY_INTEGRITY_FAILURE"
+            elif step is not None:
+                # Statutory action is authorized from a confirmed violation
+                # with a generated step, independently of product score
+                # publication and of counsel verification, while production
+                # registry integrity holds. A released score below the rescue
+                # threshold was already rejected above.
+                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif step is None and flag.rule_id != "TAX-004":
                 disposition, reason = "BLOCKED", "RESCUE_STEP_NOT_GENERATED"
             elif score_band not in (Severity.RED.value, Severity.BLACK.value):
                 disposition, reason = "NO_ACTION", "RISK_BAND_BELOW_RESCUE_THRESHOLD"
-            elif step is not None:
-                disposition, reason = "ACTION_REQUIRED", "CONFIRMED_RESCUE_STEP"
             elif not legal_score_is_released():
                 disposition, reason = "BLOCKED", "LEGAL_SCORE_NOT_RELEASED"
             elif flag.rule_id == "TAX-004":
@@ -4487,17 +4525,24 @@ class NLCRuleEngine:
         return dispositions
 
     def _generate_rescue_sequence(self, c: CompanyProfile, flags: List[ComplianceFlag], score: ScoreBreakdown) -> List[Dict[str, Any]]:
-        """R-014: Generate reviewable candidates from confirmed RED/BLACK findings.
+        """R-014: Generate rescue-step candidates from confirmed, applicable findings.
 
-        Candidate steps are not customer actions. The disposition gate keeps
-        them REVIEW_REQUIRED until product scoring is released; counsel-review status remains separate.
-        TAX-004 is aggregated into one step because its missed-quarter details
-        describe one remediation item. Missing quarter evidence does not itself
-        establish a missed payment.
+        Generation proceeds while product score release is paused and does not
+        require counsel verification. Whether a candidate is actionable is
+        decided separately by the disposition gate, which authorizes a
+        confirmed violation with a generated step as ACTION_REQUIRED
+        independently of score release and counsel verification while
+        production registry integrity holds; an integrity failure blocks
+        action as BLOCKED/REGISTRY_INTEGRITY_FAILURE. Only
+        confirmed RED/BLACK violations generate steps; UNKNOWN and
+        unresolved evidence states do not.
+        TAX-004 is aggregated because missed-quarter details describe one item.
+        Missing quarter evidence does not itself establish a missed payment.
         """
         # A released company risk band below RED cannot start a rescue plan.
-        # While release is paused, deterministic candidates may still be shown
-        # for review; the disposition gate prevents customer action.
+        # While release is paused, deterministic candidates are still
+        # generated from confirmed violations; the disposition gate
+        # authorizes them independently of the withheld score.
         score_band = getattr(score.risk_band, "value", score.risk_band)
         if legal_score_is_released() and score_band not in (
             Severity.RED.value, Severity.BLACK.value

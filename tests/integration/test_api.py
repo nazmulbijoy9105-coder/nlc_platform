@@ -655,19 +655,26 @@ class TestRescue:
         })
 
     @pytest.mark.asyncio
-    async def test_create_rescue_plan_requires_red_band(
-        self, api_client, super_admin_tok, db_company
+    async def test_create_rescue_plan_fails_closed_on_catalogue_identity_conflicts(
+        self, api_client, super_admin_tok, db_company, monkeypatch
     ):
-        """A GREEN company cannot enter the RED/BLACK rescue workflow."""
-        # db_company is GREEN band
+        """An explicitly injected identity conflict must fail closed before later validation."""
+        from app.services import compliance_service
+
+        monkeypatch.setattr(
+            compliance_service,
+            "_score_blocking_catalogue_conflicts",
+            lambda _conflicts: {"AGM-001"},
+        )
         resp = await api_client.post(
             "/api/v1/rescue/plans",
             headers=_auth(super_admin_tok),
             json={"company_id": str(db_company.id)}
         )
-        # The score-release gate takes precedence over risk-band evaluation.
-        assert resp.status_code == 422
-        assert "RED or BLACK" in resp.json()["detail"]
+        assert resp.status_code == 409
+        detail = resp.json()["detail"]
+        assert "catalogue/evaluator identity conflicts" in detail["message"]
+        assert detail["conflicted_rule_ids"]
 
     @pytest.mark.asyncio
     async def test_create_rescue_plan_for_red_company(

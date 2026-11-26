@@ -254,7 +254,7 @@ class TestComplianceService:
         from app.models.rules import LegalRule
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
 
-        canonical_agm_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
+        canonical_agm_001_basis = STATUTORY_RULE_REGISTRY["AGM-001"].law
 
         # This fixture explicitly exercises the paused-product-release contract.
         # Do not depend on the production default, which is now owner-enabled.
@@ -310,7 +310,7 @@ class TestComplianceService:
             description="Controlled evidence review fixture",
             # Match the canonical AGM-001 identity so this test exercises
             # release redaction, not the separate identity-conflict gate.
-            statutory_basis=canonical_agm_basis,
+            statutory_basis=canonical_agm_001_basis,
             state=RuleState.NON_COMPLIANT,
             eval_state="VIOLATION",
         )
@@ -324,6 +324,10 @@ class TestComplianceService:
         mock_engine = SimpleNamespace(evaluate=Mock(return_value=mock_output))
 
         # Use the row produced by the real Alembic migration chain. This test
+        # Bind the fixture finding to a real active catalogue identity. Without
+        # this row, the fail-closed identity gate correctly quarantines AGM-001
+        # and no customer-facing ComplianceFlag row should be created.
+        # Use the row produced by the real Alembic migration chain. The test
         # must not seed or rewrite catalogue data to make identity binding pass.
         catalogue_result = await db.execute(
             select(LegalRule).where(LegalRule.rule_id == "AGM-001")
@@ -334,6 +338,10 @@ class TestComplianceService:
 
         # Exercise the same catalogue reconciliation helper used by evaluation
         # before invoking the mocked engine. A quarantined identity must fail here.
+        assert catalogue_rule.statutory_basis == canonical_agm_001_basis
+
+        # The migration must reconcile the real catalogue row before evaluation.
+        # A quarantined or conflicting identity must fail before release checks.
         from app.services.compliance_service import _catalogue_identity_conflicts
 
         identity_conflicts = _catalogue_identity_conflicts([catalogue_rule])
@@ -357,6 +365,9 @@ class TestComplianceService:
 
         # Identity binding is asserted independently of release redaction:
         # the finding must be attributed to the migrated canonical catalogue row.
+        # Identity binding is asserted independently of release redaction.
+        # Identity binding is independent of release redaction: the finding
+        # must bind to the migrated canonical catalogue identity.
         assert (
             result["review_findings"][0]["identity_binding_status"]
             == "MATCHED_CATALOGUE_IDENTITY"
@@ -364,6 +375,8 @@ class TestComplianceService:
 
         # Release-redaction contract: a matched identity is still withheld
         # from customer-facing scoring while the product release is paused.
+        # Release-redaction assertions cannot pass on a quarantined identity.
+        # Release-redaction assertions are kept separate from identity checks.
         assert result["review_findings"][0]["score_impact_applied"] == 0
         assert "No statutory conclusion" in result["review_findings"][0]["message"]
         mock_engine.evaluate.assert_called_once()
@@ -395,8 +408,8 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
-        # Persisted snapshots redact risk severity while the legal score
-        # release gate is closed; the raw engine label is not released.
+        # The persisted customer-facing snapshot redacts raw engine severity
+        # while the legal score release gate is closed.
         assert persisted_run.flags_snapshot[0]["severity"] == "NOT_EVALUATED"
 
         persisted_flag_result = await db.execute(
@@ -1007,7 +1020,7 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
         severity=Severity.RED,
         score_impact=0,
         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-        description="Confirmed fact fixture; review required",
+        description="Confirmed fact fixture; action authorized",
         statutory_basis="Controlled test fixture",
         state=RuleState.NON_COMPLIANT,
         eval_state="VIOLATION",
@@ -1024,8 +1037,10 @@ def test_rescue_planner_remains_deterministic_when_score_release_is_paused(monke
     dispositions = NLCRuleEngine._build_rescue_dispositions(
         [finding], score, steps
     )
-    assert dispositions[0]["disposition"] == "REVIEW_REQUIRED"
-    assert dispositions[0]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    # Score-independent authorization: a confirmed violation with a
+    # generated step is actionable while score publication is paused.
+    assert dispositions[0]["disposition"] == "ACTION_REQUIRED"
+    assert dispositions[0]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 
@@ -1113,12 +1128,14 @@ def test_pdf_rescue_section_renders_structured_progress_and_blocked_reason():
     html = _render_rescue_section(plan)
 
     assert "Corporate Rescue Plan" in html
+    assert "<strong>Initial score:</strong> NOT EVALUATED" in html
+    assert "/100" not in html
     assert "Verify records" in html
     assert "Missing source evidence" in html
     assert "BLOCKED" in html
 
 
-def test_rescue_output_validation_requires_product_release_and_unique_evidenced_findings(monkeypatch):
+def test_rescue_output_validation_is_score_independent_and_requires_unique_evidenced_findings(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import RuleState, Severity
     from app.services.rescue_service import validate_rescue_engine_output
@@ -1137,14 +1154,21 @@ def test_rescue_output_validation_requires_product_release_and_unique_evidenced_
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", False)
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    with pytest.raises(PermissionError, match="disabled"):
-        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+    # Closing product-score publication does not suppress deterministic
+    # candidate validation; the engine disposition authorizes confirmed steps.
+    assert validate_rescue_engine_output(
+        output, expected_company_id="tenant-001"
+    ) == frozenset({"AGM-001"})
 
     monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     monkeypatch.setattr(engine_module, "PRODUCT_SCORING_RULE_IDS", frozenset({"AGM-001"}))
     monkeypatch.setattr(engine_module, "VERIFIED_RULE_IDS", frozenset())
-    with pytest.raises(PermissionError, match="disabled"):
-        validate_rescue_engine_output(output, expected_company_id="tenant-001")
+    # Candidate validation is deliberately score-release independent. The
+    # engine's rescue disposition is authorized independently of counsel
+    # verification; validating the candidate activates the statutory action.
+    assert validate_rescue_engine_output(
+        output, expected_company_id="tenant-001"
+    ) == frozenset({"AGM-001"})
 
     # A released fixture must approve every rule in its product catalogue.
     monkeypatch.setattr(
@@ -1219,7 +1243,7 @@ def test_score_allocation_covers_inactive_excluded_black_and_duplicate_paths(mon
     assert results[6]["status"] == "APPLIED"
 
 
-def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is_paused(monkeypatch):
+def test_rescue_dispositions_keep_confirmed_candidates_authorized_when_product_release_is_paused(monkeypatch):
     import app.rule_engine.engine as engine_module
     from app.rule_engine.engine import (
         ComplianceFlag,
@@ -1254,9 +1278,9 @@ def test_rescue_dispositions_keep_candidates_review_only_when_product_release_is
     dispositions = NLCRuleEngine._build_rescue_dispositions(rows, score, steps)
 
     assert [item["disposition"] for item in dispositions] == [
-        "NO_ACTION", "WAITING_EVIDENCE", "REVIEW_REQUIRED", "BLOCKED"
+        "NO_ACTION", "WAITING_EVIDENCE", "ACTION_REQUIRED", "BLOCKED"
     ]
-    assert dispositions[2]["reason"] == "PRODUCT_SCORE_RELEASE_DISABLED"
+    assert dispositions[2]["reason"] == "CONFIRMED_RESCUE_STEP"
 
 
 def test_rescue_target_date_prefers_explicit_then_latest_step_date():

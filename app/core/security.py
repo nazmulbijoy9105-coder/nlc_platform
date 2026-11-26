@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import os
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Optional, cast
 
@@ -46,7 +47,6 @@ def _encode_token(payload: dict) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-    import uuid
     to_encode.update({"exp": expire, "type": "access", "jti": uuid.uuid4().hex})
     return _encode_token(to_encode)
 
@@ -54,14 +54,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    import uuid
     to_encode.update({"exp": expire, "type": "refresh", "jti": uuid.uuid4().hex})
     return _encode_token(to_encode)
 
 
 def decode_token(token: str, expected_type: str | None = None) -> dict | None:
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
         if expected_type is not None and payload.get("type") != expected_type:
             return None
         return payload
@@ -75,7 +78,6 @@ def decode_token(token: str, expected_type: str | None = None) -> dict | None:
 def create_temp_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=5))
-    import uuid
     to_encode.update({"exp": expire, "type": "temp", "jti": uuid.uuid4().hex})
     return _encode_token(to_encode)
 
@@ -124,6 +126,7 @@ def decrypt_totp_secret(encrypted: str) -> str:
 def verify_totp_code(secret: str, code: str) -> bool:
     try:
         import pyotp
+
         return pyotp.TOTP(secret).verify(code, valid_window=1)
     except ImportError:
         return False
@@ -132,6 +135,7 @@ def verify_totp_code(secret: str, code: str) -> bool:
 def get_totp_provisioning_uri(secret: str, email: str, issuer_name: str = "NLC Platform") -> str:
     try:
         import pyotp
+
         return pyotp.totp.TOTP(secret).provisioning_uri(name=email, issuer_name=issuer_name)
     except ImportError:
         return ""
