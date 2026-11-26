@@ -64,7 +64,7 @@ jobs:
               "git_sha": __import__("os").environ.get("GITHUB_SHA"),
           }
           Path("artifacts/security-audit/environment.json").write_text(
-              json.dumps(payload, indent=2) + "\\n", encoding="utf-8"
+              json.dumps(payload, indent=2) + "\n", encoding="utf-8"
           )
           print(json.dumps(payload, indent=2))
           PY
@@ -157,7 +157,7 @@ jobs:
                               f"resolved {package}={actual!r}; expected {expected}"
                           )
           (root / "summary.json").write_text(
-              json.dumps(summary, indent=2) + "\\n", encoding="utf-8"
+              json.dumps(summary, indent=2) + "\n", encoding="utf-8"
           )
           print(json.dumps(summary, indent=2))
           if summary["errors"]:
@@ -193,7 +193,7 @@ jobs:
               "wheel": wheels[0].name,
           }
           (root / "defusedxml-license-metadata.json").write_text(
-              json.dumps(metadata, indent=2) + "\\n", encoding="utf-8"
+              json.dumps(metadata, indent=2) + "\n", encoding="utf-8"
           )
           print(json.dumps(metadata, indent=2))
           PY
