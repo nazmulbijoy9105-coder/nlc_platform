@@ -14,8 +14,10 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
+# requirements.txt is the complete, exactly pinned set verified by the dependency
+# audit; install it as-is so the image never resolves anything the audit did not see.
 RUN pip install --upgrade "pip==24.0" setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir --no-deps -r requirements.txt
 
 # STAGE 2: runtime-base
 FROM python:3.11-slim-bookworm AS runtime-base

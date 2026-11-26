@@ -11,6 +11,7 @@
 - Collection mode: `pip-audit --strict -r requirements.txt`; both PyPI and OSV advisory services were queried.
 - Result: **222 resolved dependencies, zero vulnerable dependencies, zero known vulnerabilities** from each advisory source.
 - The unpinned `apscheduler>=3.11.0` requirement resolved to `3.11.3` in this graph.
+- Follow-up after this run: `requirements.txt` now pins `APScheduler==3.11.3` and `uvloop==0.23.0` (previously an unpinned transitive dependency through `fastapi-cli` → `uvicorn[standard]`), so every resolved dependency has an exact pin and the Docker build installs the same set with `--no-deps`. The SHA-256 above is for the pre-pin file; the next audit run on the updated `requirements.txt` supplies the evidence for the pinned set.
 
 The raw JSON reports are retained in the run's machine-readable artifact. The artifact is ID `15139453869`, SHA-256 `16796efac40b60b7ef54fe506d41a8728462c375a96a671be35d2af46960ab84`, with expiry 2027-02-24. The PyPI and OSV report files each have SHA-256 `7732fdfbf1c4b6baf3d9715a034e84edd4bed3c87a3f8c83a79d0fe9406aacf0`. The structured summary is committed in [2026-11-26-dependency-audit-summary.json](2026-11-26-dependency-audit-summary.json).
 
