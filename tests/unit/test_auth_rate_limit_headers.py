@@ -14,7 +14,12 @@ from app.core.config import Settings
 
 @pytest.fixture
 def development_limiter(monkeypatch):
-    settings = Settings(_env_file=None, ENVIRONMENT="development", redis_url="")
+    settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="development",
+        REDIS_URL="",
+        redis_url="",
+    )
     monkeypatch.setattr(auth_module, "get_settings", lambda: settings)
     return auth_module._build_limiter()
 
