@@ -163,6 +163,15 @@ jobs:
               pinned_requirements.append(
                   (canonicalize_name(requirement.name), specifiers[0].version)
               )
+          pinned_versions = {}
+          for package, version in pinned_requirements:
+              if package in pinned_versions and pinned_versions[package] != version:
+                  summary["errors"].append(
+                      f"multiple active pins for {package}: {pinned_versions[package]} and {version}"
+                  )
+              pinned_versions[package] = version
+          summary["pinned_requirement_count"] = len(pinned_versions)
+
           for name in ("pypi", "osv"):
               path = root / f"pip-audit-{name}.json"
               if not path.is_file() or not path.stat().st_size:
@@ -193,13 +202,18 @@ jobs:
                   canonicalize_name(str(dep.get("name", ""))): dep.get("version")
                   for dep in dependencies
               }
+              for package, actual in versions.items():
+                  if package not in pinned_versions:
+                      summary["errors"].append(
+                          f"{name}: resolved package {package} has no active exact requirements pin"
+                      )
+              for package, expected in pinned_versions.items():
+                  actual = versions.get(package)
+                  if actual != expected:
+                      summary["errors"].append(
+                          f"{name}: resolved {package}={actual!r}; requirements pin expects {expected}"
+                      )
               if name == "pypi":
-                  for package, expected in pinned_requirements:
-                      actual = versions.get(package)
-                      if actual != expected:
-                          summary["errors"].append(
-                              f"resolved {package}={actual!r}; requirements pin expects {expected}"
-                          )
                   summary["required_versions"] = {
                       key: versions.get(key)
                       for key in ("tornado", "pillow", "fastapi", "starlette", "filelock")
