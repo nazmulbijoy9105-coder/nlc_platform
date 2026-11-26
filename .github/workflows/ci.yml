@@ -709,3 +709,179 @@ jobs:
             fc-cache -f
             fc-match "Noto Sans"
           '
+
+
+  dependency-audit:
+    name: Full dependency audit (Python 3.11 / Linux x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up production-compatible Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pip-audit==2.10.1"
+
+      - name: Record audit environment and requirements digest
+        run: |
+          mkdir -p artifacts/security-audit
+          python - <<'PY'
+          import hashlib
+          import json
+          import platform
+          import sys
+          from pathlib import Path
+
+          data = {
+              "python": sys.version,
+              "platform": platform.platform(),
+              "machine": platform.machine(),
+              "requirements_sha256": hashlib.sha256(Path("requirements.txt").read_bytes()).hexdigest(),
+              "git_sha": __import__("os").environ["GITHUB_SHA"],
+          }
+          Path("artifacts/security-audit/environment.json").write_text(
+              json.dumps(data, indent=2) + "\\n", encoding="utf-8"
+          )
+          print(json.dumps(data, indent=2))
+          PY
+
+      - name: Audit requirements against PyPI
+        id: pypi_audit
+        continue-on-error: true
+        run: |
+          set +e
+          pip-audit --strict --progress-spinner off --format=json -r requirements.txt \
+            > artifacts/security-audit/pip-audit-pypi.json \
+            2> artifacts/security-audit/pip-audit-pypi.stderr.log
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "PyPI audit exit code: $status"
+          exit "$status"
+
+      - name: Audit requirements against OSV
+        id: osv_audit
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          pip-audit --strict --progress-spinner off --vulnerability-service osv \
+            --format=json -r requirements.txt \
+            > artifacts/security-audit/pip-audit-osv.json \
+            2> artifacts/security-audit/pip-audit-osv.stderr.log
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          echo "OSV audit exit code: $status"
+          exit "$status"
+
+      - name: Validate JSON reports and resolved release-critical versions
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/security-audit")
+          summary = {"reports": {}, "resolved_versions": {}, "errors": []}
+          for source in ("pypi", "osv"):
+              path = root / f"pip-audit-{source}.json"
+              try:
+                  report = json.loads(path.read_text(encoding="utf-8"))
+                  dependencies = report["dependencies"]
+                  if not isinstance(dependencies, list):
+                      raise TypeError("dependencies must be a list")
+              except Exception as exc:
+                  summary["errors"].append(f"{source}: invalid or missing JSON report: {exc}")
+                  continue
+              vulnerable = [item for item in dependencies if item.get("vulns")]
+              summary["reports"][source] = {
+                  "dependency_count": len(dependencies),
+                  "vulnerable_dependency_count": len(vulnerable),
+                  "vulnerability_count": sum(len(item["vulns"]) for item in vulnerable),
+                  "vulnerable_dependencies": vulnerable,
+              }
+              if source == "pypi":
+                  versions = {
+                      str(item.get("name", "")).lower().replace("_", "-"): item.get("version")
+                      for item in dependencies
+                  }
+                  expected = {
+                      "tornado": "6.6.1",
+                      "pillow": "13.0.0",
+                      "fastapi": "0.165.0",
+                      "starlette": "1.10.0",
+                      "filelock": "4.2.12",
+                  }
+                  summary["resolved_versions"] = {key: versions.get(key) for key in expected}
+                  for package, version in expected.items():
+                      if versions.get(package) != version:
+                          summary["errors"].append(
+                              f"{package}: resolved {versions.get(package)!r}, expected {version}"
+                          )
+          (root / "summary.json").write_text(
+              json.dumps(summary, indent=2) + "\\n", encoding="utf-8"
+          )
+          print(json.dumps(summary, indent=2))
+          if summary["errors"]:
+              raise SystemExit("Dependency audit report validation failed")
+          PY
+
+      - name: Capture Defusedxml distribution license metadata
+        if: always()
+        run: |
+          python -m pip download --no-deps --only-binary=:all: \
+            --dest artifacts/security-audit defusedxml==0.7.1
+          python - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          root = Path("artifacts/security-audit")
+          wheels = list(root.glob("defusedxml-0.7.1-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"Expected one Defusedxml wheel, found {len(wheels)}")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              name = next(x for x in archive.namelist() if x.endswith(".dist-info/METADATA"))
+              lines = archive.read(name).decode("utf-8").splitlines()
+          result = {
+              "name": next((x[6:] for x in lines if x.startswith("Name: ")), None),
+              "version": next((x[9:] for x in lines if x.startswith("Version: ")), None),
+              "license": next((x[9:] for x in lines if x.startswith("License: ")), None),
+              "license_expression": next((x[20:] for x in lines if x.startswith("License-Expression: ")), None),
+              "license_classifiers": [x[12:] for x in lines if x.startswith("Classifier: ") and "License ::" in x],
+              "wheel": wheels[0].name,
+          }
+          (root / "defusedxml-license-metadata.json").write_text(
+              json.dumps(result, indent=2) + "\\n", encoding="utf-8"
+          )
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Hash audit evidence
+        if: always()
+        run: |
+          find artifacts/security-audit -maxdepth 1 -type f ! -name SHA256SUMS -print0 \
+            | sort -z | xargs -0 -r sha256sum > artifacts/security-audit/SHA256SUMS
+
+      - name: Upload machine-readable audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nlc-dependency-security-audit-${{ github.sha }}
+          path: artifacts/security-audit/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce clean and complete audit
+        if: always()
+        env:
+          PYPI_OUTCOME: ${{ steps.pypi_audit.outcome }}
+          OSV_OUTCOME: ${{ steps.osv_audit.outcome }}
+        run: |
+          test "$PYPI_OUTCOME" = "success"
+          test "$OSV_OUTCOME" = "success"
