@@ -2,8 +2,10 @@
 
 The controlled production release workflow runs this script and fails closed
 unless every numbered item in the document's "Findings requiring verification
-before closure" section is marked CLOSED and every evidence artifact the
-section references under docs/ exists in the repository. References are
+before closure" section carries a ``Status: CLOSED`` line (the status value
+must be exactly ``CLOSED``; ``NOT CLOSED``, ``OPEN`` or a missing status all
+fail) and every evidence artifact the section references under docs/ exists in
+the repository. References are
 backticked docs/ paths and Markdown link destinations (inline and reference
 style) that resolve under docs/.
 """
@@ -17,6 +19,7 @@ from urllib.parse import unquote
 DOC_PATH = Path("docs/SECURITY_RISK_ACCEPTANCE.md")
 SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
+STATUS_LINE = re.compile(r"^(?:(?:[-+]|\d+\.)\s+)?status\s*:\s*(.*?)\s*$", re.IGNORECASE)
 EVIDENCE_ROOT = "docs/"
 
 BACKTICK_REF = re.compile(r"`(docs/[^`]+)`")
@@ -50,6 +53,21 @@ def link_evidence_path(destination: str) -> str | None:
     return normalized if normalized.startswith(EVIDENCE_ROOT) else None
 
 
+def item_statuses(block: str) -> list[str]:
+    """Return the value of every ``Status:`` line in a closure item, markup removed."""
+    statuses = []
+    for line in block.splitlines():
+        match = STATUS_LINE.match(re.sub(r"[*_`]", "", line).strip())
+        if match:
+            statuses.append(match.group(1))
+    return statuses
+
+
+def is_closed(block: str) -> bool:
+    statuses = item_statuses(block)
+    return bool(statuses) and all(status == CLOSED_MARKER for status in statuses)
+
+
 def referenced_evidence_paths(body: str) -> list[str]:
     refs = list(BACKTICK_REF.findall(body))
     destinations = INLINE_LINK.findall(body) + REFERENCE_LINK.findall(body)
@@ -80,8 +98,8 @@ def main() -> int:
     failures: list[str] = []
     for block in blocks:
         title = block.splitlines()[0].strip()
-        if CLOSED_MARKER not in block:
-            failures.append(f"item not CLOSED: {title}")
+        if not is_closed(block):
+            failures.append(f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}")
 
     for ref in referenced_evidence_paths(body):
         if not Path(ref).is_file():

@@ -37,7 +37,7 @@ def repo(tmp_path, monkeypatch):
     ],
 )
 def test_missing_linked_evidence_fails_closed(repo, capsys, markup):
-    _write_doc(repo, f"1. CLOSED: see {markup}")
+    _write_doc(repo, f"1. Item: see {markup}\n   Status: CLOSED")
 
     assert closure.main() == 1
     assert "FAIL: missing evidence file: docs/evidence/" in capsys.readouterr().out
@@ -53,7 +53,7 @@ def test_missing_linked_evidence_fails_closed(repo, capsys, markup):
     ],
 )
 def test_existing_linked_evidence_passes(repo, markup):
-    _write_doc(repo, f"1. CLOSED: see {markup}")
+    _write_doc(repo, f"1. Item: see {markup}\n   Status: CLOSED")
     (repo / "docs" / "evidence").mkdir()
     (repo / "docs" / "evidence" / "report.md").write_text("evidence", encoding="utf-8")
 
@@ -61,7 +61,7 @@ def test_existing_linked_evidence_passes(repo, markup):
 
 
 def test_url_decoded_link_destination_is_checked(repo):
-    _write_doc(repo, "1. CLOSED: see [evidence](docs/evidence/my%20report.md)")
+    _write_doc(repo, "1. Item: see [evidence](docs/evidence/my%20report.md)\n   Status: CLOSED")
     (repo / "docs" / "evidence").mkdir()
     (repo / "docs" / "evidence" / "my report.md").write_text("evidence", encoding="utf-8")
 
@@ -69,7 +69,7 @@ def test_url_decoded_link_destination_is_checked(repo):
 
 
 def test_backticked_missing_evidence_still_fails(repo, capsys):
-    _write_doc(repo, "1. CLOSED: see `docs/evidence/report.md`")
+    _write_doc(repo, "1. Item: see `docs/evidence/report.md`\n   Status: CLOSED")
 
     assert closure.main() == 1
     assert "missing evidence file: docs/evidence/report.md" in capsys.readouterr().out
@@ -93,9 +93,56 @@ def test_external_anchor_and_non_docs_destinations_are_ignored(destination):
 def test_same_missing_file_is_reported_once(repo, capsys):
     _write_doc(
         repo,
-        "1. CLOSED: `docs/evidence/report.md` and [same](docs/evidence/report.md)",
+        "1. Item: `docs/evidence/report.md` and [same](docs/evidence/report.md)\n   Status: CLOSED",
     )
 
     assert closure.main() == 1
     out = capsys.readouterr().out
     assert out.count("missing evidence file: docs/evidence/report.md") == 1
+
+
+@pytest.mark.parametrize(
+    "status_line",
+    [
+        "Status: CLOSED",
+        "- Status: CLOSED",
+        "**Status:** CLOSED",
+        "**Status: CLOSED**",
+        "Status: **CLOSED**",
+        "  status:   CLOSED  ",
+    ],
+)
+def test_explicit_closed_status_passes(repo, status_line):
+    _write_doc(repo, f"1. Item\n   {status_line}")
+
+    assert closure.main() == 0
+
+
+@pytest.mark.parametrize(
+    "status_lines",
+    [
+        "Status: NOT CLOSED",
+        "Status: UNCLOSED",
+        "Status: OPEN",
+        "Status: closed",
+        "Status: CLOSED pending review",
+        "Status:",
+        "Status: CLOSED\n   Status: OPEN",
+        "Not closed yet.",
+        "This was CLOSED in an earlier review but reopened.",
+    ],
+)
+def test_item_without_exact_closed_status_fails_closed(repo, capsys, status_lines):
+    _write_doc(repo, f"1. Item\n   {status_lines}")
+
+    assert closure.main() == 1
+    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+
+
+def test_one_unresolved_item_fails_even_when_others_are_closed(repo, capsys):
+    _write_doc(repo, "1. First\n   Status: CLOSED\n2. Second\n   Status: NOT CLOSED")
+
+    assert closure.main() == 1
+    out = capsys.readouterr().out
+    assert "2. Second" in out
+    assert "1. First" not in out
