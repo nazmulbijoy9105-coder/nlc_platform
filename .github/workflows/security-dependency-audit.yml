@@ -39,7 +39,7 @@ jobs:
 
       - name: Install pinned audit tool
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade "pip==24.0"
           python -m pip install "pip-audit==2.10.1"
 
       - name: Record audit environment
@@ -201,15 +201,19 @@ jobs:
       - name: Hash retained audit evidence
         if: always()
         run: |
-          find artifacts/security-audit -maxdepth 1 -type f ! -name SHA256SUMS -print0 \
-            | sort -z \
-            | xargs -0 -r sha256sum > artifacts/security-audit/SHA256SUMS
+          (
+            cd artifacts/security-audit
+            find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\\0' \
+              | sort -z \
+              | xargs -0 -r sha256sum > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
 
       - name: Upload machine-readable audit evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-dependency-security-audit-${{ github.sha }}
+          name: nlc-dependency-security-audit-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/security-audit/
           if-no-files-found: error
           retention-days: 90
