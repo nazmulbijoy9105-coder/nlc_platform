@@ -1,3 +1,4 @@
+import os
 import sys
 
 import httpx
@@ -122,7 +123,10 @@ def fetch_posted_replies(client: httpx.Client, headers: dict[str, str]) -> set[t
 
 
 def main() -> int:
-    token = sys.argv[1]
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token:
+        print("FAILED: set GITHUB_TOKEN (or GH_TOKEN) in the environment", file=sys.stderr)
+        return 1
     with httpx.Client(base_url="https://api.github.com") as client:
         headers = {
             "Authorization": f"Bearer {token}",
