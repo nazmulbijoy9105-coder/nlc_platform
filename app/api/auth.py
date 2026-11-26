@@ -57,10 +57,9 @@ def _build_limiter() -> Limiter:
     Mounts the dedicated REDIS_URL storage so buckets survive restarts and are shared
     across replicas. CELERY_BROKER_URL is never used as a limiter backend.
     Production and Render runtimes must configure Redis and refuse to start without it;
-    the process-local ``memory://`` store is only
-    selected when no Redis URL is configured outside production. If the storage
-    backend dies at runtime, the in-memory fallback keeps breached requests
-    rejected instead of surfacing backend errors.
+    the process-local ``memory://`` store is only selected outside production.
+    Runtime Redis failures are deliberately not downgraded to process-local
+    counters: doing so would reset the shared quota independently on each worker.
 
     Header emission is enabled so 429 responses carry ``Retry-After``. SlowAPI
     then writes rate-limit headers onto every limited endpoint's response, so
@@ -78,7 +77,11 @@ def _build_limiter() -> Limiter:
             "socket_connect_timeout": 1.0,
             "socket_timeout": 1.0,
         },
-        in_memory_fallback=["10/minute", "5/minute"],
+        # One global fallback ceiling preserves login at 10/minute. The
+        # route-specific 5/minute decorators remain the stricter 2FA limits.
+        # Fallback is intentionally disabled: process-local counters cannot
+        # preserve shared Redis quota across workers.
+        in_memory_fallback=["10/minute"],
     )
 
 
