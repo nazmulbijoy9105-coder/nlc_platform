@@ -27,7 +27,7 @@ from dataclasses import fields as dataclass_fields
 from datetime import UTC, datetime
 from typing import NamedTuple
 
-from sqlalchemy import and_, func, or_, select, text, update
+from sqlalchemy import and_, false, func, or_, select, text, true, update
 
 from app.models.company import Company
 from app.models.compliance import ComplianceEvaluationRun, ComplianceFlag, ComplianceScoreHistory
@@ -627,9 +627,9 @@ class ComplianceService(BaseService[ComplianceFlag]):
         # cannot rewrite evaluator code. A missing/inactive row is fail-closed.
         catalogue_rows = list((
             await self.db.execute(
-                _catalogue_identity_query()
+                select(LegalRule).order_by(LegalRule.rule_id)
             )
-        ).all())
+        ).scalars().all())
         catalogue_identity_conflicts = _catalogue_identity_conflicts(catalogue_rows)
         profile.catalogue_binding_required = True
         profile.catalogue_rule_versions = {
@@ -1609,9 +1609,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
         verified_rule_ids = sorted(
             set(VERIFIED_RULE_IDS).intersection(RJSC_IN_SCOPE_RULE_IDS)
         )
-        product_filter = and_(
-            score_released,
-            ComplianceFlag.rule_id.in_(product_rule_ids),
+        product_filter = (
+            ComplianceFlag.rule_id.in_(product_rule_ids)
+            if score_released
+            else false()
         )
         flags_result = await self.db.execute(
             select(
@@ -1634,9 +1635,10 @@ class ComplianceService(BaseService[ComplianceFlag]):
                 func.count().filter(
                     and_(
                         ComplianceFlag.rule_id.in_(rjsc_rule_ids),
-                        or_(
-                            not score_released,
-                            ~ComplianceFlag.rule_id.in_(product_rule_ids),
+                        (
+                            true()
+                            if not score_released
+                            else ~ComplianceFlag.rule_id.in_(product_rule_ids)
                         ),
                     )
                 ).label("not_evaluated"),
