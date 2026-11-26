@@ -437,3 +437,19 @@ def test_evaluation_snapshot_query_loads_complete_legal_rule_records():
     assert description["entity"] is LegalRule
     assert hasattr(LegalRule, "verified_by")
     assert hasattr(LegalRule, "verified_at")
+
+def test_agm001_missing_definition_fields_fail_closed_without_attribute_error():
+    from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from app.services.compliance_service import _catalogue_identity_conflicts
+
+    row = SimpleNamespace(
+        rule_id="AGM-001",
+        rule_version="2.3",
+        is_active=True,
+        statutory_basis=STATUTORY_RULE_REGISTRY["AGM-001"].law,
+    )
+
+    conflicts = _catalogue_identity_conflicts([row])
+
+    assert conflicts["AGM-001"]["binding_reason"] == "RULE_DEFINITION_MISMATCH"
+    assert conflicts["AGM-001"]["catalogue_is_active"] is True
