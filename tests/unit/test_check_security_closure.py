@@ -149,11 +149,11 @@ def test_one_unresolved_item_fails_even_when_others_are_closed(repo, capsys):
 
 
 def test_reference_definition_outside_closure_section_is_resolved(repo, capsys):
-    _write_doc(repo, "1. Item: see [evidence][report]\\n   Status: CLOSED")
+    _write_doc(repo, "1. Item: see [evidence][report]\n   Status: CLOSED")
     document = repo / "docs" / "SECURITY_RISK_ACCEPTANCE.md"
     document.write_text(
         document.read_text(encoding="utf-8")
-        + "\\n[report]: docs/evidence/report.md\\n",
+        + "\n[report]: docs/evidence/report.md\n",
         encoding="utf-8",
     )
 
@@ -162,14 +162,14 @@ def test_reference_definition_outside_closure_section_is_resolved(repo, capsys):
 
 
 def test_collapsed_reference_link_definition_outside_section_passes(repo):
-    _write_doc(repo, "1. Item: see [report][]\\n   Status: CLOSED")
+    _write_doc(repo, "1. Item: see [report][]\n   Status: CLOSED")
     evidence = repo / "docs" / "evidence"
     evidence.mkdir()
     (evidence / "report.md").write_text("evidence", encoding="utf-8")
     document = repo / "docs" / "SECURITY_RISK_ACCEPTANCE.md"
     document.write_text(
         document.read_text(encoding="utf-8")
-        + "\\n[report]: docs/evidence/report.md\\n",
+        + "\n[report]: docs/evidence/report.md\n",
         encoding="utf-8",
     )
 
