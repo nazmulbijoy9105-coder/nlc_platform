@@ -274,7 +274,8 @@ def test_duplicate_closure_item_fails_closed(repo, capsys):
     assert "duplicate closure item 1" in capsys.readouterr().out
 
 
-def test_structure_only_passes_with_an_open_item(repo, capsys):
+def test_structure_only_passes_with_an_open_item(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2}))
     # The PR-level structural job must not force every item CLOSED; an OPEN
     # item is reported as info, not a failure (the production gate still blocks).
     _write_doc(repo, "1. Closed\n   Status: CLOSED\n2. Pending\n   Status: OPEN")
@@ -299,7 +300,7 @@ def test_structure_only_fails_on_missing_status(repo, capsys):
     _write_doc(repo, "1. Item with no status line\n   some prose only")
 
     assert closure.main(["--structure-only"]) == 1
-    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+    assert "exactly one Status: OPEN or Status: CLOSED" in capsys.readouterr().out
 
 
 def test_structure_only_fails_on_missing_evidence(repo, capsys):
