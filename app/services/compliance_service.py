@@ -1580,7 +1580,7 @@ class ComplianceService(BaseService[ComplianceFlag]):
     async def get_flag_summary(self, company_id: uuid.UUID) -> dict:
         """
         Return the existing view metadata plus canonical active-flag counts.
-        Severity counts are calculated from active ORM flags, not inferred
+        Severity counts are calculated from active flag rows in SQL, not inferred
         from risk-band or score values.
         """
         from app.models.enums import FlagStatus
