@@ -1,0 +1,39 @@
+name: Security closure structure
+
+# PR-level structural gate for docs/SECURITY_RISK_ACCEPTANCE.md.
+#
+# Catches the class of regression seen in PR #432: a superseded closure block
+# left in the document duplicated the numbered items and left item 4 as
+# `Status: OPEN`, which made the fail-closed production gate
+# (scripts/check_security_closure.py) exit 1. That gate runs only in the
+# workflow_dispatch production-release/deploy workflows, so the failure was
+# invisible on the PR.
+#
+# This job runs the gate in --structure-only mode on every pull request: it
+# rejects duplicate item numbers, missing/malformed Status lines, and missing
+# evidence files, but does NOT run the slow live pip-audit and does NOT require
+# every item to be CLOSED (an OPEN item is reported as info, not a failure).
+# The live audit and the all-CLOSED requirement remain release-gate concerns
+# enforced by the production-release and deploy-vercel-backend workflows.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  closure-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate security-closure document structure
+        run: python scripts/check_security_closure.py --structure-only
