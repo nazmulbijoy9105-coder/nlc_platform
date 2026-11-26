@@ -1,4 +1,3 @@
-import json
 import sys
 
 import httpx
@@ -31,8 +30,8 @@ REPLIES = {
         "- New `tests/unit/test_rescue_registry_integrity_gate.py`: parity failure → "
         "BLOCKED; paused switch → ACTION_REQUIRED; unknown rule id in `related_rules` → BLOCKED.\n"
         "- `test_rescue_sequence_parity.py`: 37 passed (approved contract unchanged).\n"
-        "- Targeted run `tests/unit -k \"rescue or disposition or legal_score or canonical "
-        "or scoring or band\"`: 397 passed / 6 pre-existing collection errors vs 394 passed / "
+        '- Targeted run `tests/unit -k "rescue or disposition or legal_score or canonical '
+        'or scoring or band"`: 397 passed / 6 pre-existing collection errors vs 394 passed / '
         "the same 6 errors on the parent commit — the only delta is the 3 new tests. No new "
         "ruff findings (the single I001 import-sort finding is identical on the parent)."
     ),
@@ -100,6 +99,28 @@ REPLIES = {
 }
 
 
+def _normalize(body: str) -> str:
+    return body.replace("\r\n", "\n").strip()
+
+
+def fetch_posted_replies(client: httpx.Client, headers: dict[str, str]) -> set[tuple[int, str]]:
+    """Return (parent comment id, body) for every reply already on the PR."""
+    posted: set[tuple[int, str]] = set()
+    url: str | None = f"/repos/{OWNER}/{REPO}/pulls/{PR}/comments"
+    params: dict[str, int] | None = {"per_page": 100}
+    while url:
+        resp = client.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        for comment in resp.json():
+            parent_id = comment.get("in_reply_to_id")
+            if parent_id is not None:
+                posted.add((parent_id, _normalize(comment["body"])))
+        next_link = resp.links.get("next")
+        url = next_link["url"] if next_link else None
+        params = None
+    return posted
+
+
 def main() -> int:
     token = sys.argv[1]
     with httpx.Client(base_url="https://api.github.com") as client:
@@ -107,8 +128,17 @@ def main() -> int:
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
         }
-        ok, fail = 0, 0
+        try:
+            posted = fetch_posted_replies(client, headers)
+        except httpx.HTTPError as exc:
+            print(f"FAILED to list existing replies, nothing posted: {exc}")
+            return 1
+        ok, skipped, fail = 0, 0, 0
         for comment_id, body in REPLIES.items():
+            if (comment_id, _normalize(body)) in posted:
+                skipped += 1
+                print(f"skipped {comment_id}: reply already posted")
+                continue
             resp = client.post(
                 f"/repos/{OWNER}/{REPO}/pulls/{PR}/comments",
                 headers=headers,
@@ -120,7 +150,7 @@ def main() -> int:
             else:
                 fail += 1
                 print(f"FAILED {comment_id}: {resp.status_code} {resp.text[:200]}")
-        print(f"done: {ok} replied, {fail} failed")
+        print(f"done: {ok} replied, {skipped} already posted, {fail} failed")
         return 1 if fail else 0
 
 
