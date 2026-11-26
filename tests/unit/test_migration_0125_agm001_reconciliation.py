@@ -444,7 +444,7 @@ def test_legacy_execution_fake_rejects_update_with_dropped_predicates():
         "UPDATE public.legal_rules "
         "SET statutory_basis = :canonical_basis, rule_version = :next_version"
     )
-    with pytest.raises(AssertionError, match="UPDATE semantics"):
+    with pytest.raises(AssertionError, match="rule UPDATE"):
         bind.execute(
             unsafe_sql,
             {
