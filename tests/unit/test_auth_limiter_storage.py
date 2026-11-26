@@ -133,3 +133,20 @@ def test_build_limiter_configures_bounded_redis_timeouts(monkeypatch):
     }
     assert captured["in_memory_fallback"] == ["10/minute"]
     assert captured["in_memory_fallback_enabled"] is False
+
+
+def test_production_limiter_connects_to_the_ci_redis_service(monkeypatch):
+    """Exercise the actual Redis storage backend in production mode when CI provides it."""
+    import os
+
+    redis_url = os.environ.get("REDIS_URL", "").strip()
+    if not redis_url:
+        pytest.skip("REDIS_URL is provided by the CI Redis service")
+
+    settings = _settings(ENVIRONMENT="production", REDIS_URL=redis_url)
+    monkeypatch.setattr(auth_module, "get_settings", lambda: settings)
+
+    limiter = auth_module._build_limiter()
+
+    assert limiter._storage_uri == redis_url
+    assert limiter._storage.check() is True
