@@ -56,6 +56,15 @@ CANONICAL_CONDITION = {
         "agm_count",
     ],
 }
+# These scoring and escalation attributes are part of the legal-rule identity,
+# not harmless metadata. A drifted value must not be carried into the canonical
+# calendar-month definition merely because the text and citation still match.
+EXPECTED_LEGACY_ATTRIBUTES = {
+    "default_severity": "NOT_EVALUATED",
+    "score_impact": 0,
+    "revenue_tier": "STRUCTURED_REGULARIZATION",
+    "is_black_override": False,
+}
 CHANGE_REASON = (
     "Replace the obsolete fixed 548-day AGM-001 catalogue approximation with "
     "the canonical 18-calendar-month rule used by the statutory registry, "
@@ -120,6 +129,7 @@ def _validate_0125_history(bind):
         "description": LEGACY_DESCRIPTION,
         "rule_condition": LEGACY_CONDITION,
         "is_active": True,
+        **EXPECTED_LEGACY_ATTRIBUTES,
     }
     if (
         before.get("rule_id") != RULE_ID
@@ -162,6 +172,10 @@ def upgrade() -> None:
         or previous.get("description") != LEGACY_DESCRIPTION
         or previous.get("rule_condition") != LEGACY_CONDITION
         or previous.get("is_active") is not True
+        or any(
+            previous.get(key) != value
+            for key, value in EXPECTED_LEGACY_ATTRIBUTES.items()
+        )
     ):
         raise RuntimeError(
             "0128 refuses unexpected AGM-001 catalogue drift; "
