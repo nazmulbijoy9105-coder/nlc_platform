@@ -1,0 +1,28 @@
+SOURCE TYPE: Derived text extract from an official Bangladesh Government Gazette PDF (not the PDF binary).
+INSTRUMENT: Finance Act, 2022 (Act XIII of 2022), dated 30 June 2022.
+ISSUING SOURCE: Department of Printing and Publications, Bangladesh Government Press.
+OFFICIAL PDF URL: https://www.dpp.gov.bd/upload_file/gazettes/45026_26037.pdf
+CAPTURE / OBSERVATION DATE: 2026-11-28
+SOURCE PAGES: PDF page 2 (printed Gazette p. 10952; Stamp Act amendment heading and Schedule I substitution); PDF pages 29-30 (printed Gazette pp. 10980-10981; Schedule I Articles 61-62).
+LANGUAGE: Gazette in Bangla; Schedule I replacement text is in English.
+PROVENANCE: Text transcribed from the browser-rendered text extraction of the official DPP-hosted Gazette PDF. The original PDF bytes were not downloadable in the current execution environment. This file is therefore a derived excerpt, not an immutable copy of the Gazette PDF.
+SOURCE PDF SHA-256: NOT CAPTURED.
+EXTRACT FILE SHA-256: 21aa4dabb618ae6243d2f1770b97ba6354e49b58ca25137cca4d3254a29431be
+
+--- Extract ---
+
+Stamp Act, 1899 (Act No. II of 1899) — Schedule I, as substituted by section 3 of the Finance Act, 2022.
+
+61. TRANSFER (whether with or without consideration)—
+(a) Of shares in an incorporated company or other body corporate;
+
+Duty: 1.5% of the value of the consideration.
+
+Exemption:
+(2) Transfer of shares and debentures of the public limited companies defined in the Companies Act, 1994 (Act No. XVIII of 1994) and whose shares are listed in the stock exchange.
+
+62. TRANSFER OF LEASE by way of assignment and not by way of under lease.
+
+--- End extract ---
+
+LIMITATION: This extract supports the correction of the earlier Article 62(a) attribution to Article 61(a) at the 2022 Gazette publication date. It does not establish whether a later amendment, notification, exemption, or rate change has modified the position by 2026-11-28. It is not counsel approval and must not change TR-002's NOT_VERIFIED status.
