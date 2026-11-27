@@ -5,7 +5,7 @@
 **Machine-readable source of truth:** [85_rule_source_and_evidence_workpack_v1.json](./85_rule_source_and_evidence_workpack_v1.json)  
 **Legal approval:** 0/85; this register does not change `VERIFIED_RULE_IDS`, the legal approval register, or release gates.
 
-**Current inventory control counts:** 85/85 source records remain NOT_VALIDATED; 0 reviewers and 0 captured source hashes are recorded. Eleven rule IDs currently lack even a candidate exact provision: BSEC-001–004, FX-001, INC-005, INC-006, TL-001, TL-002, TR-002 and VAT-003. All 85 operative intervals remain unresolved.
+**Current inventory control counts:** 85/85 source records remain NOT_VALIDATED; 0 reviewers and 0 captured source hashes are recorded. **Register synchronisation note:** the rule-by-rule table below now records candidate provisions for BSEC-001–004, but the machine-readable JSON workpack has not yet been synchronised with those four candidate anchors. Its existing inventory therefore still reports eleven missing candidates; seven are not yet identified in this markdown table (FX-001, INC-005, INC-006, TL-001, TL-002, TR-002 and VAT-003). Do not use the aggregate missing-candidate count as reconciled until the JSON is updated and parity-tested. All 85 operative intervals remain unresolved.
 
 ## BSEC candidate-source clarification (research note; not validation)
 
