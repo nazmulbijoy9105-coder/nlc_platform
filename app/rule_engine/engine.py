@@ -1735,10 +1735,6 @@ class NLCRuleEngine:
                     "deadline logic; no compliance, breach clearance, or score "
                     "adjustment is inferred."
                 )
-                review_basis = (
-                    "Section 81(1), Companies Act 1994 (Bangladesh); "
-                    "order-specific authority requires review"
-                )
                 if "AGM-001" in target_rules:
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-001",
@@ -1747,7 +1743,10 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=review_basis,
+                        statutory_basis=(
+                            "Section 81(1), Companies Act 1994 (Bangladesh); "
+                            "order-specific authority requires review"
+                        ),
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
@@ -1760,7 +1759,10 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=review_basis,
+                        statutory_basis=(
+                            "Section 81(1), Companies Act 1994 (Bangladesh); "
+                            "order-specific authority requires review"
+                        ),
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
