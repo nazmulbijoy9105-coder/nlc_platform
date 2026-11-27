@@ -21,6 +21,9 @@ on:
       - "tests/unit/test_not_evaluated_score_visibility.py"
       - "tests/unit/test_score_release_evidence_gates.py"
       - ".github/workflows/production-0112-to-0122-rehearsal.yml"
+  push:
+    branches:
+      - ci/postgres-only-g2-neon-isolation-20261127
   workflow_dispatch:
 
 permissions:
