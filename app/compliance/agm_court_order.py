@@ -194,13 +194,11 @@ def agm_court_order_scoring_guard(
         except (TypeError, ValueError) as exc:
             decision_error = str(exc)
 
-    decision_matches = bool(
-        decision
-        and decision.affected_event == evidence.affected_event
-        and decision.reviewer_id
-        and decision.decision_reference
-    )
-    if not evidence.evidence_verified or not decision_matches:
+    if (
+        not evidence.evidence_verified
+        or decision is None
+        or decision.affected_event != evidence.affected_event
+    ):
         reason = (
             "ORDER_EVIDENCE_NOT_VERIFIED"
             if not evidence.evidence_verified
