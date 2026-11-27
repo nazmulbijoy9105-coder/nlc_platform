@@ -1710,42 +1710,58 @@ class NLCRuleEngine:
                 else:
                     target_rules = ["AGM-001", "AGM-002"]
             if target_rules:
-                for target_rule_id in target_rules:
-                    review_state = (
-                        RuleState.REQUIRES_LAWYER_JUDGMENT
-                        if (
-                            review["evidence_verified"]
-                            and review["requires_lawyer_judgment"]
-                        )
-                        else RuleState.UNKNOWN
+                review_state = (
+                    RuleState.REQUIRES_LAWYER_JUDGMENT
+                    if (
+                        review["evidence_verified"]
+                        and review["requires_lawyer_judgment"]
                     )
+                    else RuleState.UNKNOWN
+                )
+                review_detail = {
+                    "court_order_review": review,
+                    "court_name": order_details.get("court_name"),
+                    "case_number": order_details.get("case_number"),
+                    "order_date": order_details.get("order_date"),
+                    "affected_event": affected_event or None,
+                    "evidence_ref": order_details.get("evidence_ref"),
+                    "order_status": order_details.get("order_status", "UNKNOWN"),
+                    "automatic_clearance": False,
+                    "score_uplift": 0,
+                }
+                review_description = (
+                    "Potentially relevant court-order evidence is recorded. "
+                    "Its legal effect has not been translated into this rule's "
+                    "deadline logic; no compliance, breach clearance, or score "
+                    "adjustment is inferred."
+                )
+                review_basis = (
+                    "Section 81(1), Companies Act 1994 (Bangladesh); "
+                    "order-specific authority requires review"
+                )
+                if "AGM-001" in target_rules:
                     self._add_flag(ComplianceFlag(
-                        rule_id=target_rule_id,
+                        rule_id="AGM-001",
                         flag_code="AGM_COURT_ORDER_REQUIRES_REVIEW",
                         severity=Severity.NOT_EVALUATED,
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
-                        description=(
-                            "Potentially relevant court-order evidence is recorded. "
-                            "Its legal effect has not been translated into this rule's "
-                            "deadline logic; no compliance, breach clearance, or score "
-                            "adjustment is inferred."
-                        ),
-                        statutory_basis=(
-                            "Section 81(1), Companies Act 1994 (Bangladesh); "
-                            "order-specific authority requires review"
-                        ),
-                        detail={
-                            "court_order_review": review,
-                            "court_name": order_details.get("court_name"),
-                            "case_number": order_details.get("case_number"),
-                            "order_date": order_details.get("order_date"),
-                            "affected_event": affected_event or None,
-                            "evidence_ref": order_details.get("evidence_ref"),
-                            "order_status": order_details.get("order_status", "UNKNOWN"),
-                            "automatic_clearance": False,
-                            "score_uplift": 0,
-                        },
+                        description=review_description,
+                        statutory_basis=review_basis,
+                        detail=review_detail,
+                        state=review_state,
+                        eval_state="UNKNOWN",
+                    ))
+                if "AGM-002" in target_rules:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="AGM_COURT_ORDER_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=review_description,
+                        statutory_basis=review_basis,
+                        detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
                     ))
