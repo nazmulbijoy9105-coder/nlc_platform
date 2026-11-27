@@ -100,6 +100,29 @@ def test_injecting_any_out_of_scope_rule_cannot_change_any_engine_rjsc_decision(
 
     baseline = NLCRuleEngine(today=date(2026, 11, 24)).evaluate(profile)
 
+    # Positive control: the same engine must still apply an explicitly
+    # in-scope scoring rule. Otherwise a no-op scorer would make every
+    # out-of-scope invariance assertion pass vacuously.
+    in_scope = ComplianceFlag(
+        rule_id="AR-001",
+        flag_code="IN_SCOPE_SCORING_CONTROL",
+        severity=Severity.RED,
+        score_impact=15,
+        revenue_tier=RevenueTier.CORPORATE_RESCUE,
+        description="In-scope scoring control",
+        statutory_basis="Companies Act 1994, Section 36",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+        is_black_override=False,
+    )
+    monkeypatch.setattr(
+        NLCRuleEngine,
+        "_run_incorporation_rules",
+        lambda self, company: self._add_flag(in_scope),
+    )
+    in_scope_control = NLCRuleEngine(today=date(2026, 11, 24)).evaluate(profile)
+    assert in_scope_control.score_breakdown.final_score < baseline.score_breakdown.final_score
+
     injected = ComplianceFlag(
         rule_id=rule_id,
         flag_code="MALICIOUS_OUT_OF_SCOPE_INJECTION",
