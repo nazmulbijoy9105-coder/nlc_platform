@@ -66,6 +66,8 @@ jobs:
       APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role@localhost:5432/nlc_test
       REQUIRE_RLS_APP_ROLE: "true"
       ENVIRONMENT: test
+      TESTING: "true"
+      CI: "true"
       REDIS_URL: redis://localhost:6379/0
       JWT_SECRET_KEY: ci-only-not-a-production-secret
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
