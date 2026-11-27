@@ -170,6 +170,11 @@ jobs:
             psql -h localhost -U nlc_test -d nlc_test -X -v ON_ERROR_STOP=1 \
             -f scripts/audit_nlc_role_memberships.sql
 
+      - name: Seed canonical 85-rule catalogue in disposable PostgreSQL
+        env:
+          NLC_ALLOW_DEVELOPMENT_RULE_SEED: "true"
+        run: python scripts/seed_rules.py --apply
+
       - name: Verify independent legal approval register remains fail-closed
         run: python scripts/check_rule_verification.py
 
