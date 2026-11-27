@@ -23,18 +23,23 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies and inventory tool
+      - name: Install application and inventory-tool environments separately
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pip-licenses
+          set -euo pipefail
+          python -m venv .venv-app
+          python -m venv .venv-license-tools
+          .venv-app/bin/python -m pip install --upgrade pip
+          .venv-app/bin/python -m pip install -r requirements.txt
+          .venv-license-tools/bin/python -m pip install pip-licenses
 
       - name: Enforce explicit approved-license allowlist
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          pip-licenses --format=json --with-urls --with-description > artifacts/python-licenses.json
-          pip-licenses --format=markdown --with-urls > artifacts/python-licenses.md
+          .venv-license-tools/bin/pip-licenses --python .venv-app/bin/python \
+            --format=json --with-urls --with-description > artifacts/python-licenses.json
+          .venv-license-tools/bin/pip-licenses --python .venv-app/bin/python \
+            --format=markdown --with-urls > artifacts/python-licenses.md
           python scripts/check_dependency_licenses.py artifacts/python-licenses.json
 
       - name: Upload license inventory
