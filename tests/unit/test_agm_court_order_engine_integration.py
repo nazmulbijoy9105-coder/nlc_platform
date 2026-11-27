@@ -1,6 +1,6 @@
-from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from datetime import date
 
+from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine, RuleState, Severity
 
 
