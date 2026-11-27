@@ -116,5 +116,7 @@ def test_dependency_license_expression_parser_preserves_fail_closed_policy():
     assert not is_approved("(MIT OR GPL-3.0-only) AND BSD-3-Clause")
     assert is_approved("MIT AND Python-2.0")
     assert is_approved("Python License, Version 2")
+    assert is_approved("MIT-CMU")
+    assert is_approved("BSD-3-Clause AND TCL")
     assert not is_approved("UNKNOWN")
     assert not is_approved("MIT OR")
