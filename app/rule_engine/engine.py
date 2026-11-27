@@ -1690,8 +1690,14 @@ class NLCRuleEngine:
             elif affected_event.startswith("SUBSEQUENT_AGM"):
                 target_rules = ["AGM-002"] if c.agm_count is None or c.agm_count > 0 else []
             else:
-                # An unscoped/ambiguous order must not be guessed into a rule.
-                target_rules = ["AGM-001", "AGM-002"]
+                # Scope an ambiguous order only to the currently relevant AGM
+                # track; unknown AGM history must hold both tracks for review.
+                if c.agm_count == 0:
+                    target_rules = ["AGM-001"]
+                elif c.agm_count is not None and c.agm_count > 0:
+                    target_rules = ["AGM-002"]
+                else:
+                    target_rules = ["AGM-001", "AGM-002"]
             if target_rules:
                 for target_rule_id in target_rules:
                     review_state = (
