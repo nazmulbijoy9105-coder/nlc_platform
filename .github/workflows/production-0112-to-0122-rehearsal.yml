@@ -75,36 +75,60 @@ jobs:
             local payload="${3:-}"
             local http_status=""
             local response_body=""
-            for attempt in $(seq 1 8); do
+            local retry_after=""
+            local delay=""
+            local deadline=$((SECONDS + 300))
+            local attempt=0
+            local headers_file
+            headers_file=$(mktemp)
+            while (( SECONDS < deadline && attempt < 8 )); do
+              attempt=$((attempt + 1))
+              : > "$headers_file"
               if [[ "$method" == "POST" ]]; then
                 http_status=$(curl --silent --show-error --request POST \
                   "${AUTH[@]}" -H "Content-Type: application/json" \
-                  --data "$payload" -o "$response_file" -w "%{http_code}" "$url") || {
-                    echo "::error::Neon $method request failed at transport level." >&2
+                  --data "$payload" -D "$headers_file" -o "$response_file" -w "%{http_code}" "$url") || {
+                    rm -f "$headers_file"
+                    echo "::error::Neon $method transport failure; request was not blindly retried." >&2
                     return 1
                   }
               else
                 http_status=$(curl --silent --show-error \
-                  "${AUTH[@]}" -o "$response_file" -w "%{http_code}" "$url") || {
-                    echo "::error::Neon $method request failed at transport level." >&2
+                  "${AUTH[@]}" -D "$headers_file" -o "$response_file" -w "%{http_code}" "$url") || {
+                    rm -f "$headers_file"
+                    echo "::error::Neon $method transport failure." >&2
                     return 1
                   }
               fi
               response_body=$(cat "$response_file")
               if [[ "$http_status" == "423" ]]; then
-                delay=$((attempt * 10))
-                echo "Neon API is locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)." >&2
+                retry_after=$(awk 'BEGIN{IGNORECASE=1} /^Retry-After:/ {gsub("\\r","",$2); print $2}' "$headers_file" | tail -n 1)
+                if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
+                  delay="$retry_after"
+                else
+                  delay=$((2 ** attempt))
+                  (( delay > 60 )) && delay=60
+                  delay=$((delay + RANDOM % 4))
+                fi
+                if (( SECONDS + delay >= deadline )); then
+                  rm -f "$headers_file"
+                  echo "::error::Neon API lock retry would exceed the 300-second total deadline." >&2
+                  return 1
+                fi
+                echo "Neon API locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)." >&2
                 sleep "$delay"
                 continue
               fi
+              rm -f "$headers_file"
               if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
-                echo "::error::Neon $method request returned HTTP $http_status: $response_body" >&2
+                echo "::error::Neon $method returned non-retryable HTTP $http_status: $response_body" >&2
                 return 1
               fi
               printf '%s' "$response_body"
               return 0
             done
-            echo "::error::Neon API remained locked after bounded HTTP 423 retries." >&2
+            rm -f "$headers_file"
+            echo "::error::Neon API remained locked or exceeded retry deadline; failing closed." >&2
             return 1
           }
 
@@ -145,7 +169,14 @@ jobs:
 
           get_uri() {
             local role="$1"
-            curl --silent --show-error --fail --get "${AUTH[@]}"               --data-urlencode "branch_id=$BRANCH_ID"               --data-urlencode "endpoint_id=$ENDPOINT_ID"               --data-urlencode "database_name=neondb"               --data-urlencode "role_name=$role"               --data-urlencode "pooled=false"               "$API/connection_uri" | jq -r '.uri // empty'
+            local query
+            query=$(curl --silent --show-error --get --data-urlencode "branch_id=$BRANCH_ID" \
+              --data-urlencode "endpoint_id=$ENDPOINT_ID" \
+              --data-urlencode "database_name=neondb" \
+              --data-urlencode "role_name=$role" \
+              --data-urlencode "pooled=false" --output /dev/null --write-out '%{url_effective}' \
+              "$API/connection_uri")
+            neon_request GET "$query" | jq -er '.uri | select(type == "string" and length > 0)'
           }
 
           MIGRATION_URL=$(get_uri "nlc_migration_user")
