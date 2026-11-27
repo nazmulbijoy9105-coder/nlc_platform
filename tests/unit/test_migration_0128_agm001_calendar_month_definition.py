@@ -66,9 +66,6 @@ def _current_row(**overrides):
         "statutory_basis": MIGRATION.CANONICAL_BASIS,
         "rule_version": "1.2",
         **_legacy_definition(),
-        "default_severity": "NOT_EVALUATED",
-        "score_impact": 0,
-        "revenue_tier": "STRUCTURED_REGULARIZATION",
         **copy.deepcopy(MIGRATION.EXPECTED_LEGACY_ATTRIBUTES),
     }
     row.update(overrides)
