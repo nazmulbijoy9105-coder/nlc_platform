@@ -1,8 +1,5 @@
 name: API contract smoke
 
-# P0: keep a stable OpenAPI surface for nlc_frontend and external clients.
-# Exports the schema and fails if the app cannot import or generate docs.
-
 on:
   pull_request:
   push:
@@ -20,6 +17,8 @@ jobs:
       JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -31,36 +30,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Export OpenAPI schema
+      - name: Export and validate exact OpenAPI client contract
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          from app.main import app
-
-          schema = app.openapi()
-          assert isinstance(schema, dict), "OpenAPI schema must be a dict"
-          assert schema.get("openapi"), "OpenAPI version missing"
-          paths = schema.get("paths") or {}
-          assert paths, "OpenAPI paths must not be empty"
-          # Stable prefixes the frontend and ops rely on
-          required_prefixes = (
-              "/api/v1/health",
-              "/api/v1/auth",
-              "/api/v1/companies",
-              "/api/v1/rules",
-          )
-          joined = " ".join(paths.keys())
-          missing = [p for p in required_prefixes if p not in joined and not any(k.startswith(p) for k in paths)]
-          if missing:
-              raise SystemExit(f"Required API prefixes missing from OpenAPI: {missing}")
-          out = Path("artifacts/openapi-contract.json")
-          out.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          print(f"Exported {len(paths)} paths to {out}")
-          PY
+          python -m scripts.check_openapi_contract --output artifacts/openapi-contract.json
 
       - name: Upload OpenAPI artifact
         uses: actions/upload-artifact@v4
