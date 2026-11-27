@@ -14,7 +14,13 @@ SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
 ALLOWED_STATUSES = frozenset({"OPEN", CLOSED_MARKER})
 EXPECTED_FINDING_NUMBERS = frozenset({1, 2, 3, 4, 5})
-STATUS_LINE = re.compile(r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:\s*(.*?)\s*$", re.IGNORECASE)
+# Optional list bullet, optional emphasis around the Status key, then a single value.
+STATUS_LINE = re.compile(
+    r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:\s*(.*?)\s*$",
+    re.IGNORECASE,
+)
+# Top-level Markdown ordered-list marker: column zero or up to three leading spaces.
+ITEM_MARKER = re.compile(r"^ {0,3}([0-9]+)\.(?:\s|$)")
 EVIDENCE_ROOT = "docs/"
 REQUIREMENTS_PATH = Path("requirements.txt")
 CURRENT_AUDIT_REPORT = Path("artifacts/security/pip-audit-current.json")
@@ -52,14 +58,24 @@ def _without_fenced_code(value: str) -> str:
     return re.sub(r"(?ms)^ {0,3}((?:\x60){3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[ \t]*$", "", value)
 
 
+def _normalize_status_value(value: str) -> str:
+    """Strip emphasis markers so Markdown-wrapped OPEN/CLOSED still validate.
+
+    Case is preserved: only exact OPEN/CLOSED are accepted by callers.
+    """
+    return re.sub(r"[*_`]", "", value).strip()
+
+
 def item_statuses(block: str) -> list[str]:
     statuses = []
     for line in _without_fenced_code(block).splitlines():
         match = STATUS_LINE.match(line.strip())
         if match:
-            value = match.group(1).strip()
-            wrapped = re.fullmatch(r"(?:\*\*|__|\x60)?(OPEN|CLOSED)(?:\*\*|__|\x60)?", value)
-            statuses.append(wrapped.group(1) if wrapped else value)
+            raw = match.group(1).strip()
+            normalized = _normalize_status_value(raw)
+            # Accept only exact OPEN/CLOSED after emphasis stripping; keep raw
+            # text otherwise so malformed values remain visible in failures.
+            statuses.append(normalized if normalized in ALLOWED_STATUSES else raw)
     return statuses
 
 
@@ -147,11 +163,11 @@ def audit_current_dependencies() -> tuple[bool, str]:
 
 
 def _item_number(block: str) -> int | None:
-    """Return an ASCII, column-zero top-level ordered-list number."""
+    """Return an ASCII ordered-list number (column 0 or up to 3 leading spaces)."""
     lines = block.splitlines()
     if not lines:
         return None
-    match = re.match(r"^([0-9]+)\.\s", lines[0])
+    match = ITEM_MARKER.match(lines[0])
     return int(match.group(1)) if match else None
 
 
@@ -160,8 +176,12 @@ def _has_description(block: str) -> bool:
     lines = _without_fenced_code(block).splitlines()
     if not lines:
         return False
-    first = re.sub(r"^[0-9]+\.\s+", "", lines[0]).strip()
-    remaining = [line.strip() for line in lines[1:] if not STATUS_LINE.match(line.strip())]
+    first = re.sub(r"^ {0,3}[0-9]+\.\s*", "", lines[0]).strip()
+    remaining = [
+        line.strip()
+        for line in lines[1:]
+        if not STATUS_LINE.match(line.strip())
+    ]
     return bool(first or any(remaining))
 
 
@@ -189,12 +209,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: section {SECTION_TITLE!r} not found in {DOC_PATH}")
         return 1
     body = text.split(SECTION_TITLE, 1)[1].split("\n## ", 1)[0]
-    # Ignore fenced examples. Only column-zero ASCII ordered-list markers
-    # are closure records; indented markers are nested list content.
+    # Ignore fenced examples. Ordered-list markers at column zero or with up
+    # to three leading spaces are closure records (CommonMark list rules).
     body_without_code = _without_fenced_code(body)
     blocks = [
         block
-        for block in re.split(r"(?m)(?=^[0-9]+\.\s)", body_without_code.strip("\n"))
+        for block in re.split(
+            r"(?m)(?=^ {0,3}[0-9]+\.(?:\s|$))",
+            body_without_code.strip("\n"),
+        )
         if _item_number(block) is not None
     ]
     if not blocks:
