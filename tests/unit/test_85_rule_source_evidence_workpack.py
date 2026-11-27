@@ -40,6 +40,7 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
         assert "candidate_exact_provisions" in source
         assert source["confirmed_exact_provisions"] == []
         assert "primary_source_url" in source
+        assert isinstance(source["related_official_instruments"], list)
         assert "commencement_or_effective_from" in source
         assert "effective_to" in source
         assert source["operative_interval_status"] == "NOT_VALIDATED"
