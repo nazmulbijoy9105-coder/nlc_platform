@@ -108,9 +108,9 @@ def is_approved(value: object) -> bool:
     raw = str(value or "").strip()
     # pip-licenses appends parenthetical classifier aliases to these exact
     # license names; accept only the recognized redundant forms.
-    if re.fullmatch(r"(?i)the unlicense\\s*\\(\\s*unlicense\\s*\\)", raw):
+    if re.fullmatch(r"(?i)the unlicense\s*\(\s*unlicense\s*\)", raw):
         return True
-    if re.fullmatch(r"(?i)isc license\\s*\\(\\s*iscl\\s*\\)", raw):
+    if re.fullmatch(r"(?i)isc license\s*\(\s*iscl\s*\)", raw):
         return True
     expression = _normalize_expression(value)
     if not expression:
