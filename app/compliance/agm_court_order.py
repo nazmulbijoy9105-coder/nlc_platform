@@ -77,7 +77,9 @@ class AgmCourtOrderEvidence:
             if isinstance(appeal_or_stay_reference, str) else None
         )
         if status in {"APPEALED", "STAYED", "SUPERSEDED"} and not appeal_or_stay_reference:
-            raise ValueError("appeal_or_stay_reference is required for appealed, stayed or superseded orders")
+            raise ValueError(
+                "appeal_or_stay_reference is required for appealed, stayed or superseded orders"
+            )
 
         authenticated = value.get("authenticated") is True
         verified_by = value.get("verified_by")
