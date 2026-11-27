@@ -44,7 +44,14 @@ BEFORE_IMAGE_FIELDS = frozenset(
     }
 )
 MIGRATION_MUTATED_FIELDS = frozenset(
-    {"statutory_basis", "rule_version", "last_modified_at", "updated_at"}
+    {
+        "statutory_basis",
+        "description",
+        "rule_condition",
+        "rule_version",
+        "last_modified_at",
+        "updated_at",
+    }
 )
 
 
@@ -111,13 +118,64 @@ async def test_0125_persists_complete_agm001_before_image_and_version(db):
     for field in sorted(BEFORE_IMAGE_FIELDS - MIGRATION_MUTATED_FIELDS):
         assert before[field] == current[field], field
 
+    # 0125 records the pre-migration version; its current catalogue version
+    # is one increment later. 0128 then records that complete intermediate
+    # row and advances the catalogue version a second time.
     version_parts = str(history["version"]).split(".")
     assert all(part.isdigit() for part in version_parts)
+    version_parts[-1] = str(int(version_parts[-1]) + 1)
+    version_after_0125 = ".".join(version_parts)
+
+    history_0128_rows = (
+        await db.execute(
+            text(
+                """
+                SELECT version, change_reason, changed_by, actor_type,
+                       migration_revision, previous_definition
+                  FROM public.legal_rule_versions
+                 WHERE rule_id = 'AGM-001'
+                   AND migration_revision = '0128_agm001_calendar_month_definition'
+                """
+            )
+        )
+    ).mappings().all()
+    assert len(history_0128_rows) == 1
+    history_0128 = history_0128_rows[0]
+    before_0128 = _json_object(history_0128["previous_definition"])
+    assert history_0128["actor_type"] == "MIGRATION"
+    assert history_0128["changed_by"] is None
+    assert history_0128["migration_revision"] == (
+        "0128_agm001_calendar_month_definition"
+    )
+    assert history_0128["change_reason"]
+    assert history_0128["version"] == version_after_0125
+    assert set(before_0128) == BEFORE_IMAGE_FIELDS
+    assert before_0128["rule_version"] == version_after_0125
+    assert before_0128["statutory_basis"] == CANONICAL_BASIS
+    for field in sorted(BEFORE_IMAGE_FIELDS - MIGRATION_MUTATED_FIELDS):
+        assert before_0128[field] == current[field], field
+    assert before_0128["description"] == before["description"]
+    assert before_0128["rule_condition"] == before["rule_condition"]
+
     version_parts[-1] = str(int(version_parts[-1]) + 1)
     assert current["rule_version"] == ".".join(version_parts)
     assert current["statutory_basis"] == CANONICAL_BASIS
     assert current["rule_name"] == before["rule_name"]
     assert current["rule_type"] == before["rule_type"]
-    assert current["description"] == before["description"]
-    assert current["rule_condition"] == before["rule_condition"]
+    assert current["description"] == (
+        "First AGM must be held within 18 calendar months of incorporation. "
+        "Calculate with calendar-month arithmetic; do not use a fixed-day approximation."
+    )
+    assert current["rule_condition"] == {
+        "check_fn": "check_agm_001",
+        "trigger": (
+            "agm_history_verified == True AND agm_count == 0 AND "
+            "today > add_calendar_months(incorporation_date, 18)"
+        ),
+        "data_points": [
+            "agm_history_verified",
+            "incorporation_date",
+            "agm_count",
+        ],
+    }
     assert current["is_active"] is True

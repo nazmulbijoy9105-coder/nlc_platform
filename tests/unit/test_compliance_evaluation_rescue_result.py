@@ -9,16 +9,33 @@ from uuid import uuid4
 
 import pytest
 from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+from scripts.seed_rules import ILRMF_RULES
 
 from app.rule_engine import CompanyProfile
 from app.services.compliance_service import ComplianceService, RescueWorkflowOutcome
 
 
 def _catalogue_rows():
+    canonical_agm001 = next(
+        rule for rule in ILRMF_RULES if rule["rule_id"] == "AGM-001"
+    )
     return [
         SimpleNamespace(
-            rule_id=rule_id, statutory_basis=rule.law, is_active=True,
-            rule_version="test-v1", verification_status="UNVERIFIED",
+            rule_id=rule_id,
+            statutory_basis=rule.law,
+            is_active=True,
+            rule_version="test-v1",
+            verification_status="UNVERIFIED",
+            **(
+                {
+                    "rule_name": canonical_agm001["rule_name"],
+                    "rule_type": canonical_agm001["rule_type"],
+                    "description": canonical_agm001["description"],
+                    "rule_condition": canonical_agm001["rule_condition"],
+                }
+                if rule_id == "AGM-001"
+                else {}
+            ),
         )
         for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
     ]

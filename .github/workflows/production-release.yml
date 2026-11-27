@@ -1,10 +1,10 @@
-name: Controlled Production Release 0112 to 0127
+name: Controlled Production Release 0112 to 0128
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_release:
-        description: Type APPLY_0127_AND_DEPLOY to authorize the controlled production release
+        description: Type APPLY_0128_AND_DEPLOY to authorize the controlled production release
         required: true
         type: string
       api_url:
@@ -108,8 +108,8 @@ jobs:
           CONFIRM_PRODUCTION_RELEASE: ${{ inputs.confirm_production_release }}
         run: |
           set -euo pipefail
-          if [[ "$CONFIRM_PRODUCTION_RELEASE" != "APPLY_0127_AND_DEPLOY" ]]; then
-            echo "::error::Type APPLY_0127_AND_DEPLOY exactly to authorize this production operation."
+          if [[ "$CONFIRM_PRODUCTION_RELEASE" != "APPLY_0128_AND_DEPLOY" ]]; then
+            echo "::error::Type APPLY_0128_AND_DEPLOY exactly to authorize this production operation."
             exit 1
           fi
           for key in NEON_API_KEY RENDER_API_KEY; do
@@ -243,12 +243,12 @@ jobs:
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts-pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts-pre-migration-health.json >/dev/null
 
-      - name: Apply and verify production migrations 0112 through 0127
+      - name: Apply and verify production migrations 0112 through 0128
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          python scripts/rehearse_production_0112_to_0122.py
+          python scripts/rehearse_production_0112_to_0128.py
           mkdir -p artifacts
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
           jq -e '.ready == true and .database == "ok" and (.redis == "ok" or .redis == "degraded")' artifacts/pre-migration-health.json >/dev/null
@@ -424,6 +424,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nlc-production-release-0127-evidence
+          name: nlc-production-release-0128-evidence
           path: artifacts/*.json
           if-no-files-found: warn

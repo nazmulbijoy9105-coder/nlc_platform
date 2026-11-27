@@ -124,18 +124,24 @@ cp .env.example .env
 #   SENTRY_DSN         (https://xxx@oXXX.ingest.sentry.io/XXX)
 #   ALLOW_PUBLIC_SIGNUP (default: true, role: CLIENT_VIEW_ONLY)
 
-# Install + run
+# Install + run (LOCAL DEVELOPMENT ONLY)
 pip install -r requirements.txt
+# For a disposable local development database only:
 alembic upgrade head
-python scripts/seed_rules.py  # Development only; never use as a production release step
+# Development fixture/bootstrap utility only; never a production release step:
+python scripts/seed_rules.py
 uvicorn app.main:app --reload
+
+# Production migrations are not run from this Quick Start or at app startup.
+# They execute only through the approved controlled release workflow after
+# fresh-DB validation and an isolated production-derived Neon rehearsal.
 
 # Verify
 curl http://localhost:8000/api/v1/health/ready
 # OpenAPI docs at http://localhost:8000/api/v1/docs
-# Development
+# Development (local disposable database only)
 uvicorn app.main:app --reload          # Start API server
-alembic upgrade head                   # Run migrations
+alembic upgrade head                   # Local schema setup; NOT a production command
 
 celery -A app.worker.celery_app worker -l info  # Start Celery worker
 celery -A app.worker.celery_app beat -l info     # Start beat scheduler
@@ -155,6 +161,10 @@ python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 # The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
 # Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
 # Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
+# Production rollback is not "alembic downgrade -1": use a reviewed forward-fix,
+# or restore PITR to a separate branch and validate before controlled cutover.
+# An old app may be redeployed only after schema/data compatibility is proven.
+# See docs/MIGRATION_RELEASE_CONTRACT.md for mandatory evidence and gates.
 
 ## API router inventory
 

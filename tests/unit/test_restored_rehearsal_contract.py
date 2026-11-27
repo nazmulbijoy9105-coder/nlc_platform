@@ -49,7 +49,7 @@ def test_rehearsal_head_tracks_the_single_repository_alembic_head():
 
     heads = revisions - referenced
     assert heads == {EXPECTED_HEAD_REVISION}
-    assert EXPECTED_HEAD_REVISION == "0127_one_active_rescue_plan_per_company"
+    assert EXPECTED_HEAD_REVISION == "0128_agm001_calendar_month_definition"
     assert EXPECTED_START_REVISION == "0042_dedup_key"
 
 
@@ -226,7 +226,7 @@ def test_0125_migration_actor_does_not_require_a_bootstrap_user():
 
 def test_production_rehearsal_active_catalogue_guard_names_0125():
     source = (
-        ROOT / "scripts/rehearse_production_0112_to_0122.py"
+        ROOT / "scripts/rehearse_production_0112_to_0128.py"
     ).read_text(encoding="utf-8")
     assert '"0125 requires exactly 85 active catalogue rows "' in source
     assert '"0124 requires exactly 85 active catalogue rows "' not in source
@@ -234,22 +234,65 @@ def test_production_rehearsal_active_catalogue_guard_names_0125():
 
 def test_production_parity_audit_is_pinned_to_the_repository_head():
     assert PRODUCTION_AUDIT_EXPECTED_REVISION == EXPECTED_HEAD_REVISION
-    assert PRODUCTION_AUDIT_EXPECTED_REVISION == "0127_one_active_rescue_plan_per_company"
+    assert PRODUCTION_AUDIT_EXPECTED_REVISION == "0128_agm001_calendar_month_definition"
 
 
-def test_production_rehearsal_audit_accepts_all_supported_resume_heads():
-    source = (ROOT / "scripts/rehearse_production_0112_to_0122.py").read_text(
+def test_production_rehearsal_requires_exact_0112_baseline_and_rejects_resume():
+    source = (ROOT / "scripts/rehearse_production_0112_to_0128.py").read_text(
         encoding="utf-8"
     )
-    accepted_revisions = (
-        "HEAD_REVISION",
-        "AGM_PRE_0125_REVISION",
-        "AGM_POST_0125_REVISION",
-        "AGM_POST_0126_REVISION",
-        "PREVIOUS_REVISION",
+    assert 'START_REVISION = "0112_runtime_acl_and_alembic_rls"' in source
+    assert 'HEAD_REVISION = "0128_agm001_calendar_month_definition"' in source
+    assert "Fresh disposable rehearsal must start at exactly" in source
+    assert "if revisions != [START_REVISION]:" in source
+    assert "verified_existing_rehearsal" not in source
+    assert "resumable =" not in source
+
+
+def test_production_rehearsal_report_is_bound_to_clean_commit_and_input_hashes():
+    source = (ROOT / "scripts/rehearse_production_0112_to_0128.py").read_text(
+        encoding="utf-8"
     )
-    gate_start = source.index("if actual_revision not in {")
-    gate_end = source.index("or failed:", gate_start)
-    gate = source[gate_start:gate_end]
-    for revision in accepted_revisions:
-        assert revision in gate
+    assert "NLC_EXPECTED_SOURCE_SHA" in source
+    assert '["git", "rev-parse", "HEAD"]' in source
+    assert '["git", "status", "--porcelain", "--untracked-files=all"]' in source
+    assert 'line[:2] == "??"' in source
+    assert "line[3:].strip(" in source
+    assert '.startswith("artifacts/")' in source
+    assert '"input_sha256": hashes' in source
+    assert '"commit_sha": commit' in source
+
+
+def test_production_rehearsal_captures_schema_security_inventory_before_and_after():
+    source = (ROOT / "scripts/rehearse_production_0112_to_0128.py").read_text(
+        encoding="utf-8"
+    )
+    for key in ("columns", "constraints", "indexes", "triggers", "policies", "rls", "grants"):
+        assert f'"{key}":' in source
+    assert '"schema_inventory_before": schema_before' in source
+    assert '"schema_inventory_after": schema_after' in source
+    assert "_application_role_parity()" in source
+    assert "can_insert_view" in source
+
+
+def test_neon_rehearsal_workflow_has_bounded_423_retry_and_exact_source_sha():
+    workflow = (
+        ROOT / ".github/workflows/production-0112-to-0122-rehearsal.yml"
+    ).read_text(encoding="utf-8")
+    assert 'http_status" == "423"' in workflow
+    assert "Retry-After" in workflow
+    assert "deadline=$((SECONDS + 300))" in workflow
+    assert "NLC_EXPECTED_SOURCE_SHA" in workflow
+    assert "upload-artifact@v4" in workflow
+
+
+def test_controlled_render_deploy_requires_exact_sha_and_live_status():
+    workflow = (
+        ROOT / ".github/workflows/deploy-vercel-backend.yml"
+    ).read_text(encoding="utf-8")
+    assert "autoDeployTrigger" in workflow
+    assert "commitId:$sha" in workflow
+    assert "EXPECTED_DEPLOYED_SHA" in workflow
+    assert "limit=100" in workflow
+    assert "live)" in workflow
+    assert "accepted-no-id" not in workflow

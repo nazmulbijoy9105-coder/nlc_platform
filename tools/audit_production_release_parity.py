@@ -15,7 +15,7 @@ from sqlalchemy.engine import make_url
 from app.db_url import prepare_asyncpg_connection
 from scripts.seed_rules import ILRMF_RULES
 
-EXPECTED_REVISION = "0127_one_active_rescue_plan_per_company"
+EXPECTED_REVISION = "0128_agm001_calendar_month_definition"
 REQUIRED_TRUE = (
     "identity_archive_present",
     "identities_present",

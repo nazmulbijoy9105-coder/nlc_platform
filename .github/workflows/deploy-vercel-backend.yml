@@ -1,5 +1,6 @@
 # CI-gated Render deployment. Render's native autoDeploy remains disabled.
-# A deploy hook is triggered only after CI and production migrations succeed.
+# A deploy is triggered only after CI and production migrations succeed,
+# and only after the protected GitHub Environment "production" is approved.
 
 name: Deploy Backend (Render)
 
@@ -22,6 +23,9 @@ jobs:
     name: Migrate then deploy Render
     if: ${{ github.event.workflow_run.conclusion == 'success' && vars.NLC_AUTO_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
+    # Human approval required before production migrate/deploy (dual-path control).
+    # Configure required reviewers on the GitHub Environment named "production".
+    environment: production
     steps:
       - name: Checkout the CI-tested commit
         uses: actions/checkout@v5
@@ -112,6 +116,36 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      - name: Verify Render target and disabled native auto-deploy
+        if: steps.freshness.outputs.current == 'true'
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d72sam94tr6s73dk8etg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${RENDER_API_KEY:-}" || -z "${RENDER_SERVICE_ID:-}" ]]; then
+            echo "::error::Render API key or service ID is missing; aborting before production migration."
+            exit 1
+          fi
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$BODY_FILE"' EXIT
+          HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
+            --write-out '%{http_code}' --connect-timeout 10 --max-time 20 \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header "Accept: application/json" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID")"
+          if [[ "$HTTP_STATUS" != "200" ]]; then
+            echo "::error::Unable to verify Render service configuration (HTTP $HTTP_STATUS). Aborting before migration."
+            exit 1
+          fi
+          AUTO_DEPLOY="$(jq -r '.autoDeployTrigger // .autoDeploy // empty' "$BODY_FILE")"
+          if [[ "$AUTO_DEPLOY" != "off" && "$AUTO_DEPLOY" != "no" ]]; then
+            echo "::error::Render native auto-deploy must be off; observed '$AUTO_DEPLOY'. Aborting before migration."
+            exit 1
+          fi
+          echo "Render service identity verified and native auto-deploy is disabled."
+
       # Migrations run from the CI-tested image, before any production deploy.
       # The credential is a GitHub Actions secret, not a Render API env var.
       - name: Apply production migrations before Render deploy
@@ -132,66 +166,139 @@ jobs:
             --env NLC_ALEMBIC_METADATA_ONLY=1 \
             --env MIGRATION_DATABASE_URL \
             nlc-api:migration \
-            -c 'set -eu; alembic upgrade head; alembic current'
-          echo "Production Alembic migration command completed successfully."
+            -c '
+              set -eu
+              HEADS="$(alembic heads)"
+              HEAD_COUNT="$(printf "%s\\n" "$HEADS" | sed "/^[[:space:]]*$/d" | wc -l | tr -d " ")"
+              if [ "$HEAD_COUNT" -ne 1 ]; then
+                echo "Expected exactly one Alembic head; got $HEAD_COUNT"
+                printf "%s\\n" "$HEADS"
+                exit 1
+              fi
+              EXPECTED_HEAD="$(printf "%s\\n" "$HEADS" | awk "NR == 1 {print \\$1}")"
+              BEFORE="$(alembic current)"
+              echo "Database Alembic revision before migration:"
+              printf "%s\\n" "$BEFORE"
+              alembic upgrade head
+              AFTER="$(alembic current)"
+              echo "Database Alembic revision after migration:"
+              printf "%s\\n" "$AFTER"
+              CURRENT_COUNT="$(printf "%s\\n" "$AFTER" | sed "/^[[:space:]]*$/d" | wc -l | tr -d " ")"
+              if [ "$CURRENT_COUNT" -ne 1 ] || ! printf "%s\\n" "$AFTER" | grep -Fq "$EXPECTED_HEAD"; then
+                echo "Database did not finish at the sole repository head $EXPECTED_HEAD"
+                exit 1
+              fi
+            '
+          echo "Production Alembic migration completed and exact single head verified."
 
-      - name: Trigger Render Deploy Hook
+      - name: Trigger Render deployment for the exact CI-tested commit
         id: trigger
         if: steps.freshness.outputs.current == 'true'
         env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d72sam94tr6s73dk8etg
+          EXPECTED_DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${RENDER_DEPLOY_HOOK:-}" ]]; then
-            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not configured."
+          if [[ -z "${RENDER_API_KEY:-}" || -z "${RENDER_SERVICE_ID:-}" || -z "${EXPECTED_DEPLOYED_SHA:-}" ]]; then
+            echo "::error::RENDER_API_KEY, service ID, and expected commit SHA are required. No deployment was triggered."
             exit 1
           fi
-          echo "Triggering Render deploy after successful CI and migration..."
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
-            --write-out '%{http_code}' --max-time 30 \
-            --request POST "$RENDER_DEPLOY_HOOK")"
-          if [[ ! "$HTTP_STATUS" =~ ^2[0-9][0-9]$ ]]; then
-            echo "::error::Render deploy hook returned HTTP $HTTP_STATUS."
-            if [[ -s "$BODY_FILE" ]]; then
-              head -c 1000 "$BODY_FILE"
-              echo
-            fi
+            --write-out '%{http_code}' --connect-timeout 10 --max-time 30 \
+            --request POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --data "$(jq -cn --arg sha "$EXPECTED_DEPLOYED_SHA" '{commitId:$sha}')")"
+          echo "Render deploy API HTTP status: $HTTP_STATUS"
+          if [[ "$HTTP_STATUS" != "201" ]]; then
+            echo "::error::Render deploy API did not return HTTP 201."
+            head -c 1000 "$BODY_FILE" || true
+            echo
             exit 1
           fi
-
-          DEPLOYMENT_ID="$(python - "$BODY_FILE" <<'PY'
-          import json
-          import pathlib
-          import sys
-
-          body = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").strip()
-          if not body:
-              print("accepted-no-id")
-              raise SystemExit(0)
-          try:
-              data = json.loads(body)
-          except json.JSONDecodeError:
-              print("accepted-no-id")
-              raise SystemExit(0)
-          deploy = data.get("deploy", {}) if isinstance(data, dict) else {}
-          deployment_id = (
-              deploy.get("id")
-              if isinstance(deploy, dict)
-              else None
-          ) or (data.get("id") if isinstance(data, dict) else None)
-          print(deployment_id or "accepted-no-id")
-          PY
-          )"
-          echo "Render deploy hook accepted (HTTP $HTTP_STATUS); deployment reference: $DEPLOYMENT_ID"
+          DEPLOYMENT_ID="$(jq -r '.id // empty' "$BODY_FILE")"
+          RETURNED_SHA="$(jq -r '.commit.id // empty' "$BODY_FILE")"
+          if [[ -n "$RETURNED_SHA" && "$RETURNED_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::Render accepted a different commit: expected $EXPECTED_DEPLOYED_SHA, got $RETURNED_SHA."
+            exit 1
+          fi
+          echo "Render accepted the exact requested commit; deploy reference: ${DEPLOYMENT_ID:-not-returned}"
           echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+          echo "expected_sha=$EXPECTED_DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Wait and verify backend health
+      - name: Poll Render until the exact commit is live
+        id: verify-deploy
         if: steps.trigger.outcome == 'success'
         env:
-          DEPLOYMENT_ID: ${{ steps.trigger.outputs.deployment_id }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: srv-d72sam94tr6s73dk8etg
+          EXPECTED_DEPLOYED_SHA: ${{ steps.trigger.outputs.expected_sha }}
+          TRIGGERED_DEPLOYMENT_ID: ${{ steps.trigger.outputs.deployment_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${RENDER_API_KEY:-}" || -z "${EXPECTED_DEPLOYED_SHA:-}" ]]; then
+            echo "::error::Cannot verify deployment without Render API credentials and expected SHA."
+            exit 1
+          fi
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$BODY_FILE"' EXIT
+          for attempt in $(seq 1 90); do
+            HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
+              --write-out '%{http_code}' --connect-timeout 10 --max-time 20 \
+              --header "Authorization: Bearer $RENDER_API_KEY" \
+              --header "Accept: application/json" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=100")" || HTTP_STATUS="000"
+            echo "Render deploy-list poll $attempt/90: HTTP $HTTP_STATUS"
+            if [[ "$HTTP_STATUS" == "200" ]]; then
+              MATCH="$(jq -c --arg sha "$EXPECTED_DEPLOYED_SHA" '
+                [ .[] | (.deploy // .) | select(.commit.id == $sha) ]
+                | sort_by(.createdAt // "")
+                | last // empty
+              ' "$BODY_FILE")"
+              if [[ -n "$MATCH" && "$MATCH" != "null" ]]; then
+                DEPLOYMENT_ID="$(jq -r '.id // empty' <<<"$MATCH")"
+                DEPLOYED_SHA="$(jq -r '.commit.id // empty' <<<"$MATCH")"
+                DEPLOY_STATUS="$(jq -r '.status // empty' <<<"$MATCH")"
+                if [[ -n "$TRIGGERED_DEPLOYMENT_ID" && "$DEPLOYMENT_ID" != "$TRIGGERED_DEPLOYMENT_ID" ]]; then
+                  echo "::error::Render deploy list returned a different deployment ID than the trigger response."
+                  exit 1
+                fi
+                echo "Matched deployment $DEPLOYMENT_ID commit=$DEPLOYED_SHA status=$DEPLOY_STATUS"
+                if [[ "$DEPLOYED_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+                  echo "::error::Deployment SHA mismatch."
+                  exit 1
+                fi
+                case "$DEPLOY_STATUS" in
+                  live)
+                    echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+                    echo "deployed_sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
+                    exit 0
+                    ;;
+                  build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                    echo "::error::Exact commit deployment reached terminal failure status $DEPLOY_STATUS."
+                    exit 1
+                    ;;
+                esac
+              fi
+            else
+              echo "Render deploy list not yet available; will retry within the bounded polling window."
+            fi
+            if [[ "$attempt" -lt 90 ]]; then sleep 20; fi
+          done
+          echo "::error::No deployment for expected SHA $EXPECTED_DEPLOYED_SHA reached live status within 30 minutes."
+          exit 1
+
+      - name: Wait and verify backend health
+        if: steps.verify-deploy.outcome == 'success'
+        env:
+          DEPLOYMENT_ID: ${{ steps.verify-deploy.outputs.deployment_id }}
+          EXPECTED_DEPLOYED_SHA: ${{ steps.verify-deploy.outputs.deployed_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -225,7 +332,7 @@ jobs:
           exit 1
 
       - name: Verify backend readiness
-        if: steps.trigger.outcome == 'success'
+        if: steps.verify-deploy.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
