@@ -74,4 +74,4 @@ Product scoring eligibility is a technical/product configuration and must not be
 
 ## Result
 
-<badge>PASS</badge> Technical parity and fail-closed checks passed on the recorded code commit. Legal approval remains separate and unchanged.
+**Result: PASS.** Technical parity and fail-closed checks passed on the recorded code commit. Legal approval remains separate and unchanged.
