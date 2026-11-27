@@ -26,7 +26,6 @@ CacheControl==0.14.4
 celery==5.6.3
 certifi==2026.11.20
 cffi==2.0.0
-chardet==6.0.0.post1
 charset-normalizer==3.5.2
 click==8.4.0
 click-didyoumean==0.3.1
@@ -198,7 +197,6 @@ toml==0.10.2
 tomli==2.4.1
 tomli_w==1.2.0
 tornado==6.6.1
-tqdm==4.67.3
 truststore==0.10.4
 typer==0.25.1
 typer-slim==0.24.0
@@ -206,7 +204,6 @@ typing-inspection==0.4.2
 typing_extensions==4.16.0
 tzdata==2025.3
 tzlocal==5.4.4
-ujson==6.0.0
 urllib3==2.8.0
 uvicorn==0.54.0
 uvloop==0.23.0 ; sys_platform != "win32"
