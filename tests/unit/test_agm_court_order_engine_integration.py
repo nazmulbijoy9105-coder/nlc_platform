@@ -69,6 +69,9 @@ def test_verified_court_order_routes_first_agm_to_review_and_blocks_default_scor
     assert flag.is_black_override is False
     assert flag.detail["court_order_review"]["automatic_clearance"] is False
     assert flag.detail["court_order_review"]["score_uplift"] == 0
+    score = engine._calculate_score(engine._flags, profile)
+    assert score.final_score == 100
+    assert score.risk_band is Severity.NOT_EVALUATED
 
 
 def test_unverified_company_fact_cannot_authenticate_court_order():
