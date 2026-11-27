@@ -1,0 +1,146 @@
+name: Legal engine assurance
+
+# Legal-engine assurance chain (independent of infrastructure release green).
+# Mandatory P0: catalogue parity, RJSC scope isolation, score provenance,
+# fail-closed publication. See docs/NLC_PRODUCTION_ASSURANCE.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  legal-rule-catalogue-parity:
+    name: legal-rule-catalogue-parity
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      - name: Static engine/seed parity + seed manifest
+        run: |
+          mkdir -p artifacts
+          python tools/audit_rule_parity.py --no-db --no-api \
+            --report-json artifacts/rule-registry-static-parity.json
+      - name: Six-state coverage funnel
+        run: |
+          python -m canonical_architecture.coverage_report \
+            --output artifacts/rule-coverage-report.json
+      - name: Assert 85-rule catalogue cardinality
+        run: |
+          python - <<'PY'
+          from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+          assert len(STATUTORY_RULE_REGISTRY) == 85, len(STATUTORY_RULE_REGISTRY)
+          print("STATUTORY_RULE_REGISTRY count=85")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: legal-catalogue-parity
+          path: |
+            artifacts/rule-registry-static-parity.json
+            artifacts/rule-coverage-report.json
+          if-no-files-found: warn
+
+  rjsc-scope-isolation:
+    name: rjsc-scope-isolation
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      - name: RJSC scope registry and OUT_OF_SCOPE injection invariance
+        run: python -m pytest tests/unit/test_rjsc_scope_registry.py -q --tb=short
+
+  score-provenance-integrity:
+    name: score-provenance-integrity
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      - name: Evaluation integrity and score hashes
+        run: python -m pytest tests/unit/test_evaluation_integrity.py -q --tb=short
+      - name: Rule outcome ledger
+        run: python -m pytest tests/unit/test_rule_outcome_ledger.py -q --tb=short
+
+  fail-closed-publication:
+    name: fail-closed-publication
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+      - name: Withheld / not-released score visibility
+        run: python -m pytest tests/unit/test_not_evaluated_score_visibility.py -q --tb=short
+      - name: Score release evidence gates
+        run: python -m pytest tests/unit/test_score_release_evidence_gates.py -q --tb=short
+
+  legal-engine-p0:
+    name: legal-engine-p0
+    if: always()
+    needs:
+      - legal-rule-catalogue-parity
+      - rjsc-scope-isolation
+      - score-provenance-integrity
+      - fail-closed-publication
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every P0 assurance job to succeed
+        env:
+          CATALOGUE_RESULT: ${{ needs.legal-rule-catalogue-parity.result }}
+          SCOPE_RESULT: ${{ needs.rjsc-scope-isolation.result }}
+          PROVENANCE_RESULT: ${{ needs.score-provenance-integrity.result }}
+          PUBLICATION_RESULT: ${{ needs.fail-closed-publication.result }}
+        run: |
+          set -euo pipefail
+          for result in "$CATALOGUE_RESULT" "$SCOPE_RESULT" "$PROVENANCE_RESULT" "$PUBLICATION_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::A required legal-engine P0 job did not succeed (result=$result)."
+              exit 1
+            fi
+          done
+          echo "All legal-engine P0 assurance jobs succeeded."

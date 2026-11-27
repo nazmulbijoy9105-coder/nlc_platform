@@ -14,6 +14,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -37,6 +38,46 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Require legal-engine P0 assurance for this exact release SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/$REPOSITORY/actions/workflows/legal-engine-assurance.yml/runs?head_sha=$TARGET_SHA&per_page=20"
+          for attempt in $(seq 1 40); do
+            RESPONSE=$(curl --silent --show-error --fail \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "$API_URL")
+            RUN=$(jq -c --arg sha "$TARGET_SHA" '
+              [.workflow_runs[] | select(.head_sha == $sha and .event == "push")]
+              | sort_by(.run_started_at // .created_at)
+              | last // empty
+            ' <<<"$RESPONSE")
+            if [[ -n "$RUN" ]]; then
+              STATUS=$(jq -r '.status // empty' <<<"$RUN")
+              CONCLUSION=$(jq -r '.conclusion // empty' <<<"$RUN")
+              RUN_URL=$(jq -r '.html_url // empty' <<<"$RUN")
+              echo "Legal-engine assurance status=$STATUS conclusion=$CONCLUSION url=$RUN_URL"
+              if [[ "$STATUS" == "completed" ]]; then
+                if [[ "$CONCLUSION" == "success" ]]; then
+                  echo "Exact-SHA legal-engine P0 assurance passed: $TARGET_SHA"
+                  exit 0
+                fi
+                echo "::error::Legal-engine P0 assurance did not succeed for $TARGET_SHA (conclusion=$CONCLUSION)."
+                exit 1
+              fi
+            else
+              echo "No push-triggered legal-engine assurance run for $TARGET_SHA yet."
+            fi
+            sleep 15
+          done
+          echo "::error::Timed out waiting for exact-SHA legal-engine P0 assurance. No migration or deployment is permitted."
+          exit 1
 
       - uses: actions/setup-python@v6
         with:

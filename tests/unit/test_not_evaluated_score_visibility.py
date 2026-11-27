@@ -77,8 +77,21 @@ def _company(score, band):
     )
 
 
-def test_legacy_stored_company_score_stays_hidden_while_release_is_paused():
-    response = _company_to_response(_company(88, "GREEN"))
+def test_legacy_stored_company_score_stays_hidden_while_release_is_paused(monkeypatch):
+    from datetime import datetime, timezone
+
+    monkeypatch.setattr(companies_api, "LEGAL_SCORE_RELEASED", False)
+    company = _company(88, "GREEN")
+    evaluated_at = datetime(2026, 11, 24, tzinfo=timezone.utc)
+    company.last_evaluated_at = evaluated_at
+    company.updated_at = evaluated_at
+    completed_run = _valid_evaluation_run(
+        company, score=88, risk_band="GREEN", calculated_at=evaluated_at
+    )
+
+    # The evaluation itself is valid and completed; only the release switch
+    # should prevent the otherwise publishable score from being exposed.
+    response = _company_to_response(company, evaluation_run=completed_run)
 
     assert response.band == "NOT_EVALUATED"
     assert response.compliance_score is None
