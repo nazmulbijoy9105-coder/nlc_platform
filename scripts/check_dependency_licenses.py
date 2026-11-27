@@ -43,8 +43,12 @@ def normalize(value: object) -> str:
 
 
 def _normalize_expression(value: object) -> str:
-    """Normalize an SPDX-like expression while preserving grouping parentheses."""
+    """Normalize SPDX expressions and pip-licenses' semicolon alternatives."""
     expression = str(value or "").upper()
+    # pip-licenses emits semicolon-separated license labels for distributions
+    # that declare multiple license texts. Treat these as conjunctive obligations:
+    # every listed license must independently be approved.
+    expression = expression.replace(";", " AND ")
     expression = re.sub(r"\b(AND|OR)\b", r" \1 ", expression)
     expression = re.sub(r"[^A-Z0-9()]+", " ", expression)
     return re.sub(r"\s+", " ", expression).strip()
@@ -101,6 +105,13 @@ def is_approved(value: object) -> bool:
     rejected rather than assuming the distributor will select the permissive
     option. Unknown, malformed, and unlisted terms fail closed.
     """
+    raw = str(value or "").strip()
+    # pip-licenses appends parenthetical classifier aliases to these exact
+    # license names; accept only the recognized redundant forms.
+    if re.fullmatch(r"(?i)the unlicense\\s*\\(\\s*unlicense\\s*\\)", raw):
+        return True
+    if re.fullmatch(r"(?i)isc license\\s*\\(\\s*iscl\\s*\\)", raw):
+        return True
     expression = _normalize_expression(value)
     if not expression:
         return False
