@@ -72,8 +72,12 @@ def test_openapi_contract_rejects_removed_client_response_field():
         validate_schema(schema)
 
 
-def test_psfl_is_not_implicitly_approved():
-    assert normalize("PSF License") not in APPROVED_ALIASES
+def test_psfl_and_unlicense_are_explicitly_approved():
+    from scripts.check_dependency_licenses import is_approved
+
+    assert normalize("Python Software Foundation License") in APPROVED_ALIASES
+    assert is_approved("Python Software Foundation License")
+    assert is_approved("Unlicense")
     assert normalize("MIT License") in APPROVED_ALIASES
 
 def test_production_image_and_license_sbom_use_runtime_requirements():
@@ -99,6 +103,9 @@ def test_dependency_license_expression_parser_preserves_fail_closed_policy():
     assert is_approved("Apache-2.0 OR BSD-3-Clause")
     assert is_approved("Apache-2.0 AND BSD-2-Clause")
     assert is_approved("MIT OR (Apache-2.0 AND BSD-3-Clause)")
+    assert is_approved("Python Software Foundation License")
+    assert is_approved("BSD-2-Clause AND Unlicense AND MIT")
+    assert is_approved("3-Clause BSD License")
     assert not is_approved("MPL-2.0 AND (Apache-2.0 OR MIT)")
     assert not is_approved("MIT OR GPL-3.0-only")
     assert not is_approved("Apache-2.0 OR (MIT AND GPL-3.0-only)")
