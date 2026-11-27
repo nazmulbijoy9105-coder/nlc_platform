@@ -846,7 +846,6 @@
       "source_validation": {
         "jurisdiction": "BD",
         "candidate_exact_provisions": [
-          "81",
           "81(1)"
         ],
         "confirmed_exact_provisions": [],
@@ -866,7 +865,23 @@
         "legal_review_status": "NOT_VALIDATED",
         "reviewer_decision_reference": null,
         "historical_version_mapping_status": "NOT_VALIDATED",
-        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval.",
+        "canonical_engine_basis": "Section 81(1), Companies Act 1994 (Bangladesh)",
+        "legacy_seed_basis": "Section 81, Companies Act 1994 (Bangladesh)",
+        "reconciliation_migrations": [
+          {
+            "revision": "0125_reconcile_agm001_statutory_basis",
+            "path": "alembic/versions/0125_reconcile_agm001_statutory_basis.py",
+            "effect": "Reconciles the known legacy citation to Section 81(1) and preserves the before-image in legal_rule_versions."
+          },
+          {
+            "revision": "0128_agm001_calendar_month_definition",
+            "path": "alembic/versions/0128_agm001_calendar_month_definition.py",
+            "effect": "Replaces the legacy fixed 548-day definition with the canonical 18-calendar-month definition and preserves the prior version."
+          }
+        ],
+        "migration_reconciliation_status": "ENGINE_AND_CURRENT_SEED_RECONCILED; HISTORICAL_SOURCE_CLAIM_RETAINED",
+        "legal_confirmation_status": "NOT_COUNSEL_APPROVED"
       }
     },
     {
