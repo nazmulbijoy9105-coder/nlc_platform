@@ -72,6 +72,11 @@ def _source_provenance() -> dict[str, Any]:
         ["git", "rev-parse", "HEAD"], cwd=root, check=True,
         capture_output=True, text=True,
     ).stdout.strip()
+    expected_commit = os.environ.get("NLC_EXPECTED_SOURCE_SHA", "").strip()
+    if expected_commit and commit != expected_commit:
+        raise RuntimeError(
+            f"Rehearsal checkout SHA {commit!r} does not match workflow SHA {expected_commit!r}."
+        )
     dirty = subprocess.run(
         ["git", "status", "--porcelain"], cwd=root, check=True,
         capture_output=True, text=True,
@@ -95,6 +100,10 @@ def _source_provenance() -> dict[str, Any]:
     return {
         "repository": "nazmulbijoy9105-coder/nlc_platform",
         "commit_sha": commit,
+        "expected_commit_sha": expected_commit or None,
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "pull_request_number": os.environ.get("GITHUB_PR_NUMBER"),
         "checkout_clean": True,
         "input_sha256": hashes,
     }
