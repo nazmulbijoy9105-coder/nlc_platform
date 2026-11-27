@@ -55,7 +55,7 @@ def _run_agm(profile):
     return engine
 
 
-def test_verified_court_order_routes_first_agm_to_review_and_blocks_default_score():
+def test_verified_court_order_routes_first_agm_to_review_and_blocks_default_score(monkeypatch):
     profile = _profile_with_order()
     engine = _run_agm(profile)
 
@@ -70,8 +70,12 @@ def test_verified_court_order_routes_first_agm_to_review_and_blocks_default_scor
     assert flag.is_black_override is False
     assert flag.detail["court_order_review"]["automatic_clearance"] is False
     assert flag.detail["court_order_review"]["score_uplift"] == 0
+    import app.rule_engine.engine as engine_module
+    monkeypatch.setattr(engine_module, "_input_coverage", lambda _company: 1.0)
+    monkeypatch.setattr(engine_module, "LEGAL_SCORE_RELEASED", True)
     score = engine._calculate_score(engine._flags, profile)
     assert score.final_score == 100
+    # A complete profile must not turn a verified unresolved order into GREEN.
     assert score.risk_band is Severity.NOT_EVALUATED
 
 
@@ -79,11 +83,20 @@ def test_unverified_company_fact_cannot_authenticate_court_order():
     profile = _profile_with_order(verified=False)
     engine = _run_agm(profile)
 
-    flag = engine._flags[0]
-    assert flag.state is RuleState.REQUIRES_LAWYER_JUDGMENT
-    assert flag.detail["court_order_review"]["evidence_verified"] is False
-    assert flag.score_impact == 0
-    assert flag.is_black_override is False
+    review_flag = next(
+        item for item in engine._flags
+        if item.flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+    )
+    assert review_flag.state is RuleState.UNKNOWN
+    assert review_flag.detail["court_order_review"]["evidence_verified"] is False
+    assert review_flag.score_impact == 0
+    assert review_flag.is_black_override is False
+    # An unverified order assertion cannot suppress the independently
+    # evidenced first-AGM default or improve the score.
+    default_flag = next(
+        item for item in engine._flags if item.flag_code == "FIRST_AGM_DEFAULT"
+    )
+    assert default_flag.score_impact > 0
 
 
 def test_scoped_lawyer_decision_still_withholds_scoring_until_rule_logic_is_implemented():
@@ -167,14 +180,17 @@ def test_malformed_non_object_order_fact_fails_closed_in_engine():
     profile.agm_court_order_evidence = ["not", "an", "object"]
     engine = _run_agm(profile)
 
-    assert len(engine._flags) == 1
-    flag = engine._flags[0]
-    assert flag.rule_id == "AGM-001"
-    assert flag.state is RuleState.REQUIRES_LAWYER_JUDGMENT
-    assert flag.eval_state == "UNKNOWN"
-    assert flag.severity is Severity.NOT_EVALUATED
-    assert flag.score_impact == 0
-    assert flag.is_black_override is False
-    assert flag.detail["court_order_review"]["reason"].startswith(
+    review_flag = next(
+        item for item in engine._flags
+        if item.flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+    )
+    assert review_flag.rule_id == "AGM-001"
+    assert review_flag.state is RuleState.UNKNOWN
+    assert review_flag.eval_state == "UNKNOWN"
+    assert review_flag.severity is Severity.NOT_EVALUATED
+    assert review_flag.score_impact == 0
+    assert review_flag.is_black_override is False
+    assert review_flag.detail["court_order_review"]["reason"].startswith(
         "INVALID_OR_INCOMPLETE_ORDER_EVIDENCE:"
     )
+    assert any(item.flag_code == "FIRST_AGM_DEFAULT" for item in engine._flags)
