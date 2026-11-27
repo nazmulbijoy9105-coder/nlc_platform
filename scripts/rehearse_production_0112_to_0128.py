@@ -145,6 +145,51 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
 
+async def _schema_inventory(conn: asyncpg.Connection) -> dict[str, Any]:
+    """Capture deterministic PostgreSQL schema/security metadata for before/after evidence."""
+    queries = {
+        "columns": """SELECT table_schema, table_name, column_name, data_type, udt_name,
+            is_nullable, column_default, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema IN ('public','audit','nlc_private')
+            ORDER BY 1,2,ordinal_position""",
+        "constraints": """SELECT n.nspname AS schema_name, t.relname AS table_name,
+            c.conname, c.contype, pg_get_constraintdef(c.oid, true) AS definition
+            FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid
+            JOIN pg_namespace n ON n.oid=t.relnamespace
+            WHERE n.nspname IN ('public','audit','nlc_private') ORDER BY 1,2,3""",
+        "indexes": """SELECT schemaname, tablename, indexname, indexdef
+            FROM pg_indexes WHERE schemaname IN ('public','audit','nlc_private')
+            ORDER BY 1,2,3""",
+        "triggers": """SELECT event_object_schema, event_object_table, trigger_name,
+            action_timing, event_manipulation, action_statement
+            FROM information_schema.triggers
+            WHERE event_object_schema IN ('public','audit','nlc_private')
+            ORDER BY 1,2,3,5""",
+        "policies": """SELECT schemaname, tablename, policyname, permissive, roles,
+            cmd, qual, with_check FROM pg_policies
+            WHERE schemaname IN ('public','audit','nlc_private') ORDER BY 1,2,3""",
+        "rls": """SELECT n.nspname AS schema_name, c.relname AS table_name,
+            c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS rls_forced
+            FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname IN ('public','audit','nlc_private')
+              AND c.relkind IN ('r','p') ORDER BY 1,2""",
+        "grants": """SELECT table_schema, table_name, grantee, privilege_type, is_grantable
+            FROM information_schema.role_table_grants
+            WHERE table_schema IN ('public','audit','nlc_private') ORDER BY 1,2,3,4""",
+    }
+    inventory = {
+        name: [dict(row) for row in await conn.fetch(sql)]
+        for name, sql in queries.items()
+    }
+    canonical = _canonical(inventory)
+    return {
+        "sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "counts": {name: len(rows) for name, rows in inventory.items()},
+        "objects": inventory,
+    }
+
+
 async def _rows_digest(conn: asyncpg.Connection, table: str) -> dict[str, Any]:
     exists = await conn.fetchval(
         "SELECT to_regclass($1) IS NOT NULL", f"public.{table}"
@@ -807,6 +852,7 @@ async def main() -> None:
         resume_from_0125 = False
         resume_from_0126 = False
         resume_after_agm_migration = False
+        schema_before = await _schema_inventory(conn)
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(
             conn,
@@ -897,6 +943,7 @@ async def main() -> None:
         postflight = await _postflight(
             conn, before_tables, before_rules, agm001_before_0125
         )
+        schema_after = await _schema_inventory(conn)
         rescue_plan_schema = await _rescue_plan_schema_parity(conn)
         application_role = await _application_role_parity()
         audit_view = await _audit_view_parity()
@@ -939,6 +986,8 @@ async def main() -> None:
                 else {}
             ),
             **postflight,
+            "schema_inventory_before": schema_before,
+            "schema_inventory_after": schema_after,
             "rescue_plan_schema_parity": rescue_plan_schema,
             "application_role_boundary": application_role,
             "active_plan_duplicate_preflight": active_plan_duplicates,
