@@ -1,8 +1,6 @@
-name: Neon role membership audit
+name: PostgreSQL role membership audit (isolated)
 
 on:
-  schedule:
-    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -11,48 +9,61 @@ permissions:
 jobs:
   audit-role-memberships:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nlc_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: nlc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nlc_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
 
-      - name: Obtain read-only production audit connection
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: rapid-bonus-26545234
-          NEON_PRODUCTION_BRANCH_ID: br-purple-fog-aodj8s04
-          NEON_PRODUCTION_ENDPOINT_ID: ep-broad-darkness-aoou0pie
+      - name: Install PostgreSQL driver
+        run: python -m pip install --no-cache-dir asyncpg
+
+      - name: Create isolated least-privilege role fixtures
         run: |
-          set -euo pipefail
-          if [[ -z "${NEON_API_KEY:-}" ]]; then
-            echo "::error::NEON_API_KEY is required to obtain the scoped nlc_ci_audit_role connection."
-            exit 1
-          fi
-          API="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}"
-          AUTH=(-H "Authorization: Bearer ${NEON_API_KEY}" -H "Accept: application/json")
-          BRANCH=$(curl --silent --show-error --fail "${AUTH[@]}" "${API}/branches/${NEON_PRODUCTION_BRANCH_ID}")
-          if [[ "$(jq -r '.branch.name // empty' <<<"${BRANCH}")" != "production" || "$(jq -r '.branch.default // false' <<<"${BRANCH}")" != "true" ]]; then
-            echo "::error::Role audit refused: Neon target is not the default production branch."
-            exit 1
-          fi
-          ENDPOINT=$(curl --silent --show-error --fail "${AUTH[@]}" "${API}/endpoints/${NEON_PRODUCTION_ENDPOINT_ID}")
-          if [[ "$(jq -r '.endpoint.branch_id // empty' <<<"${ENDPOINT}")" != "${NEON_PRODUCTION_BRANCH_ID}" ]]; then
-            echo "::error::Role audit refused: endpoint does not belong to production branch."
-            exit 1
-          fi
-          AUDIT_URL=$(curl --silent --show-error --fail --get "${AUTH[@]}" \
-            --data-urlencode "branch_id=${NEON_PRODUCTION_BRANCH_ID}" \
-            --data-urlencode "endpoint_id=${NEON_PRODUCTION_ENDPOINT_ID}" \
-            --data-urlencode "database_name=neondb" \
-            --data-urlencode "role_name=nlc_ci_audit_role" \
-            --data-urlencode "pooled=false" \
-            "${API}/connection_uri" | jq -r '.uri // empty')
-          if [[ -z "${AUDIT_URL}" ]]; then
-            echo "::error::Neon did not return a direct nlc_ci_audit_role connection URI."
-            exit 1
-          fi
-          echo "::add-mask::${AUDIT_URL}"
-          PGOPTIONS="-c default_transaction_read_only=on" psql "${AUDIT_URL}" -X -v ON_ERROR_STOP=1 -f scripts/audit_nlc_role_memberships.sql
+          python - <<'PY'
+          import asyncio
+          import os
+          import asyncpg
+
+          async def main():
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
+              try:
+                  await conn.execute("""
+                      CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB
+                          NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
+                      CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB
+                          NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
+                  """)
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+
+      - name: Run read-only role membership audit against local PostgreSQL
+        run: |
+          PGOPTIONS='-c default_transaction_read_only=on' \
+            psql -h localhost -U nlc_test -d nlc_test -X -v ON_ERROR_STOP=1 \
+            -f scripts/audit_nlc_role_memberships.sql
