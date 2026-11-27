@@ -114,3 +114,20 @@ def test_subsequent_agm_order_does_not_suppress_first_agm_rule_when_count_is_zer
     assert len(engine._flags) == 1
     assert engine._flags[0].rule_id == "AGM-001"
     assert engine._flags[0].flag_code == "FIRST_AGM_DEFAULT"
+
+def test_ambiguous_order_is_scoped_to_first_agm_when_verified_count_is_zero():
+    profile = _profile_with_order(affected_event="UNSCOPED_ORDER")
+    engine = _run_agm(profile)
+    assert len(engine._flags) == 1
+    assert engine._flags[0].rule_id == "AGM-001"
+    assert engine._flags[0].flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+
+
+def test_subsequent_agm_order_routes_only_subsequent_rule_after_first_agm():
+    profile = _profile_with_order(affected_event="SUBSEQUENT_AGM_2026")
+    profile.agm_count = 1
+    profile.last_agm_date = date(2025, 6, 1)
+    engine = _run_agm(profile)
+    assert len(engine._flags) == 1
+    assert engine._flags[0].rule_id == "AGM-002"
+    assert engine._flags[0].flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
