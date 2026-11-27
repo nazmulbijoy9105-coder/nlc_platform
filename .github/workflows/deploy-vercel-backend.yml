@@ -121,9 +121,21 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: srv-d72sam94tr6s73dk8etg
+          EXPECTED_DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
+          # Resolve the expected release SHA in this step as well; set -u must never
+          # expand an unset variable during the pre-migration Render-target gate.
+          if [[ -z "${EXPECTED_DEPLOYED_SHA:-}" ]]; then
+            echo "::error::CI workflow-run SHA is missing; aborting before production migration."
+            exit 1
+          fi
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced before Render-target verification (release=$EXPECTED_DEPLOYED_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Aborting before migration."
+            exit 1
+          fi
           if [[ -z "${RENDER_API_KEY:-}" || -z "${RENDER_SERVICE_ID:-}" ]]; then
             echo "::error::Render API key or service ID is missing; aborting before production migration."
             exit 1
