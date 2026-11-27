@@ -7,10 +7,10 @@ The backend deployment workflow runs in this order:
 1. Check that the CI-tested commit is still the current `main`.
 2. Build the API image from that exact commit.
 3. Run `alembic upgrade head` inside the image using the GitHub Actions secret `NLC_MIGRATION_DATABASE_URL`.
-4. Trigger the Render deploy hook only after Alembic exits successfully.
+4. Trigger the Render API deployment for the same immutable commit SHA only after Alembic exits successfully.
 5. Probe the Render liveness and readiness endpoints.
 
-If the migration secret is absent, the migration identity fails validation, or Alembic fails, the workflow exits before calling the Render deploy hook. A stale CI run also performs neither migration nor deployment.
+If the migration secret is absent, the migration identity fails validation, or Alembic fails, the workflow exits before requesting a Render deployment. A stale CI run also performs neither migration nor deployment.
 
 ## Automatic deployment opt-in
 
@@ -24,7 +24,7 @@ Set this repository Actions variable:
 
 If `NLC_AUTO_DEPLOY` is unset, empty, or set to anything other than the exact lowercase string `true`, the `deploy-render` job is skipped. GitHub may therefore show successful CI with no production release; this is expected while automatic deployment is not opted in. To enable automatic production releases after successful current-main CI, create or update this repository variable to `true`. To disable automatic releases, unset the variable or change its value.
 
-This variable is a repository **variable**, not a secret. It does not replace the credentials below; both required secrets must also be configured for the migration and deploy-hook steps.
+This variable is a repository **variable**, not a secret. It does not replace the credentials below; the migration database secret and Render API key must also be configured for the migration and exact-commit deploy steps.
 
 ## Required GitHub Actions secret
 
@@ -59,3 +59,11 @@ The automatic workflow checks `NLC_AUTO_DEPLOY` in a shell comparison, not a Git
 Both workflows re-resolve `refs/heads/main` immediately before each production mutation. If current main no longer equals the workflow's immutable target SHA, the workflow stops before that mutation. The automatic workflow builds and migrates the checked-out CI-tested SHA, then submits that same SHA as Render's `commitId` and verifies the resulting deployment SHA. The controlled workflow likewise pins its Render deploy request to `github.sha` and verifies the selected deployment.
 
 A main-branch advance after a migration but before the Render request causes the workflow to stop rather than deploy a different revision. The migration may already have applied; migration steps must therefore remain backward-compatible and the next release must reconcile the current Alembic head before deployment.
+
+
+Create the Render API Actions secret:
+
+- Name: `RENDER_API_KEY`
+- Value: a Render API key authorised to inspect and deploy the configured NLC backend service.
+
+The automatic release calls the Render deploy API with `commitId` set to the same SHA used for the migration, then polls the resulting deployment and requires that exact SHA to reach `live`. It does not use a moving-branch deploy hook.
