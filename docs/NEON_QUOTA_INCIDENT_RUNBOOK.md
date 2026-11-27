@@ -25,6 +25,12 @@ Capture the incident timestamp, affected Neon project/branch, Render service, cu
 6. **Reconcile usage drivers.** Review query volume, repeated polling, over-fetch, oversized response payloads, background jobs, backup/replication egress, and branch activity. Reduce avoidable traffic without weakening legal evidence, audit logging, or tenant isolation.
 7. **Record closure.** Capture provider plan/entitlement confirmation, usage before and after, exact Render SHA, health results, database revision, and incident owner approval.
 
+## Render compute-plan requirement
+
+The NLC Render web service was observed on the Free compute plan. Render explicitly says Free web services are not intended for production, spin down after 15 minutes without inbound traffic, and may be restarted or suspended under Free-plan limits. Before customer launch, the service owner must approve and apply a paid always-on compute plan to the exact service, then verify the service remains live. A workspace subscription change alone does not upgrade a Free service. Do not apply a paid plan without explicit billing approval.
+
+Reference: https://render.com/docs/free
+
 ## Prohibited shortcuts
 
 - Do not bypass the database startup check or report readiness while the production database is unavailable.
