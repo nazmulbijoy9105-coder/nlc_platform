@@ -18,7 +18,7 @@ to detect. A workflow passing is evidence only for the checks it actually runs.
 
 | Gap | Workflow / mechanism |
 |-----|----------------------|
-| Backup recovery | `backup-restore-drill.yml` creates a backup from the configured read-only/direct source URL, verifies its archive/checksum and restores that same archive into an ephemeral PostgreSQL service; optional pinned Neon migration rehearsal uses separate restored-branch URLs |
+| Backup recovery | `backup-restore-drill.yml` creates a backup from the configured direct source URL, verifies its archive/checksum, restores that same archive into an ephemeral PostgreSQL service, and runs Alembic to the repository head against that restored database; optional pinned Neon rehearsal remains a separate provider-specific check |
 | Secret scanning | `secret-scan.yml` (Gitleaks) |
 | SAST | `codeql.yml` |
 | SBOM | `sbom.yml` generates CycloneDX from the declared application requirements file, not the CI environment |
