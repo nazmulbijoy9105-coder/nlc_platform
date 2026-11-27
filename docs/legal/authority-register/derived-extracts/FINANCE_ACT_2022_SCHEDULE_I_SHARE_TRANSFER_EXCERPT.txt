@@ -7,7 +7,7 @@ SOURCE PAGES: PDF page 2 (printed Gazette p. 10952; Stamp Act amendment heading 
 LANGUAGE: Gazette in Bangla; Schedule I replacement text is in English.
 PROVENANCE: Text transcribed from the browser-rendered text extraction of the official DPP-hosted Gazette PDF. The original PDF bytes were not downloadable in the current execution environment. This file is therefore a derived excerpt, not an immutable copy of the Gazette PDF.
 SOURCE PDF SHA-256: NOT CAPTURED.
-EXTRACT FILE SHA-256: 21aa4dabb618ae6243d2f1770b97ba6354e49b58ca25137cca4d3254a29431be
+EXTRACT FILE SHA-256: Recorded in SOURCE_CAPTURE_LOG_2026-11-28.md
 
 --- Extract ---
 
