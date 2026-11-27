@@ -20,7 +20,7 @@ The only hashed source-related file in this PR is a **derived text extract** fro
 ## Derived extract
 
 - File: `derived-extracts/FINANCE_ACT_2022_SCHEDULE_I_SHARE_TRANSFER_EXCERPT.txt`
-- Extract SHA-256: `21aa4dabb618ae6243d2f1770b97ba6354e49b58ca25137cca4d3254a29431be`
+- Extract SHA-256: `aef36969fe703053554d5c4ca7e3d14c0a9ae25719fd76a35e3f998a0bab4ab6`
 - It is a transcription of the English Schedule I excerpt as rendered from the official Gazette PDF, not a binary source capture.
 - It records Article 61(a), the 1.5% consideration rate, and the listed-public-company exemption as published in the 2022 Finance Act Gazette.
 - It does not prove that no later SRO or amendment changed the position by 2026-11-28.
