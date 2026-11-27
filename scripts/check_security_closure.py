@@ -12,7 +12,22 @@ from urllib.parse import unquote
 DOC_PATH = Path("docs/SECURITY_RISK_ACCEPTANCE.md")
 SECTION_TITLE = "## Findings requiring verification before closure"
 CLOSED_MARKER = "CLOSED"
-STATUS_LINE = re.compile(r"^(?:(?:[-+]|\d+\.)\s+)?status\s*:\s*(.*?)\s*$", re.IGNORECASE)
+ALLOWED_STATUSES = frozenset({"OPEN", CLOSED_MARKER})
+EXPECTED_FINDING_NUMBERS = frozenset({1, 2, 3, 4, 5})
+# Optional list bullet, optional emphasis around the Status key, then a single value.
+STATUS_LINE = re.compile(
+    r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:(?:\*\*)?\s*(.*?)\s*$",
+    re.IGNORECASE,
+)
+# Exact OPEN/CLOSED with optional surrounding Markdown emphasis only.
+# Interior punctuation (C_LOSED, CLOSED_, _CLOSED) must not match.
+STATUS_VALUE = re.compile(
+    # Paired Markdown emphasis is allowed; a lone underscore or a trailing
+    # punctuation character must never be normalized into a valid status.
+    r"^(?:\*\*|__|\*)?(OPEN|CLOSED)(?:\*\*|__|\*)?$"
+)
+# Top-level Markdown ordered-list marker: column zero or up to three leading spaces.
+ITEM_MARKER = re.compile(r"^ {0,3}([0-9]+)\.(?:\s|$)")
 EVIDENCE_ROOT = "docs/"
 REQUIREMENTS_PATH = Path("requirements.txt")
 CURRENT_AUDIT_REPORT = Path("artifacts/security/pip-audit-current.json")
@@ -45,12 +60,37 @@ def link_evidence_path(destination: str) -> str | None:
     return normalized if normalized.startswith(EVIDENCE_ROOT) else None
 
 
+def _without_fenced_code(value: str) -> str:
+    """Remove fenced code blocks before interpreting closure records."""
+    return re.sub(r"(?ms)^ {0,3}((?:\x60){3,}|~{3,})[^\n]*\n.*?^ {0,3}\1[ \t]*$", "", value)
+
+
+def _normalize_status_value(value: str) -> str:
+    """Accept exact OPEN/CLOSED with optional surrounding emphasis markers.
+
+    Does not strip interior punctuation: C_LOSED, CLOSED_, and _CLOSED stay invalid.
+    """
+    match = STATUS_VALUE.fullmatch(value.strip())
+    return match.group(1) if match else value.strip()
+
+
 def item_statuses(block: str) -> list[str]:
     statuses = []
-    for line in block.splitlines():
-        match = STATUS_LINE.match(re.sub(r"[*_\x60]", "", line).strip())
+    for line in _without_fenced_code(block).splitlines():
+        candidate = line.strip()
+        # Markdown may emphasize the complete metadata line (**Status: CLOSED**)
+        # or just the key/value (**Status:** CLOSED / Status: **CLOSED**).
+        # Remove only a matched pair surrounding the whole line; never strip
+        # arbitrary punctuation or underscores from the status value.
+        if candidate.startswith("**") and candidate.endswith("**") and len(candidate) > 4:
+            candidate = candidate[2:-2].strip()
+        match = STATUS_LINE.match(candidate)
         if match:
-            statuses.append(match.group(1))
+            raw = match.group(1).strip()
+            normalized = _normalize_status_value(raw)
+            # Accept only exact OPEN/CLOSED; keep raw text otherwise so
+            # malformed values remain visible in failures.
+            statuses.append(normalized if normalized in ALLOWED_STATUSES else raw)
     return statuses
 
 
@@ -137,29 +177,41 @@ def audit_current_dependencies() -> tuple[bool, str]:
     )
 
 
-def _item_number(block: str) -> str | None:
-    """Return the leading ``N.`` number of a closure block, or None."""
+def _item_number(block: str) -> int | None:
+    """Return an ASCII ordered-list number (column 0 or up to 3 leading spaces)."""
     lines = block.splitlines()
     if not lines:
         return None
-    match = re.match(r"(\d+)\.\s", lines[0])
-    return match.group(1) if match else None
+    match = ITEM_MARKER.match(lines[0])
+    return int(match.group(1)) if match else None
+
+
+def _has_description(block: str) -> bool:
+    """Require meaningful item text apart from its marker and status metadata."""
+    lines = _without_fenced_code(block).splitlines()
+    if not lines:
+        return False
+    first = re.sub(r"^ {0,3}[0-9]+\.\s*", "", lines[0]).strip()
+    remaining = [
+        line.strip()
+        for line in lines[1:]
+        if not STATUS_LINE.match(line.strip())
+    ]
+    return bool(first or any(remaining))
 
 
 def main(argv: list[str] | None = None) -> int:
     """Run the closure gate.
 
-    Default (fail-closed production gate): every numbered item must carry a
-    ``Status: CLOSED`` line, every referenced ``docs/`` evidence file must
-    exist, no item number may repeat, and a live ``pip-audit`` must report zero
-    vulnerabilities. Used by the production-release and deploy workflows.
+    Default (fail-closed production gate): require exactly one ``Status:
+    CLOSED`` per item, all required finding numbers, no duplicates or
+    unexpected numbers, existing referenced evidence files, and a live
+    ``pip-audit`` report with zero vulnerabilities.
 
-    ``--structure-only``: skip the live pip-audit and allow ``Status: OPEN``
-    (reported as info, not a failure). Still fails on duplicate item numbers,
-    missing/malformed status lines, and missing evidence files. Used by the PR
-    CI job so the closure document's structural integrity is checked on every
-    pull request without forcing every OPEN item closed or running the slow
-    live audit (the live audit remains a release-gate concern).
+    ``--structure-only``: skip the live pip-audit and permit exactly one
+    ``Status: OPEN`` or ``Status: CLOSED`` per required item. It still
+    rejects malformed/conflicting statuses, missing or duplicate findings,
+    unexpected numbers, and missing evidence files.
     """
     args = sys.argv[1:] if argv is None else argv
     structure_only = "--structure-only" in args
@@ -172,9 +224,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: section {SECTION_TITLE!r} not found in {DOC_PATH}")
         return 1
     body = text.split(SECTION_TITLE, 1)[1].split("\n## ", 1)[0]
+    # Ignore fenced examples. Ordered-list markers at column zero or with up
+    # to three leading spaces are closure records (CommonMark list rules).
+    body_without_code = _without_fenced_code(body)
     blocks = [
-        block for block in re.split(r"\n(?=\d+\.\s)", body.strip("\n"))
-        if re.match(r"\d+\.\s", block)
+        block
+        for block in re.split(
+            r"(?m)(?=^ {0,3}[0-9]+\.(?:\s|$))",
+            body_without_code.strip("\n"),
+        )
+        if _item_number(block) is not None
     ]
     if not blocks:
         print("FAIL: no numbered closure items found")
@@ -182,25 +241,47 @@ def main(argv: list[str] | None = None) -> int:
 
     failures: list[str] = []
     open_items: list[str] = []
-    seen_numbers: dict[str, str] = {}
+    seen_numbers: dict[int, str] = {}
     for block in blocks:
         title = block.splitlines()[0].strip()
         number = _item_number(block)
-        if number is not None:
-            if number in seen_numbers:
-                failures.append(
-                    f"duplicate closure item {number}: {title!r} repeats "
-                    f"{seen_numbers[number]!r}"
-                )
-            else:
-                seen_numbers[number] = title
-        if not is_closed(block):
-            if structure_only and item_statuses(block):
+        if number is None:
+            failures.append(f"closure item has no valid leading number: {title!r}")
+        elif number in seen_numbers:
+            failures.append(
+                f"duplicate closure item {number}: {title!r} repeats "
+                f"{seen_numbers[number]!r}"
+            )
+        else:
+            seen_numbers[number] = title
+
+        if not _has_description(block):
+            failures.append(f"closure item has no description: {title}")
+        statuses = item_statuses(block)
+        if len(statuses) != 1 or statuses[0].strip() not in ALLOWED_STATUSES:
+            failures.append(
+                f"item must contain exactly one Status: OPEN or Status: CLOSED line: {title}"
+            )
+        elif statuses[0].strip() == "OPEN":
+            if structure_only:
                 open_items.append(title)
             else:
                 failures.append(
                     f"item not CLOSED (needs a 'Status: {CLOSED_MARKER}' line): {title}"
                 )
+    missing_numbers = EXPECTED_FINDING_NUMBERS - set(seen_numbers)
+    unexpected_numbers = set(seen_numbers) - EXPECTED_FINDING_NUMBERS
+    if missing_numbers:
+        failures.append(
+            "missing required closure item(s): "
+            + ", ".join(str(number) for number in sorted(missing_numbers))
+        )
+    if unexpected_numbers:
+        failures.append(
+            "unexpected closure item number(s): "
+            + ", ".join(str(number) for number in sorted(unexpected_numbers))
+        )
+
     for ref in referenced_evidence_paths(body, text):
         if not Path(ref).is_file():
             failures.append(f"missing evidence file: {ref}")

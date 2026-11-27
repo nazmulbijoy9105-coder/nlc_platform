@@ -94,6 +94,12 @@ evidence and is not a substitute for the live release-time audit.
 Items 1–5 are **CLOSED**. Item 4 (Defusedxml / PSFL) was closed by a recorded
 project-owner license-policy decision: root `LICENSE` (MIT), explicit PSFL
 acceptance in `docs/DEPENDENCY_LICENSE_POLICY.md`, and verified package metadata.
+Items 1–5 are CLOSED. Item 4 (Defusedxml license classifier) is closed by the
+project-owner decision recorded on 2026-11-27: NLC Platform is proprietary
+(All rights reserved), its project metadata declares `LicenseRef-Proprietary`,
+and the dependency policy explicitly accepts PSFL-licensed dependencies subject
+to their applicable notice and redistribution obligations. The policy is
+linked below and is retained as security-closure evidence.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the
    reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile
@@ -137,6 +143,18 @@ acceptance in `docs/DEPENDENCY_LICENSE_POLICY.md`, and verified package metadata
    `docs/DEPENDENCY_LICENSE_POLICY.md` explicitly accepts PSFL for NLC
    dependencies; root `LICENSE` records MIT for the NLC codebase. Production
    release is no longer blocked solely on this license-policy item.
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md); [project dependency-license policy](DEPENDENCY_LICENSE_POLICY.md); [proprietary project license](../LICENSE); [project license metadata](../pyproject.toml).
+   Status: CLOSED
+   Closed 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
+   PSFL` and the OSI-approved Python Software Foundation License classifier
+   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`).
+   The project owner has expressly selected proprietary / All rights reserved
+   for NLC Platform. The root `LICENSE` records that restriction and
+   `pyproject.toml` declares `LicenseRef-Proprietary`. The project owner also
+   explicitly accepts PSFL-licensed dependencies under
+   `docs/DEPENDENCY_LICENSE_POLICY.md`, subject to the applicable license text,
+   attribution, and notice obligations. This decision and policy are the
+   recorded project-owner approval for this finding.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
    affected by the October/November 2026 RedirectHandler open-redirect and
    related advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
@@ -151,3 +169,10 @@ dependency audit must still pass live at release time. **All five numbered
 closure items are CLOSED.** Remaining release blockers are operational
 (green CI, isolated migration rehearsal, protected production environment),
 not open security-closure document items.
+dependency audit is clean against both PyPI and OSV for the resolved 222-package
+graph; this is not a whole-system scan and does not replace operating-system or
+bundled-native-library verification. Pillow's bundled Brotli payload and the
+upgraded backend compatibility suite have separate passing final-image and CI
+evidence. Defusedxml's PSFL metadata and the project-owner's PSFL dependency acceptance
+are recorded in the dependency-license policy. The production gate still
+requires a fresh successful live dependency audit and all other release checks.
