@@ -1,8 +1,6 @@
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
-import pytest
-
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine, RuleState, Severity
 from app.services.company_service import _agm_history_summary
 
