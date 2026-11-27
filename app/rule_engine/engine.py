@@ -240,6 +240,9 @@ class CompanyProfile:
     agm_history_evidence_ref: str | None = None
     agm_history_verified_at: date | None = None
     agm_history_verified_by: str | None = None
+    # Structured CompanyFact payloads; unverified assertions are review-only.
+    agm_court_order_evidence: dict[str, Any] | None = None
+    agm_court_order_lawyer_decision: dict[str, Any] | None = None
     last_agm_date: Optional[date] = None
     agm_extension_granted_until: date | None = None
     agm_extension_application_date: date | None = None
@@ -1663,6 +1666,72 @@ class NLCRuleEngine:
         # Section 81 deadlines depend on a complete, verified AGM history.
         # Missing history is an explicit UNKNOWN review state, not an assumed
         # absence of meetings and not a deadline breach.
+        # A potentially relevant court order is evidence, never an automatic
+        # extension, waiver, compliance result, or score uplift. The two
+        # structured payloads arrive through the normal CompanyFact pipeline.
+        if isinstance(c.agm_court_order_evidence, dict):
+            from app.compliance.agm_court_order import agm_court_order_scoring_guard
+
+            order_evidence = dict(c.agm_court_order_evidence)
+            verified_keys = set(getattr(c, "verified_fact_keys", ()) or ())
+            if "agm_court_order_evidence" not in verified_keys:
+                order_evidence["authenticated"] = False
+                order_evidence["verified_by"] = None
+                order_evidence["verified_at"] = None
+            lawyer_decision = c.agm_court_order_lawyer_decision
+            if "agm_court_order_lawyer_decision" not in verified_keys:
+                lawyer_decision = None
+            review = agm_court_order_scoring_guard(
+                order_evidence, lawyer_decision
+            )
+            affected_event = str(order_evidence.get("affected_event") or "").upper()
+            if affected_event.startswith("FIRST_AGM"):
+                target_rules = ["AGM-001"] if c.agm_count in (None, 0) else []
+            elif affected_event.startswith("SUBSEQUENT_AGM"):
+                target_rules = ["AGM-002"] if c.agm_count is None or c.agm_count > 0 else []
+            else:
+                # An unscoped/ambiguous order must not be guessed into a rule.
+                target_rules = ["AGM-001", "AGM-002"]
+            if target_rules:
+                for target_rule_id in target_rules:
+                    review_state = (
+                        RuleState.REQUIRES_LAWYER_JUDGMENT
+                        if review["requires_lawyer_judgment"]
+                        else RuleState.UNKNOWN
+                    )
+                    self._add_flag(ComplianceFlag(
+                        rule_id=target_rule_id,
+                        flag_code="AGM_COURT_ORDER_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "Potentially relevant court-order evidence is recorded. "
+                            "Its legal effect has not been translated into this rule's "
+                            "deadline logic; no compliance, breach clearance, or score "
+                            "adjustment is inferred."
+                        ),
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh); order-specific authority requires review",
+                        detail={
+                            "court_order_review": review,
+                            "court_name": order_evidence.get("court_name"),
+                            "case_number": order_evidence.get("case_number"),
+                            "order_date": order_evidence.get("order_date"),
+                            "affected_event": affected_event or None,
+                            "evidence_ref": order_evidence.get("evidence_ref"),
+                            "order_status": order_evidence.get("order_status", "UNKNOWN"),
+                            "automatic_clearance": False,
+                            "score_uplift": 0,
+                        },
+                        state=review_state,
+                        eval_state="UNKNOWN",
+                    ))
+                # Do not run ordinary AGM deadline scoring for the affected
+                # event until a rule-specific, counsel-reviewed implementation
+                # is added. This remains fail-closed even after a decision fact
+                # is recorded: the decision alone never changes a score.
+                return
+
         if not self._agm_history_is_verified(c):
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-001",
