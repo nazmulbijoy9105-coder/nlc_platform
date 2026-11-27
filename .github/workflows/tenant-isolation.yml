@@ -1,7 +1,9 @@
 name: Tenant isolation (RLS)
 
 # P0: multi-tenant legal data must not leak across company boundaries.
-# Runs existing unit isolation/company-access coverage and RLS verification helpers.
+# Runs company-access / RLS / tenant unit gates and compiles verification helpers.
+# Route-auth inventory lives under tests/security and is enforced by CI unit/security
+# paths — not this job.
 
 on:
   pull_request:
@@ -31,6 +33,8 @@ jobs:
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -46,22 +50,19 @@ jobs:
       - name: Company-access and isolation unit gates
         run: |
           set -euo pipefail
-          # Prefer focused modules when present; fall back to name filters.
           ARGS=()
           for path in \
             tests/unit/test_company_access.py \
             tests/unit/test_dependencies_company_access.py \
             tests/unit/test_rls.py \
-            tests/unit/test_tenant_isolation.py \
-            tests/security
+            tests/unit/test_tenant_isolation.py
           do
             if [[ -e "$path" ]]; then
               ARGS+=("$path")
             fi
           done
           if ((${#ARGS[@]} == 0)); then
-            python -m pytest tests/unit -q --tb=short -k "company_access or tenant or rls or membership" || \
-              python -m pytest tests/unit -q --tb=short -k "company"
+            python -m pytest tests/unit -q --tb=short -k "company_access or tenant or rls or membership"
           else
             python -m pytest "${ARGS[@]}" -q --tb=short
           fi
