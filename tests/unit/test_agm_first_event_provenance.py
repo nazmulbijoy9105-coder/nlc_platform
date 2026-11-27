@@ -102,3 +102,22 @@ def test_first_agm_event_does_not_reopen_agm001_after_verified_holding():
     engine.evaluate(profile, today=date(2026, 11, 27))
 
     assert not any(flag.rule_id == "AGM-001" for flag in engine._flags)
+
+def test_verified_single_event_history_is_valid_first_agm_provenance_for_legacy_profiles():
+    profile = CompanyProfile(
+        company_id="legacy-history-company",
+        company_name="Legacy History Ltd",
+        incorporation_date=date(2023, 1, 1),
+        agm_count=1,
+        agm_history_verified=True,
+        agm_history_evidence_ref="agm-history:complete",
+        agm_history_verified_at=date(2026, 11, 27),
+        agm_history_verified_by="reviewer-01",
+        last_agm_date=date(2024, 10, 1),
+    )
+    engine = NLCRuleEngine()
+
+    assert engine._first_agm_date_is_verified(profile) is True
+    components = engine._subsequent_agm_deadline_components(profile)
+    assert components is not None
+    assert components[0] == date(2026, 1, 1)

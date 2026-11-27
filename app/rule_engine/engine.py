@@ -1597,13 +1597,23 @@ class NLCRuleEngine:
         )
 
     def _first_agm_date_is_verified(self, c: CompanyProfile) -> bool:
-        return (
+        explicit_event_provenance = (
             c.first_agm_date is not None
             and c.first_agm_date_verified is True
             and bool(c.first_agm_date_evidence_ref)
             and c.first_agm_date_verified_at is not None
             and bool(c.first_agm_date_verified_by)
         )
+        # With exactly one AGM, the verified complete AGM-history record is
+        # itself the first-AGM event. This preserves older profiles whose
+        # verified history predates the dedicated first_agm_date fields,
+        # without accepting an unverified date or inferring from agm_count.
+        history_proves_single_first_event = (
+            c.agm_count == 1
+            and c.last_agm_date is not None
+            and self._agm_history_is_verified(c)
+        )
+        return explicit_event_provenance or history_proves_single_first_event
 
     def _subsequent_agm_deadline_components(
         self, c: CompanyProfile
@@ -1613,7 +1623,7 @@ class NLCRuleEngine:
         if c.agm_count == 1:
             if not self._first_agm_date_is_verified(c):
                 return None
-            preceding_agm_date = c.first_agm_date
+            preceding_agm_date = c.first_agm_date or c.last_agm_date
         else:
             preceding_agm_date = c.last_agm_date
         if preceding_agm_date is None:
