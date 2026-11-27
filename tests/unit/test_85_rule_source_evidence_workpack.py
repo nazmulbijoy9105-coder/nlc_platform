@@ -78,6 +78,18 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
             assert role["collection_procedure"]
             assert role["verification_standard"]
 
+    # The October 2026 Bangladesh Bank circular supersedes GFET-2018 Vol.1
+    # except monthly reporting in Vol.2; the exact FX-001 mapping stays open.
+    fx001 = next(item for item in data["rules"] if item["rule_id"] == "FX-001")
+    fx_events = fx001["statutory_chain"]["amendment_events"]
+    assert any(
+        event["instrument"].startswith("Bangladesh Bank FEPD-2 Circular No. 09")
+        and event["effective_from"] == "2026-10-29"
+        and "GFET-2018 Vol.1" in event["scope"]
+        for event in fx_events
+    )
+    assert fx001["source_validation"]["legal_review_status"] == "NOT_VALIDATED"
+
     # Preserve the known historical/canonical citation conflict; do not erase it.
     agm005 = next(item for item in data["rules"] if item["rule_id"] == "AGM-005")
     assert "Section 89" in agm005["recorded_statutory_basis"]
