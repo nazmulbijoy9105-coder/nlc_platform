@@ -1,4 +1,4 @@
-name: Production 0112 to 0128 Neon Migration Rehearsal
+name: G2 PostgreSQL migration and legal-engine rehearsal
 
 on:
   pull_request:
@@ -10,549 +10,208 @@ on:
       - "app/models/**"
       - "app/db/**"
       - "app/db_url.py"
+      - "app/rule_engine/**"
       - "canonical_architecture/statutory_rules.py"
       - "alembic.ini"
       - "requirements.txt"
-      - "scripts/rehearse_production_0112_to_0128.py"
+      - "scripts/check_rule_verification.py"
+      - "tests/integration/**"
+      - "tests/unit/test_rjsc_scope_registry.py"
+      - "tests/unit/test_evaluation_integrity.py"
+      - "tests/unit/test_not_evaluated_score_visibility.py"
+      - "tests/unit/test_score_release_evidence_gates.py"
       - ".github/workflows/production-0112-to-0122-rehearsal.yml"
+  push:
+    branches:
+      - ci/postgres-only-g2-neon-isolation-20261127
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: nlc-production-migration-rehearsal-${{ github.event.pull_request.number || github.ref }}
+  group: nlc-g2-postgres-rehearsal-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
-  rehearse:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+  g2-postgres:
+    name: Isolated PostgreSQL G2 checks
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nlc_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: nlc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nlc_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: rapid-bonus-26545234
-      NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
-      PYTHONPATH: ${{ github.workspace }}
-      NLC_EXPECTED_SOURCE_SHA: ${{ github.sha }}
-      GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+      DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST_MIGRATION: postgresql+asyncpg://nlc_migrator@localhost:5432/nlc_test
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://nlc_migrator@localhost:5432/nlc_test
+      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role@localhost:5432/nlc_test
+      REQUIRE_RLS_APP_ROLE: "true"
+      ENVIRONMENT: test
+      TESTING: "true"
+      CI: "true"
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-not-a-production-secret-2026
+      NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install migration dependencies
-        run: python -m pip install --no-cache-dir -r requirements.txt
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install pytest pytest-asyncio pytest-cov==7.1.0
 
-      - name: Create isolated Neon child, verify target, and rehearse migrations
+      - name: Provision isolated migration, runtime and audit roles
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${NEON_API_KEY:-}" ]]; then
-            echo "::error::NEON_API_KEY repository secret is required."
-            exit 1
-          fi
-
-          API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
-          AUTH=(-H "Authorization: Bearer $NEON_API_KEY" -H "Accept: application/json")
-          BRANCH_ID=""
-          cleanup() {
-            if [[ -n "$BRANCH_ID" ]]; then
-              if ! curl --silent --show-error --fail --request DELETE "${AUTH[@]}" "$API/branches/$BRANCH_ID" >/dev/null; then
-                echo "::warning::Disposable Neon rehearsal branch cleanup failed; inspect branch $BRANCH_ID."
-              fi
-            fi
-          }
-          trap cleanup EXIT
-
-          # This is a preserved backup, never the production/default branch.
-          response_file=$(mktemp)
-          trap 'rm -f "$response_file"; cleanup' EXIT
-          neon_request() {
-            local method="$1"
-            local url="$2"
-            local payload="${3:-}"
-            local http_status=""
-            local response_body=""
-            local retry_after=""
-            local delay=""
-            local deadline=$((SECONDS + 300))
-            local attempt=0
-            local headers_file
-            headers_file=$(mktemp)
-            while (( SECONDS < deadline && attempt < 8 )); do
-              attempt=$((attempt + 1))
-              : > "$headers_file"
-              if [[ "$method" == "POST" ]]; then
-                http_status=$(curl --silent --show-error --request POST \
-                  "${AUTH[@]}" -H "Content-Type: application/json" \
-                  --data "$payload" -D "$headers_file" -o "$response_file" -w "%{http_code}" "$url") || {
-                    rm -f "$headers_file"
-                    echo "::error::Neon $method transport failure; request was not blindly retried." >&2
-                    return 1
-                  }
-              else
-                http_status=$(curl --silent --show-error \
-                  "${AUTH[@]}" -D "$headers_file" -o "$response_file" -w "%{http_code}" "$url") || {
-                    rm -f "$headers_file"
-                    echo "::error::Neon $method transport failure." >&2
-                    return 1
-                  }
-              fi
-              response_body=$(cat "$response_file")
-              if [[ "$http_status" == "423" ]]; then
-                retry_after=$(awk 'BEGIN{IGNORECASE=1} /^Retry-After:/ {gsub("\\r","",$2); print $2}' "$headers_file" | tail -n 1)
-                if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
-                  delay="$retry_after"
-                elif [[ -n "$retry_after" ]]; then
-                  retry_epoch=$(date -u -d "$retry_after" +%s 2>/dev/null || true)
-                  if [[ "$retry_epoch" =~ ^[0-9]+$ ]]; then
-                    delay=$((retry_epoch - $(date -u +%s)))
-                    (( delay < 0 )) && delay=0
-                  else
-                    echo "::error::Neon returned an invalid Retry-After header." >&2
-                    rm -f "$headers_file"
-                    return 1
-                  fi
-                else
-                  delay=$((2 ** attempt))
-                  (( delay > 60 )) && delay=60
-                  delay=$((delay + RANDOM % 4))
-                fi
-                if (( SECONDS + delay >= deadline )); then
-                  rm -f "$headers_file"
-                  echo "::error::Neon API lock retry would exceed the 300-second total deadline." >&2
-                  return 1
-                fi
-                echo "Neon API locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)." >&2
-                sleep "$delay"
-                continue
-              fi
-              rm -f "$headers_file"
-              if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
-                echo "::error::Neon $method returned non-retryable HTTP $http_status: $response_body" >&2
-                return 1
-              fi
-              printf '%s' "$response_body"
-              return 0
-            done
-            rm -f "$headers_file"
-            echo "::error::Neon API remained locked or exceeded retry deadline; failing closed." >&2
-            return 1
-          }
-
-          parent_json=$(neon_request GET "$API/branches/$NEON_PARENT_BRANCH_ID")
-          parent_name=$(jq -r '.branch.name // empty' <<<"$parent_json")
-          parent_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$parent_json")
-          if [[ "$parent_name" != "nlc-prod-backup-2026-11-20-before-0122" || "$parent_default" != "false" ]]; then
-            echo "::error::Refusing rehearsal: pinned parent is not the verified non-default production backup."
-            exit 1
-          fi
-
-          # A unique disposable branch prevents stale IDs and concurrent-run collisions.
-          BRANCH_NAME="nlc-0112-to-0128-rehearsal-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          payload=$(jq -n --arg name "$BRANCH_NAME" --arg parent "$NEON_PARENT_BRANCH_ID"             '{branch:{name:$name,parent_id:$parent},endpoints:[{type:"read_write"}]}')
-          created=$(neon_request POST "$API/branches" "$payload")
-          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
-          ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
-          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
-            echo "::error::Neon did not return both the disposable branch ID and its read-write endpoint ID."
-            exit 1
-          fi
-
-          branch_json=$(neon_request GET "$API/branches/$BRANCH_ID")
-          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
-          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
-          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "$BRANCH_NAME" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
-            echo "::error::Refusing migration: newly created target is not the expected isolated backup child."
-            exit 1
-          fi
-
-          endpoint_json=$(neon_request GET "$API/endpoints/$ENDPOINT_ID")
-          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
-          if [[ "$endpoint_branch" != "$BRANCH_ID" ]]; then
-            echo "::error::Read-write endpoint does not belong to the disposable rehearsal branch."
-            exit 1
-          fi
-
-          get_uri() {
-            local role="$1"
-            local query="$API/connection_uri?branch_id=$BRANCH_ID&endpoint_id=$ENDPOINT_ID&database_name=neondb&role_name=$role&pooled=false"
-            neon_request GET "$query" | jq -er '.uri | select(type == "string" and length > 0)'
-          }
-
-          MIGRATION_URL=$(get_uri "nlc_migration_user")
-          APP_URL=$(get_uri "nlc_app_role")
-          AUDIT_URL=$(get_uri "nlc_ci_audit_role")
-          if [[ -z "$MIGRATION_URL" || -z "$APP_URL" || -z "$AUDIT_URL" ]]; then
-            echo "::error::Neon did not return all three direct role-specific connection URIs."
-            exit 1
-          fi
-          echo "::add-mask::$MIGRATION_URL"
-          echo "::add-mask::$APP_URL"
-          echo "::add-mask::$AUDIT_URL"
-
-          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
-          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
-
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          ready=false
-          for attempt in $(seq 1 30); do
-            if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
-          import asyncio, os
+          python - <<'PY'
+          import asyncio
+          import os
+          import secrets
           import asyncpg
-          from app.db_url import prepare_asyncpg_connection
-          from sqlalchemy.engine import make_url
+
           async def main():
-              url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
-              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
-              conn = await asyncpg.connect(dsn, **args, timeout=5)
+              url = os.environ["DATABASE_URL"].replace(
+                  "postgresql+asyncpg://", "postgresql://", 1
+              )
+              conn = await asyncpg.connect(url)
               try:
-                  row = await conn.fetchrow("SELECT session_user, current_user, current_database(), current_setting('neon.branch_id', true)")
-                  assert row["session_user"] == "nlc_migration_user"
-                  assert row["current_user"] == "nlc_migration_user"
-                  assert row["current_database"] == "neondb"
-                  assert row["current_setting"] == os.environ["NLC_TARGET_BRANCH_ID"]
+                  await conn.execute("""
+                      DO $$
+                      BEGIN
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_app_role') THEN
+                              CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                                  NOINHERIT NOREPLICATION NOBYPASSRLS;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migrator') THEN
+                              CREATE ROLE nlc_migrator LOGIN SUPERUSER;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_migration_owner') THEN
+                              CREATE ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                                  NOINHERIT BYPASSRLS NOREPLICATION;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nlc_ci_audit_role') THEN
+                              CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+                                  NOINHERIT NOREPLICATION NOBYPASSRLS;
+                          END IF;
+                          EXECUTE 'GRANT nlc_migration_owner TO nlc_migrator WITH ADMIN FALSE, INHERIT FALSE, SET TRUE';
+                          EXECUTE 'GRANT USAGE, CREATE ON SCHEMA public TO nlc_migration_owner';
+                      END
+                      $$;
+                  """)
+                  password = secrets.token_urlsafe(32)
+                  alter = await conn.fetchval(
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
+                      password,
+                  )
+                  await conn.execute(alter)
               finally:
                   await conn.close()
-          asyncio.run(main())
-          PY
-            then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-          if [[ "$ready" != "true" ]]; then
-            echo "::error::Disposable Neon compute did not become reachable with the expected migration identity and branch."
-            exit 1
-          fi
 
-          export ENVIRONMENT=production
-          export NLC_EXPECTED_SOURCE_SHA="$GITHUB_SHA"
-          export GITHUB_PR_NUMBER="${{ github.event.pull_request.number || '' }}"
-          export MIGRATION_DATABASE_URL="$MIGRATION_URL"
-          export APP_DATABASE_URL="$APP_URL"
-          export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
-          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          python -m py_compile scripts/rehearse_production_0112_to_0128.py
-          python scripts/rehearse_production_0112_to_0128.py
-
-      - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0128.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: nlc-production-0112-to-0128-rehearsal
-          path: artifacts/neon-production-0112-to-0128.json
-          if-no-files-found: error
-\\n%{http_code}' "$API/branches") || {
-                echo "::error::Neon branch creation request failed at transport level."
-                exit 1
+              password = password
+              values = {
+                  "APP_DATABASE_PASSWORD": password,
+                  "APP_DATABASE_URL": (
+                      "postgresql+asyncpg://nlc_app_role:"
+                      + password
+                      + "@localhost:5432/nlc_test"
+                  ),
+                  "NLC_RLS_HMAC_SECRET": secrets.token_hex(32),
+                  "JWT_SECRET_KEY": secrets.token_urlsafe(48),
               }
-            http_status="${response##*
-          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
-          ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
-          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
-            echo "::error::Neon did not return both the disposable branch ID and its read-write endpoint ID."
-            exit 1
-          fi
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+                  for key, value in values.items():
+                      env.write(f"{key}={value}\n")
+              for value in values.values():
+                  print(f"::add-mask::{value}")
 
-          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$BRANCH_ID")
-          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
-          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
-          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "$BRANCH_NAME" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
-            echo "::error::Refusing migration: newly created target is not the expected isolated backup child."
-            exit 1
-          fi
-
-          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$ENDPOINT_ID")
-          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
-          if [[ "$endpoint_branch" != "$BRANCH_ID" ]]; then
-            echo "::error::Read-write endpoint does not belong to the disposable rehearsal branch."
-            exit 1
-          fi
-
-          get_uri() {
-            local role="$1"
-            curl --silent --show-error --fail --get "${AUTH[@]}"               --data-urlencode "branch_id=$BRANCH_ID"               --data-urlencode "endpoint_id=$ENDPOINT_ID"               --data-urlencode "database_name=neondb"               --data-urlencode "role_name=$role"               --data-urlencode "pooled=false"               "$API/connection_uri" | jq -r '.uri // empty'
-          }
-
-          MIGRATION_URL=$(get_uri "nlc_migration_user")
-          APP_URL=$(get_uri "nlc_app_role")
-          AUDIT_URL=$(get_uri "nlc_ci_audit_role")
-          if [[ -z "$MIGRATION_URL" || -z "$APP_URL" || -z "$AUDIT_URL" ]]; then
-            echo "::error::Neon did not return all three direct role-specific connection URIs."
-            exit 1
-          fi
-          echo "::add-mask::$MIGRATION_URL"
-          echo "::add-mask::$APP_URL"
-          echo "::add-mask::$AUDIT_URL"
-
-          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
-          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
-
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          ready=false
-          for attempt in $(seq 1 30); do
-            if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
-          import asyncio, os
-          import asyncpg
-          from app.db_url import prepare_asyncpg_connection
-          from sqlalchemy.engine import make_url
-          async def main():
-              url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
-              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
-              conn = await asyncpg.connect(dsn, **args, timeout=5)
-              try:
-                  row = await conn.fetchrow("SELECT session_user, current_user, current_database(), current_setting('neon.branch_id', true)")
-                  assert row["session_user"] == "nlc_migration_user"
-                  assert row["current_user"] == "nlc_migration_user"
-                  assert row["current_database"] == "neondb"
-                  assert row["current_setting"] == os.environ["NLC_TARGET_BRANCH_ID"]
-              finally:
-                  await conn.close()
           asyncio.run(main())
           PY
-            then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-          if [[ "$ready" != "true" ]]; then
-            echo "::error::Disposable Neon compute did not become reachable with the expected migration identity and branch."
-            exit 1
-          fi
 
-          export ENVIRONMENT=production
-          export MIGRATION_DATABASE_URL="$MIGRATION_URL"
-          export APP_DATABASE_URL="$APP_URL"
-          export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
-          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          python -m py_compile scripts/rehearse_production_0112_to_0128.py
-          python scripts/rehearse_production_0112_to_0128.py
+      - name: Verify sole Alembic head and migrate isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEADS="$(alembic heads)"
+          printf '%s\n' "$HEADS"
+          test "$(grep -c ' (head)' <<< "$HEADS")" -eq 1
+          EXPECTED_HEAD="$(awk 'NR == 1 {print $1}' <<< "$HEADS")"
 
-      - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0128.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: nlc-production-0112-to-0128-rehearsal
-          path: artifacts/neon-production-0112-to-0128.json
-          if-no-files-found: error
-\\n'}"
-            response_body="${response%
-          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
-          ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
-          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
-            echo "::error::Neon did not return both the disposable branch ID and its read-write endpoint ID."
-            exit 1
-          fi
+          alembic upgrade head
+          alembic upgrade head
+          CURRENT="$(alembic current)"
+          printf '%s\n' "$CURRENT"
+          grep -Fq "$EXPECTED_HEAD" <<< "$CURRENT"
 
-          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$BRANCH_ID")
-          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
-          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
-          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "$BRANCH_NAME" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
-            echo "::error::Refusing migration: newly created target is not the expected isolated backup child."
-            exit 1
-          fi
+          PGOPTIONS='-c default_transaction_read_only=on' \
+            psql -h localhost -U nlc_test -d nlc_test -X -v ON_ERROR_STOP=1 \
+            -f scripts/audit_nlc_role_memberships.sql
 
-          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$ENDPOINT_ID")
-          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
-          if [[ "$endpoint_branch" != "$BRANCH_ID" ]]; then
-            echo "::error::Read-write endpoint does not belong to the disposable rehearsal branch."
-            exit 1
-          fi
+      - name: Seed canonical 85-rule catalogue in disposable PostgreSQL
+        env:
+          NLC_ALLOW_DEVELOPMENT_RULE_SEED: "true"
+        run: python scripts/seed_rules.py --apply
 
-          get_uri() {
-            local role="$1"
-            curl --silent --show-error --fail --get "${AUTH[@]}"               --data-urlencode "branch_id=$BRANCH_ID"               --data-urlencode "endpoint_id=$ENDPOINT_ID"               --data-urlencode "database_name=neondb"               --data-urlencode "role_name=$role"               --data-urlencode "pooled=false"               "$API/connection_uri" | jq -r '.uri // empty'
-          }
+      - name: Verify independent legal approval register remains fail-closed
+        run: python scripts/check_rule_verification.py
 
-          MIGRATION_URL=$(get_uri "nlc_migration_user")
-          APP_URL=$(get_uri "nlc_app_role")
-          AUDIT_URL=$(get_uri "nlc_ci_audit_role")
-          if [[ -z "$MIGRATION_URL" || -z "$APP_URL" || -z "$AUDIT_URL" ]]; then
-            echo "::error::Neon did not return all three direct role-specific connection URIs."
-            exit 1
-          fi
-          echo "::add-mask::$MIGRATION_URL"
-          echo "::add-mask::$APP_URL"
-          echo "::add-mask::$AUDIT_URL"
+      - name: Run G2 parity, RLS, tenant-isolation, scope, integrity and withheld-score tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest \
+            tests/integration/test_rule_registry_parity.py \
+            tests/integration/test_dashboard_tenant_isolation.py \
+            tests/integration/test_agm_share_event_rls.py \
+            tests/integration/test_legal_provenance_acl.py \
+            tests/integration/test_articles_rls_security.py \
+            tests/unit/test_rjsc_scope_registry.py \
+            tests/unit/test_evaluation_integrity.py \
+            tests/unit/test_rule_outcome_ledger.py \
+            tests/unit/test_not_evaluated_score_visibility.py \
+            tests/unit/test_score_release_evidence_gates.py \
+            tests/unit/test_legal_approval_register_parity.py \
+            -q -rs --tb=short --junitxml=/tmp/nlc-g2-postgres.xml
 
-          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
-          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
 
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          ready=false
-          for attempt in $(seq 1 30); do
-            if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
-          import asyncio, os
-          import asyncpg
-          from app.db_url import prepare_asyncpg_connection
-          from sqlalchemy.engine import make_url
-          async def main():
-              url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
-              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
-              conn = await asyncpg.connect(dsn, **args, timeout=5)
-              try:
-                  row = await conn.fetchrow("SELECT session_user, current_user, current_database(), current_setting('neon.branch_id', true)")
-                  assert row["session_user"] == "nlc_migration_user"
-                  assert row["current_user"] == "nlc_migration_user"
-                  assert row["current_database"] == "neondb"
-                  assert row["current_setting"] == os.environ["NLC_TARGET_BRANCH_ID"]
-              finally:
-                  await conn.close()
-          asyncio.run(main())
+          root = ET.parse("/tmp/nlc-g2-postgres.xml").getroot()
+          cases = root.findall(".//testcase")
+          if not cases:
+              raise SystemExit("G2 PostgreSQL suite collected zero tests")
+          skipped = [case.get("name", "<unnamed>") for case in cases
+                     if case.find("skipped") is not None]
+          if skipped:
+              raise SystemExit("G2 PostgreSQL suite must not skip: " + ", ".join(skipped))
+          print(f"G2 PostgreSQL suite: {len(cases)} tests collected, zero skips.")
           PY
-            then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-          if [[ "$ready" != "true" ]]; then
-            echo "::error::Disposable Neon compute did not become reachable with the expected migration identity and branch."
-            exit 1
-          fi
-
-          export ENVIRONMENT=production
-          export MIGRATION_DATABASE_URL="$MIGRATION_URL"
-          export APP_DATABASE_URL="$APP_URL"
-          export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
-          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          python -m py_compile scripts/rehearse_production_0112_to_0128.py
-          python scripts/rehearse_production_0112_to_0128.py
-
-      - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0128.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: nlc-production-0112-to-0128-rehearsal
-          path: artifacts/neon-production-0112-to-0128.json
-          if-no-files-found: error
-\\n'*}"
-            if [[ "$http_status" == "423" ]]; then
-              delay=$((attempt * 10))
-              echo "Neon branch API is locked (HTTP 423); retrying in ${delay}s (attempt ${attempt}/8)."
-              sleep "$delay"
-              continue
-            fi
-            if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
-              echo "::error::Neon branch creation returned HTTP $http_status: $response_body"
-              exit 1
-            fi
-            created="$response_body"
-            break
-          done
-          if [[ -z "$created" ]]; then
-            echo "::error::Neon branch API remained locked after bounded HTTP 423 retries."
-            exit 1
-          fi
-          BRANCH_ID=$(jq -r '.branch.id // empty' <<<"$created")
-          ENDPOINT_ID=$(jq -r '.endpoints[]? | select(.type == "read_write") | .id' <<<"$created" | head -n 1)
-          if [[ -z "$BRANCH_ID" || -z "$ENDPOINT_ID" ]]; then
-            echo "::error::Neon did not return both the disposable branch ID and its read-write endpoint ID."
-            exit 1
-          fi
-
-          branch_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/branches/$BRANCH_ID")
-          branch_name=$(jq -r '.branch.name // empty' <<<"$branch_json")
-          branch_parent=$(jq -r '.branch.parent_id // empty' <<<"$branch_json")
-          branch_default=$(jq -r 'if .branch.default == null then "unknown" else (.branch.default | tostring) end' <<<"$branch_json")
-          if [[ "$branch_name" != "$BRANCH_NAME" || "$branch_parent" != "$NEON_PARENT_BRANCH_ID" || "$branch_default" != "false" ]]; then
-            echo "::error::Refusing migration: newly created target is not the expected isolated backup child."
-            exit 1
-          fi
-
-          endpoint_json=$(curl --silent --show-error --fail "${AUTH[@]}" "$API/endpoints/$ENDPOINT_ID")
-          endpoint_branch=$(jq -r '.endpoint.branch_id // empty' <<<"$endpoint_json")
-          if [[ "$endpoint_branch" != "$BRANCH_ID" ]]; then
-            echo "::error::Read-write endpoint does not belong to the disposable rehearsal branch."
-            exit 1
-          fi
-
-          get_uri() {
-            local role="$1"
-            curl --silent --show-error --fail --get "${AUTH[@]}"               --data-urlencode "branch_id=$BRANCH_ID"               --data-urlencode "endpoint_id=$ENDPOINT_ID"               --data-urlencode "database_name=neondb"               --data-urlencode "role_name=$role"               --data-urlencode "pooled=false"               "$API/connection_uri" | jq -r '.uri // empty'
-          }
-
-          MIGRATION_URL=$(get_uri "nlc_migration_user")
-          APP_URL=$(get_uri "nlc_app_role")
-          AUDIT_URL=$(get_uri "nlc_ci_audit_role")
-          if [[ -z "$MIGRATION_URL" || -z "$APP_URL" || -z "$AUDIT_URL" ]]; then
-            echo "::error::Neon did not return all three direct role-specific connection URIs."
-            exit 1
-          fi
-          echo "::add-mask::$MIGRATION_URL"
-          echo "::add-mask::$APP_URL"
-          echo "::add-mask::$AUDIT_URL"
-
-          REHEARSAL_HMAC_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')
-          echo "::add-mask::$REHEARSAL_HMAC_SECRET"
-
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          ready=false
-          for attempt in $(seq 1 30); do
-            if MIGRATION_DATABASE_URL="$MIGRATION_URL" python - <<'PY'
-          import asyncio, os
-          import asyncpg
-          from app.db_url import prepare_asyncpg_connection
-          from sqlalchemy.engine import make_url
-          async def main():
-              url, args = prepare_asyncpg_connection(os.environ["MIGRATION_DATABASE_URL"], require_tls=True)
-              dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
-              conn = await asyncpg.connect(dsn, **args, timeout=5)
-              try:
-                  row = await conn.fetchrow("SELECT session_user, current_user, current_database(), current_setting('neon.branch_id', true)")
-                  assert row["session_user"] == "nlc_migration_user"
-                  assert row["current_user"] == "nlc_migration_user"
-                  assert row["current_database"] == "neondb"
-                  assert row["current_setting"] == os.environ["NLC_TARGET_BRANCH_ID"]
-              finally:
-                  await conn.close()
-          asyncio.run(main())
-          PY
-            then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-          if [[ "$ready" != "true" ]]; then
-            echo "::error::Disposable Neon compute did not become reachable with the expected migration identity and branch."
-            exit 1
-          fi
-
-          export ENVIRONMENT=production
-          export MIGRATION_DATABASE_URL="$MIGRATION_URL"
-          export APP_DATABASE_URL="$APP_URL"
-          export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
-          export NLC_RLS_HMAC_SECRET="$REHEARSAL_HMAC_SECRET"
-          export NLC_REHEARSAL_BRANCH_ID="$BRANCH_ID"
-          export NLC_TARGET_BRANCH_ID="$BRANCH_ID"
-          python -m py_compile scripts/rehearse_production_0112_to_0128.py
-          python scripts/rehearse_production_0112_to_0128.py
-
-      - name: Upload isolated migration rehearsal report
-        if: always() && hashFiles('artifacts/neon-production-0112-to-0128.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: nlc-production-0112-to-0128-rehearsal
-          path: artifacts/neon-production-0112-to-0128.json
-          if-no-files-found: error
