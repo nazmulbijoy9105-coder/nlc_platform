@@ -91,12 +91,12 @@ before merge; that mode does not run the live audit and does not require every
 item to be CLOSED. The dated 25 November report below remains historical
 evidence and is not a substitute for the live release-time audit.
 
-Items 1, 2, 3, and 5 are CLOSED. **Item 4 (Defusedxml license classifier)
-remains OPEN**: the `defusedxml==0.7.1` wheel metadata declares PSFL, but the
-repository has no root LICENSE file, `pyproject.toml` declares no project
-license, and no dependency-license policy document exists, so NLC's acceptance
-of PSFL-licensed dependencies is not established. Production release must
-remain blocked until a project-owner license-policy decision is recorded.
+Items 1–5 are CLOSED. Item 4 (Defusedxml license classifier) is closed by the
+project-owner decision recorded on 2026-11-27: NLC Platform is proprietary
+(All rights reserved), its project metadata declares `LicenseRef-Proprietary`,
+and the dependency policy explicitly accepts PSFL-licensed dependencies subject
+to their applicable notice and redistribution obligations. The policy is
+linked below and is retained as security-closure evidence.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the
    reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile
@@ -133,19 +133,18 @@ remain blocked until a project-owner license-policy decision is recorded.
    identification finding, not by itself a demonstrated exploitable security
    vulnerability. Confirm the package's actual license metadata and the
    project's license policy.
-   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md).
-   Status: OPEN
-   Open 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md); [project dependency-license policy](DEPENDENCY_LICENSE_POLICY.md); [proprietary project license](../LICENSE); [project license metadata](../pyproject.toml).
+   Status: CLOSED
+   Closed 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
    PSFL` and the OSI-approved Python Software Foundation License classifier
-   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`),
-   so the package's declared license is verified. However, the repository has
-   no root LICENSE file, `pyproject.toml` declares no `[project].license`, and
-   no separate dependency-license policy document exists, so NLC's acceptance
-   of PSFL-licensed dependencies is not established. Closing this item requires
-   a project-owner decision recorded as a root LICENSE / `pyproject.toml`
-   license declaration plus a dependency-license policy document (or explicit
-   written PSFL acceptance). Until then the fail-closed production gate
-   continues to block release on this item.
+   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`).
+   The project owner has expressly selected proprietary / All rights reserved
+   for NLC Platform. The root `LICENSE` records that restriction and
+   `pyproject.toml` declares `LicenseRef-Proprietary`. The project owner also
+   explicitly accepts PSFL-licensed dependencies under
+   `docs/DEPENDENCY_LICENSE_POLICY.md`, subject to the applicable license text,
+   attribution, and notice obligations. This decision and policy are the
+   recorded project-owner approval for this finding.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
    affected by the October/November 2026 RedirectHandler open-redirect and
    related advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
@@ -160,6 +159,6 @@ dependency audit is clean against both PyPI and OSV for the resolved 222-package
 graph; this is not a whole-system scan and does not replace operating-system or
 bundled-native-library verification. Pillow's bundled Brotli payload and the
 upgraded backend compatibility suite have separate passing final-image and CI
-evidence. Defusedxml's PSFL metadata is verified, but project license-policy
-approval remains open. **Production release must remain blocked until item 4 is
-explicitly resolved by a recorded project-owner license-policy decision.**
+evidence. Defusedxml's PSFL metadata and the project-owner's PSFL dependency acceptance
+are recorded in the dependency-license policy. The production gate still
+requires a fresh successful live dependency audit and all other release checks.
