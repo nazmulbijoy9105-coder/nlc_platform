@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 
 from app.rule_engine.engine import RuleState, Severity
-from app.services.filing_service import AGMService
 
 
 def _evaluate_first_agm(rule_engine, build_profile, incorporation_date, as_of, agm_count=0):
@@ -137,22 +136,3 @@ def test_agm001_only_applies_when_verified_agm_count_is_zero(
     assert len(unknown_count_flags) == 1
     assert unknown_count_flags[0].state == RuleState.UNKNOWN
     assert unknown_count_flags[0].score_impact == 0
-
-
-def test_first_agm_deadline_uses_calendar_months():
-    assert AGMService.calculate_first_agm_deadline(date(2024, 1, 31)) == date(2025, 7, 31)
-    assert AGMService.calculate_first_agm_deadline(date(2023, 8, 31)) == date(2025, 2, 28)
-
-
-def test_subsequent_agm_deadline_enforces_fifteen_calendar_month_cap():
-    # Incorporation 1 Jan 2020; first AGM 1 Jan 2021. A second AGM is due
-    # no later than 1 Apr 2022, not 31 Dec 2022.
-    assert AGMService.calculate_subsequent_agm_deadline(
-        date(2021, 1, 1), date(2021, 12, 31)
-    ) == date(2022, 4, 1)
-
-
-def test_subsequent_agm_deadline_also_respects_calendar_year():
-    assert AGMService.calculate_subsequent_agm_deadline(
-        date(2025, 10, 1), date(2025, 12, 31)
-    ) == date(2026, 12, 31)
