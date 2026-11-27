@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 
 
-# Owner-approved permissive licenses only. PSFL/PSF, GPL/AGPL, LGPL, MPL,
-# SSPL, BUSL, unknown and unclassified licenses remain blocked pending review.
+# Explicitly approved by docs/DEPENDENCY_LICENSE_POLICY.md: permissive
+# families plus PSFL. GPL/AGPL, LGPL, MPL, SSPL, BUSL, unknown and
+# unclassified licenses remain blocked unless separately approved in writing.
 APPROVED_ALIASES = {
     "MIT",
     "MIT LICENSE",
@@ -26,6 +27,14 @@ APPROVED_ALIASES = {
     "APACHE 2 0",
     "ISC LICENSE",
     "ISC",
+    "PYTHON SOFTWARE FOUNDATION LICENSE",
+    "PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2",
+    "PYTHON SOFTWARE FOUNDATION LICENSE 2 0",
+    "PSF 2 0",
+    "PSFL",
+    "UNLICENSE",
+    "THE UNLICENSE UNLICENSE",
+    "3 CLAUSE BSD LICENSE",
 }
 
 
