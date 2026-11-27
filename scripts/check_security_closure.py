@@ -16,7 +16,7 @@ ALLOWED_STATUSES = frozenset({"OPEN", CLOSED_MARKER})
 EXPECTED_FINDING_NUMBERS = frozenset({1, 2, 3, 4, 5})
 # Optional list bullet, optional emphasis around the Status key, then a single value.
 STATUS_LINE = re.compile(
-    r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:\s*(.*?)\s*$",
+    r"^(?:(?:[-+])\\s+)?(?:\\*\\*)?status(?:\\*\\*)?\\s*:(?:\\*\\*)?\\s*(.*?)\\s*$",
     re.IGNORECASE,
 )
 # Exact OPEN/CLOSED with optional surrounding Markdown emphasis only.
