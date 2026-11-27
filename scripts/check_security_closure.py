@@ -19,6 +19,11 @@ STATUS_LINE = re.compile(
     r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:\s*(.*?)\s*$",
     re.IGNORECASE,
 )
+# Exact OPEN/CLOSED with optional surrounding Markdown emphasis only.
+# Interior punctuation (C_LOSED, CLOSED_, _CLOSED) must not match.
+STATUS_VALUE = re.compile(
+    r"^(?:\*\*|__|[*_`])?(OPEN|CLOSED)(?:\*\*|__|[*_`])?$"
+)
 # Top-level Markdown ordered-list marker: column zero or up to three leading spaces.
 ITEM_MARKER = re.compile(r"^ {0,3}([0-9]+)\.(?:\s|$)")
 EVIDENCE_ROOT = "docs/"
@@ -59,11 +64,12 @@ def _without_fenced_code(value: str) -> str:
 
 
 def _normalize_status_value(value: str) -> str:
-    """Strip emphasis markers so Markdown-wrapped OPEN/CLOSED still validate.
+    """Accept exact OPEN/CLOSED with optional surrounding emphasis markers.
 
-    Case is preserved: only exact OPEN/CLOSED are accepted by callers.
+    Does not strip interior punctuation: C_LOSED, CLOSED_, and _CLOSED stay invalid.
     """
-    return re.sub(r"[*_`]", "", value).strip()
+    match = STATUS_VALUE.fullmatch(value.strip())
+    return match.group(1) if match else value.strip()
 
 
 def item_statuses(block: str) -> list[str]:
@@ -73,8 +79,8 @@ def item_statuses(block: str) -> list[str]:
         if match:
             raw = match.group(1).strip()
             normalized = _normalize_status_value(raw)
-            # Accept only exact OPEN/CLOSED after emphasis stripping; keep raw
-            # text otherwise so malformed values remain visible in failures.
+            # Accept only exact OPEN/CLOSED; keep raw text otherwise so
+            # malformed values remain visible in failures.
             statuses.append(normalized if normalized in ALLOWED_STATUSES else raw)
     return statuses
 
