@@ -77,14 +77,20 @@ def _source_provenance() -> dict[str, Any]:
         raise RuntimeError(
             f"Rehearsal checkout SHA {commit!r} does not match workflow SHA {expected_commit!r}."
         )
-    dirty = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=root, check=True,
-        capture_output=True, text=True,
+    dirty_status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=root,
+        check=True, capture_output=True, text=True,
     ).stdout.splitlines()
+    # CI may create artifacts/ before this check (for example the live
+    # dependency-audit JSON). Those are generated evidence outputs, not source.
+    dirty = [
+        line for line in dirty_status
+        if not (line[:2] == "??" and line[3:].strip('"').startswith("artifacts/"))
+    ]
     if dirty:
         raise RuntimeError(
-            "Rehearsal requires a clean checkout; refusing to report evidence "
-            f"for modified/untracked source files: {dirty[:20]!r}"
+            "Rehearsal requires a clean source checkout; refusing to report "
+            f"evidence for modified/untracked source files: {dirty[:20]!r}"
         )
     tracked_inputs = [
         *sorted((root / "alembic" / "versions").glob("*.py")),
