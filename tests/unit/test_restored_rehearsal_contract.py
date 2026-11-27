@@ -256,7 +256,9 @@ def test_production_rehearsal_report_is_bound_to_clean_commit_and_input_hashes()
     assert "NLC_EXPECTED_SOURCE_SHA" in source
     assert '["git", "rev-parse", "HEAD"]' in source
     assert '["git", "status", "--porcelain", "--untracked-files=all"]' in source
-    assert 'line[:2] == "??" and line[3:].strip('"').startswith("artifacts/")' in source
+    assert 'line[:2] == "??"' in source
+    assert "line[3:].strip(" in source
+    assert '.startswith("artifacts/")' in source
     assert '"input_sha256": hashes' in source
     assert '"commit_sha": commit' in source
 
