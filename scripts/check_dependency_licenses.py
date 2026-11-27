@@ -33,8 +33,16 @@ def normalize(value: object) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", str(value or "").upper()).strip()
 
 
+def _normalize_expression(value: object) -> str:
+    """Normalize an SPDX-like expression while preserving grouping parentheses."""
+    expression = str(value or "").upper()
+    expression = re.sub(r"\\b(AND|OR)\\b", r" \\1 ", expression)
+    expression = re.sub(r"[^A-Z0-9()]+", " ", expression)
+    return re.sub(r"\\s+", " ", expression).strip()
+
+
 def _split_top_level(expression: str, operator: str) -> list[str]:
-    """Split a simple SPDX-style expression without splitting parenthesized terms."""
+    """Split an SPDX-style expression without splitting parenthesized terms."""
     parts: list[str] = []
     depth = 0
     start = 0
@@ -60,6 +68,22 @@ def _split_top_level(expression: str, operator: str) -> list[str]:
     return parts if all(parts) else []
 
 
+def _has_balanced_outer_parentheses(expression: str) -> bool:
+    if not (expression.startswith("(") and expression.endswith(")")):
+        return False
+    depth = 0
+    for index, char in enumerate(expression):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0 and index != len(expression) - 1:
+                return False
+            if depth < 0:
+                return False
+    return depth == 0
+
+
 def is_approved(value: object) -> bool:
     """Accept only expressions whose chosen license path is explicitly approved.
 
@@ -67,22 +91,24 @@ def is_approved(value: object) -> bool:
     every component to be approved. Unknown, malformed, and unlisted terms fail
     closed; this does not approve any new license identifier.
     """
-    expression = normalize(value)
-    if expression in APPROVED_ALIASES:
-        return True
+    expression = _normalize_expression(value)
+    if not expression:
+        return False
+    if _has_balanced_outer_parentheses(expression):
+        return is_approved(expression[1:-1])
 
     # SPDX precedence: AND binds more tightly than OR.
     alternatives = _split_top_level(expression, "OR")
     if len(alternatives) > 1:
-        return any(is_approved(part.strip(" ()")) for part in alternatives)
+        return any(is_approved(part) for part in alternatives)
 
     conjunction = _split_top_level(expression, "AND")
     if len(conjunction) > 1:
-        return all(is_approved(part.strip(" ()")) for part in conjunction)
+        return all(is_approved(part) for part in conjunction)
 
-    if expression.startswith("(") and expression.endswith(")"):
-        return is_approved(expression[1:-1])
-    return False
+    if "(" in expression or ")" in expression:
+        return False
+    return normalize(expression) in APPROVED_ALIASES
 
 
 def main() -> int:
