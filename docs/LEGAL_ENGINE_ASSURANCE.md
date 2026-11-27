@@ -25,10 +25,16 @@ scores requires **both** chains green on the **same** commit SHA.
 
 ## Recommended required checks on `main`
 
-1. `Legal engine assurance` / `legal-engine-p0`
+1. `Legal engine assurance` / `legal-engine-p0` (aggregate; requires all four P0 jobs)
 2. Existing `CI` unit + integration
 3. Security closure structure
-4. Post-deploy: production parity + readonly tenant smoke (release path)
+4. Post-deploy: production parity + readonly tenant smoke (controlled release path)
+
+The aggregate job is the single branch-protection check to require. It fails if
+catalogue parity, RJSC scope isolation, score provenance, or fail-closed
+publication is failed, skipped, or cancelled. The deployment workflows also
+wait for a successful `push` assurance run for the exact commit SHA before
+any migration or deployment step.
 
 ## Follow-ups (not in this workflow)
 
