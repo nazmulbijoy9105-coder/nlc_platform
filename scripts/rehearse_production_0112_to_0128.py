@@ -184,7 +184,7 @@ async def _schema_inventory(conn: asyncpg.Connection) -> dict[str, Any]:
             WHERE n.nspname IN ('public','audit','nlc_private')
               AND c.relkind IN ('r','p') ORDER BY 1,2""",
         "grants": """SELECT table_schema, table_name, grantee, privilege_type, is_grantable
-            FROM information_schema.role_table_grants
+            FROM information_schema.table_privileges
             WHERE table_schema IN ('public','audit','nlc_private') ORDER BY 1,2,3,4""",
     }
     inventory = {
