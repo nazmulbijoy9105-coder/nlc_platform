@@ -87,9 +87,10 @@ def _has_balanced_outer_parentheses(expression: str) -> bool:
 def is_approved(value: object) -> bool:
     """Accept only expressions whose chosen license path is explicitly approved.
 
-    OR allows a distributor to select one approved alternative. AND requires
-    every component to be approved. Unknown, malformed, and unlisted terms fail
-    closed; this does not approve any new license identifier.
+    Every declared alternative and every conjunction component must be approved.
+    In particular, an expression containing a prohibited OR alternative is
+    rejected rather than assuming the distributor will select the permissive
+    option. Unknown, malformed, and unlisted terms fail closed.
     """
     expression = _normalize_expression(value)
     if not expression:
@@ -100,7 +101,7 @@ def is_approved(value: object) -> bool:
     # SPDX precedence: AND binds more tightly than OR.
     alternatives = _split_top_level(expression, "OR")
     if len(alternatives) > 1:
-        return any(is_approved(part) for part in alternatives)
+        return all(is_approved(part) for part in alternatives)
 
     conjunction = _split_top_level(expression, "AND")
     if len(conjunction) > 1:
