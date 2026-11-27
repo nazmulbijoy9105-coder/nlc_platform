@@ -12,6 +12,8 @@ The backend deployment workflow runs in this order:
 6. Request a Render deployment with `commitId` explicitly pinned to the same SHA used to build the migration image; verify the resulting deployment reports that exact SHA and reaches `live`.
 7. Probe the Render liveness and readiness endpoints.
 
+The Render-target verification step explicitly receives `EXPECTED_DEPLOYED_SHA` from the completed CI workflow run and validates that it is non-empty before any use under Bash `set -u`. It also checks that `main` still points to that SHA before proceeding. The post-migration Render-trigger step independently repeats the freshness check immediately before the API request; it must not rely on the earlier check's result.
+
 The initial freshness check is only an early rejection of stale CI runs; it is not reused as authorization for later release mutations. If `main` advances during image build or migration, the immediately-following freshness gate fails closed: no database migration is started if the advance is detected before Alembic, and no Render deployment is requested if the advance is detected after migration. The Render API request must carry the immutable CI-tested SHA as `commitId`; it must never deploy the moving `main` branch or rely on a deploy hook that resolves the branch at trigger time.
 
 The Render deployment is therefore pinned to the same source SHA as the migration image. If `main` advances after the final freshness check but before Render accepts the request, the request is still pinned to the migrated SHA rather than silently switching to the newer branch head. The subsequent deployment verification rejects any deployment whose reported commit differs from that SHA.
