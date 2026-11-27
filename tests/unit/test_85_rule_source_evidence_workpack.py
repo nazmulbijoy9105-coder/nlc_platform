@@ -21,6 +21,21 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert rule_ids == sorted(rule_ids)
 
     for rule in data["rules"]:
+        source = rule["source_validation"]
+        assert source["jurisdiction"] == "BD"
+        assert "candidate_exact_provisions" in source
+        assert source["confirmed_exact_provisions"] == []
+        assert "primary_source_url" in source
+        assert "commencement_or_effective_from" in source
+        assert "effective_to" in source
+        assert source["operative_interval_status"] == "NOT_VALIDATED"
+        assert source["legal_review_status"] == "NOT_VALIDATED"
+        assert source["reviewer"] is None
+        assert source["reviewer_qualification"] is None
+        assert source["reviewed_at"] is None
+        assert source["reviewer_decision_reference"] is None
+        assert source["source_capture_sha256"] is None
+        assert source["historical_version_mapping_status"] == "NOT_VALIDATED"
         assert rule["statutory_chain"]["primary_instrument"]
         assert rule["statutory_chain"]["operative_interval"]["status"] == (
             "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
