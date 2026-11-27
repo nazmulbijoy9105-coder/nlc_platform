@@ -46,7 +46,7 @@ async def test_chain_accepts_exact_previous_run_hash():
 
     # The mock returns a configured predecessor hash, so also pin the query
     # contract: same company, strictly earlier timestamp, newest predecessor.
-    sql = str(db.statement.compile(compile_kwargs={"literal_binds": True})).lower()
+    sql = str(db.statement).lower()
     assert "company_id" in sql and "=" in sql
     assert "calculated_at" in sql and "<" in sql
     assert "order by" in sql and "desc" in sql
