@@ -36,9 +36,9 @@ def normalize(value: object) -> str:
 def _normalize_expression(value: object) -> str:
     """Normalize an SPDX-like expression while preserving grouping parentheses."""
     expression = str(value or "").upper()
-    expression = re.sub(r"\\b(AND|OR)\\b", r" \\1 ", expression)
+    expression = re.sub(r"\b(AND|OR)\b", r" \1 ", expression)
     expression = re.sub(r"[^A-Z0-9()]+", " ", expression)
-    return re.sub(r"\\s+", " ", expression).strip()
+    return re.sub(r"\s+", " ", expression).strip()
 
 
 def _split_top_level(expression: str, operator: str) -> list[str]:
