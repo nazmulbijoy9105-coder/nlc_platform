@@ -263,6 +263,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "183"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -419,6 +443,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "190"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -567,6 +615,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "181"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -770,6 +842,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "81",
+          "81(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -1101,6 +1198,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "81",
+          "81(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -1400,6 +1522,46 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "85",
+          "85(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Amendment) Act, 2020 (Act No. 7 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1308.html",
+            "publication_date": "2020-02-25",
+            "candidate_effective_from": "2020-02-25",
+            "status": "OFFICIAL_TEXT_AND_GAZETTE_LOCATED"
+          },
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -1699,6 +1861,46 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "85",
+          "85(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Amendment) Act, 2020 (Act No. 7 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1308.html",
+            "publication_date": "2020-02-25",
+            "candidate_effective_from": "2020-02-25",
+            "status": "OFFICIAL_TEXT_AND_GAZETTE_LOCATED"
+          },
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2064,6 +2266,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "89",
+          "85(2)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2205,6 +2432,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "89"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2343,6 +2594,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "130",
+          "85"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2499,6 +2775,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "36"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2682,6 +2982,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "36",
+          "346"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2865,6 +3190,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "36",
+          "346"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -2990,6 +3340,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "36"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3143,6 +3517,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "210(6)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3321,6 +3719,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "183"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3501,6 +3923,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "151",
+          "210",
+          "183"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3636,6 +4084,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "210(2)",
+          "210(3)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3770,6 +4243,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "210(3)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3874,6 +4371,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "241",
+          "244"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -3991,6 +4513,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "255"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4095,6 +4649,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "241",
+          "246"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4251,6 +4830,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "96"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4418,6 +5021,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "95"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4585,6 +5212,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "89"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4771,6 +5422,43 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "BSEC Corporate Governance Code 2018",
+        "primary_source_url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+        "publication_date": "2018-06-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "publication_date": "2023-11-20",
+            "candidate_effective_from": null,
+            "status": "GAZETTE_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "publication_date": "2024-04-29",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_TEXT_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -4957,6 +5645,43 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "BSEC Corporate Governance Code 2018",
+        "primary_source_url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+        "publication_date": "2018-06-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "publication_date": "2023-11-20",
+            "candidate_effective_from": null,
+            "status": "GAZETTE_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "publication_date": "2024-04-29",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_TEXT_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -5151,6 +5876,50 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "BSEC Corporate Governance Code 2018",
+        "primary_source_url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+        "publication_date": "2018-06-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "publication_date": "2023-11-20",
+            "candidate_effective_from": null,
+            "status": "GAZETTE_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "publication_date": "2024-04-29",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_TEXT_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "BSEC female independent director deadline extension",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_29.07.2025.pdf",
+            "publication_date": "2025-07-29",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_EXTENSION_NOTICE_LOCATED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -5337,6 +6106,43 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "BSEC Corporate Governance Code 2018",
+        "primary_source_url": "https://sec.gov.bd/slaws/Corporate_Governance_Code_10.06.2018.pdf",
+        "publication_date": "2018-06-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 16 October 2023",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_28.11.2023.pdf",
+            "publication_date": "2023-11-20",
+            "candidate_effective_from": null,
+            "status": "GAZETTE_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "BSEC Corporate Governance Code amendment notification 4 April 2024",
+            "official_source_url": "https://sec.gov.bd/slaws/Notification_26.05.2024.pdf",
+            "publication_date": "2024-04-29",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_TEXT_LOCATED_EFFECTIVE_CLAUSE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -5611,6 +6417,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "53",
+          "54",
+          "56"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -5905,6 +6737,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "159(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -6086,6 +6942,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "59",
+          "60"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -6247,6 +7128,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "88",
+          "88(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -6545,6 +7451,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "172(1)",
+          "159"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -6848,6 +7779,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "94",
+          "94(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -6991,6 +7947,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "397"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -7228,6 +8208,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "90",
+          "115(2)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -7420,6 +8425,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "93",
+          "115(2)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -7748,6 +8778,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "115(2)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -7989,6 +9043,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "109",
+          "115"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -8126,6 +9205,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "130"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -8229,6 +9332,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "130"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -8571,6 +9698,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "93(2)",
+          "92"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -8731,6 +9883,33 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "195",
+          "197",
+          "199",
+          "104"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -8878,6 +10057,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "110"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9101,6 +10304,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "346"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9322,6 +10549,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "346"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9494,6 +10745,33 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "81",
+          "115",
+          "36",
+          "346"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9598,6 +10876,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "130",
+          "286"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9703,6 +11006,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "195",
+          "197",
+          "199"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -9843,6 +11172,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Foreign Exchange Regulation Act, 1947 (Act VII of 1947)",
+        "primary_source_url": "https://old.bdlaws.minlaw.gov.bd/upload/bdcodeact/2023-12-11-15-13-10-234.-FOREIGN-EXCHANGE-REGULATION-ACT-1947.pdf",
+        "publication_date": "1947-03-11",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -10067,6 +11418,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "23"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -10281,6 +11656,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "90(2)",
+          "90(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -10460,6 +11860,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "53",
+          "56"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -10613,6 +12038,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Guidelines for Foreign Exchange Transactions 2018, Volumes 1 and 2; FE Circular No. 08",
+        "primary_source_url": "https://www.bb.org.bd/mediaroom/circulars/fepd/mar042018fepd08e.pdf",
+        "publication_date": "2018-03-04",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -10740,6 +12187,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "BIDA Guidelines for foreign commercial offices and work permits (2023)",
+        "primary_source_url": "https://www.bida.gov.bd/resources",
+        "publication_date": "2023",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -11041,6 +12510,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "150(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -11402,6 +12895,42 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "35",
+          "326(1)",
+          "201",
+          "354",
+          "355"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+        "publication_date": "2006-10-11",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "publication_date": "2026-04-10",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_LOCATED_RULE_SPECIFIC_COMMENCEMENT_AND_AMENDMENT_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -11763,6 +13292,42 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "35",
+          "326(1)",
+          "201",
+          "354",
+          "355"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+        "publication_date": "2006-10-11",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "publication_date": "2026-04-10",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_LOCATED_RULE_SPECIFIC_COMMENCEMENT_AND_AMENDMENT_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -11899,6 +13464,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "209"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Bangladesh Labour Act, 2006 (Act No. 42 of 2006)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-952.html",
+        "publication_date": "2006-10-11",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Bangladesh Labour (Amendment) Act, 2026 (Act No. 43 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1672.html",
+            "publication_date": "2026-04-10",
+            "candidate_effective_from": null,
+            "status": "OFFICIAL_GAZETTE_LOCATED_RULE_SPECIFIC_COMMENCEMENT_AND_AMENDMENT_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12047,6 +13644,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "222"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12216,6 +13837,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "77"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12364,6 +14009,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "34"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12609,6 +14278,33 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "34",
+          "89",
+          "115",
+          "174"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12798,6 +14494,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "34(2)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -12932,6 +14652,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "151"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13066,6 +14810,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "158"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13200,6 +14968,30 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "56"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13379,6 +15171,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "20",
+          "11",
+          "88(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13560,6 +15378,34 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "17",
+          "12",
+          "15",
+          "16",
+          "88(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13731,6 +15577,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "18",
+          "20",
+          "88(1)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -13874,6 +15746,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "166",
+          "261",
+          "264"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Income Tax Act, 2023 (Act No. XII of 2023)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+        "publication_date": "2023-06-22",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14073,6 +15971,48 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "2(48)",
+          "2(57)",
+          "4",
+          "10"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+        "publication_date": "2012-12-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Value Added Tax and Supplementary Duty (Amendment) Act, 2026 (Act No. 77 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1706.html",
+            "publication_date": "2026-04-10",
+            "candidate_effective_from": "2025-01-09",
+            "status": "OFFICIAL_TEXT_AND_EXPRESS_RETROSPECTIVE_EFFECTIVE_DATE_LOCATED"
+          },
+          {
+            "instrument": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "publication_date": "2026-06-30",
+            "candidate_effective_from": "2026-07-01",
+            "status": "OFFICIAL_CONSOLIDATED_FOOTNOTE_LOCATED_RULE_SCOPE_REVIEW_REQUIRED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14215,6 +16155,32 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "75",
+          "170(2)",
+          "171"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Income Tax Act, 2023 (Act No. XII of 2023)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+        "publication_date": "2023-06-22",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14403,6 +16369,34 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "74",
+          "154",
+          "157",
+          "87",
+          "88"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Income Tax Act, 2023 (Act No. XII of 2023)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1429.html",
+        "publication_date": "2023-06-22",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14527,6 +16521,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
+        "publication_date": "2009-10-15",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14651,6 +16667,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Local Government (City Corporation) Act, 2009 (Act No. 60 of 2009)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1026.html",
+        "publication_date": "2009-10-15",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -14887,6 +16925,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "38(3)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -15080,6 +17150,28 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Stamp Act, 1899 (Act No. II of 1899)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-77.html",
+        "publication_date": "1899-01-27",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -15309,6 +17401,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "38(7)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -15523,6 +17647,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "38(4)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -15774,6 +17930,38 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "38(7)"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Companies (Second Amendment) Act, 2020 (Act No. 24 of 2020)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1353.html",
+            "publication_date": "2020-11-26",
+            "candidate_effective_from": "2020-11-26",
+            "status": "OFFICIAL_TEXT_LOCATED_GAZETTE_ARTIFACT_OPEN"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -15909,6 +18097,31 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "34",
+          "38"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Companies Act, 1994 (Act XVIII of 1994)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-788.html",
+        "publication_date": "1994-09-12",
+        "commencement_or_effective_from": "1994-12-01",
+        "effective_to": null,
+        "amendment_sources": [],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -16087,6 +18300,45 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [
+          "64"
+        ],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+        "publication_date": "2012-12-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Finance Act, 2026 (Act No. 96 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-1725.html",
+            "publication_date": "2026-06-30",
+            "candidate_effective_from": "2026-07-01",
+            "status": "OFFICIAL_CONSOLIDATED_FOOTNOTE_LOCATED_RULE_SCOPE_REVIEW_REQUIRED"
+          },
+          {
+            "instrument": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
+            "publication_date": "2026-10-14",
+            "candidate_effective_from": "2026-10-01",
+            "status": "OFFICIAL_TEXT_AND_CONSOLIDATED_EFFECTIVE_DATE_LOCATED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     },
     {
@@ -16254,6 +18506,36 @@
         "source_path": "scripts/seed_rules.py",
         "source_blob_sha": "0e0c43cfa7287575e9d07d4bed05e007dc942ac8",
         "verification_status": "SOURCE_CODE_CLAIM_NOT_LEGAL_APPROVAL"
+      },
+      "source_validation": {
+        "jurisdiction": "BD",
+        "candidate_exact_provisions": [],
+        "confirmed_exact_provisions": [],
+        "primary_source_document": "Value Added Tax and Supplementary Duty Act, 2012 (Act No. 47 of 2012)",
+        "primary_source_url": "https://bdlaws.minlaw.gov.bd/act-print-1106.html",
+        "publication_date": "2012-12-10",
+        "commencement_or_effective_from": null,
+        "effective_to": null,
+        "amendment_sources": [
+          {
+            "instrument": "Value Added Tax and Supplementary Duty (Amendment) Ordinance, 2026 (Ordinance No. 38 of 2026)",
+            "official_source_url": "https://bdlaws.minlaw.gov.bd/act-1742.html",
+            "publication_date": "2026-10-14",
+            "candidate_effective_from": "2026-10-01",
+            "status": "OFFICIAL_TEXT_AND_CONSOLIDATED_EFFECTIVE_DATE_LOCATED"
+          }
+        ],
+        "amendment_completeness": "OPEN_NOT_EXHAUSTIVE",
+        "operative_interval_status": "NOT_VALIDATED",
+        "source_capture_sha256": null,
+        "source_capture_date": null,
+        "reviewer": null,
+        "reviewer_qualification": null,
+        "reviewed_at": null,
+        "legal_review_status": "NOT_VALIDATED",
+        "reviewer_decision_reference": null,
+        "historical_version_mapping_status": "NOT_VALIDATED",
+        "notes": "Candidate source metadata only. Confirm the exact operative text, amendments, commencement, savings, transition, repeal and corrigenda for the rule and relevant company/event date before approval."
       }
     }
   ]
