@@ -128,6 +128,14 @@ jobs:
             echo "::error::Render API key or service ID is missing; aborting before production migration."
             exit 1
           fi
+          # Re-check after migration and immediately before requesting Render deployment.
+          # The API request below pins commitId to the exact SHA whose image was migrated.
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced after migration (migrated=$EXPECTED_DEPLOYED_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to trigger Render."
+            exit 1
+          fi
+          echo "Freshness revalidated immediately before Render deploy request: $EXPECTED_DEPLOYED_SHA"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
@@ -160,6 +168,13 @@ jobs:
             exit 1
           fi
           docker build --target api --tag nlc-api:migration .
+          # Re-check after the image build and immediately before the DB mutation.
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::main advanced before production migration (release=$GITHUB_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to migrate a stale release."
+            exit 1
+          fi
+          echo "Freshness revalidated immediately before Alembic mutation: $GITHUB_SHA"
           docker run --rm \
             --entrypoint /bin/sh \
             --env ENVIRONMENT=production \
