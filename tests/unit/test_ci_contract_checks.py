@@ -44,6 +44,7 @@ def test_openapi_contract_accepts_required_operations_and_response_schemas():
 def test_openapi_prefix_cannot_be_satisfied_by_unrelated_substring():
     schema = _valid_openapi()
     del schema["paths"]["/api/v1/auth/login"]
+    del schema["paths"]["/api/v1/auth/refresh"]
     schema["paths"]["/unrelated/api/v1/auth/login"] = {
         "post": {"responses": {"200": {"description": "not the auth route"}}}
     }
