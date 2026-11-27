@@ -88,6 +88,31 @@ jobs:
           echo "Backup created, TOC/checksum verified, and restored into the disposable PostgreSQL service."
           echo "This proves restoreability of this backup; it does not certify production migration readiness."
 
+      - name: Migrate the backup restored in this run to the repository Alembic head
+        env:
+          MIGRATION_DATABASE_URL: postgresql+asyncpg://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore
+          DATABASE_URL: postgresql+asyncpg://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore
+          ENVIRONMENT: test
+        run: |
+          set -euo pipefail
+          # Exercise the actual archive restored above, not a separately seeded
+          # fixture. This is an isolated migration rehearsal, never production.
+          alembic upgrade head
+          CURRENT="$(alembic current | awk 'NR == 1 { print $1 }')"
+          HEAD="$(alembic heads | awk 'NR == 1 { print $1 }')"
+          echo "Restored backup Alembic revision: ${CURRENT}"
+          echo "Repository Alembic head: ${HEAD}"
+          test -n "$CURRENT"
+          test -n "$HEAD"
+          test "$CURRENT" = "$HEAD"
+          psql "postgresql://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore" \
+            -v ON_ERROR_STOP=1 -Atc "
+              SELECT CASE WHEN count(*) = 3 THEN 'PASS' ELSE 'FAIL' END
+              FROM information_schema.tables
+              WHERE table_schema='public'
+                AND table_name IN ('webhook_endpoints','webhook_deliveries','rescue_audit_log')
+            " | grep -qx PASS
+
       - name: Run pinned isolated Neon migration rehearsal when configured
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
