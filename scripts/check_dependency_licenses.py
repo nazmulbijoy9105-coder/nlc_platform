@@ -48,7 +48,7 @@ def _split_top_level(expression: str, operator: str) -> list[str]:
     start = 0
     index = 0
     token = f" {operator} "
-    while index <= len(expression) - len(token):
+    while index < len(expression):
         char = expression[index]
         if char == "(":
             depth += 1
