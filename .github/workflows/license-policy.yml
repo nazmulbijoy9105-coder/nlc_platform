@@ -29,7 +29,7 @@ jobs:
           python -m venv .venv-app
           python -m venv .venv-license-tools
           .venv-app/bin/python -m pip install --upgrade pip
-          .venv-app/bin/python -m pip install -r requirements.txt
+          .venv-app/bin/python -m pip install -r requirements-runtime.txt
           .venv-license-tools/bin/python -m pip install pip-licenses
 
       - name: Enforce explicit approved-license allowlist
