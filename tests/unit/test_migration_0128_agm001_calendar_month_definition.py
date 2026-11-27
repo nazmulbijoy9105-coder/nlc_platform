@@ -56,6 +56,7 @@ def _history_before_image():
         "statutory_basis": MIGRATION.LEGACY_BASIS,
         "rule_version": "1.1",
         **_legacy_definition(),
+        **copy.deepcopy(MIGRATION.EXPECTED_LEGACY_ATTRIBUTES),
     }
 
 
@@ -68,7 +69,7 @@ def _current_row(**overrides):
         "default_severity": "NOT_EVALUATED",
         "score_impact": 0,
         "revenue_tier": "STRUCTURED_REGULARIZATION",
-        "is_black_override": False,
+        **copy.deepcopy(MIGRATION.EXPECTED_LEGACY_ATTRIBUTES),
     }
     row.update(overrides)
     return row
@@ -175,6 +176,10 @@ def test_0128_reconciles_exact_0125_state_and_preserves_complete_before_image(mo
         {"statutory_basis": "Section 81, Companies Act 1994 (Bangladesh)"},
         {"is_active": False},
         {"rule_type": "POLICY"},
+        {"default_severity": "RED"},
+        {"score_impact": 25},
+        {"revenue_tier": "CORPORATE_RESCUE"},
+        {"is_black_override": True},
     ],
 )
 def test_0128_rejects_catalogue_drift_before_writes(monkeypatch, overrides):
