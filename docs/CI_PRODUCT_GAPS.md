@@ -47,6 +47,30 @@ restore target is created by the workflow and is not production.
 | Full backup health UI | `disabled/backup-health-check.yml` remains disabled until owners and secrets are assigned |
 | Production restore/migration equivalence | An ephemeral PostgreSQL restore proves the archive is restorable; it does not replace the separate isolated Neon 0112→current-head rehearsal or production release approvals |
 
+
+## Active production infrastructure blocker (observed 2026-11-27)
+
+The live Render API is repeatedly failing during startup because Neon rejects
+PostgreSQL connections with an account/project quota-exceeded error. The
+connected Neon organization is on the Free plan. The NLC project's reported
+November usage was approximately 5.55 GB public network transfer against the
+Free-plan allowance of 5 GB/project/month; compute was approximately 57.2
+CU-hours against 100 CU-hours, and logical size approximately 70.5 MB against
+1 GB. Network-transfer exhaustion is therefore the likely cause; re-check
+Neon's live usage and quota state before incident closure.
+
+**Release status: BLOCKED.** The application startup database check is
+intentionally fail-closed and must not be bypassed. Restore production
+database entitlement (paid plan for commercial operation, or an explicitly
+accepted emergency wait for the monthly reset), then verify read-only DB
+connectivity, runtime-role identity, Render readiness, authenticated paths,
+and tenant isolation. Do not migrate, seed, redeploy, switch branches, or
+delete data as a quota workaround.
+
+Operational recovery steps and prohibited shortcuts are documented in
+`docs/NEON_QUOTA_INCIDENT_RUNBOOK.md`. This incident is external to CI; green
+workflow checks do not mean the customer-facing API is available.
+
 ## Recommended required GitHub checks
 
 Mark these as required on `main` after the baseline is green:
