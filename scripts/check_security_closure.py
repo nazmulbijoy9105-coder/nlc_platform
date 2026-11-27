@@ -16,7 +16,7 @@ ALLOWED_STATUSES = frozenset({"OPEN", CLOSED_MARKER})
 EXPECTED_FINDING_NUMBERS = frozenset({1, 2, 3, 4, 5})
 # Optional list bullet, optional emphasis around the Status key, then a single value.
 STATUS_LINE = re.compile(
-    r"^(?:(?:[-+])\\s+)?(?:\\*\\*)?status(?:\\*\\*)?\\s*:(?:\\*\\*)?\\s*(.*?)\\s*$",
+    r"^(?:(?:[-+])\s+)?(?:\*\*)?status(?:\*\*)?\s*:(?:\*\*)?\s*(.*?)\s*$",
     re.IGNORECASE,
 )
 # Exact OPEN/CLOSED with optional surrounding Markdown emphasis only.
@@ -24,7 +24,7 @@ STATUS_LINE = re.compile(
 STATUS_VALUE = re.compile(
     # Paired Markdown emphasis is allowed; a lone underscore or a trailing
     # punctuation character must never be normalized into a valid status.
-    r"^(?:\\*\\*|__|\\*)?(OPEN|CLOSED)(?:\\*\\*|__|\\*)?$"
+    r"^(?:\*\*|__|\*)?(OPEN|CLOSED)(?:\*\*|__|\*)?$"
 )
 # Top-level Markdown ordered-list marker: column zero or up to three leading spaces.
 ITEM_MARKER = re.compile(r"^ {0,3}([0-9]+)\.(?:\s|$)")
