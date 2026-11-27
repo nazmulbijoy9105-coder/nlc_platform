@@ -240,6 +240,11 @@ class CompanyProfile:
     agm_history_evidence_ref: str | None = None
     agm_history_verified_at: date | None = None
     agm_history_verified_by: str | None = None
+    first_agm_date: date | None = None
+    first_agm_date_verified: bool = False
+    first_agm_date_evidence_ref: str | None = None
+    first_agm_date_verified_at: date | None = None
+    first_agm_date_verified_by: str | None = None
     # Structured CompanyFact payloads; unverified assertions are review-only.
     agm_court_order_evidence: dict[str, Any] | None = None
     agm_court_order_lawyer_decision: dict[str, Any] | None = None
@@ -1591,18 +1596,35 @@ class NLCRuleEngine:
             and bool(c.agm_history_verified_by)
         )
 
+    def _first_agm_date_is_verified(self, c: CompanyProfile) -> bool:
+        return (
+            c.first_agm_date is not None
+            and c.first_agm_date_verified is True
+            and bool(c.first_agm_date_evidence_ref)
+            and c.first_agm_date_verified_at is not None
+            and bool(c.first_agm_date_verified_by)
+        )
+
     def _subsequent_agm_deadline_components(
         self, c: CompanyProfile
     ) -> tuple[date, date, date, str] | None:
-        if not self._agm_history_is_verified(c) or c.last_agm_date is None:
+        if not self._agm_history_is_verified(c):
+            return None
+        if c.agm_count == 1:
+            if not self._first_agm_date_is_verified(c):
+                return None
+            preceding_agm_date = c.first_agm_date
+        else:
+            preceding_agm_date = c.last_agm_date
+        if preceding_agm_date is None:
             return None
 
-        interval_deadline = self._add_months(c.last_agm_date, 15)
+        interval_deadline = self._add_months(preceding_agm_date, 15)
         first_agm_in_incorporation_year = (
             c.agm_count == 1
             and c.incorporation_date is not None
-            and c.last_agm_date.year == c.incorporation_date.year
-            and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
+            and preceding_agm_date.year == c.incorporation_date.year
+            and preceding_agm_date <= self._add_months(c.incorporation_date, 18)
         )
         if first_agm_in_incorporation_year and c.incorporation_date is not None:
             calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
@@ -1622,7 +1644,7 @@ class NLCRuleEngine:
                     else "CALENDAR_YEAR"
                 )
         else:
-            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            calendar_year_deadline = date(preceding_agm_date.year + 1, 12, 31)
             base_deadline = min(interval_deadline, calendar_year_deadline)
             basis = (
                 "15_MONTH_INTERVAL"
@@ -1828,7 +1850,30 @@ class NLCRuleEngine:
                             },
                         ))
             elif c.agm_count > 0:
-                if c.last_agm_date is None:
+                if c.agm_count == 1 and not self._first_agm_date_is_verified(c):
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="FIRST_AGM_DATE_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The first AGM date lacks complete, verified event "
+                            "provenance; no subsequent-AGM deadline or score is inferred."
+                        ),
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        detail={
+                            "first_agm_date": (
+                                c.first_agm_date.isoformat()
+                                if c.first_agm_date is not None else None
+                            ),
+                            "evidence_ref": c.first_agm_date_evidence_ref,
+                            "verified": c.first_agm_date_verified,
+                        },
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                elif c.agm_count != 1 and c.last_agm_date is None:
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-002", flag_code="LAST_AGM_DATE_UNVERIFIED",
                         severity=Severity.NOT_EVALUATED, score_impact=0,
