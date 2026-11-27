@@ -191,6 +191,68 @@ def _agm_profile_evidence(latest_agm) -> dict:
     }
 
 
+
+def _agm_history_summary(active_agms, history_marker_verified: bool) -> dict:
+    """Summarize verified annual AGM history; extraordinary meetings are excluded."""
+    annual_agms = [
+        row for row in active_agms
+        if getattr(row, "agm_type", "ANNUAL") in {"ANNUAL", "FIRST"}
+    ]
+    all_cycle_statuses_verified = all(
+        getattr(row, "agm_held_verified", False) is True
+        and bool(getattr(row, "agm_held_evidence_ref", None))
+        and getattr(row, "agm_held_verified_at", None) is not None
+        and getattr(row, "agm_held_verified_by", None) is not None
+        and (
+            getattr(row, "agm_held", None) is not True
+            or getattr(row, "agm_date", None) is not None
+        )
+        for row in annual_agms
+    )
+    history_verified = history_marker_verified and all_cycle_statuses_verified
+    verified_held_agms = [
+        row for row in annual_agms
+        if row.agm_held is True
+        and row.agm_held_verified is True
+        and bool(row.agm_held_evidence_ref)
+        and row.agm_held_verified_at is not None
+        and row.agm_held_verified_by is not None
+        and row.agm_date is not None
+    ] if history_verified else []
+    first_verified_agm = (
+        min(verified_held_agms, key=lambda row: row.agm_date)
+        if verified_held_agms else None
+    )
+    last_verified_agm_date = (
+        max((row.agm_date for row in verified_held_agms), default=None)
+        if history_verified else None
+    )
+    return {
+        "annual_agms": annual_agms,
+        "agm_history_verified": history_verified,
+        "agm_count": len(verified_held_agms) if history_verified else None,
+        "last_agm_date": last_verified_agm_date,
+        "first_agm_date": (
+            first_verified_agm.agm_date
+            if history_verified and first_verified_agm is not None else None
+        ),
+        "first_agm_date_verified": bool(
+            history_verified and first_verified_agm is not None
+        ),
+        "first_agm_date_evidence_ref": (
+            first_verified_agm.agm_held_evidence_ref
+            if history_verified and first_verified_agm is not None else None
+        ),
+        "first_agm_date_verified_at": (
+            first_verified_agm.agm_held_verified_at.date()
+            if history_verified and first_verified_agm is not None else None
+        ),
+        "first_agm_date_verified_by": (
+            str(first_verified_agm.agm_held_verified_by)
+            if history_verified and first_verified_agm is not None else None
+        ),
+    }
+
 def _charge_event_from_record(charge: CompanyCharge):
     """Map a persisted charge to the engine without promoting unverified reports."""
     from app.rule_engine.engine import ChargeEvent
@@ -736,30 +798,18 @@ class CompanyService(BaseService[Company]):
             and company.agm_history_verified_at is not None
             and company.agm_history_verified_by is not None
         )
-        all_cycle_statuses_verified = all(
-            row.agm_held_verified is True
-            and bool(row.agm_held_evidence_ref)
-            and row.agm_held_verified_at is not None
-            and row.agm_held_verified_by is not None
-            for row in active_agms
+        agm_history = _agm_history_summary(
+            active_agms, history_marker_verified
         )
-        agm_history_verified = history_marker_verified and all_cycle_statuses_verified
-        verified_held_agms = [
-            row for row in active_agms
-            if row.agm_held is True
-            and row.agm_held_verified is True
-            and bool(row.agm_held_evidence_ref)
-            and row.agm_held_verified_at is not None
-            and row.agm_held_verified_by is not None
-            and row.agm_date is not None
-        ]
-        agm_count = len(verified_held_agms) if agm_history_verified else None
-        last_verified_agm_date = (
-            max((row.agm_date for row in verified_held_agms if row.agm_date is not None), default=None)
-            if agm_history_verified else None
-        )
-
-        annual_agms = [row for row in active_agms if row.agm_type in {"ANNUAL", "FIRST"}]
+        agm_history_verified = agm_history["agm_history_verified"]
+        agm_count = agm_history["agm_count"]
+        last_verified_agm_date = agm_history["last_agm_date"]
+        first_agm_date = agm_history["first_agm_date"]
+        first_agm_date_verified = agm_history["first_agm_date_verified"]
+        first_agm_date_evidence_ref = agm_history["first_agm_date_evidence_ref"]
+        first_agm_date_verified_at = agm_history["first_agm_date_verified_at"]
+        first_agm_date_verified_by = agm_history["first_agm_date_verified_by"]
+        annual_agms = agm_history["annual_agms"]
         latest_financial_year = max((row.financial_year for row in annual_agms), default=None)
         latest_year_rows = [
             row for row in annual_agms if row.financial_year == latest_financial_year
@@ -950,6 +1000,11 @@ class CompanyService(BaseService[Company]):
                 else None
             ),
             "agm_history_verified_by": str(company.agm_history_verified_by) if agm_history_verified else None,
+            "first_agm_date": first_agm_date,
+            "first_agm_date_verified": first_agm_date_verified,
+            "first_agm_date_evidence_ref": first_agm_date_evidence_ref,
+            "first_agm_date_verified_at": first_agm_date_verified_at,
+            "first_agm_date_verified_by": first_agm_date_verified_by,
             "agm_extension_granted_until": company.agm_extension_granted_until,
             "agm_extension_application_date": company.agm_extension_application_date,
             "agm_extension_verified": (

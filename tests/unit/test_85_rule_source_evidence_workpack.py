@@ -16,11 +16,41 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["release_effect"] == "NONE"
     assert data["coverage"]["rules"] == 85
     assert len(data["rules"]) == 85
+    agm001 = next(item for item in data["rules"] if item["rule_id"] == "AGM-001")
+    assert agm001["source_validation"]["candidate_exact_provisions"] == ["81(1)"]
+    assert agm001["source_validation"]["canonical_engine_basis"] == (
+        "Section 81(1), Companies Act 1994 (Bangladesh)"
+    )
+    assert agm001["source_validation"]["legacy_seed_basis"] == (
+        "Section 81, Companies Act 1994 (Bangladesh)"
+    )
+    assert agm001["source_validation"]["migration_reconciliation_status"] == (
+        "ENGINE_AND_CURRENT_SEED_RECONCILED; HISTORICAL_SOURCE_CLAIM_RETAINED"
+    )
+    assert agm001["source_validation"]["legal_confirmation_status"] == (
+        "NOT_COUNSEL_APPROVED"
+    )
     rule_ids = [item["rule_id"] for item in data["rules"]]
     assert len(set(rule_ids)) == 85
     assert rule_ids == sorted(rule_ids)
 
     for rule in data["rules"]:
+        source = rule["source_validation"]
+        assert source["jurisdiction"] == "BD"
+        assert "candidate_exact_provisions" in source
+        assert source["confirmed_exact_provisions"] == []
+        assert "primary_source_url" in source
+        assert isinstance(source["related_official_instruments"], list)
+        assert "commencement_or_effective_from" in source
+        assert "effective_to" in source
+        assert source["operative_interval_status"] == "NOT_VALIDATED"
+        assert source["legal_review_status"] == "NOT_VALIDATED"
+        assert source["reviewer"] is None
+        assert source["reviewer_qualification"] is None
+        assert source["reviewed_at"] is None
+        assert source["reviewer_decision_reference"] is None
+        assert source["source_capture_sha256"] is None
+        assert source["historical_version_mapping_status"] == "NOT_VALIDATED"
         assert rule["statutory_chain"]["primary_instrument"]
         assert rule["statutory_chain"]["operative_interval"]["status"] == (
             "UNRESOLVED_RULE_SPECIFIC_INTERVAL"
@@ -48,6 +78,18 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
             }
             assert role["collection_procedure"]
             assert role["verification_standard"]
+
+    # The October 2026 Bangladesh Bank circular supersedes GFET-2018 Vol.1
+    # except monthly reporting in Vol.2; the exact FX-001 mapping stays open.
+    fx001 = next(item for item in data["rules"] if item["rule_id"] == "FX-001")
+    fx_events = fx001["statutory_chain"]["amendment_events"]
+    assert any(
+        event["instrument"].startswith("Bangladesh Bank FEPD-2 Circular No. 09")
+        and event["effective_from"] == "2026-10-29"
+        and "GFET-2018 Vol.1" in event["scope"]
+        for event in fx_events
+    )
+    assert fx001["source_validation"]["legal_review_status"] == "NOT_VALIDATED"
 
     # Preserve the known historical/canonical citation conflict; do not erase it.
     agm005 = next(item for item in data["rules"] if item["rule_id"] == "AGM-005")
