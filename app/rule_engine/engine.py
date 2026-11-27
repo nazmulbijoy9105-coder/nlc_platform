@@ -1711,7 +1711,10 @@ class NLCRuleEngine:
                             "deadline logic; no compliance, breach clearance, or score "
                             "adjustment is inferred."
                         ),
-                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh); order-specific authority requires review",
+                        statutory_basis=(
+                            "Section 81(1), Companies Act 1994 (Bangladesh); "
+                            "order-specific authority requires review"
+                        ),
                         detail={
                             "court_order_review": review,
                             "court_name": order_evidence.get("court_name"),
