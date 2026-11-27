@@ -1,16 +1,15 @@
 # 85-rule source-level validation register — 27 November 2026
 
 **Status: OPEN — source candidates inventoried; no rule is independently source-validated or counsel-approved.**  
-**Jurisdiction:** Bangladesh (BD)  
-**Inventory:** 85 canonical rule identities  
+**Jurisdiction:** Bangladesh (BD) · **Inventory:** 85 canonical rule identities  
 **Machine-readable source of truth:** [85_rule_source_and_evidence_workpack_v1.json](./85_rule_source_and_evidence_workpack_v1.json)  
-**Legal approval:** 0/85; do not change `VERIFIED_RULE_IDS`, the legal approval register, or release gates from this inventory.
+**Legal approval:** 0/85; this register does not change `VERIFIED_RULE_IDS`, the legal approval register, or release gates.
 
 ## Validation standard
 
-A row is not validated merely because it has an Act name, section number, URL, or a test. Each rule requires a reviewer to verify, against the official promulgated text and every applicable amendment: exact Act/rule/regulation/order and subsection; official source URL/document and captured source hash, Gazette reference and retrieval date; publication, commencement and provision-specific effective-from/effective-to dates; savings, transitional provisions, repeal, substitution, corrigenda and prospective/retrospective operation; Bangladesh jurisdiction, entity class, company type, RJSC remit and factual applicability; legal proposition, exceptions, evidence standard, remedy/penalty and interpretation; reviewer identity, qualification, review date, written decision reference and tests.
+Each rule requires verification against official promulgated text and every applicable amendment: exact Act/rule/regulation/order and subsection; official source URL/document and captured source hash, Gazette reference and retrieval date; publication, commencement and provision-specific effective-from/effective-to dates; savings, transitional provisions, repeal, substitution, corrigenda and prospective/retrospective operation; Bangladesh jurisdiction, entity class, company type, RJSC remit and factual applicability; proposition, exceptions, evidence standard, remedy/penalty and interpretation; reviewer identity, qualification, review date, written decision reference and tests.
 
-The table reports **candidate** metadata from the existing workpack, not confirmed legal propositions. Dates are not an assertion that the provision was operative for every company or event. “Not assigned” means no reviewer is recorded.
+The table reports **candidate** metadata, not confirmed legal propositions. Dates do not establish that a provision applied to every company or event. “Not assigned” means no reviewer is recorded.
 
 ## Rule-by-rule source inventory
 
@@ -19,7 +18,7 @@ The table reports **candidate** metadata from the existing workpack, not confirm
 | ACC-001 | Financial Statements Not Presented at AGM | 183 | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
 | ACC-002 | Financial Statements Not Filed with Registrar | 190 | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
 | ACC-003 | Books of Account Not Kept | 181 | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
-| AGM-001 | First AGM Default | 81, 81(1) | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
+| AGM-001 | First AGM Default | 81(1) | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
 | AGM-002 | Subsequent AGM Default | 81, 81(1) | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 0 | NOT VALIDATED | Not assigned |
 | AGM-003 | AGM Notice Defective — Insufficient Days | 85, 85(1) | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 2 | NOT VALIDATED | Not assigned |
 | AGM-004 | AGM Notice Missing | 85, 85(1) | [Companies Act, 1994 (Act XVIII of 1994)](https://bdlaws.minlaw.gov.bd/act-print-788.html) | 1994-12-01 | 2 | NOT VALIDATED | Not assigned |
@@ -104,12 +103,12 @@ The table reports **candidate** metadata from the existing workpack, not confirm
 
 ## Mandatory unresolved controls
 
-- **AGM-001:** canonical anchor is Companies Act 1994, s.81(1). The 18-calendar-month calculation is tested as an engineering interpretation. Calendar-month meaning is supported by General Clauses Act 1897, s.3(33), but month-end clamping and day-count inclusion still require counsel confirmation. Reconcile the known legacy 548-day migration/catalogue drift against the exact canonical definition before release.
+- **AGM-001:** canonical engine and current seed basis is Companies Act 1994, s.81(1). Migrations `0125_reconcile_agm001_statutory_basis` and `0128_agm001_calendar_month_definition` reconcile the known legacy s.81 / 548-day catalogue definition to s.81(1) / 18 calendar months and preserve before-images. The source workpack retains the legacy seed citation for provenance. This is a technical reconciliation, **not counsel approval**. The 18-calendar-month interpretation is tested; General Clauses Act 1897, s.3(33) supports calendar-month meaning, while month-end clamping and day-count inclusion still require counsel confirmation.
 - **Amendment completeness:** all 85 operative intervals remain unresolved until clause-level amendment, commencement, savings, transition, repeal and corrigendum research is signed off. A primary Act commencement date is not a substitute for the commencement date of a later amendment.
-- **RJSC scope:** the versioned RJSC-only scope registry is separate from statutory validity and applicability. An out-of-scope tax, VAT, labour, BSEC, foreign-exchange, local-government or contractual obligation must not enter the RJSC score, band, rescue trigger, hash or release path without an explicit versioned scope decision and authority.
-- **Historical snapshots:** the repository has a `legal_rule_revisions` structure with effective intervals, but the source inventory does not yet prove a complete mapping from each company/snapshot date to the exact legal source revision, approved interpretation, scope version, evaluator artifact and evidence set used. Treat historical mapping as NOT VALIDATED until the persisted snapshot binds those immutable identifiers and a replay test reconstructs the result.
-- **No reviewer substitution:** engineering author, product owner, source URL, automated test, AI output, or this matrix is not a Bangladesh-qualified legal reviewer.
+- **RJSC scope:** versioned RJSC-only scope is separate from statutory validity and applicability. Non-RJSC tax, VAT, labour, BSEC, foreign-exchange, local-government or contractual obligations must not enter the RJSC score, band, rescue trigger, hash or release path without an explicit versioned scope decision and authority.
+- **Historical snapshots:** `legal_rule_revisions` supports effective-dated definitions, but no evidence yet establishes a complete binding from each company/snapshot to the exact legal source revision, approved interpretation, scope version, evaluator artifact and evidence set. Historical mapping remains NOT VALIDATED until persisted identifiers and replay tests prove it.
+- **No reviewer substitution:** engineering author, product owner, URL, automated test, AI output or this matrix is not a Bangladesh-qualified legal reviewer.
 
 ## Release gate
 
-No rule may be called source-validated or legally approved until its source record contains confirmed provisions, official source captures and hashes, a complete operative interval, a jurisdiction/scope decision, reviewer identity and qualification, review date, written decision reference, and passing tests for the approved interpretation. Missing or conflicting items remain REVIEW_REQUIRED / NOT_EVALUATED and are not eligible for released statutory scoring.
+No rule may be called source-validated or legally approved until confirmed provisions, official source captures and hashes, complete operative interval, jurisdiction/scope decision, reviewer identity and qualification, review date, written decision reference, and passing tests for the approved interpretation are present. Missing or conflicting items remain REVIEW_REQUIRED / NOT_EVALUATED and are not eligible for released statutory scoring.

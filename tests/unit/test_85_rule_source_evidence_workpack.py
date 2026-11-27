@@ -16,6 +16,20 @@ def test_85_rule_source_evidence_workpack_is_complete_as_an_inventory_and_fail_c
     assert data["release_effect"] == "NONE"
     assert data["coverage"]["rules"] == 85
     assert len(data["rules"]) == 85
+    agm001 = next(item for item in data["rules"] if item["rule_id"] == "AGM-001")
+    assert agm001["source_validation"]["candidate_exact_provisions"] == ["81(1)"]
+    assert agm001["source_validation"]["canonical_engine_basis"] == (
+        "Section 81(1), Companies Act 1994 (Bangladesh)"
+    )
+    assert agm001["source_validation"]["legacy_seed_basis"] == (
+        "Section 81, Companies Act 1994 (Bangladesh)"
+    )
+    assert agm001["source_validation"]["migration_reconciliation_status"] == (
+        "ENGINE_AND_CURRENT_SEED_RECONCILED; HISTORICAL_SOURCE_CLAIM_RETAINED"
+    )
+    assert agm001["source_validation"]["legal_confirmation_status"] == (
+        "NOT_COUNSEL_APPROVED"
+    )
     rule_ids = [item["rule_id"] for item in data["rules"]]
     assert len(set(rule_ids)) == 85
     assert rule_ids == sorted(rule_ids)
