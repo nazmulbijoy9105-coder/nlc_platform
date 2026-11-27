@@ -128,14 +128,6 @@ jobs:
             echo "::error::Render API key or service ID is missing; aborting before production migration."
             exit 1
           fi
-          # Re-check after migration and immediately before requesting Render deployment.
-          # The API request below pins commitId to the exact SHA whose image was migrated.
-          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
-            echo "::error::main advanced after migration (migrated=$EXPECTED_DEPLOYED_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to trigger Render."
-            exit 1
-          fi
-          echo "Freshness revalidated immediately before Render deploy request: $EXPECTED_DEPLOYED_SHA"
           BODY_FILE="$(mktemp)"
           trap 'rm -f "$BODY_FILE"' EXIT
           HTTP_STATUS="$(curl --silent --show-error --output "$BODY_FILE" \
@@ -217,6 +209,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Re-check after migration and immediately before requesting Render deployment.
+          # The API request below pins commitId to the exact SHA whose image was migrated.
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced after migration (migrated=$EXPECTED_DEPLOYED_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to trigger Render."
+            exit 1
+          fi
+          echo "Freshness revalidated immediately before Render deploy request: $EXPECTED_DEPLOYED_SHA"
           if [[ -z "${RENDER_API_KEY:-}" || -z "${RENDER_SERVICE_ID:-}" || -z "${EXPECTED_DEPLOYED_SHA:-}" ]]; then
             echo "::error::RENDER_API_KEY, service ID, and expected commit SHA are required. No deployment was triggered."
             exit 1
