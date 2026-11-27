@@ -253,7 +253,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
             echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
             exit 1
@@ -268,7 +268,7 @@ CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
         run: |
           set -euo pipefail
           RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
-CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
             echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
             exit 1
@@ -293,7 +293,7 @@ CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
 
           # Timestamp the request so a prior deployment of the same SHA can never
           # be mistaken for the deployment requested by this workflow.
-CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
             echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
             exit 1
