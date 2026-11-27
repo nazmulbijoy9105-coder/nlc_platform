@@ -92,3 +92,15 @@ def test_production_image_and_license_sbom_use_runtime_requirements():
     assert "ruff==" not in runtime_requirements
     assert "mypy==" not in runtime_requirements
     assert "pip_audit==" not in runtime_requirements
+
+def test_dependency_license_expression_parser_preserves_fail_closed_policy():
+    from scripts.check_dependency_licenses import is_approved
+
+    assert is_approved("Apache-2.0 OR BSD-3-Clause")
+    assert is_approved("Apache-2.0 AND BSD-2-Clause")
+    assert is_approved("MIT OR (Apache-2.0 AND BSD-3-Clause)")
+    assert not is_approved("MPL-2.0 AND (Apache-2.0 OR MIT)")
+    assert not is_approved("MIT OR GPL-3.0-only")
+    assert not is_approved("MIT AND Python-2.0")
+    assert not is_approved("UNKNOWN")
+    assert not is_approved("MIT OR")
