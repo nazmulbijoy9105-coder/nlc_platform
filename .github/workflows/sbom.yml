@@ -26,14 +26,14 @@ jobs:
       - name: Install application dependencies and CycloneDX CLI
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-runtime.txt
           pip install cyclonedx-bom
 
-      - name: Generate SBOM from declared application requirements
+      - name: Generate SBOM from declared production runtime requirements
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          cyclonedx-py requirements requirements.txt --output-format JSON --output-file artifacts/sbom.cdx.json
+          cyclonedx-py requirements requirements-runtime.txt --output-format JSON --output-file artifacts/sbom.cdx.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
