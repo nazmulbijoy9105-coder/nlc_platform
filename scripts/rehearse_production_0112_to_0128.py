@@ -623,6 +623,48 @@ async def _postflight(
     }
 
 
+async def _application_role_parity() -> dict[str, Any]:
+    """Prove the runtime connection is distinct and cannot own or migrate schema."""
+    raw = os.environ.get("APP_DATABASE_URL", "").strip()
+    if not raw or make_url(raw).username != "nlc_app_role":
+        raise RuntimeError("APP_DATABASE_URL must use the dedicated nlc_app_role login.")
+    url, args = prepare_asyncpg_connection(raw, require_tls=True)
+    dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+    app_conn = await asyncpg.connect(dsn, **args)
+    try:
+        row = await app_conn.fetchrow(
+            """
+            SELECT session_user, current_user, current_database(),
+                   current_setting('neon.project_id', true) AS project_id,
+                   current_setting('neon.branch_id', true) AS branch_id,
+                   r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+                   has_database_privilege(r.oid, current_database(), 'CREATE') AS db_create,
+                   has_schema_privilege(r.oid, 'public', 'CREATE') AS schema_create,
+                   (SELECT count(*) FROM pg_class c
+                     JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname IN ('public','nlc_private','audit')
+                      AND c.relkind IN ('r','p','v','m','S','f','i','I')
+                      AND c.relowner=r.oid) AS owned_relations
+              FROM pg_roles r WHERE r.rolname=current_user
+            """
+        )
+        expected_branch = os.environ.get("NLC_TARGET_BRANCH_ID") or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+        if row is None or (
+            row["session_user"] != "nlc_app_role"
+            or row["current_user"] != "nlc_app_role"
+            or row["current_database"] != DATABASE
+            or row["project_id"] != PROJECT_ID
+            or row["branch_id"] != expected_branch
+            or row["rolsuper"] or row["rolbypassrls"] or row["rolcreatedb"]
+            or row["rolcreaterole"] or row["db_create"] or row["schema_create"]
+            or row["owned_relations"] != 0
+        ):
+            raise RuntimeError(f"Application role is not least-privilege or target-pinned: {dict(row) if row else None!r}")
+        return dict(row)
+    finally:
+        await app_conn.close()
+
+
 async def _audit_view_parity() -> dict[str, Any]:
     raw = os.environ.get("NLC_AUDIT_DATABASE_URL", "").strip()
     if not raw:
@@ -637,6 +679,29 @@ async def _audit_view_parity() -> dict[str, Any]:
             os.environ.get("NLC_TARGET_BRANCH_ID")
             or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
         )
+        role = await audit_conn.fetchrow(
+            """
+            SELECT session_user, current_user, current_database(),
+                   current_setting('neon.project_id', true) AS project_id,
+                   current_setting('neon.branch_id', true) AS branch_id,
+                   r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+                   has_schema_privilege(r.oid, 'audit', 'CREATE') AS audit_create,
+                   has_table_privilege(r.oid, 'audit.production_release_parity', 'SELECT') AS can_read_view,
+                   has_table_privilege(r.oid, 'audit.production_release_parity', 'INSERT') AS can_insert_view
+              FROM pg_roles r WHERE r.rolname=current_user
+            """
+        )
+        if role is None or (
+            role["session_user"] != "nlc_ci_audit_role"
+            or role["current_user"] != "nlc_ci_audit_role"
+            or role["current_database"] != DATABASE
+            or role["project_id"] != PROJECT_ID
+            or role["branch_id"] != expected_branch_id
+            or role["rolsuper"] or role["rolbypassrls"] or role["rolcreatedb"]
+            or role["rolcreaterole"] or role["audit_create"]
+            or not role["can_read_view"] or role["can_insert_view"]
+        ):
+            raise RuntimeError(f"Audit role is not read-only or target-pinned: {dict(role) if role else None!r}")
         actual_branch_id = await audit_conn.fetchval(
             "SELECT current_setting('neon.branch_id', true)"
         )
@@ -833,6 +898,7 @@ async def main() -> None:
             conn, before_tables, before_rules, agm001_before_0125
         )
         rescue_plan_schema = await _rescue_plan_schema_parity(conn)
+        application_role = await _application_role_parity()
         audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
@@ -874,6 +940,7 @@ async def main() -> None:
             ),
             **postflight,
             "rescue_plan_schema_parity": rescue_plan_schema,
+            "application_role_boundary": application_role,
             "active_plan_duplicate_preflight": active_plan_duplicates,
             "agm001_pre_0125_before_image_sha256": hashlib.sha256(
                 _canonical(agm001_before_0125).encode("utf-8")
