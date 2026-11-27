@@ -98,7 +98,11 @@ Required (not informational):
 | migration-contract | unit migration/rehearsal contract tests inside CI |
 | rls-tenant-isolation | integration + `tenant-isolation.yml` (when merged) |
 | legal-engine-p0 (aggregate; includes all four P0 jobs) | `legal-engine-assurance.yml` |
+| legal-engine-p0 aggregate (branch-protection check) | `legal-engine-assurance.yml` |
 | legal-rule-catalogue-parity | `legal-engine-assurance.yml` |
+| rjsc-scope-isolation | `legal-engine-assurance.yml` |
+| score-provenance-integrity | `legal-engine-assurance.yml` |
+| fail-closed-publication | `legal-engine-assurance.yml` |
 | rjsc-scope-isolation | `legal-engine-assurance.yml` |
 | score-provenance-integrity | `legal-engine-assurance.yml` |
 | secret-scan | `secret-scan.yml` (when merged) |
