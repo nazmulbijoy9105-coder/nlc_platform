@@ -71,6 +71,13 @@ Operational recovery steps and prohibited shortcuts are documented in
 `docs/NEON_QUOTA_INCIDENT_RUNBOOK.md`. This incident is external to CI; green
 workflow checks do not mean the customer-facing API is available.
 
+
+## Production hosting entitlement blocker (observed 2026-11-27)
+
+The Render `nlc_platform` web service is configured on the **Free** compute plan. Render's own documentation says Free web services are not for production applications, spin down after 15 minutes without inbound traffic, and can be restarted or suspended under Free-plan limits. Upgrade the service's compute plan to a paid always-on tier before customer launch. A workspace-plan upgrade alone does not remove Free compute limitations. This requires an owner-approved billing change; no Render plan or billing change was made during this remediation.
+
+Reference: https://render.com/docs/free
+
 ## Recommended required GitHub checks
 
 Mark these as required on `main` after the baseline is green:
