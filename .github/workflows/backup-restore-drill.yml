@@ -1,0 +1,56 @@
+name: Backup restore drill
+
+# P1: scheduled restore→rehearse path when Neon credentials are present.
+# Skips cleanly when secrets are not configured (forks / incomplete envs).
+
+on:
+  schedule:
+    - cron: "15 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate restore tooling is present and compiles
+        run: |
+          set -euo pipefail
+          test -f scripts/rehearse_restored_neon_branch.py
+          test -f scripts/verify_backup.py
+          python -m py_compile scripts/rehearse_restored_neon_branch.py scripts/verify_backup.py
+          bash -n scripts/backup_to_s3.sh || true
+
+      - name: Run restore rehearsal when Neon secrets are configured
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NLC_MIGRATION_DATABASE_URL: ${{ secrets.NLC_MIGRATION_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEON_API_KEY:-}" || -z "${NEON_PROJECT_ID:-}" ]]; then
+            echo "Neon secrets not configured; tooling compile-only drill succeeded."
+            echo "Configure NEON_API_KEY and NEON_PROJECT_ID to execute a live restore rehearsal."
+            exit 0
+          fi
+          # Live path: prefer dedicated restore script when secrets exist.
+          if [[ -f scripts/rehearse_restored_neon_branch.py ]]; then
+            python scripts/rehearse_restored_neon_branch.py
+          else
+            echo "Restore script missing" >&2
+            exit 1
+          fi

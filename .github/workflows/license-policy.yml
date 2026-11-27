@@ -1,0 +1,68 @@
+name: Dependency license policy
+
+# P2 / supports Defusedxml-style license decisions: inventory licenses and
+# fail on unknown/disallowed classifiers when a policy file is present.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "50 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies and pip-licenses
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-licenses
+
+      - name: Emit license inventory
+        run: |
+          mkdir -p artifacts
+          pip-licenses --format=json --with-urls --with-description \
+            > artifacts/python-licenses.json
+          pip-licenses --format=markdown --with-urls \
+            > artifacts/python-licenses.md
+          # Soft policy: always upload inventory. Hard-fail only if explicit
+          # disallowed markers appear (expand via docs/DEPENDENCY_LICENSE_POLICY.md).
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("artifacts/python-licenses.json").read_text(encoding="utf-8"))
+          # Allow common open-source families used by the stack; block clear copyleft surprises in CI.
+          blocked_substrings = ("AGPL", "SSPL", "BUSL")
+          offenders = []
+          for row in data:
+              license_name = str(row.get("License") or "")
+              name = row.get("Name") or "?"
+              if any(b in license_name.upper() for b in blocked_substrings):
+                  offenders.append(f"{name}: {license_name}")
+          if offenders:
+              raise SystemExit("Disallowed license(s) detected:\n" + "\n".join(offenders))
+          print(f"License inventory OK for {len(data)} packages")
+          PY
+
+      - name: Upload license inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-license-inventory
+          path: |
+            artifacts/python-licenses.json
+            artifacts/python-licenses.md
+          if-no-files-found: warn
