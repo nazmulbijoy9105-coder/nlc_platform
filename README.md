@@ -157,6 +157,12 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
+# Render native autoDeploy is disabled. The controlled GitHub Actions workflow listens for completed CI runs on main.
+# Automatic production releases require repository Actions variable NLC_AUTO_DEPLOY=true (GitHub compares case-insensitively).
+# Set it under Settings -> Secrets and variables -> Actions -> Variables; unset/non-true means deploy-render is skipped.
+# The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY GitHub Actions secrets.
+# It revalidates main immediately before migration and again before Render; Render commitId is pinned to the migrated CI SHA.
+# Missing migration credentials abort before deployment; API startup performs no migration or seed.
 # Render native autoDeploy is disabled. GitHub Actions releases only after successful CI, exact-SHA assurance, and production approval.
 # Automatic release requires NLC_AUTO_DEPLOY to equal exact lowercase "true", plus NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY secrets.
 # Missing migration or Render API credentials abort before the exact-SHA Render deploy request; API startup performs no migration or seed.
@@ -219,6 +225,12 @@ Finance/subscription routes do not establish an automated payment-gateway integr
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
+     Native Render autoDeploy is disabled; GitHub Actions listens for completed CI runs on main
+     Automatic production releases require repository Actions variable NLC_AUTO_DEPLOY=true (matched case-insensitively)
+     Set it under Settings -> Secrets and variables -> Actions -> Variables; unset/non-true means deploy-render is skipped
+     The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY GitHub Actions secrets
+     Freshness is rechecked before migration and before Render; Render commitId is pinned to the migrated CI SHA
+     Missing migration credentials abort before deployment; API startup does not migrate or seed
      Native Render autoDeploy is disabled; GitHub Actions releases only after successful CI, exact-SHA assurance, and production approval
      Automatic releases require exact lowercase NLC_AUTO_DEPLOY=true and the NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY secrets
      Missing migration credentials abort before the Render deploy hook; API startup does not migrate or seed
