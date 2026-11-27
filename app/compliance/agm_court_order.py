@@ -71,6 +71,13 @@ class AgmCourtOrderEvidence:
         status = value.get("order_status", "UNKNOWN")
         if status not in ORDER_STATUSES:
             raise ValueError("order_status is not recognized")
+        appeal_or_stay_reference = value.get("appeal_or_stay_reference")
+        appeal_or_stay_reference = (
+            appeal_or_stay_reference.strip()
+            if isinstance(appeal_or_stay_reference, str) else None
+        )
+        if status in {"APPEALED", "STAYED", "SUPERSEDED"} and not appeal_or_stay_reference:
+            raise ValueError("appeal_or_stay_reference is required for appealed, stayed or superseded orders")
 
         authenticated = value.get("authenticated") is True
         verified_by = value.get("verified_by")
@@ -87,12 +94,7 @@ class AgmCourtOrderEvidence:
             verified_by=verified_by or None,
             verified_at=raw_verified_at,
             order_status=status,
-            appeal_or_stay_reference=(
-                value.get("appeal_or_stay_reference").strip()
-                if isinstance(value.get("appeal_or_stay_reference"), str)
-                and value.get("appeal_or_stay_reference").strip()
-                else None
-            ),
+            appeal_or_stay_reference=appeal_or_stay_reference or None,
         )
 
     @property
