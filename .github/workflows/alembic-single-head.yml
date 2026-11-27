@@ -1,8 +1,5 @@
 name: Alembic single head
 
-# P0: hard-fail when the revision DAG has more than one head.
-# Complements the same check inside CI unit-tests with a small, required check.
-
 on:
   pull_request:
   push:
@@ -16,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -30,10 +29,11 @@ jobs:
       - name: Require exactly one Alembic head
         run: |
           set -euo pipefail
-          alembic heads
-          HEAD_COUNT="$(alembic heads | grep -c '(head)' || true)"
+          HEADS="$(alembic heads)"
+          printf '%s\n' "$HEADS"
+          HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)' || true)"
           echo "Alembic head count: ${HEAD_COUNT}"
-          test "${HEAD_COUNT}" -eq 1
+          test "$HEAD_COUNT" -eq 1
 
       - name: Audit revision DAG
         run: |
