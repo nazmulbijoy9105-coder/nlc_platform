@@ -395,6 +395,12 @@ jobs:
           asyncio.run(main())
           PY
 
+          # The role audit is a PostgreSQL-only CI assertion; it must never open
+          # a connection to the deployed Neon database.
+          PGOPTIONS='-c default_transaction_read_only=on' \
+            psql -h localhost -U nlc_test -d nlc_test -X -v ON_ERROR_STOP=1 \
+            -f scripts/audit_nlc_role_memberships.sql
+
           # First clean PostgreSQL database: upgrade twice to prove idempotency.
           alembic upgrade head
           alembic upgrade head
