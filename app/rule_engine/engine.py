@@ -1669,22 +1669,33 @@ class NLCRuleEngine:
         # A potentially relevant court order is evidence, never an automatic
         # extension, waiver, compliance result, or score uplift. The two
         # structured payloads arrive through the normal CompanyFact pipeline.
-        if isinstance(c.agm_court_order_evidence, dict):
+        if c.agm_court_order_evidence is not None:
             from app.compliance.agm_court_order import agm_court_order_scoring_guard
 
-            order_evidence = dict(c.agm_court_order_evidence)
+            raw_order_evidence = c.agm_court_order_evidence
+            order_evidence = (
+                dict(raw_order_evidence)
+                if isinstance(raw_order_evidence, dict)
+                else raw_order_evidence
+            )
+            order_details = (
+                order_evidence if isinstance(order_evidence, dict) else {}
+            )
             verified_keys = set(getattr(c, "verified_fact_keys", ()) or ())
             if "agm_court_order_evidence" not in verified_keys:
-                order_evidence["authenticated"] = False
-                order_evidence["verified_by"] = None
-                order_evidence["verified_at"] = None
+                if isinstance(order_evidence, dict):
+                    order_evidence["authenticated"] = False
+                    order_evidence["verified_by"] = None
+                    order_evidence["verified_at"] = None
             lawyer_decision = c.agm_court_order_lawyer_decision
             if "agm_court_order_lawyer_decision" not in verified_keys:
                 lawyer_decision = None
             review = agm_court_order_scoring_guard(
                 order_evidence, lawyer_decision
             )
-            affected_event = str(order_evidence.get("affected_event") or "").upper()
+            affected_event = str(
+                order_details.get("affected_event") or ""
+            ).upper()
             if affected_event.startswith("FIRST_AGM"):
                 target_rules = ["AGM-001"] if c.agm_count in (None, 0) else []
             elif affected_event.startswith("SUBSEQUENT_AGM"):
@@ -1723,12 +1734,12 @@ class NLCRuleEngine:
                         ),
                         detail={
                             "court_order_review": review,
-                            "court_name": order_evidence.get("court_name"),
-                            "case_number": order_evidence.get("case_number"),
-                            "order_date": order_evidence.get("order_date"),
+                            "court_name": order_details.get("court_name"),
+                            "case_number": order_details.get("case_number"),
+                            "order_date": order_details.get("order_date"),
                             "affected_event": affected_event or None,
-                            "evidence_ref": order_evidence.get("evidence_ref"),
-                            "order_status": order_evidence.get("order_status", "UNKNOWN"),
+                            "evidence_ref": order_details.get("evidence_ref"),
+                            "order_status": order_details.get("order_status", "UNKNOWN"),
                             "automatic_clearance": False,
                             "score_uplift": 0,
                         },
