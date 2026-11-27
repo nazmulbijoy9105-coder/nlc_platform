@@ -161,3 +161,20 @@ def test_court_order_and_lawyer_decision_are_supported_company_fact_payloads():
         coerce_company_profile_fact_value("agm_court_order_lawyer_decision", decision)
         == decision
     )
+
+def test_malformed_non_object_order_fact_fails_closed_in_engine():
+    profile = _profile_with_order()
+    profile.agm_court_order_evidence = ["not", "an", "object"]
+    engine = _run_agm(profile)
+
+    assert len(engine._flags) == 1
+    flag = engine._flags[0]
+    assert flag.rule_id == "AGM-001"
+    assert flag.state is RuleState.REQUIRES_LAWYER_JUDGMENT
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity is Severity.NOT_EVALUATED
+    assert flag.score_impact == 0
+    assert flag.is_black_override is False
+    assert flag.detail["court_order_review"]["reason"].startswith(
+        "INVALID_OR_INCOMPLETE_ORDER_EVIDENCE:"
+    )
