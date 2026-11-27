@@ -1,9 +1,4 @@
-name: Tenant isolation (RLS)
-
-# P0: multi-tenant legal data must not leak across company boundaries.
-# Runs company-access / RLS / tenant unit gates and compiles verification helpers.
-# Route-auth inventory lives under tests/security and is enforced by CI unit/security
-# paths — not this job.
+name: Tenant isolation (PostgreSQL RLS)
 
 on:
   pull_request:
@@ -17,6 +12,19 @@ jobs:
   tenant-isolation:
     runs-on: ubuntu-latest
     services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nlc_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: nlc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nlc_test -d nlc_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
       redis:
         image: redis:7
         ports:
@@ -27,10 +35,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      DATABASE_URL: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST: postgresql+asyncpg://nlc_test@localhost:5432/nlc_test
+      DATABASE_URL_TEST_MIGRATION: postgresql+asyncpg://nlc_migrator@localhost:5432/nlc_test
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://nlc_migrator@localhost:5432/nlc_test
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+      JWT_SECRET_KEY: ci-only-tenant-test-jwt-secret-not-for-production
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
+      APP_DATABASE_URL: postgresql+asyncpg://nlc_app_role@localhost:5432/nlc_test
+      REQUIRE_RLS_APP_ROLE: "true"
+      ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v5
         with:
@@ -41,38 +55,84 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
-      - name: Company-access and isolation unit gates
+      - name: Provision isolated PostgreSQL roles
         run: |
           set -euo pipefail
-          ARGS=()
-          for path in \
-            tests/unit/test_company_access.py \
-            tests/unit/test_dependencies_company_access.py \
-            tests/unit/test_rls.py \
-            tests/unit/test_tenant_isolation.py
-          do
-            if [[ -e "$path" ]]; then
-              ARGS+=("$path")
-            fi
-          done
-          if ((${#ARGS[@]} == 0)); then
-            python -m pytest tests/unit -q --tb=short -k "company_access or tenant or rls or membership"
-          else
-            python -m pytest "${ARGS[@]}" -q --tb=short
-          fi
+          python - <<'PY'
+          import asyncio
+          import asyncpg
 
-      - name: Compile RLS verification entrypoints
+          async def main():
+              conn = await asyncpg.connect("postgresql://nlc_test@localhost:5432/nlc_test")
+              try:
+                  await conn.execute("""
+                      DO $$
+                      BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_app_role') THEN
+                          CREATE ROLE nlc_app_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migrator') THEN
+                          CREATE ROLE nlc_migrator LOGIN SUPERUSER;
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_migration_owner') THEN
+                          CREATE ROLE nlc_migration_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT BYPASSRLS;
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='nlc_ci_audit_role') THEN
+                          CREATE ROLE nlc_ci_audit_role LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+                        END IF;
+                        GRANT nlc_migration_owner TO nlc_migrator WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+                        GRANT USAGE, CREATE ON SCHEMA public TO nlc_migration_owner;
+                      END
+                      $$;
+                  """)
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+
+      - name: Generate isolated runtime-role credentials
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+          password = secrets.token_urlsafe(32)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write(f"APP_DATABASE_PASSWORD={password}\n")
+              env.write(f"APP_DATABASE_URL=postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test\n")
+          print(f"::add-mask::{password}")
+          PY
+          python - <<'PY'
+          import asyncio, os, asyncpg
+          async def main():
+              conn = await asyncpg.connect("postgresql://nlc_test@localhost:5432/nlc_test")
+              try:
+                  password = os.environ["APP_DATABASE_PASSWORD"]
+                  statement = await conn.fetchval(
+                      "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
+                      password,
+                  )
+                  await conn.execute(statement)
+              finally:
+                  await conn.close()
+          asyncio.run(main())
+          PY
+
+      - name: Run database-backed tenant and RLS regression suite
         run: |
           set -euo pipefail
-          for script in verify_rls.py verify_tenant_isolation.py; do
-            if [[ -f "$script" ]]; then
-              python -m py_compile "$script"
-              echo "compiled $script"
-            fi
-          done
+          python -m pytest -q --tb=short \
+            tests/integration/test_tenant_crud_isolation.py \
+            tests/integration/test_rls_hardening.py \
+            tests/integration/test_rls_privilege_boundaries.py
+
+      - name: Compile tenant verification entrypoints
+        run: |
+          set -euo pipefail
+          python -m py_compile verify_rls.py verify_tenant_isolation.py
