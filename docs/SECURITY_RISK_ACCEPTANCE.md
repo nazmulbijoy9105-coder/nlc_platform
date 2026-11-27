@@ -46,17 +46,17 @@ verified Pillow 13.0.0 sdist with only Pillow's Brotli build dependency changed
 from 1.2.0 to 1.2.1.
 
 - Release: [NLC Pillow 13.0.0 / Brotli 1.2.1 CPython 3.11 wheel](https://github.com/nazmulbijoy9105-coder/nlc_platform/releases/tag/nlc-pillow-13.0.0-brotli1.2.1-cp311-wheel0480)
-- Asset: \`pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl\`
-- SHA-256: \`90fea45cb80408dbaa03a0aee58d0e8de01e936e423fd6f645441712e49676d9\`
-- Pillow sdist SHA-256: \`cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510\`
-- Pillow wheel-recipe source commit: \`293218ad059d994baf1777d882911bed6a49704a\`
-- Pillow test-images commit: \`073ab5ff1895abf8cf5c8d797c1066ed394ce207\`
-- Build tag: \`1brotli121\`; target tags: CPython 3.11, manylinux 2.27/2.28, x86_64.
-- The build used Pillow's \`cibuildwheel\` recipe and its \`pyproject.toml\` test command; the full Pillow wheel test suite passed.
-- The artifact's \`pillow.libs\` contains both Brotli decoder and common libraries at SONAME 1.2.1. An independent load of the bundled decoder returned \`BrotliDecoderVersion() == (1, 2, 1)\`.
+- Asset: `pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl`
+- SHA-256: `90fea45cb80408dbaa03a0aee58d0e8de01e936e423fd6f645441712e49676d9`
+- Pillow sdist SHA-256: `cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510`
+- Pillow wheel-recipe source commit: `293218ad059d994baf1777d882911bed6a49704a`
+- Pillow test-images commit: `073ab5ff1895abf8cf5c8d797c1066ed394ce207`
+- Build tag: `1brotli121`; target tags: CPython 3.11, manylinux 2.27/2.28, x86_64.
+- The build used Pillow's `cibuildwheel` recipe and its `pyproject.toml` test command; the full Pillow wheel test suite passed.
+- The artifact's `pillow.libs` contains both Brotli decoder and common libraries at SONAME 1.2.1. An independent load of the bundled decoder returned `BrotliDecoderVersion() == (1, 2, 1)`.
 
 The release is a reviewed compatibility wheel, not an upstream Pillow release.
-The direct \`brotli==1.2.1\` requirement remains useful for other dependencies but
+The direct `brotli==1.2.1` requirement remains useful for other dependencies but
 is not treated as a patch for Pillow's private libraries. The production
 requirements marker selects the custom wheel only for CPython 3.11/Linux
 x86_64; non-production developer platforms retain upstream Pillow 13.0.0.
@@ -91,12 +91,11 @@ before merge; that mode does not run the live audit and does not require every
 item to be CLOSED. The dated 25 November report below remains historical
 evidence and is not a substitute for the live release-time audit.
 
-Items 1–5 are CLOSED. Item 4 (Defusedxml license classifier) is closed by the
-project-owner decision recorded on 2026-11-27: NLC Platform is proprietary
-(All rights reserved), its project metadata declares `LicenseRef-Proprietary`,
-and the dependency policy explicitly accepts PSFL-licensed dependencies subject
-to their applicable notice and redistribution obligations. The policy is
-linked below and is retained as security-closure evidence.
+The project owner recorded the NLC Platform proprietary license decision
+on 2026-11-27. The project metadata declares `LicenseRef-Proprietary`, and
+`docs/DEPENDENCY_LICENSE_POLICY.md` explicitly accepts PSFL-licensed
+dependencies subject to applicable license-text, attribution, and notice
+obligations. Finding 4 below records the specific Defusedxml disposition.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the
    reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile
@@ -131,20 +130,24 @@ linked below and is retained as security-closure evidence.
    suite in CI before the release gate.
 4. **Defusedxml license classifier:** the reported item is a license-
    identification finding, not by itself a demonstrated exploitable security
-   vulnerability. Confirm the package's actual license metadata and the
-   project's license policy.
-   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md); [project dependency-license policy](DEPENDENCY_LICENSE_POLICY.md); [proprietary project license](../LICENSE); [project license metadata](../pyproject.toml).
+   vulnerability. The package's wheel metadata identifies the PSFL license,
+   and the project owner explicitly accepts PSFL dependencies under the
+   dependency-license policy, subject to the applicable license text,
+   attribution, and notice obligations.
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md),
+   [project dependency-license policy](DEPENDENCY_LICENSE_POLICY.md),
+   [proprietary project license](../LICENSE), and
+   [project license metadata](../pyproject.toml).
    Status: CLOSED
-   Closed 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
-   PSFL` and the OSI-approved Python Software Foundation License classifier
-   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`).
-   The project owner has expressly selected proprietary / All rights reserved
-   for NLC Platform. The root `LICENSE` records that restriction and
-   `pyproject.toml` declares `LicenseRef-Proprietary`. The project owner also
-   explicitly accepts PSFL-licensed dependencies under
-   `docs/DEPENDENCY_LICENSE_POLICY.md`, subject to the applicable license text,
-   attribution, and notice obligations. This decision and policy are the
-   recorded project-owner approval for this finding.
+   Closed 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares
+   `Python Software Foundation License` (recorded in
+   `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`).
+   NLC Platform is proprietary / All rights reserved; the root `LICENSE`
+   and `pyproject.toml` record that project decision. The project owner
+   expressly accepts PSFL-licensed dependencies under
+   `docs/DEPENDENCY_LICENSE_POLICY.md`, subject to the applicable license
+   text, attribution, and notice obligations. This is the recorded approval
+   for this specific license finding.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
    affected by the October/November 2026 RedirectHandler open-redirect and
    related advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
@@ -155,6 +158,10 @@ linked below and is retained as security-closure evidence.
    dependency graph in CI.
 
 No production deployment is claimed by this document alone. The Python
+dependency audit must still pass live at release time. **All five numbered
+closure items are CLOSED.** Remaining release blockers are operational
+(green CI, isolated migration rehearsal, protected production environment),
+not open security-closure document items.
 dependency audit is clean against both PyPI and OSV for the resolved 222-package
 graph; this is not a whole-system scan and does not replace operating-system or
 bundled-native-library verification. Pillow's bundled Brotli payload and the

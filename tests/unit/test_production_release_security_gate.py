@@ -34,7 +34,7 @@ def test_controlled_production_release_checks_security_closure_before_operations
     for production_step in (
         "Verify production branch, preserved backup and Render target",
         "Obtain direct migration, runtime, audit and backup connection URIs",
-        "Apply and verify production migrations 0112 through 0127",
+        "Apply and verify production migrations 0112 through 0128",
         "Deploy exact main SHA and verify Render deployment",
     ):
         assert gate_index < names.index(production_step), production_step

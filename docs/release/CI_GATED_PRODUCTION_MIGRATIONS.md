@@ -19,10 +19,10 @@ The workflow is deliberately opt-in. Successful CI on the current `main` branch 
 Set this repository Actions variable:
 
 - Name: `NLC_AUTO_DEPLOY`
-- Value: `true` (GitHub compares strings case-insensitively, so `TRUE` or `True` also enables it)
+- Value: `true` (The workflow checks the value in a case-sensitive shell comparison, so only exact lowercase `true` enables it)
 - Location: repository **Settings → Secrets and variables → Actions → Variables → New repository variable**
 
-If `NLC_AUTO_DEPLOY` is unset, empty, or set to anything other than `true` in any letter case, the `deploy-render` job is skipped. GitHub may therefore show successful CI with no production release; this is expected while automatic deployment is not opted in. To enable automatic production releases after successful current-main CI, create or update this repository variable to `true`. To disable automatic releases, unset the variable or change its value.
+If `NLC_AUTO_DEPLOY` is unset, empty, or set to anything other than the exact lowercase string `true`, the `deploy-render` job is skipped. GitHub may therefore show successful CI with no production release; this is expected while automatic deployment is not opted in. To enable automatic production releases after successful current-main CI, create or update this repository variable to `true`. To disable automatic releases, unset the variable or change its value.
 
 This variable is a repository **variable**, not a secret. It does not replace the credentials below; both required secrets must also be configured for the migration and deploy-hook steps.
 
@@ -48,3 +48,14 @@ Do not add the Actions secret until the DBA has provisioned and verified that co
 ## Operational note
 
 Migrations run before the new API version is deployed, so schema changes must remain backward-compatible with the currently live application during the deployment window. Use expand/contract migrations for changes that would otherwise break the old version. Do not use this workflow to restore or reconstruct missing historical evidence.
+
+
+## Production release serialization and SHA freshness
+
+The automatic CI-gated release workflow and the operator-controlled `production-release.yml` workflow use the same GitHub Actions concurrency group, `nlc-platform-production-release`, with `cancel-in-progress: false`. This serializes their production migration and Render operations.
+
+The automatic workflow checks `NLC_AUTO_DEPLOY` in a shell comparison, not a GitHub expression string comparison. Only the exact lowercase value `true` enables the release; `TRUE`, `True`, whitespace variants, an empty value, and an unset variable do not.
+
+Both workflows re-resolve `refs/heads/main` immediately before each production mutation. If current main no longer equals the workflow's immutable target SHA, the workflow stops before that mutation. The automatic workflow builds and migrates the checked-out CI-tested SHA, then submits that same SHA as Render's `commitId` and verifies the resulting deployment SHA. The controlled workflow likewise pins its Render deploy request to `github.sha` and verifies the selected deployment.
+
+A main-branch advance after a migration but before the Render request causes the workflow to stop rather than deploy a different revision. The migration may already have applied; migration steps must therefore remain backward-compatible and the next release must reconcile the current Alembic head before deployment.
