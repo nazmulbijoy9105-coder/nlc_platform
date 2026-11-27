@@ -35,5 +35,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install pinned YAML validator dependency
+        run: python -m pip install --disable-pip-version-check "PyYAML==6.0.2"
+
       - name: Validate security-closure document structure
         run: python scripts/check_security_closure.py --structure-only
+
+      - name: Reject duplicate YAML keys and invalid workflow jobs mappings
+        run: python scripts/check_workflow_yaml.py
