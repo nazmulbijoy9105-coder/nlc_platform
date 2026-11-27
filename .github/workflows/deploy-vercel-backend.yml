@@ -32,7 +32,7 @@ jobs:
       - name: Require legal-engine P0 assurance for this exact release SHA
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_SHA: ${{ github.sha }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
