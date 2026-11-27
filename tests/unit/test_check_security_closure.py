@@ -21,6 +21,8 @@ def _write_doc(root: Path, items: str) -> None:
 def repo(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(closure, "audit_current_dependencies", lambda: (True, "test audit passed"))
+    # Most tests use one synthetic item; completeness tests restore 1..5.
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1}))
     return tmp_path
 
 
@@ -139,7 +141,7 @@ def test_item_without_exact_closed_status_fails_closed(repo, capsys, status_line
     _write_doc(repo, f"1. Item\n   {status_lines}")
 
     assert closure.main() == 1
-    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+    assert "FAIL:" in capsys.readouterr().out
 
 
 def test_one_unresolved_item_fails_even_when_others_are_closed(repo, capsys):
@@ -272,7 +274,8 @@ def test_duplicate_closure_item_fails_closed(repo, capsys):
     assert "duplicate closure item 1" in capsys.readouterr().out
 
 
-def test_structure_only_passes_with_an_open_item(repo, capsys):
+def test_structure_only_passes_with_an_open_item(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2}))
     # The PR-level structural job must not force every item CLOSED; an OPEN
     # item is reported as info, not a failure (the production gate still blocks).
     _write_doc(repo, "1. Closed\n   Status: CLOSED\n2. Pending\n   Status: OPEN")
@@ -297,7 +300,7 @@ def test_structure_only_fails_on_missing_status(repo, capsys):
     _write_doc(repo, "1. Item with no status line\n   some prose only")
 
     assert closure.main(["--structure-only"]) == 1
-    assert "FAIL: item not CLOSED" in capsys.readouterr().out
+    assert "exactly one Status: OPEN or Status: CLOSED" in capsys.readouterr().out
 
 
 def test_structure_only_fails_on_missing_evidence(repo, capsys):
@@ -307,11 +310,10 @@ def test_structure_only_fails_on_missing_evidence(repo, capsys):
     assert "missing evidence file: docs/evidence/report.md" in capsys.readouterr().out
 
 
-def test_structure_only_does_not_run_live_audit(tmp_path, monkeypatch):
-    # The structural job must not depend on pip-audit or requirements.txt.
-    monkeypatch.chdir(tmp_path)
-    _write_doc(tmp_path, "1. Closed\n   Status: CLOSED")
-
+def test_structure_only_does_not_run_live_audit(repo, monkeypatch):
+    # Completeness remains mandatory while the live audit is skipped.
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2, 3, 4, 5}))
+    _write_doc(repo, "1. First\n   Status: CLOSED\n2. Second\n   Status: CLOSED\n3. Third\n   Status: CLOSED\n4. Fourth\n   Status: OPEN\n5. Fifth\n   Status: CLOSED")
     calls = {"count": 0}
 
     def boom() -> tuple[bool, str]:
@@ -319,6 +321,74 @@ def test_structure_only_does_not_run_live_audit(tmp_path, monkeypatch):
         return False, "audit must not run in structure-only mode"
 
     monkeypatch.setattr(closure, "audit_current_dependencies", boom)
-
     assert closure.main(["--structure-only"]) == 0
     assert calls["count"] == 0
+
+
+def test_leading_zero_duplicate_numbers_are_normalized(repo, capsys):
+    _write_doc(repo, "1. First\n   Status: CLOSED\n01. Duplicate with leading zero\n   Status: CLOSED")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_indented_markdown_item_is_split_and_duplicate_detected(repo, capsys):
+    _write_doc(repo, "1. First\n   Status: CLOSED\n   1. Indented duplicate\n   Status: CLOSED")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "duplicate closure item 1" in capsys.readouterr().out
+
+
+def test_required_findings_cannot_be_removed(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2, 3, 4, 5}))
+    _write_doc(
+        repo,
+        "1. First\n   Status: CLOSED\n2. Second\n   Status: CLOSED\n"
+        "3. Third\n   Status: CLOSED\n5. Fifth\n   Status: CLOSED",
+    )
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "missing required closure item(s): 4" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "status_lines",
+    [
+        "Status:",
+        "Status: PENDING",
+        "Status: CLOSED\n   Status: OPEN",
+        "Status: closed",
+        "Status: OPEN pending",
+    ],
+)
+def test_structure_only_rejects_malformed_or_conflicting_statuses(repo, capsys, status_lines):
+    _write_doc(repo, f"1. Item\n   {status_lines}")
+
+    assert closure.main(["--structure-only"]) == 1
+    assert "exactly one Status: OPEN or Status: CLOSED" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("status", ["C_LOSED", "CLOSED_", "_CLOSED"])
+def test_status_punctuation_is_not_stripped_into_valid_status(repo, capsys, status):
+    _write_doc(repo, f"1. Item description\n   Status: {status}")
+    assert closure.main(["--structure-only"]) == 1
+    assert "exactly one Status" in capsys.readouterr().out
+
+
+def test_fenced_code_cannot_supply_status(repo, capsys):
+    _write_doc(repo, "1. Item description\n   Status: OPEN\n   Example:\n   ~~~text\n   Status: CLOSED\n   ~~~")
+    assert closure.main(["--structure-only"]) == 0
+    assert "OPEN: 1. Item description" in capsys.readouterr().out
+
+
+def test_empty_closure_record_fails(repo, capsys):
+    _write_doc(repo, "1.\n   Status: CLOSED")
+    assert closure.main(["--structure-only"]) == 1
+    assert "no description" in capsys.readouterr().out
+
+
+def test_unicode_decimal_marker_does_not_count(repo, monkeypatch, capsys):
+    monkeypatch.setattr(closure, "EXPECTED_FINDING_NUMBERS", frozenset({1, 2}))
+    _write_doc(repo, "1. First\n   Status: CLOSED\n٢. Second\n   Status: CLOSED")
+    assert closure.main(["--structure-only"]) == 1
+    assert "missing required closure item(s): 2" in capsys.readouterr().out
