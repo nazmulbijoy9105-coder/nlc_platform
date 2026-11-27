@@ -95,10 +95,7 @@ jobs:
       - name: Evaluation integrity and score hashes
         run: python -m pytest tests/unit/test_evaluation_integrity.py -q --tb=short
       - name: Rule outcome ledger
-        run: |
-          if [[ -f tests/unit/test_rule_outcome_ledger.py ]]; then
-            python -m pytest tests/unit/test_rule_outcome_ledger.py -q --tb=short
-          fi
+        run: python -m pytest tests/unit/test_rule_outcome_ledger.py -q --tb=short
 
   fail-closed-publication:
     name: fail-closed-publication
@@ -120,7 +117,30 @@ jobs:
       - name: Withheld / not-released score visibility
         run: python -m pytest tests/unit/test_not_evaluated_score_visibility.py -q --tb=short
       - name: Score release evidence gates
+        run: python -m pytest tests/unit/test_score_release_evidence_gates.py -q --tb=short
+
+  legal-engine-p0:
+    name: legal-engine-p0
+    if: always()
+    needs:
+      - legal-rule-catalogue-parity
+      - rjsc-scope-isolation
+      - score-provenance-integrity
+      - fail-closed-publication
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every P0 assurance job to succeed
+        env:
+          CATALOGUE_RESULT: ${{ needs.legal-rule-catalogue-parity.result }}
+          SCOPE_RESULT: ${{ needs.rjsc-scope-isolation.result }}
+          PROVENANCE_RESULT: ${{ needs.score-provenance-integrity.result }}
+          PUBLICATION_RESULT: ${{ needs.fail-closed-publication.result }}
         run: |
-          if [[ -f tests/unit/test_score_release_evidence_gates.py ]]; then
-            python -m pytest tests/unit/test_score_release_evidence_gates.py -q --tb=short
-          fi
+          set -euo pipefail
+          for result in "$CATALOGUE_RESULT" "$SCOPE_RESULT" "$PROVENANCE_RESULT" "$PUBLICATION_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::A required legal-engine P0 job did not succeed (result=$result)."
+              exit 1
+            fi
+          done
+          echo "All legal-engine P0 assurance jobs succeeded."
