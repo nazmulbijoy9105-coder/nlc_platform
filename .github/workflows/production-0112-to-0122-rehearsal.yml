@@ -72,7 +72,7 @@ jobs:
       TESTING: "true"
       CI: "true"
       REDIS_URL: redis://localhost:6379/0
-      JWT_SECRET_KEY: ci-only-not-a-production-secret
+      JWT_SECRET_KEY: ci-only-not-a-production-secret-2026
       NLC_RLS_HMAC_SECRET: ci-only-rls-hmac-secret-not-for-production-2026
     steps:
       - uses: actions/checkout@v5
@@ -146,6 +146,7 @@ jobs:
                       + "@localhost:5432/nlc_test"
                   ),
                   "NLC_RLS_HMAC_SECRET": secrets.token_hex(32),
+                  "JWT_SECRET_KEY": secrets.token_urlsafe(48),
               }
               with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
                   for key, value in values.items():
