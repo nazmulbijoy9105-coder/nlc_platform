@@ -75,3 +75,20 @@ def test_openapi_contract_rejects_removed_client_response_field():
 def test_psfl_is_not_implicitly_approved():
     assert normalize("PSF License") not in APPROVED_ALIASES
     assert normalize("MIT License") in APPROVED_ALIASES
+
+def test_production_image_and_license_sbom_use_runtime_requirements():
+    from pathlib import Path
+
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+    license_workflow = Path(".github/workflows/license-policy.yml").read_text(encoding="utf-8")
+    sbom_workflow = Path(".github/workflows/sbom.yml").read_text(encoding="utf-8")
+    runtime_requirements = Path("requirements-runtime.txt").read_text(encoding="utf-8")
+
+    assert "COPY requirements-runtime.txt ." in dockerfile
+    assert "-r requirements-runtime.txt" in dockerfile
+    assert ".venv-app/bin/python -m pip install -r requirements-runtime.txt" in license_workflow
+    assert "cyclonedx-py requirements requirements-runtime.txt" in sbom_workflow
+    assert "pytest==" not in runtime_requirements
+    assert "ruff==" not in runtime_requirements
+    assert "mypy==" not in runtime_requirements
+    assert "pip_audit==" not in runtime_requirements
