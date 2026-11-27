@@ -26,8 +26,10 @@ NOTICE materials when required:
 - ISC.
 - Unlicense.
 - Python Software Foundation License (PSFL), including Defusedxml and the Python License, Version 2 (SPDX Python-2.0).
+- CMU License (SPDX MIT-CMU).
+- Tcl/Tk License (TCL).
 
-The project owner expressly accepts PSFL-licensed dependencies. This approval
+The project owner expressly accepts PSFL-licensed dependencies, the permissive CMU License, and the Tcl/Tk License. This approval
 is intentional and is not an unresolved or unknown-license exception. The
 specific PSFL version and its notice obligations must still be observed.
 
@@ -80,12 +82,12 @@ does not waive notice or attribution obligations.
 | pypdfium2 5.5.0 | BSD-3-Clause / Apache-2.0 plus PDFium bundled dependency licenses | Removed from the development requirement set after repository search found no application import or use. | Not installed by the application; reintroduction requires bundle-notice review. |
 | greenlet 3.3.1 | MIT AND Python-2.0 | Approved under the existing MIT and PSFL approvals; retain both sets of applicable notices. | Allowlisted as an explicitly reviewed compound expression. |
 | certifi 2026.11.20 | MPL-2.0 | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
-| Pillow 13.0.0 | MIT-CMU | Not approved by the current policy; MIT-CMU is a distinct SPDX license identifier and is not silently treated as MIT. | Release blocker while present in the installed runtime inventory pending explicit review or an approved replacement. |
+| Pillow 13.0.0 | MIT-CMU | Approved as the distinct CMU License under the owner decision above; preserve notices and the no-endorsement condition. | Allowed when the license text and notices are retained. |
 | chardet 6.0.0.post1 | LGPL-2.1-or-later | Direct pin removed after repository search found no application import. No LGPL approval is granted. | If installed transitively, remains a release blocker pending replacement or written review. |
 | pyphen 0.17.2 | GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1 | Not approved; its tri-license alternatives require an explicit choice and review of the selected terms and included dictionaries. | Release blocker while present in the installed runtime inventory. |
 | python-bidi 0.6.7 | LGPL | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
 | tqdm 4.67.3 | MPL-2.0 AND MIT | Direct pin removed after repository search found no application import. The distribution contains MPL-covered files as well as MIT-covered files; no MPL approval is granted. | If installed transitively, remains a release blocker pending replacement or written review. |
-| ujson 6.0.0 | BSD-3-Clause AND TCL | Direct pin removed after repository search found no application import. No Tcl approval is granted. | If installed transitively, remains a release blocker pending review of the Tcl license and bundled double-conversion notices. |
+| ujson 6.0.0 | BSD-3-Clause AND TCL | Direct pin removed after repository search found no application import. BSD-3-Clause and Tcl/Tk License are explicitly approved; retain both notices and verify bundled double-conversion notices in the installed distribution. | Allowed only if the actual inventory and bundled notices match this reviewed expression; unknown bundled licenses still block. |
 
 Removal decisions above are based on the absence of repository references, not on a licence exception. Transitive packages remain in scope: removing a direct pin does not resolve a package that is still installed through another dependency. Re-run the inventory after every dependency change and review the actual resolved package set.
 
