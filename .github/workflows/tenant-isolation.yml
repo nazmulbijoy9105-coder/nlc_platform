@@ -100,20 +100,15 @@ jobs:
       - name: Generate isolated runtime-role credentials
         run: |
           python - <<'PY'
+          import asyncio
           import os
           import secrets
-          password = secrets.token_urlsafe(32)
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
-              env.write(f"APP_DATABASE_PASSWORD={password}\n")
-              env.write(f"APP_DATABASE_URL=postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test\n")
-          print(f"::add-mask::{password}")
-          PY
-          python - <<'PY'
-          import asyncio, os, asyncpg
+          import asyncpg
+
           async def main():
+              password = secrets.token_urlsafe(32)
               conn = await asyncpg.connect("postgresql://nlc_test@localhost:5432/nlc_test")
               try:
-                  password = os.environ["APP_DATABASE_PASSWORD"]
                   statement = await conn.fetchval(
                       "SELECT format('ALTER ROLE nlc_app_role WITH PASSWORD %L', $1::text)",
                       password,
@@ -121,9 +116,15 @@ jobs:
                   await conn.execute(statement)
               finally:
                   await conn.close()
+              with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+                  env.write(f"APP_DATABASE_PASSWORD={password}\\n")
+                  env.write(
+                      f"APP_DATABASE_URL=postgresql+asyncpg://nlc_app_role:{password}@localhost:5432/nlc_test\\n"
+                  )
+              print(f"::add-mask::{password}")
+
           asyncio.run(main())
           PY
-
       - name: Run database-backed tenant and RLS regression suite
         run: |
           set -euo pipefail
