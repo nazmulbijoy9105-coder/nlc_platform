@@ -16,6 +16,19 @@ def _first_agm_default(output):
     ]
 
 
+def _assert_unknown_review_flag(output, flag_code):
+    flags = [
+        flag for flag in output.flags
+        if flag.rule_id == "AGM-001" and flag.flag_code == flag_code
+    ]
+    assert len(flags) == 1
+    flag = flags[0]
+    assert flag.state.value == "UNKNOWN"
+    assert flag.eval_state == "UNKNOWN"
+    assert flag.severity.value == "NOT_EVALUATED"
+    assert flag.score_impact == 0
+
+
 def _evaluate(rule_engine, build_profile, incorporation, today, **overrides):
     profile = build_profile(
         incorporation_date=incorporation,
@@ -98,8 +111,7 @@ def test_unverified_history_never_infers_default(rule_engine, build_profile):
         agm_history_verified=False,
     )
     assert _first_agm_default(output) == []
-    codes = [flag.flag_code for flag in output.flags if flag.rule_id == "AGM-001"]
-    assert "AGM_HISTORY_REQUIRES_VERIFICATION" in codes
+    _assert_unknown_review_flag(output, "AGM_HISTORY_REQUIRES_VERIFICATION")
 
 
 @pytest.mark.parametrize(
@@ -121,15 +133,13 @@ def test_incomplete_history_verification_never_infers_default(
         **{missing_field: None},
     )
     assert _first_agm_default(output) == []
-    codes = [flag.flag_code for flag in output.flags if flag.rule_id == "AGM-001"]
-    assert "AGM_HISTORY_REQUIRES_VERIFICATION" in codes
+    _assert_unknown_review_flag(output, "AGM_HISTORY_REQUIRES_VERIFICATION")
 
 
 def test_missing_incorporation_date_is_unknown_not_default(rule_engine, build_profile):
     output = _evaluate(rule_engine, build_profile, None, date(2026, 1, 15))
     assert _first_agm_default(output) == []
-    codes = [flag.flag_code for flag in output.flags if flag.rule_id == "AGM-001"]
-    assert "INCORPORATION_DATE_UNKNOWN" in codes
+    _assert_unknown_review_flag(output, "INCORPORATION_DATE_UNKNOWN")
 
 
 def test_missing_agm_count_is_unknown_not_default(rule_engine, build_profile):
@@ -141,8 +151,7 @@ def test_missing_agm_count_is_unknown_not_default(rule_engine, build_profile):
     )
     output = rule_engine.evaluate(profile, today=date(2026, 1, 15))
     assert _first_agm_default(output) == []
-    codes = [flag.flag_code for flag in output.flags if flag.rule_id == "AGM-001"]
-    assert "AGM_COUNT_UNKNOWN" in codes
+    _assert_unknown_review_flag(output, "AGM_COUNT_UNKNOWN")
 
 
 def test_first_agm_held_means_no_first_agm_default(rule_engine, build_profile):
