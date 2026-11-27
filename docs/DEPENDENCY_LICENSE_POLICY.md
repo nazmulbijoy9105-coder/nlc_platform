@@ -25,7 +25,7 @@ NOTICE materials when required:
 - Apache-2.0.
 - ISC.
 - Unlicense.
-- Python Software Foundation License (PSFL), including Defusedxml.
+- Python Software Foundation License (PSFL), including Defusedxml and the Python License, Version 2 (SPDX Python-2.0).
 
 The project owner expressly accepts PSFL-licensed dependencies. This approval
 is intentional and is not an unresolved or unknown-license exception. The
@@ -72,7 +72,23 @@ For each release dependency audit, retain:
 Unknown or unapproved licenses are release blockers. A passing scanner result
 does not waive notice or attribution obligations.
 
-## 5. Change control
+## 5. Current dependency dispositions (2026-11-27)
+
+| Package / version | Detected license | Decision | Release treatment |
+|---|---|---|---|
+| PyMuPDF 1.27.1 | AGPL-3.0 or Artifex commercial | Removed from runtime and development requirement sets after repository search found no application import or use. No AGPL/commercial acceptance is granted. | Not installed by the application; reintroduction requires a new review. |
+| pypdfium2 5.5.0 | BSD-3-Clause / Apache-2.0 plus PDFium bundled dependency licenses | Removed from the development requirement set after repository search found no application import or use. | Not installed by the application; reintroduction requires bundle-notice review. |
+| greenlet 3.3.1 | MIT AND Python-2.0 | Approved under the existing MIT and PSFL approvals; retain both sets of applicable notices. | Allowlisted as an explicitly reviewed compound expression. |
+| certifi 2026.11.20 | MPL-2.0 | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
+| chardet 6.0.0.post1 | LGPL-2.1-or-later | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
+| pyphen 0.17.2 | GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1 | Not approved; its tri-license alternatives require an explicit choice and review of the selected terms and included dictionaries. | Release blocker while present in the installed runtime inventory. |
+| python-bidi 0.6.7 | LGPL | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
+| tqdm 4.67.3 | MPL-2.0 AND MIT | Not approved because the distribution contains MPL-covered files as well as MIT-covered files. | Release blocker while present in the installed runtime inventory. |
+| ujson 6.0.0 | BSD-3-Clause AND TCL | Not approved until the Tcl license text and bundled double-conversion notices are reviewed and recorded. | Release blocker while present in the installed runtime inventory. |
+
+Removal decisions above are based on the absence of repository references, not on a licence exception. Transitive packages remain in scope: removing a direct pin does not resolve a package that is still installed through another dependency. Re-run the inventory after every dependency change and review the actual resolved package set.
+
+## 6. Change control
 
 Changes to accepted license categories, or exceptions for a particular
 dependency, require a documented decision by the project owner or an expressly
