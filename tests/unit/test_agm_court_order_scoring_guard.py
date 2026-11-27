@@ -109,3 +109,10 @@ def test_order_date_is_not_inferred_from_today_or_upload_date():
     with pytest.raises(ValueError, match="order_date"):
         from app.compliance.agm_court_order import AgmCourtOrderEvidence
         AgmCourtOrderEvidence.from_mapping(_evidence(order_date=None))
+
+@pytest.mark.parametrize("status", ["APPEALED", "STAYED", "SUPERSEDED"])
+def test_order_status_with_pending_or_superseding_process_requires_reference(status):
+    from app.compliance.agm_court_order import AgmCourtOrderEvidence
+
+    with pytest.raises(ValueError, match="appeal_or_stay_reference"):
+        AgmCourtOrderEvidence.from_mapping(_evidence(order_status=status))
