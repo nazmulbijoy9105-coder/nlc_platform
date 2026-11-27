@@ -145,10 +145,7 @@ def test_agm001_release_redaction_fixture_uses_migrated_catalogue_identity():
     fixture = source[start : boundary.start() if boundary else None]
 
     assert "catalogue_rule = catalogue_result.scalar_one()" in fixture
-    assert (
-        "catalogue_rule.statutory_basis == canonical_agm_001_basis" in fixture
-        or "catalogue_rule.statutory_basis == canonical_agm_basis" in fixture
-    )
+    assert "catalogue_rule.statutory_basis == canonical_agm_001_basis" in fixture
     assert "_catalogue_identity_conflicts([catalogue_rule])" in fixture
     assert '"MATCHED_CATALOGUE_IDENTITY"' in fixture
     assert "\n        catalogue_rule.statutory_basis = " not in fixture
@@ -505,12 +502,24 @@ def test_agm001_upgrade_executes_reconciliation_and_advances_version(monkeypatch
 @pytest.mark.parametrize(
     "overrides",
     [
+        pytest.param({"rule_name": "Renamed AGM rule"}, id="changed-rule-name"),
+        pytest.param(
+            {"description": "First AGM deadline: 548 days"},
+            id="changed-description",
+        ),
         pytest.param(
             {"rule_condition": {
                 **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION["rule_condition"]),
                 "trigger": "first_agm_held == False AND days_since_incorporation > 549",
             }},
             id="changed-548-day-trigger",
+        ),
+        pytest.param(
+            {"rule_condition": {
+                **copy.deepcopy(MIGRATION_0125.LEGACY_DEFINITION["rule_condition"]),
+                "data_points": ["incorporation_date", "first_agm_held"],
+            }},
+            id="changed-condition-data-points",
         ),
         pytest.param({"is_active": False}, id="inactive-legacy-row"),
         pytest.param({"rule_type": "POLICY"}, id="wrong-legacy-rule-type"),

@@ -26,7 +26,7 @@ PROJECT_ID = "rapid-bonus-26545234"
 PARENT_BRANCH_ID = "br-divine-glade-aovapmi5"
 DATABASE = "neondb"
 START_REVISION = "0112_runtime_acl_and_alembic_rls"
-HEAD_REVISION = "0127_one_active_rescue_plan_per_company"
+HEAD_REVISION = "0128_agm001_calendar_month_definition"
 AGM_MIGRATION_REVISION = "0125_reconcile_agm001_statutory_basis"
 AGM_PRE_0125_REVISION = "0124_restore_85_rule_catalogue_parity"
 AGM_POST_0125_REVISION = "0125_reconcile_agm001_statutory_basis"
@@ -61,8 +61,58 @@ LEGACY_FINGERPRINTS = {
          "paid_up_capital_bdt > 0 AND form_iii_filed == False AND days_since_incorporation > 28"),
     },
 }
-REPORT = Path("artifacts/neon-production-0112-to-0127.json")
+REPORT = Path("artifacts/neon-production-0112-to-0128.json")
 
+
+
+def _source_provenance() -> dict[str, Any]:
+    """Bind rehearsal evidence to the exact, clean source checkout."""
+    root = Path(__file__).resolve().parents[1]
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True,
+        capture_output=True, text=True,
+    ).stdout.strip()
+    expected_commit = os.environ.get("NLC_EXPECTED_SOURCE_SHA", "").strip()
+    if expected_commit and commit != expected_commit:
+        raise RuntimeError(
+            f"Rehearsal checkout SHA {commit!r} does not match workflow SHA {expected_commit!r}."
+        )
+    dirty_status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=root,
+        check=True, capture_output=True, text=True,
+    ).stdout.splitlines()
+    # CI may create artifacts/ before this check (for example the live
+    # dependency-audit JSON). Those are generated evidence outputs, not source.
+    dirty = [
+        line for line in dirty_status
+        if not (line[:2] == "??" and line[3:].strip('"').startswith("artifacts/"))
+    ]
+    if dirty:
+        raise RuntimeError(
+            "Rehearsal requires a clean source checkout; refusing to report "
+            f"evidence for modified/untracked source files: {dirty[:20]!r}"
+        )
+    tracked_inputs = [
+        *sorted((root / "alembic" / "versions").glob("*.py")),
+        root / "alembic.ini",
+        root / "scripts" / "rehearse_production_0112_to_0128.py",
+        root / ".github" / "workflows" / "production-0112-to-0122-rehearsal.yml",
+    ]
+    hashes = {}
+    for path in tracked_inputs:
+        if not path.is_file():
+            raise RuntimeError(f"Required rehearsal source input is missing: {path}")
+        hashes[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return {
+        "repository": "nazmulbijoy9105-coder/nlc_platform",
+        "commit_sha": commit,
+        "expected_commit_sha": expected_commit or None,
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "pull_request_number": os.environ.get("GITHUB_PR_NUMBER"),
+        "checkout_clean": True,
+        "input_sha256": hashes,
+    }
 
 def _url() -> str:
     raw = os.environ.get("MIGRATION_DATABASE_URL", "").strip()
@@ -108,6 +158,51 @@ def _canonical(value: Any) -> str:
         except json.JSONDecodeError:
             pass
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+
+
+async def _schema_inventory(conn: asyncpg.Connection) -> dict[str, Any]:
+    """Capture deterministic PostgreSQL schema/security metadata for before/after evidence."""
+    queries = {
+        "columns": """SELECT table_schema, table_name, column_name, data_type, udt_name,
+            is_nullable, column_default, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema IN ('public','audit','nlc_private')
+            ORDER BY 1,2,ordinal_position""",
+        "constraints": """SELECT n.nspname AS schema_name, t.relname AS table_name,
+            c.conname, c.contype, pg_get_constraintdef(c.oid, true) AS definition
+            FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid
+            JOIN pg_namespace n ON n.oid=t.relnamespace
+            WHERE n.nspname IN ('public','audit','nlc_private') ORDER BY 1,2,3""",
+        "indexes": """SELECT schemaname, tablename, indexname, indexdef
+            FROM pg_indexes WHERE schemaname IN ('public','audit','nlc_private')
+            ORDER BY 1,2,3""",
+        "triggers": """SELECT event_object_schema, event_object_table, trigger_name,
+            action_timing, event_manipulation, action_statement
+            FROM information_schema.triggers
+            WHERE event_object_schema IN ('public','audit','nlc_private')
+            ORDER BY 1,2,3,5""",
+        "policies": """SELECT schemaname, tablename, policyname, permissive, roles,
+            cmd, qual, with_check FROM pg_policies
+            WHERE schemaname IN ('public','audit','nlc_private') ORDER BY 1,2,3""",
+        "rls": """SELECT n.nspname AS schema_name, c.relname AS table_name,
+            c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS rls_forced
+            FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname IN ('public','audit','nlc_private')
+              AND c.relkind IN ('r','p') ORDER BY 1,2""",
+        "grants": """SELECT table_schema, table_name, grantee, privilege_type, is_grantable
+            FROM information_schema.table_privileges
+            WHERE table_schema IN ('public','audit','nlc_private') ORDER BY 1,2,3,4""",
+    }
+    inventory = {
+        name: [dict(row) for row in await conn.fetch(sql)]
+        for name, sql in queries.items()
+    }
+    canonical = _canonical(inventory)
+    return {
+        "sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "counts": {name: len(rows) for name, rows in inventory.items()},
+        "objects": inventory,
+    }
 
 
 async def _rows_digest(conn: asyncpg.Connection, table: str) -> dict[str, Any]:
@@ -314,7 +409,58 @@ async def _postflight(
                     "0125 AGM-001 migration history does not preserve the exact before-image: "
                     f"{dict(history_row)!r}"
                 )
+            # 0128 must preserve the exact 0125-current catalogue row,
+            # then advance its version once more while replacing only the
+            # fixed-day description/condition and audit timestamps.
+            history_0128 = await conn.fetch(
+                "SELECT version, change_reason, changed_by, actor_type, "
+                "migration_revision, previous_definition "
+                "FROM public.legal_rule_versions "
+                "WHERE rule_id=$1 AND migration_revision=$2",
+                rule_id,
+                "0128_agm001_calendar_month_definition",
+            )
+            if len(history_0128) != 1:
+                raise RuntimeError(
+                    "0128 did not create exactly one AGM-001 migration history row: "
+                    f"{len(history_0128)}"
+                )
+            history_0128_row = history_0128[0]
+            before_0128 = history_0128_row["previous_definition"]
+            if isinstance(before_0128, str):
+                before_0128 = json.loads(before_0128)
+            version_after_0125 = str(original.get("rule_version", ""))
+            version_parts = version_after_0125.split(".")
+            if not version_after_0125 or any(not part.isdigit() for part in version_parts):
+                raise RuntimeError("0125 AGM-001 version is not numeric.")
+            version_parts[-1] = str(int(version_parts[-1]) + 1)
+            expected_0128_history_version = ".".join(version_parts)
+            version_parts[-1] = str(int(version_parts[-1]) + 1)
+            stable_fields = set(before_0128 or {}) - {
+                "statutory_basis", "description", "rule_condition", "rule_version",
+                "last_modified_at", "updated_at",
+            }
+            if (
+                not isinstance(before_0128, dict)
+                or set(before_0128) != set(original)
+                or any(before_0128.get(field) != original.get(field) for field in stable_fields)
+                or history_0128_row["actor_type"] != "MIGRATION"
+                or history_0128_row["changed_by"] is not None
+                or history_0128_row["migration_revision"] != "0128_agm001_calendar_month_definition"
+                or not history_0128_row["change_reason"]
+                or history_0128_row["version"] != expected_0128_history_version
+                or not isinstance(before_0128, dict)
+                or before_0128.get("rule_version") != expected_0128_history_version
+                or before_0128.get("statutory_basis") != "Section 81(1), Companies Act 1994 (Bangladesh)"
+                or before_0128.get("description") != original.get("description")
+                or before_0128.get("rule_condition") != original.get("rule_condition")
+            ):
+                raise RuntimeError(
+                    "0128 AGM-001 migration history does not preserve the exact 0125-current before-image: "
+                    f"{dict(history_0128_row)!r}"
+                )
             migration_history_verified.append(rule_id)
+            migration_history_verified.append("AGM-001@0128")
             continue
         row = archived.get(rule_id)
         if row is None:
@@ -362,7 +508,8 @@ async def _postflight(
     version_parts = previous_version.split(".")
     if any(not part.isdigit() for part in version_parts):
         raise RuntimeError(f"AGM-001 has a non-numeric prior version: {previous_version!r}")
-    version_parts[-1] = str(int(version_parts[-1]) + 1)
+    version_parts[-1] = str(int(version_parts[-1]) + 1)  # 0125
+    version_parts[-1] = str(int(version_parts[-1]) + 1)  # 0128
     expected_agm001_version = ".".join(version_parts)
     if agm001["rule_version"] != expected_agm001_version:
         raise RuntimeError(
@@ -376,17 +523,35 @@ async def _postflight(
         raise RuntimeError("AGM-001 current row payload is not a JSON object")
     before_compare = dict(original_agm001)
     current_compare = dict(current_agm001)
-    for mutable_key in ("statutory_basis", "rule_version", "last_modified_at", "updated_at"):
-        before_compare.pop(mutable_key, None)
-        current_compare.pop(mutable_key, None)
-    mutable_fields = ("statutory_basis", "rule_version", "last_modified_at", "updated_at")
+    mutable_fields = (
+        "statutory_basis", "description", "rule_condition", "rule_version",
+        "last_modified_at", "updated_at",
+    )
     for field in mutable_fields:
         before_compare.pop(field, None)
         current_compare.pop(field, None)
     if current_compare != before_compare:
         raise RuntimeError(
-            "0125 changed AGM-001 fields beyond citation/version/timestamps"
+            "0125/0128 changed AGM-001 fields beyond the approved citation, "
+            "calendar-month definition, version, and timestamps"
         )
+    expected_description = (
+        "First AGM must be held within 18 calendar months of incorporation. "
+        "Calculate with calendar-month arithmetic; do not use a fixed-day approximation."
+    )
+    expected_condition = {
+        "check_fn": "check_agm_001",
+        "trigger": (
+            "agm_history_verified == True AND agm_count == 0 AND "
+            "today > add_calendar_months(incorporation_date, 18)"
+        ),
+        "data_points": ["agm_history_verified", "incorporation_date", "agm_count"],
+    }
+    if (
+        current_agm001.get("description") != expected_description
+        or current_agm001.get("rule_condition") != expected_condition
+    ):
+        raise RuntimeError("0128 AGM-001 calendar-month definition is not canonical.")
 
     inc002 = by_rule.get("INC-002")
     if inc002 is not None and (
@@ -518,6 +683,48 @@ async def _postflight(
     }
 
 
+async def _application_role_parity() -> dict[str, Any]:
+    """Prove the runtime connection is distinct and cannot own or migrate schema."""
+    raw = os.environ.get("APP_DATABASE_URL", "").strip()
+    if not raw or make_url(raw).username != "nlc_app_role":
+        raise RuntimeError("APP_DATABASE_URL must use the dedicated nlc_app_role login.")
+    url, args = prepare_asyncpg_connection(raw, require_tls=True)
+    dsn = make_url(url).set(drivername="postgresql").render_as_string(hide_password=False)
+    app_conn = await asyncpg.connect(dsn, **args)
+    try:
+        row = await app_conn.fetchrow(
+            """
+            SELECT session_user, current_user, current_database(),
+                   current_setting('neon.project_id', true) AS project_id,
+                   current_setting('neon.branch_id', true) AS branch_id,
+                   r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+                   has_database_privilege(r.oid, current_database(), 'CREATE') AS db_create,
+                   has_schema_privilege(r.oid, 'public', 'CREATE') AS schema_create,
+                   (SELECT count(*) FROM pg_class c
+                     JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname IN ('public','nlc_private','audit')
+                      AND c.relkind IN ('r','p','v','m','S','f','i','I')
+                      AND c.relowner=r.oid) AS owned_relations
+              FROM pg_roles r WHERE r.rolname=current_user
+            """
+        )
+        expected_branch = os.environ.get("NLC_TARGET_BRANCH_ID") or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
+        if row is None or (
+            row["session_user"] != "nlc_app_role"
+            or row["current_user"] != "nlc_app_role"
+            or row["current_database"] != DATABASE
+            or row["project_id"] != PROJECT_ID
+            or row["branch_id"] != expected_branch
+            or row["rolsuper"] or row["rolbypassrls"] or row["rolcreatedb"]
+            or row["rolcreaterole"] or row["db_create"] or row["schema_create"]
+            or row["owned_relations"] != 0
+        ):
+            raise RuntimeError(f"Application role is not least-privilege or target-pinned: {dict(row) if row else None!r}")
+        return dict(row)
+    finally:
+        await app_conn.close()
+
+
 async def _audit_view_parity() -> dict[str, Any]:
     raw = os.environ.get("NLC_AUDIT_DATABASE_URL", "").strip()
     if not raw:
@@ -532,6 +739,29 @@ async def _audit_view_parity() -> dict[str, Any]:
             os.environ.get("NLC_TARGET_BRANCH_ID")
             or os.environ.get("NLC_REHEARSAL_BRANCH_ID")
         )
+        role = await audit_conn.fetchrow(
+            """
+            SELECT session_user, current_user, current_database(),
+                   current_setting('neon.project_id', true) AS project_id,
+                   current_setting('neon.branch_id', true) AS branch_id,
+                   r.rolsuper, r.rolbypassrls, r.rolcreatedb, r.rolcreaterole,
+                   has_schema_privilege(r.oid, 'audit', 'CREATE') AS audit_create,
+                   has_table_privilege(r.oid, 'audit.production_release_parity', 'SELECT') AS can_read_view,
+                   has_table_privilege(r.oid, 'audit.production_release_parity', 'INSERT') AS can_insert_view
+              FROM pg_roles r WHERE r.rolname=current_user
+            """
+        )
+        if role is None or (
+            role["session_user"] != "nlc_ci_audit_role"
+            or role["current_user"] != "nlc_ci_audit_role"
+            or role["current_database"] != DATABASE
+            or role["project_id"] != PROJECT_ID
+            or role["branch_id"] != expected_branch_id
+            or role["rolsuper"] or role["rolbypassrls"] or role["rolcreatedb"]
+            or role["rolcreaterole"] or role["audit_create"]
+            or not role["can_read_view"] or role["can_insert_view"]
+        ):
+            raise RuntimeError(f"Audit role is not read-only or target-pinned: {dict(role) if role else None!r}")
         actual_branch_id = await audit_conn.fetchval(
             "SELECT current_setting('neon.branch_id', true)"
         )
@@ -617,6 +847,7 @@ async def main() -> None:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     conn = await _connect()
     started = datetime.now(timezone.utc).isoformat()
+    source_provenance = _source_provenance()
     try:
         identity = dict(await conn.fetchrow(
             "SELECT session_user, current_user, current_database(), "
@@ -624,52 +855,19 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions == [HEAD_REVISION]:
-            # A previous one-shot rehearsal may already have migrated this
-            # disposable branch. Revalidate branch-pinned restricted parity
-            # instead of trying to replay the 0112-only migration.
-            rescue_plan_schema = (
-                await _rescue_plan_schema_parity(conn)
-                if revisions == [HEAD_REVISION]
-                else None
-            )
-            await conn.close()
-            audit_view = await _audit_view_parity()
-            report = {
-                "status": "PASS",
-                "mode": "verified_existing_rehearsal",
-                "started_at": started,
-                "finished_at": datetime.now(timezone.utc).isoformat(),
-                "target": identity,
-                "starting_revision": START_REVISION,
-                "final_revision": revisions,
-                "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
-                "restricted_audit_view_parity": audit_view,
-                "rescue_plan_schema_parity": rescue_plan_schema,
-                "notes": f"The isolated branch was already at {revisions[0]}; no migration was replayed.",
-            }
-            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
-            print(json.dumps(report, indent=2, default=str))
-            return
-        # A failed multi-revision upgrade may leave a committed intermediate
-        # head. Resume from 0125/0126 by recovering the exact AGM-001 before-image
-        # from 0125 legal_rule_versions history instead of requiring a fresh branch.
-        resume_from_0122 = revisions == [PREVIOUS_REVISION]
-        resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
-        resume_from_0125 = revisions == [AGM_POST_0125_REVISION]
-        resume_from_0126 = revisions == [AGM_POST_0126_REVISION]
-        resume_after_agm_migration = resume_from_0125 or resume_from_0126
-        resumable = {
-            (START_REVISION,), (PREVIOUS_REVISION,), (AGM_PRE_0125_REVISION,),
-            (AGM_POST_0125_REVISION,), (AGM_POST_0126_REVISION,),
-        }
-        if tuple(revisions) not in resumable:
+        if revisions != [START_REVISION]:
             raise RuntimeError(
-                f"Expected starting revision {START_REVISION}, resumable revisions "
-                f"{PREVIOUS_REVISION}, {AGM_PRE_0125_REVISION}, "
-                f"{AGM_POST_0125_REVISION}, or {AGM_POST_0126_REVISION}, "
-                f"or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
+                "Fresh disposable rehearsal must start at exactly "
+                f"{START_REVISION}; observed {revisions!r}. "
+                "Intermediate, already-upgraded, missing, or multiple revision "
+                "states require a separately reviewed baseline contract."
             )
+        resume_from_0122 = False
+        resume_from_0124 = False
+        resume_from_0125 = False
+        resume_from_0126 = False
+        resume_after_agm_migration = False
+        schema_before = await _schema_inventory(conn)
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(
             conn,
@@ -760,12 +958,15 @@ async def main() -> None:
         postflight = await _postflight(
             conn, before_tables, before_rules, agm001_before_0125
         )
+        schema_after = await _schema_inventory(conn)
         rescue_plan_schema = await _rescue_plan_schema_parity(conn)
+        application_role = await _application_role_parity()
         audit_view = await _audit_view_parity()
         report = {
             "status": "PASS",
             "started_at": started,
             "finished_at": datetime.now(timezone.utc).isoformat(),
+            "source": source_provenance,
             "target": identity,
             "starting_revision": (
                 AGM_POST_0126_REVISION if resume_from_0126
@@ -800,7 +1001,10 @@ async def main() -> None:
                 else {}
             ),
             **postflight,
+            "schema_inventory_before": schema_before,
+            "schema_inventory_after": schema_after,
             "rescue_plan_schema_parity": rescue_plan_schema,
+            "application_role_boundary": application_role,
             "active_plan_duplicate_preflight": active_plan_duplicates,
             "agm001_pre_0125_before_image_sha256": hashlib.sha256(
                 _canonical(agm001_before_0125).encode("utf-8")

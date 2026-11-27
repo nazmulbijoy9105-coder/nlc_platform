@@ -262,20 +262,64 @@ def _catalogue_identity_conflicts(catalogue_rows) -> dict[str, dict]:
             continue
         if existing is None or row.is_active is True:
             rows_by_id[row.rule_id] = row
+    # AGM-001 has a semantic identity contract as well as a citation.  The
+    # evaluator and seed catalogue use the 18-calendar-month definition; a
+    # matching Section 81(1) string must never bless a drifted row (including
+    # the historical 548-day approximation).
+    canonical_agm001_definition = {
+        "rule_name": "First AGM Default",
+        "rule_type": "DEADLINE",
+        "description": (
+            "First AGM must be held within 18 calendar months of incorporation. "
+            "Calculate with calendar-month arithmetic; do not use a fixed-day approximation."
+        ),
+        "rule_condition": {
+            "check_fn": "check_agm_001",
+            "trigger": (
+                "agm_history_verified == True AND agm_count == 0 AND "
+                "today > add_calendar_months(incorporation_date, 18)"
+            ),
+            "data_points": [
+                "agm_history_verified",
+                "incorporation_date",
+                "agm_count",
+            ],
+        },
+    }
     conflicts: dict[str, dict] = {}
     for rule_id, canonical_rule in STATUTORY_RULE_REGISTRY.items():
         row = rows_by_id.get(rule_id)
         engine_basis = getattr(canonical_rule, "law", None)
+        reason = None
+        catalogue_basis = getattr(row, "statutory_basis", None) if row else None
         if row is None:
             reason = "CATALOGUE_ENTRY_MISSING"
-            catalogue_basis = None
         elif row.is_active is not True:
             reason = "RULE_INACTIVE"
-            catalogue_basis = row.statutory_basis
         elif _normalise_statutory_basis(engine_basis) != _normalise_statutory_basis(row.statutory_basis):
             reason = "STATUTORY_BASIS_MISMATCH"
-            catalogue_basis = row.statutory_basis
-        else:
+        elif rule_id == "AGM-001":
+            # Partial row-like objects are used by legacy callers and tests;
+            # missing identity fields must fail closed, not raise AttributeError
+            # or accidentally establish a canonical binding.
+            actual_rule_type = getattr(row, "rule_type", None)
+            actual_rule_type = getattr(actual_rule_type, "value", actual_rule_type)
+            actual_condition = getattr(row, "rule_condition", None)
+            if isinstance(actual_condition, str):
+                import json
+                try:
+                    actual_condition = json.loads(actual_condition)
+                except (TypeError, ValueError):
+                    actual_condition = None
+            definition_matches = (
+                getattr(row, "rule_name", None) == canonical_agm001_definition["rule_name"]
+                and str(actual_rule_type) == canonical_agm001_definition["rule_type"]
+                and getattr(row, "description", None) == canonical_agm001_definition["description"]
+                and actual_condition == canonical_agm001_definition["rule_condition"]
+            )
+            if not definition_matches:
+                reason = "RULE_DEFINITION_MISMATCH"
+        if reason is None:
             continue
         conflicts[rule_id] = {
             "rule_id": rule_id,

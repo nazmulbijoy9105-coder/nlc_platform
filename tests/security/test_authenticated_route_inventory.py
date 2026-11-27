@@ -59,6 +59,7 @@ def _iter_api_routes(routes):
 def _registered_api_methods_and_paths():
     """Return {(METHOD, normalized_path)} for every mounted APIRoute."""
     registered: set[tuple[str, str]] = set()
+    # Prefer the router registry (source of truth after include_router).
     route_lists = []
     router = getattr(app, "router", None)
     if router is not None and getattr(router, "routes", None) is not None:

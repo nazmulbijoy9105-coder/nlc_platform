@@ -44,6 +44,14 @@ async def test_chain_accepts_exact_previous_run_hash():
     assert await evaluation_run_chain_problem(db, run) is None
     assert db.statement is not None
 
+    # The mock returns a configured predecessor hash, so also pin the query
+    # contract: same company, strictly earlier timestamp, newest predecessor.
+    sql = str(db.statement).lower()
+    assert "company_id" in sql and "=" in sql
+    assert "calculated_at" in sql and "<" in sql
+    assert "order by" in sql and "desc" in sql
+    assert "limit" in sql
+
 
 @pytest.mark.asyncio
 async def test_chain_rejects_wrong_previous_run_hash():
