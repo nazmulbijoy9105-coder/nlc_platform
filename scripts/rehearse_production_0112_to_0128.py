@@ -64,6 +64,41 @@ LEGACY_FINGERPRINTS = {
 REPORT = Path("artifacts/neon-production-0112-to-0128.json")
 
 
+
+def _source_provenance() -> dict[str, Any]:
+    """Bind rehearsal evidence to the exact, clean source checkout."""
+    root = Path(__file__).resolve().parents[1]
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True,
+        capture_output=True, text=True,
+    ).stdout.strip()
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=root, check=True,
+        capture_output=True, text=True,
+    ).stdout.splitlines()
+    if dirty:
+        raise RuntimeError(
+            "Rehearsal requires a clean checkout; refusing to report evidence "
+            f"for modified/untracked source files: {dirty[:20]!r}"
+        )
+    tracked_inputs = [
+        *sorted((root / "alembic" / "versions").glob("*.py")),
+        root / "alembic.ini",
+        root / "scripts" / "rehearse_production_0112_to_0128.py",
+        root / ".github" / "workflows" / "production-0112-to-0122-rehearsal.yml",
+    ]
+    hashes = {}
+    for path in tracked_inputs:
+        if not path.is_file():
+            raise RuntimeError(f"Required rehearsal source input is missing: {path}")
+        hashes[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return {
+        "repository": "nazmulbijoy9105-coder/nlc_platform",
+        "commit_sha": commit,
+        "checkout_clean": True,
+        "input_sha256": hashes,
+    }
+
 def _url() -> str:
     raw = os.environ.get("MIGRATION_DATABASE_URL", "").strip()
     if not raw or "-pooler." in raw.lower():
@@ -687,6 +722,7 @@ async def main() -> None:
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     conn = await _connect()
     started = datetime.now(timezone.utc).isoformat()
+    source_provenance = _source_provenance()
     try:
         identity = dict(await conn.fetchrow(
             "SELECT session_user, current_user, current_database(), "
@@ -694,52 +730,18 @@ async def main() -> None:
             "current_setting('neon.branch_id', true) AS branch_id"
         ))
         revisions = await _alembic_revision(conn)
-        if revisions == [HEAD_REVISION]:
-            # A previous one-shot rehearsal may already have migrated this
-            # disposable branch. Revalidate branch-pinned restricted parity
-            # instead of trying to replay the 0112-only migration.
-            rescue_plan_schema = (
-                await _rescue_plan_schema_parity(conn)
-                if revisions == [HEAD_REVISION]
-                else None
-            )
-            await conn.close()
-            audit_view = await _audit_view_parity()
-            report = {
-                "status": "PASS",
-                "mode": "verified_existing_rehearsal",
-                "started_at": started,
-                "finished_at": datetime.now(timezone.utc).isoformat(),
-                "target": identity,
-                "starting_revision": START_REVISION,
-                "final_revision": revisions,
-                "prior_rehearsal_run_id": os.environ.get("NLC_PRIOR_REHEARSAL_RUN_ID"),
-                "restricted_audit_view_parity": audit_view,
-                "rescue_plan_schema_parity": rescue_plan_schema,
-                "notes": f"The isolated branch was already at {revisions[0]}; no migration was replayed.",
-            }
-            REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
-            print(json.dumps(report, indent=2, default=str))
-            return
-        # A failed multi-revision upgrade may leave a committed intermediate
-        # head. Resume from 0125/0126 by recovering the exact AGM-001 before-image
-        # from 0125 legal_rule_versions history instead of requiring a fresh branch.
-        resume_from_0122 = revisions == [PREVIOUS_REVISION]
-        resume_from_0124 = revisions == [AGM_PRE_0125_REVISION]
-        resume_from_0125 = revisions == [AGM_POST_0125_REVISION]
-        resume_from_0126 = revisions == [AGM_POST_0126_REVISION]
-        resume_after_agm_migration = resume_from_0125 or resume_from_0126
-        resumable = {
-            (START_REVISION,), (PREVIOUS_REVISION,), (AGM_PRE_0125_REVISION,),
-            (AGM_POST_0125_REVISION,), (AGM_POST_0126_REVISION,),
-        }
-        if tuple(revisions) not in resumable:
+        if revisions != [START_REVISION]:
             raise RuntimeError(
-                f"Expected starting revision {START_REVISION}, resumable revisions "
-                f"{PREVIOUS_REVISION}, {AGM_PRE_0125_REVISION}, "
-                f"{AGM_POST_0125_REVISION}, or {AGM_POST_0126_REVISION}, "
-                f"or already-rehearsed {HEAD_REVISION}; got {revisions!r}"
+                "Fresh disposable rehearsal must start at exactly "
+                f"{START_REVISION}; observed {revisions!r}. "
+                "Intermediate, already-upgraded, missing, or multiple revision "
+                "states require a separately reviewed baseline contract."
             )
+        resume_from_0122 = False
+        resume_from_0124 = False
+        resume_from_0125 = False
+        resume_from_0126 = False
+        resume_after_agm_migration = False
         before_tables = {table: await _rows_digest(conn, table) for table in HISTORICAL_TABLES}
         before_rules = await _legacy_payloads(
             conn,
@@ -836,6 +838,7 @@ async def main() -> None:
             "status": "PASS",
             "started_at": started,
             "finished_at": datetime.now(timezone.utc).isoformat(),
+            "source": source_provenance,
             "target": identity,
             "starting_revision": (
                 AGM_POST_0126_REVISION if resume_from_0126
