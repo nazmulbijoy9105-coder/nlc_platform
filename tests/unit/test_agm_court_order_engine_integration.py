@@ -1,3 +1,4 @@
+from app.compliance.fact_provenance import coerce_company_profile_fact_value
 from datetime import date
 
 from app.rule_engine.engine import CompanyProfile, NLCRuleEngine, RuleState, Severity
@@ -131,3 +132,32 @@ def test_subsequent_agm_order_routes_only_subsequent_rule_after_first_agm():
     assert len(engine._flags) == 1
     assert engine._flags[0].rule_id == "AGM-002"
     assert engine._flags[0].flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+
+def test_court_order_and_lawyer_decision_are_supported_company_fact_payloads():
+    order = {
+        "court_name": "High Court Division",
+        "case_number": "Company Matter 12 of 2026",
+        "order_date": "2026-10-01",
+        "operative_paragraphs": "Paragraph 4 ...",
+        "affected_event": "FIRST_AGM_2026",
+        "statutory_power_claimed": "Companies Act 1994, section 85",
+        "evidence_ref": "document:order-001",
+        "authenticated": True,
+        "verified_by": "reviewer-uuid",
+        "verified_at": "2026-10-02T10:00:00+06:00",
+        "order_status": "IN_FORCE",
+    }
+    decision = {
+        "reviewer_id": "counsel-uuid",
+        "decided_at": "2026-10-03T12:00:00+06:00",
+        "decision_reference": "legal-review:agm-001-2026-01",
+        "reasoning": "Scoped interpretation recorded.",
+        "affected_event": "FIRST_AGM_2026",
+        "outcome": "NO_EFFECT",
+    }
+
+    assert coerce_company_profile_fact_value("agm_court_order_evidence", order) == order
+    assert (
+        coerce_company_profile_fact_value("agm_court_order_lawyer_decision", decision)
+        == decision
+    )
