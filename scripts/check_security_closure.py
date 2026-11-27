@@ -22,7 +22,9 @@ STATUS_LINE = re.compile(
 # Exact OPEN/CLOSED with optional surrounding Markdown emphasis only.
 # Interior punctuation (C_LOSED, CLOSED_, _CLOSED) must not match.
 STATUS_VALUE = re.compile(
-    r"^(?:\*\*|__|[*_`])?(OPEN|CLOSED)(?:\*\*|__|[*_`])?$"
+    # Paired Markdown emphasis is allowed; a lone underscore or a trailing
+    # punctuation character must never be normalized into a valid status.
+    r"^(?:\\*\\*|__|\\*)?(OPEN|CLOSED)(?:\\*\\*|__|\\*)?$"
 )
 # Top-level Markdown ordered-list marker: column zero or up to three leading spaces.
 ITEM_MARKER = re.compile(r"^ {0,3}([0-9]+)\.(?:\s|$)")
@@ -75,7 +77,14 @@ def _normalize_status_value(value: str) -> str:
 def item_statuses(block: str) -> list[str]:
     statuses = []
     for line in _without_fenced_code(block).splitlines():
-        match = STATUS_LINE.match(line.strip())
+        candidate = line.strip()
+        # Markdown may emphasize the complete metadata line (**Status: CLOSED**)
+        # or just the key/value (**Status:** CLOSED / Status: **CLOSED**).
+        # Remove only a matched pair surrounding the whole line; never strip
+        # arbitrary punctuation or underscores from the status value.
+        if candidate.startswith("**") and candidate.endswith("**") and len(candidate) > 4:
+            candidate = candidate[2:-2].strip()
+        match = STATUS_LINE.match(candidate)
         if match:
             raw = match.group(1).strip()
             normalized = _normalize_status_value(raw)
