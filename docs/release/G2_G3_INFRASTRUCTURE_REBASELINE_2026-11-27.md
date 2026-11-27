@@ -39,7 +39,11 @@ The application log at 06:50:47 UTC records startup failure in `app/main.py`'s l
 
 `RuntimeError: Cannot connect to database on startup ... Your account or project has exceeded the quota. Upgrade your plan to increase limits.`
 
-This confirms a restart loop caused by the database quota response, not an inferred memory or health-check failure. The app exits before becoming ready. No Render service configuration, Neon plan, production environment variable or deployment was changed in this investigation.
+This confirms a restart loop caused by the database quota response, not an inferred memory or health-check failure. The app exits before becoming ready.
+
+The primary Render service configuration currently has `pullRequestPreviewsEnabled: yes` and `previews.generation: automatic`. Render preview services for PRs #439 (`srv-dc4hfjoae00c73dmlcr0`) and #440 (`srv-dc4i2igae00c73dn8n80`) also have sampled application logs containing the same Neon quota-exceeded error. This confirms that automatic PR previews are attempting to use the shared Neon project. The #436 preview had repeated build/deploy events, but the sampled logs did not contain the quota message.
+
+No Render service configuration, Neon plan, production environment variable or deployment was changed in this investigation. The Render actions connection exposes read/log/metrics and environment-variable updates, but no service-preview configuration update or preview-service deletion action. Do not open a PR that would create another preview until pull-request previews are disabled in Render and the existing Neon-connected previews are retired or isolated.
 
 ## G2 closure matrix — isolated PostgreSQL only
 
