@@ -100,6 +100,27 @@ def test_injecting_any_out_of_scope_rule_cannot_change_any_engine_rjsc_decision(
 
     baseline = NLCRuleEngine(today=date(2026, 11, 24)).evaluate(profile)
 
+    # Positive control: prove this test setup can actually change an RJSC score.
+    # Without this assertion, a broken/no-op scorer could make the injected
+    # OUT_OF_SCOPE comparison pass vacuously.
+    in_scope_control = ComplianceFlag(
+        rule_id="AGM-001",
+        flag_code="IN_SCOPE_SCORING_CONTROL",
+        severity=Severity.RED,
+        score_impact=25,
+        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+        description="Confirmed in-scope scoring control",
+        statutory_basis="Companies Act 1994, Section 81(1)",
+        state=RuleState.NON_COMPLIANT,
+        eval_state="VIOLATION",
+    )
+    control_score = NLCRuleEngine(today=date(2026, 11, 24))._calculate_score(
+        [in_scope_control], profile
+    )
+    assert control_score.raw_total < baseline.score_breakdown.raw_total
+    assert control_score.final_score < baseline.score_breakdown.final_score
+    assert control_score.score_hash != baseline.score_breakdown.score_hash
+
     injected = ComplianceFlag(
         rule_id=rule_id,
         flag_code="MALICIOUS_OUT_OF_SCOPE_INJECTION",
