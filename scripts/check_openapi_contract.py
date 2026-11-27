@@ -23,24 +23,59 @@ REQUIRED_OPERATIONS = {
     ("/api/v1/companies", "get"): True,
     ("/api/v1/rules", "get"): True,
 }
+# Stable fields consumed by the web client. Removing or renaming one requires
+# an intentional frontend/API contract update in the same release train.
+REQUIRED_RESPONSE_FIELDS = {
+    ("/api/v1/auth/login", "post"): {
+        "access_token", "token_type", "user", "requires_2fa",
+    },
+    ("/api/v1/auth/refresh", "post"): {
+        "access_token", "token_type",
+    },
+    ("/api/v1/companies", "get"): {
+        "id", "name", "registration_number", "compliance_score",
+        "evaluation_status", "screening_only", "legal_advice",
+    },
+    ("/api/v1/rules", "get"): {
+        "rule_id", "statutory_basis", "product_scoring_enabled",
+        "verification_status",
+    },
+}
 
 
 def _canonical_path(path: str) -> str:
     return path.rstrip("/") or "/"
 
 
-def _has_success_json_schema(operation: dict[str, Any]) -> bool:
+def _success_json_schema(operation: dict[str, Any]) -> dict[str, Any] | None:
     responses = operation.get("responses") or {}
     for status, response in responses.items():
-        if not (str(status).startswith("2") or str(status).lower() == "default"):
+        # A default response may describe an error; only a 2xx response proves
+        # the successful client response contract exists.
+        if not str(status).startswith("2"):
             continue
         content = (response or {}).get("content") or {}
         for media_type, media in content.items():
             if media_type == "application/json" or media_type.endswith("+json"):
                 schema = (media or {}).get("schema")
                 if isinstance(schema, dict) and schema:
-                    return True
-    return False
+                    return schema
+    return None
+
+
+def _resolve_response_object(
+    schema: dict[str, Any],
+    components: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve a response object or array item through local OpenAPI refs."""
+    current = schema
+    if current.get("type") == "array":
+        current = current.get("items") or {}
+    ref = current.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+        name = ref.rsplit("/", 1)[-1]
+        current = (components.get("schemas") or {}).get(name) or {}
+    return current
 
 
 def validate_schema(schema: dict[str, Any]) -> None:
@@ -62,19 +97,34 @@ def validate_schema(schema: dict[str, Any]) -> None:
 
     missing_operations = []
     missing_schemas = []
+    missing_fields = []
+    components = schema.get("components") or {}
     for (path, method), requires_schema in REQUIRED_OPERATIONS.items():
         operation = (paths.get(path) or {}).get(method)
         if not isinstance(operation, dict):
             missing_operations.append(f"{method.upper()} {path}")
             continue
-        if requires_schema and not _has_success_json_schema(operation):
+        if not requires_schema:
+            continue
+        response_schema = _success_json_schema(operation)
+        if response_schema is None:
             missing_schemas.append(f"{method.upper()} {path}")
-    if missing_operations or missing_schemas:
+            continue
+        expected_fields = REQUIRED_RESPONSE_FIELDS.get((path, method), set())
+        response_object = _resolve_response_object(response_schema, components)
+        actual_fields = set((response_object.get("properties") or {}).keys())
+        absent = sorted(expected_fields - actual_fields)
+        if absent:
+            missing_fields.append(f"{method.upper()} {path}: {absent!r}")
+
+    if missing_operations or missing_schemas or missing_fields:
         problems = []
         if missing_operations:
             problems.append("missing client operations: " + ", ".join(missing_operations))
         if missing_schemas:
             problems.append("missing successful JSON response schemas: " + ", ".join(missing_schemas))
+        if missing_fields:
+            problems.append("missing client response fields: " + "; ".join(missing_fields))
         raise SystemExit("OpenAPI client contract failed: " + "; ".join(problems))
 
 
