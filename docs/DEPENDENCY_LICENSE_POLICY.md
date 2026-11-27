@@ -1,137 +1,78 @@
-# Dependency license policy
-
-## Project license
-
-NLC Platform is proprietary software. The project owner declares the project
-license in the root `LICENSE` file and `pyproject.toml`; dependency licenses
-do not change the project's license.
-
-## Explicitly approved dependency licenses
-
-The CI allowlist currently approves only:
-
-- MIT
-- BSD 2-Clause
-- BSD 3-Clause
-- Apache License 2.0
-- ISC
-
-The CI gate compares each installed distribution's declared license metadata
-against an explicit alias list. Unknown, empty, compound, or unrecognized
-license strings fail closed and require review rather than being silently
-accepted.
-
-## Pending owner decisions
-
-- **Python Software Foundation License (PSFL/PSF): NOT APPROVED pending an
-  explicit project-owner decision and notice review.** In particular,
-  `defusedxml` must not pass the automated gate merely because PSFL is absent
-  from a denylist.
-- LGPL, GPL, AGPL, MPL, SSPL, BUSL, and other copyleft/source-available terms
-  are not approved by default. A dependency using one requires documented
-  written approval before it is added to the allowlist.
-- Public-domain, dual-license, custom, missing, or ambiguous metadata must be
-  reviewed and mapped to an exact approved expression; it is not implicitly
-  permitted.
-
-## Change control
-
-To approve another license, the project owner must update this document and
-`scripts/check_dependency_licenses.py` in the same reviewed pull request,
-record the rationale and applicable notice/attribution obligations, and
-confirm the dependency's actual license text. CI must remain fail-closed for
-all licenses not explicitly listed.
 # Dependency License Policy
 
 **Project:** NLC Platform  
 **Project license:** Proprietary — All rights reserved  
-**Policy status:** Project-owner decision recorded  
-**Scope:** Third-party packages and other dependencies incorporated into, distributed with, or used to build or operate NLC Platform.
+**Owner decision recorded:** 2026-11-27
 
 ## 1. Separate project and dependency licensing
 
-NLC Platform is proprietary software. The project's proprietary status does not
-change the license terms of third-party dependencies, and acceptance of a
+NLC Platform is proprietary software. The project's proprietary status does
+not change the license terms of third-party dependencies, and acceptance of a
 dependency license does not grant a license to NLC Platform.
 
 Each dependency must be assessed under its own applicable license and any
 relevant notice, attribution, source-disclosure, offer, or redistribution
 obligations.
 
-## 2. Explicit acceptance of PSFL
+## 2. Explicitly approved dependency licenses
 
-The project owner explicitly accepts dependencies distributed under the
-**Python Software Foundation License (PSFL)**, subject to the terms of the
-specific PSFL version applicable to each dependency.
+The following license families are approved for use, subject to retaining and
+providing applicable license texts, copyright notices, attribution, and
+NOTICE materials when required:
 
-PSFL acceptance is intentional and is not an unresolved or unknown-license
-exception. Before redistributing a PSFL-licensed dependency, the project must
-retain and provide the applicable license text, copyright notices, and other
-required notices in the manner required by that license.
-
-## 3. License categories
-
-The following categories guide dependency review. Classification must be
-verified against the actual license text and the way the dependency is used;
-an SPDX identifier or scanner label alone is not a legal determination.
-
-### Generally acceptable, subject to notice compliance
-
-- Python Software Foundation License (PSFL), explicitly accepted above.
 - MIT.
 - BSD-2-Clause and BSD-3-Clause.
 - Apache-2.0.
 - ISC.
-- Other permissive licenses approved in writing by the project owner or
-  designated legal reviewer.
+- Unlicense.
+- Python Software Foundation License (PSFL), including Defusedxml.
 
-Required copyright, attribution, license, and NOTICE materials must be
-preserved where applicable.
+The project owner expressly accepts PSFL-licensed dependencies. This approval
+is intentional and is not an unresolved or unknown-license exception. The
+specific PSFL version and its notice obligations must still be observed.
 
-### Requires case-by-case written review before release
+The CI allowlist is intentionally narrower than this explanatory list where
+metadata is ambiguous or compound. A package whose metadata cannot be
+unambiguously mapped to an approved license expression remains blocked until
+the expression is reviewed and represented exactly in the checker.
+
+## 3. Requires case-by-case written review
+
+The following categories are not approved by default and block release until
+the exact license, use, distribution model, and obligations have been reviewed
+and the decision is recorded:
 
 - LGPL.
 - MPL.
 - EPL.
-- Other weak-copyleft, reciprocal, source-available, dual-licensed, or
-  non-standard licenses.
-
-Review must consider the exact license version, linking and modification
-model, distribution method, source and notice obligations, and compatibility
-with the proprietary product. Approval and any conditions must be recorded.
-
-### Not accepted without express project-owner and legal approval
-
 - GPL.
 - AGPL.
 - SSPL.
-- Unknown, missing, conflicting, or unverified licenses.
-- Any license whose terms or restrictions have not been reviewed sufficiently
-  to determine whether use and distribution are compatible with the product.
+- BUSL.
+- Dual-licensed, custom, source-available, or other non-standard terms.
+- Public-domain or compound expressions that the checker cannot safely
+  interpret.
+- Unknown, missing, conflicting, or unverified license metadata.
 
-A dependency in this category blocks release until the issue is resolved,
-replaced, excluded, or expressly approved in a documented decision.
+A dependency in this category must be replaced, excluded, or expressly approved
+in a dated project-owner/legal-review record before it can be allowlisted.
+Scanner labels alone are not a legal determination.
 
 ## 4. Evidence and release controls
 
 For each release dependency audit, retain:
 
-1. The dependency-audit output, including package name and version.
-2. The detected license identifier and the source used to verify it.
-3. Relevant license and NOTICE texts for distributed dependencies.
+1. The dependency inventory, including package name and version.
+2. The detected license identifier and source used to verify it.
+3. Applicable license and NOTICE texts for distributed dependencies.
 4. Written approvals and conditions for dependencies requiring case-by-case
    review.
 5. A record of unresolved, unknown, or disallowed findings and their disposition.
 
-A scanner's classification is evidence for review, not project-owner approval.
-A passing scanner result does not waive notice or attribution obligations.
+Unknown or unapproved licenses are release blockers. A passing scanner result
+does not waive notice or attribution obligations.
 
-Unknown or unapproved licenses are release blockers. PSFL findings are
-acceptable under this policy when the applicable PSFL terms and notice
-obligations are met. This document is the project's written record of that
-PSFL acceptance for dependency-license review and security-closure evidence.
-
-## 5. Changes to this policy
+## 5. Change control
 
 Changes to accepted license categories, or exceptions for a particular
 dependency, require a documented decision by the project owner or an expressly
