@@ -1713,7 +1713,10 @@ class NLCRuleEngine:
                 for target_rule_id in target_rules:
                     review_state = (
                         RuleState.REQUIRES_LAWYER_JUDGMENT
-                        if review["requires_lawyer_judgment"]
+                        if (
+                            review["evidence_verified"]
+                            and review["requires_lawyer_judgment"]
+                        )
                         else RuleState.UNKNOWN
                     )
                     self._add_flag(ComplianceFlag(
@@ -1746,11 +1749,12 @@ class NLCRuleEngine:
                         state=review_state,
                         eval_state="UNKNOWN",
                     ))
-                # Do not run ordinary AGM deadline scoring for the affected
-                # event until a rule-specific, counsel-reviewed implementation
-                # is added. This remains fail-closed even after a decision fact
-                # is recorded: the decision alone never changes a score.
-                return
+                # An unverified or malformed order assertion is retained as
+                # an UNKNOWN audit annotation but cannot suppress an otherwise
+                # evidenced default. A verified order blocks publication below
+                # until counsel review is translated into rule-specific logic.
+                if review["evidence_verified"]:
+                    return
 
         if not self._agm_history_is_verified(c):
             self._add_flag(ComplianceFlag(
@@ -4378,6 +4382,17 @@ class NLCRuleEngine:
             else Severity.NOT_EVALUATED
         )
 
+        court_order_review_pending = any(
+            f.rule_id in {"AGM-001", "AGM-002"}
+            and f.flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+            and bool(
+                (f.detail or {})
+                .get("court_order_review", {})
+                .get("evidence_verified")
+            )
+            for f in active
+        )
+
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
         if legal_score_is_released() and not critical:
@@ -4404,6 +4419,11 @@ class NLCRuleEngine:
             band = max_flag_severity if flag_rank > band_rank else score_band
         else:
             band = score_band
+
+        # A verified order with unresolved legal effect blocks publication of
+        # the overall score. Do not turn an UNKNOWN rule into an apparent GREEN.
+        if court_order_review_pending:
+            band = Severity.NOT_EVALUATED
 
         if band == Severity.NOT_EVALUATED or band in (Severity.GREEN, Severity.YELLOW):
             exposure = ExposureBand.LOW
