@@ -1597,36 +1597,27 @@ class NLCRuleEngine:
         )
 
     def _first_agm_date_is_verified(self, c: CompanyProfile) -> bool:
-        explicit_event_provenance = (
+        return (
             c.first_agm_date is not None
             and c.first_agm_date_verified is True
             and bool(c.first_agm_date_evidence_ref)
             and c.first_agm_date_verified_at is not None
             and bool(c.first_agm_date_verified_by)
         )
-        # With exactly one AGM, the verified complete AGM-history record is
-        # itself the first-AGM event. This preserves older profiles whose
-        # verified history predates the dedicated first_agm_date fields,
-        # without accepting an unverified date or inferring from agm_count.
-        history_proves_single_first_event = (
-            c.agm_count == 1
-            and c.last_agm_date is not None
-            and self._agm_history_is_verified(c)
-        )
-        return explicit_event_provenance or history_proves_single_first_event
 
     def _subsequent_agm_deadline_components(
         self, c: CompanyProfile
     ) -> tuple[date, date, date, str] | None:
-        if not self._agm_history_is_verified(c):
-            return None
-        if c.agm_count == 1:
-            if not self._first_agm_date_is_verified(c):
-                return None
-            preceding_agm_date = c.first_agm_date or c.last_agm_date
-        else:
+        # A complete, independently verified AGM-history record makes its
+        # last_agm_date the controlling (latest known) statutory event.
+        # Otherwise, a separately provenance-verified first AGM may be used
+        # as the latest known verified event. A bare/unverified date is never
+        # promoted to an AGM event.
+        if self._agm_history_is_verified(c) and c.last_agm_date is not None:
             preceding_agm_date = c.last_agm_date
-        if preceding_agm_date is None:
+        elif self._first_agm_date_is_verified(c):
+            preceding_agm_date = c.first_agm_date
+        else:
             return None
 
         interval_deadline = self._add_months(preceding_agm_date, 15)
