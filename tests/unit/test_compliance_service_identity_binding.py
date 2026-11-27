@@ -93,35 +93,51 @@ def test_live_production_catalogue_keeps_inc001_active_and_only_inc002_inactive(
     assert set(active_ids) == canonical_ids
 
 
-def test_catalogue_identity_conflicts_are_derived_without_engine_findings():
+def test_all_85_catalogue_rows_bind_exactly_to_canonical_evaluator_identities():
+    from pathlib import Path
+
     from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
+    from canonical_architecture.coverage_report import parse_engine_rule_ids
     from app.services.compliance_service import _catalogue_identity_conflicts
+
+    seed_by_id = {row["rule_id"]: row for row in ILRMF_RULES}
+    canonical_ids = set(STATUTORY_RULE_REGISTRY)
+    assert len(seed_by_id) == 85
+    assert len(canonical_ids) == 85
+    assert set(seed_by_id) == canonical_ids
+
+    engine_path = Path(__file__).resolve().parents[2] / "app" / "rule_engine" / "engine.py"
+    engine_ids = parse_engine_rule_ids(engine_path.read_text(encoding="utf-8"))
+    assert engine_ids == canonical_ids
 
     rows = [
         SimpleNamespace(
             rule_id=rule_id,
             rule_version="2.3",
             is_active=True,
-            statutory_basis=rule.law,
+            statutory_basis=STATUTORY_RULE_REGISTRY[rule_id].law,
+            rule_name=seed_by_id[rule_id].get("rule_name"),
+            rule_type=seed_by_id[rule_id].get("rule_type"),
+            description=seed_by_id[rule_id].get("description"),
+            rule_condition=seed_by_id[rule_id].get("rule_condition"),
         )
-        for rule_id, rule in STATUTORY_RULE_REGISTRY.items()
+        for rule_id in sorted(canonical_ids)
     ]
-    rows.append(SimpleNamespace(
-        rule_id="INC-002",
-        rule_version="legacy",
-        is_active=False,
-        statutory_basis="Legacy inactive rule",
-    ))
-    target = rows[0]
-    target.statutory_basis = "Different statutory basis"
+    assert len(rows) == 85
+    assert {row.rule_id for row in rows} == engine_ids
+    assert _catalogue_identity_conflicts(rows) == {}
 
+    # A missing canonical row must be identified, not silently accepted.
+    missing_id = rows[0].rule_id
+    missing_conflicts = _catalogue_identity_conflicts(rows[1:])
+    assert set(missing_conflicts) == {missing_id}
+    assert missing_conflicts[missing_id]["binding_reason"] == "CATALOGUE_ENTRY_MISSING"
+
+    # A single basis drift must quarantine exactly that identity.
+    rows[0].statutory_basis = "Different statutory basis"
     conflicts = _catalogue_identity_conflicts(rows)
-    assert target.rule_id in conflicts
-    assert conflicts[target.rule_id]["binding_reason"] == "STATUTORY_BASIS_MISMATCH"
-    assert conflicts["INC-002"]["binding_reason"] in {
-        "RULE_INACTIVE", "ENGINE_RULE_DEFINITION_MISSING"
-    }
-
+    assert set(conflicts) == {missing_id}
+    assert conflicts[missing_id]["binding_reason"] == "STATUTORY_BASIS_MISMATCH"
 
 def test_catalogue_conflict_quarantines_finding_before_scoring_or_rescue():
     from app.services.compliance_service import _quarantine_catalogue_conflict_findings
