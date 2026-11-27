@@ -34,6 +34,8 @@ jobs:
       NEON_PROJECT_ID: rapid-bonus-26545234
       NEON_PARENT_BRANCH_ID: br-divine-glade-aovapmi5
       PYTHONPATH: ${{ github.workspace }}
+      NLC_EXPECTED_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
     steps:
       - uses: actions/checkout@v5
 
@@ -105,6 +107,16 @@ jobs:
                 retry_after=$(awk 'BEGIN{IGNORECASE=1} /^Retry-After:/ {gsub("\\r","",$2); print $2}' "$headers_file" | tail -n 1)
                 if [[ "$retry_after" =~ ^[0-9]+$ ]]; then
                   delay="$retry_after"
+                elif [[ -n "$retry_after" ]]; then
+                  retry_epoch=$(date -u -d "$retry_after" +%s 2>/dev/null || true)
+                  if [[ "$retry_epoch" =~ ^[0-9]+$ ]]; then
+                    delay=$((retry_epoch - $(date -u +%s)))
+                    (( delay < 0 )) && delay=0
+                  else
+                    echo "::error::Neon returned an invalid Retry-After header." >&2
+                    rm -f "$headers_file"
+                    return 1
+                  fi
                 else
                   delay=$((2 ** attempt))
                   (( delay > 60 )) && delay=60
@@ -222,6 +234,8 @@ jobs:
           fi
 
           export ENVIRONMENT=production
+          export NLC_EXPECTED_SOURCE_SHA="$GITHUB_SHA"
+          export GITHUB_PR_NUMBER="${{ github.event.pull_request.number || '' }}"
           export MIGRATION_DATABASE_URL="$MIGRATION_URL"
           export APP_DATABASE_URL="$APP_URL"
           export NLC_AUDIT_DATABASE_URL="$AUDIT_URL"
