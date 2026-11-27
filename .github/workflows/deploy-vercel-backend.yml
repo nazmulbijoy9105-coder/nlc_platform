@@ -19,7 +19,7 @@ concurrency:
 jobs:
   deploy-render:
     name: Migrate then deploy Render
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.NLC_AUTO_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the CI-tested commit
