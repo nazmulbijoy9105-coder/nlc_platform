@@ -15,13 +15,37 @@ permissions:
   contents: read
 
 concurrency:
-  group: nlc-platform-production-render-deploy
+  # Shared with production-release.yml to serialize production mutations.
+  group: nlc-platform-production-release
   cancel-in-progress: false
 
 jobs:
+  exact-auto-deploy-opt-in:
+    name: Check exact automatic-release opt-in
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+    steps:
+      - name: Require exact lowercase true
+        id: gate
+        env:
+          NLC_AUTO_DEPLOY: ${{ vars.NLC_AUTO_DEPLOY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${NLC_AUTO_DEPLOY:-}" == "true" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Exact lowercase NLC_AUTO_DEPLOY=true; automatic release is enabled."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Automatic release is disabled; only exact lowercase true enables it."
+          fi
+
   deploy-render:
     name: Migrate then deploy Render
-    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.NLC_AUTO_DEPLOY == 'true' }}
+    needs: exact-auto-deploy-opt-in
+    if: ${{ needs.exact-auto-deploy-opt-in.outputs.enabled == 'true' }}
     runs-on: ubuntu-latest
     # Human approval required before production migrate/deploy (dual-path control).
     # Configure required reviewers on the GitHub Environment named "production".
@@ -165,6 +189,7 @@ jobs:
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.NLC_MIGRATION_DATABASE_URL }}
           TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -180,6 +205,11 @@ jobs:
             exit 1
           fi
           echo "Freshness revalidated immediately before Alembic mutation: $TARGET_SHA"
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced before migration; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. No migration will run."
+            exit 1
+          fi
           docker run --rm \
             --entrypoint /bin/sh \
             --env ENVIRONMENT=production \
@@ -231,6 +261,11 @@ jobs:
           echo "Freshness revalidated immediately before Render deploy request: $EXPECTED_DEPLOYED_SHA"
           if [[ -z "${RENDER_API_KEY:-}" || -z "${RENDER_SERVICE_ID:-}" || -z "${EXPECTED_DEPLOYED_SHA:-}" ]]; then
             echo "::error::RENDER_API_KEY, service ID, and expected commit SHA are required. No deployment was triggered."
+            exit 1
+          fi
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced after migration; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing to trigger Render."
             exit 1
           fi
           BODY_FILE="$(mktemp)"
