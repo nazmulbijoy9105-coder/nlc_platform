@@ -85,7 +85,9 @@ Accordingly, product-owner-enabled risk scoring is not proof of independent lega
 - Replaced the PR-triggered Neon production-derived migration rehearsal with a PostgreSQL 16 service-container G2 workflow.
 - Added the read-only role-membership SQL audit to the existing PostgreSQL-backed main CI job.
 - Replaced the six-hour Neon production role audit with a manual, isolated-PostgreSQL audit workflow.
-- Retired the manual Neon-backed Alembic and restored-snapshot rehearsal workflows from routine GitHub Actions. The daily encrypted backup remains a separately scoped operational backup, not a CI test.
+- Retired the manual Neon-backed Alembic and restored-snapshot rehearsal workflows.
+- Retired the live production DB/API parity workflow and live tenant-isolation smoke workflow; their G2 checks now run against the isolated PostgreSQL service. Deployed-service smoke is limited to ingress/health, CORS and proxy/readiness checks.
+- The controlled production-release workflow still accesses the single deployed Neon database for an explicitly approved release; the daily encrypted backup remains a separately scoped read-only operational backup, not a CI test.
 - No Neon database, Render service, production environment variable, migration or deployed instance was changed.
 
 ## Explicit non-claims
