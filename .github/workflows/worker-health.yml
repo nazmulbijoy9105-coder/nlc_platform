@@ -1,7 +1,5 @@
 name: Worker health
 
-# P1: Celery app import and beat schedule must stay loadable.
-
 on:
   pull_request:
   push:
@@ -19,6 +17,8 @@ jobs:
       JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -30,42 +30,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Import Celery app and inspect schedule
+      - name: Import Celery app and assert required beat jobs
         run: |
           set -euo pipefail
           python - <<'PY'
-          import importlib
+          from app.worker.celery_app import celery_app
+          from app.worker.beat_schedule import BEAT_SCHEDULE
 
-          # Prefer documented entrypoint; fall back to package layout.
-          candidates = [
-              "app.worker.celery_app",
-              "app.worker",
-              "app.workers.celery_app",
-          ]
-          mod = None
-          errors = []
-          for name in candidates:
-              try:
-                  mod = importlib.import_module(name)
-                  print(f"imported {name}")
-                  break
-              except Exception as exc:  # noqa: BLE001 — collect import attempts
-                  errors.append(f"{name}: {exc}")
-          if mod is None:
-              raise SystemExit("Could not import Celery app:\n" + "\n".join(errors))
-
-          app = getattr(mod, "celery_app", None) or getattr(mod, "app", None)
-          if app is None:
-              # Module may *be* the app
-              if hasattr(mod, "conf"):
-                  app = mod
-              else:
-                  raise SystemExit(f"No celery app object on {mod}")
-
-          # Beat schedule presence is informational if empty (some envs inject later).
-          schedule = getattr(app.conf, "beat_schedule", None) or {}
-          print(f"beat_schedule entries: {len(schedule)}")
-          for key in sorted(schedule)[:20]:
-              print(f"  - {key}")
-          print("worker health smoke OK")
+          required = {
+              "daily-compliance-evaluation": "app.worker.tasks.evaluate_all_companies",
+              "daily-deadline-warnings": "app.worker.tasks.queue_deadline_warning_notifications",
+              "process-pending-notifications": "app.worker.tasks.send_pending_notifications",
+              "dispatch-domain-event-outbox": "app.worker.tasks.dispatch_domain_event_outbox",
+              "monthly-score-snapshot": "app.worker.tasks.monthly_score_snapshot_all",
+              "sro-registry-check": "app.worker.tasks.sync_sro_registry",
+              "cleanup-expired-notifications": "app.worker.tasks.cleanup_expired_notifications",
+              "weekly-log-cleanup": "app.worker.tasks.cleanup_old_activity_logs",
+              "daily-subscription-lifecycle": "app.worker.tasks.process_due_subscriptions",
+              "db-health-check": "app.worker.tasks.database_health_check",
+          }
+          configured = celery_app.conf.beat_schedule or {}
+          if not configured:
+              raise SystemExit("Celery beat_schedule is empty")
+          missing = {
+              key: task for key, task in required.items()
+              if key not in configured or configured[key].get("task") != task
+          }
+          if missing:
+              raise SystemExit(f"Required Celery beat entries missing or changed: {missing!r}")
+          print(f"Celery beat schedule OK: {len(configured)} entries; required jobs={len(required)}")
           PY
