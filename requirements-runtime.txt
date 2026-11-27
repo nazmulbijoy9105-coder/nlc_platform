@@ -22,7 +22,6 @@ brotli==1.2.1
 celery==5.6.3
 certifi==2026.11.20
 cffi==2.0.0
-chardet==6.0.0.post1
 charset-normalizer==3.5.2
 click==8.4.0
 click-didyoumean==0.3.1
@@ -159,7 +158,6 @@ tinyhtml5==2.1.0
 toml==0.10.2
 tomli_w==1.2.0
 tornado==6.6.1
-tqdm==4.67.3
 truststore==0.10.4
 typing-inspection==0.4.2
 typing_extensions==4.16.0
