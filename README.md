@@ -157,9 +157,9 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Render native autoDeploy is disabled. The controlled GitHub Actions workflow runs after successful CI on current main.
-# The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
-# Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
+# Render native autoDeploy is disabled. GitHub Actions releases only after successful CI, exact-SHA assurance, and production approval.
+# Automatic release requires NLC_AUTO_DEPLOY to equal exact lowercase "true", plus NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY secrets.
+# Missing migration or Render API credentials abort before the exact-SHA Render deploy request; API startup performs no migration or seed.
 # Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
 # Production rollback is not "alembic downgrade -1": use a reviewed forward-fix,
 # or restore PITR to a separate branch and validate before controlled cutover.
@@ -219,8 +219,8 @@ Finance/subscription routes do not establish an automated payment-gateway integr
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Native Render autoDeploy is disabled; the controlled GitHub Actions workflow runs after successful CI on current main
-     The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets
+     Native Render autoDeploy is disabled; GitHub Actions releases only after successful CI, exact-SHA assurance, and production approval
+     Automatic releases require exact lowercase NLC_AUTO_DEPLOY=true and the NLC_MIGRATION_DATABASE_URL and RENDER_API_KEY secrets
      Missing migration credentials abort before the Render deploy hook; API startup does not migrate or seed
      Apply reviewed Alembic migrations before application release
 Docker (Local/On-Premise)

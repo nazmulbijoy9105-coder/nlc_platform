@@ -17,6 +17,11 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  # Shared with deploy-vercel-backend.yml to serialize production mutations.
+  group: nlc-platform-production-release
+  cancel-in-progress: false
+
 jobs:
   release:
     if: github.ref == 'refs/heads/main'
@@ -248,6 +253,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
+            exit 1
+          fi
           python scripts/rehearse_production_0112_to_0128.py
           mkdir -p artifacts
           curl --silent --show-error --fail "$API_URL/api/v1/health/ready" -o artifacts/pre-migration-health.json
@@ -258,6 +268,11 @@ jobs:
         run: |
           set -euo pipefail
           RENDER_AUTH=(-H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json")
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
+            exit 1
+          fi
           curl --silent --show-error --fail --request PATCH \
             --url "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
             "${RENDER_AUTH[@]}" \
@@ -278,6 +293,11 @@ jobs:
 
           # Timestamp the request so a prior deployment of the same SHA can never
           # be mistaken for the deployment requested by this workflow.
+          CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$EXPECTED_DEPLOYED_SHA" ]]; then
+            echo "::error::main advanced during controlled release; expected $EXPECTED_DEPLOYED_SHA, current main is ${CURRENT_MAIN_SHA:-unresolved}. Refusing this mutation."
+            exit 1
+          fi
           REQUEST_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           HTTP_STATUS=$(curl --silent --show-error \
             --output "$RESPONSE_FILE" --write-out '%{http_code}' \
