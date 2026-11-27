@@ -152,9 +152,9 @@ python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
 # Render native autoDeploy is disabled. The controlled GitHub Actions workflow listens for completed CI runs on main.
-# Automatic production migration/deployment is OPT-IN: set repository variable NLC_AUTO_DEPLOY to the exact string "true".
+# Automatic production migration/deployment is OPT-IN: set repository variable NLC_AUTO_DEPLOY to "true" (GitHub compares case-insensitively, so "TRUE" also enables it).
 # Configure it at GitHub repository Settings -> Secrets and variables -> Actions -> Variables -> New repository variable.
-# If NLC_AUTO_DEPLOY is unset or any value other than "true", the deployment job is skipped—even when CI succeeds.
+# If NLC_AUTO_DEPLOY is unset or any value other than "true" in any letter case, the deployment job is skipped—even when CI succeeds.
 # The workflow also requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
 # Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
 # Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
@@ -213,7 +213,7 @@ Finance/subscription routes do not establish an automated payment-gateway integr
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
      Native Render autoDeploy is disabled; GitHub Actions listens for completed CI runs on current main
-     Automatic production releases require repository Actions variable NLC_AUTO_DEPLOY=true (exact lowercase string)
+     Automatic production releases require repository Actions variable NLC_AUTO_DEPLOY=true (matched case-insensitively)
      Set it under Settings -> Secrets and variables -> Actions -> Variables; unset/non-true means the deploy job is skipped, even after successful CI
      The workflow also requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets
      Missing migration credentials abort before the Render deploy hook; API startup does not migrate or seed

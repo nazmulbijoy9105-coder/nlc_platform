@@ -19,10 +19,10 @@ The workflow is deliberately opt-in. Successful CI on the current `main` branch 
 Set this repository Actions variable:
 
 - Name: `NLC_AUTO_DEPLOY`
-- Value: `true` (exact lowercase string)
+- Value: `true` (GitHub compares strings case-insensitively, so `TRUE` or `True` also enables it)
 - Location: repository **Settings → Secrets and variables → Actions → Variables → New repository variable**
 
-If `NLC_AUTO_DEPLOY` is unset, empty, or set to anything other than the exact value `true`, the `deploy-render` job is skipped. GitHub may therefore show successful CI with no production release; this is expected while automatic deployment is not opted in. To enable automatic production releases after successful current-main CI, create or update this repository variable to `true`. To disable automatic releases, unset the variable or change its value.
+If `NLC_AUTO_DEPLOY` is unset, empty, or set to anything other than `true` in any letter case, the `deploy-render` job is skipped. GitHub may therefore show successful CI with no production release; this is expected while automatic deployment is not opted in. To enable automatic production releases after successful current-main CI, create or update this repository variable to `true`. To disable automatic releases, unset the variable or change its value.
 
 This variable is a repository **variable**, not a secret. It does not replace the credentials below; both required secrets must also be configured for the migration and deploy-hook steps.
 
