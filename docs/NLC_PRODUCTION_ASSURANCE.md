@@ -2,7 +2,9 @@
 
 NLC is a **legal-compliance scoring product**. Technical deploy success is not
 sufficient. Two independent chains must both pass on the **same commit SHA**
-before a published RJSC score is trustworthy:
+before a published RJSC score is trustworthy. Both controlled Render release
+workflows wait for a successful push-triggered legal-engine assurance run for
+the exact release SHA before any production migration or deployment step:
 
 1. **Infrastructure release chain** — CI, migrations, deploy, backups, ops.
 2. **Legal-engine assurance chain** — catalogue, scope, provenance, publication.
@@ -95,6 +97,7 @@ Required (not informational):
 | single-alembic-head | `CI` + `alembic-single-head.yml` (when merged) |
 | migration-contract | unit migration/rehearsal contract tests inside CI |
 | rls-tenant-isolation | integration + `tenant-isolation.yml` (when merged) |
+| legal-engine-p0 (aggregate; includes all four P0 jobs) | `legal-engine-assurance.yml` |
 | legal-rule-catalogue-parity | `legal-engine-assurance.yml` |
 | rjsc-scope-isolation | `legal-engine-assurance.yml` |
 | score-provenance-integrity | `legal-engine-assurance.yml` |
