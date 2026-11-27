@@ -151,8 +151,11 @@ python -m compileall app/              # Compile check
 python tools/audit_rule_parity.py --no-db  # Rule parity (AST-based)
 
 # Deployment (Render.com)
-# Render native autoDeploy is disabled. The controlled GitHub Actions workflow runs after successful CI on current main.
-# The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
+# Render native autoDeploy is disabled. The controlled GitHub Actions workflow listens for completed CI runs on main.
+# Automatic production migration/deployment is OPT-IN: set repository variable NLC_AUTO_DEPLOY to the exact string "true".
+# Configure it at GitHub repository Settings -> Secrets and variables -> Actions -> Variables -> New repository variable.
+# If NLC_AUTO_DEPLOY is unset or any value other than "true", the deployment job is skipped—even when CI succeeds.
+# The workflow also requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets.
 # Missing migration credentials abort before the Render deploy hook; API startup performs no migration or seed.
 # Production legal-rule registry changes are forward-only, reviewed Alembic migrations; seed scripts are development-only.
 
