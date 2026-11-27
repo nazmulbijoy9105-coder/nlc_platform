@@ -108,4 +108,6 @@ def test_subsequent_agm_order_does_not_suppress_first_agm_rule_when_count_is_zer
     profile = _profile_with_order(affected_event="SUBSEQUENT_AGM_2026")
     engine = _run_agm(profile)
     # A subsequent-AGM order is not applied to an unheld first AGM.
-    assert not engine._flags
+    assert len(engine._flags) == 1
+    assert engine._flags[0].rule_id == "AGM-001"
+    assert engine._flags[0].flag_code == "FIRST_AGM_DEFAULT"
