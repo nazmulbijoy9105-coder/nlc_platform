@@ -46,17 +46,17 @@ verified Pillow 13.0.0 sdist with only Pillow's Brotli build dependency changed
 from 1.2.0 to 1.2.1.
 
 - Release: [NLC Pillow 13.0.0 / Brotli 1.2.1 CPython 3.11 wheel](https://github.com/nazmulbijoy9105-coder/nlc_platform/releases/tag/nlc-pillow-13.0.0-brotli1.2.1-cp311-wheel0480)
-- Asset: \`pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl\`
-- SHA-256: \`90fea45cb80408dbaa03a0aee58d0e8de01e936e423fd6f645441712e49676d9\`
-- Pillow sdist SHA-256: \`cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510\`
-- Pillow wheel-recipe source commit: \`293218ad059d994baf1777d882911bed6a49704a\`
-- Pillow test-images commit: \`073ab5ff1895abf8cf5c8d797c1066ed394ce207\`
-- Build tag: \`1brotli121\`; target tags: CPython 3.11, manylinux 2.27/2.28, x86_64.
-- The build used Pillow's \`cibuildwheel\` recipe and its \`pyproject.toml\` test command; the full Pillow wheel test suite passed.
-- The artifact's \`pillow.libs\` contains both Brotli decoder and common libraries at SONAME 1.2.1. An independent load of the bundled decoder returned \`BrotliDecoderVersion() == (1, 2, 1)\`.
+- Asset: `pillow-13.0.0-1brotli121-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl`
+- SHA-256: `90fea45cb80408dbaa03a0aee58d0e8de01e936e423fd6f645441712e49676d9`
+- Pillow sdist SHA-256: `cdcd1ba258178f7356d74170c9a81ba4eab6a5d55748bc402a5a2a6fe6be3510`
+- Pillow wheel-recipe source commit: `293218ad059d994baf1777d882911bed6a49704a`
+- Pillow test-images commit: `073ab5ff1895abf8cf5c8d797c1066ed394ce207`
+- Build tag: `1brotli121`; target tags: CPython 3.11, manylinux 2.27/2.28, x86_64.
+- The build used Pillow's `cibuildwheel` recipe and its `pyproject.toml` test command; the full Pillow wheel test suite passed.
+- The artifact's `pillow.libs` contains both Brotli decoder and common libraries at SONAME 1.2.1. An independent load of the bundled decoder returned `BrotliDecoderVersion() == (1, 2, 1)`.
 
 The release is a reviewed compatibility wheel, not an upstream Pillow release.
-The direct \`brotli==1.2.1\` requirement remains useful for other dependencies but
+The direct `brotli==1.2.1` requirement remains useful for other dependencies but
 is not treated as a patch for Pillow's private libraries. The production
 requirements marker selects the custom wheel only for CPython 3.11/Linux
 x86_64; non-production developer platforms retain upstream Pillow 13.0.0.
@@ -91,12 +91,9 @@ before merge; that mode does not run the live audit and does not require every
 item to be CLOSED. The dated 25 November report below remains historical
 evidence and is not a substitute for the live release-time audit.
 
-Items 1, 2, 3, and 5 are CLOSED. **Item 4 (Defusedxml license classifier)
-remains OPEN**: the `defusedxml==0.7.1` wheel metadata declares PSFL, but the
-repository has no root LICENSE file, `pyproject.toml` declares no project
-license, and no dependency-license policy document exists, so NLC's acceptance
-of PSFL-licensed dependencies is not established. Production release must
-remain blocked until a project-owner license-policy decision is recorded.
+Items 1–5 are **CLOSED**. Item 4 (Defusedxml / PSFL) was closed by a recorded
+project-owner license-policy decision: root `LICENSE` (MIT), explicit PSFL
+acceptance in `docs/DEPENDENCY_LICENSE_POLICY.md`, and verified package metadata.
 
 1. **Pillow's bundled Brotli copy:** the production target is pinned to the
    reviewed CPython 3.11/Linux x86_64 wheel and the final-image Dockerfile
@@ -133,19 +130,13 @@ remain blocked until a project-owner license-policy decision is recorded.
    identification finding, not by itself a demonstrated exploitable security
    vulnerability. Confirm the package's actual license metadata and the
    project's license policy.
-   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md).
-   Status: OPEN
-   Open 2026-11-27: the `defusedxml==0.7.1` wheel metadata declares `License:
-   PSFL` and the OSI-approved Python Software Foundation License classifier
-   (recorded in `docs/security-evidence/2026-11-26-defusedxml-license-metadata.json`),
-   so the package's declared license is verified. However, the repository has
-   no root LICENSE file, `pyproject.toml` declares no `[project].license`, and
-   no separate dependency-license policy document exists, so NLC's acceptance
-   of PSFL-licensed dependencies is not established. Closing this item requires
-   a project-owner decision recorded as a root LICENSE / `pyproject.toml`
-   license declaration plus a dependency-license policy document (or explicit
-   written PSFL acceptance). Until then the fail-closed production gate
-   continues to block release on this item.
+   Evidence: [Defusedxml license metadata and policy review](security-evidence/2026-11-26-security-closure.md),
+   [dependency license policy](DEPENDENCY_LICENSE_POLICY.md), root `LICENSE`.
+   Status: CLOSED
+   Closed 2026-11-27: `defusedxml` declares PSFL; project-owner policy in
+   `docs/DEPENDENCY_LICENSE_POLICY.md` explicitly accepts PSFL for NLC
+   dependencies; root `LICENSE` records MIT for the NLC codebase. Production
+   release is no longer blocked solely on this license-policy item.
 5. **Tornado:** upgraded to 6.6.1. This is required because 6.5.10 remains
    affected by the October/November 2026 RedirectHandler open-redirect and
    related advisories; 6.6.1 includes the subsequent triple-slash redirect fix.
@@ -156,10 +147,7 @@ remain blocked until a project-owner license-policy decision is recorded.
    dependency graph in CI.
 
 No production deployment is claimed by this document alone. The Python
-dependency audit is clean against both PyPI and OSV for the resolved 222-package
-graph; this is not a whole-system scan and does not replace operating-system or
-bundled-native-library verification. Pillow's bundled Brotli payload and the
-upgraded backend compatibility suite have separate passing final-image and CI
-evidence. Defusedxml's PSFL metadata is verified, but project license-policy
-approval remains open. **Production release must remain blocked until item 4 is
-explicitly resolved by a recorded project-owner license-policy decision.**
+dependency audit must still pass live at release time. **All five numbered
+closure items are CLOSED.** Remaining release blockers are operational
+(green CI, isolated migration rehearsal, protected production environment),
+not open security-closure document items.
