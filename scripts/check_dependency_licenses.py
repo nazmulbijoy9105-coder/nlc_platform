@@ -33,6 +33,58 @@ def normalize(value: object) -> str:
     return re.sub(r"[^A-Z0-9]+", " ", str(value or "").upper()).strip()
 
 
+def _split_top_level(expression: str, operator: str) -> list[str]:
+    """Split a simple SPDX-style expression without splitting parenthesized terms."""
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    index = 0
+    token = f" {operator} "
+    while index <= len(expression) - len(token):
+        char = expression[index]
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return []
+        if depth == 0 and expression.startswith(token, index):
+            parts.append(expression[start:index].strip())
+            index += len(token)
+            start = index
+            continue
+        index += 1
+    if depth != 0:
+        return []
+    parts.append(expression[start:].strip())
+    return parts if all(parts) else []
+
+
+def is_approved(value: object) -> bool:
+    """Accept only expressions whose chosen license path is explicitly approved.
+
+    OR allows a distributor to select one approved alternative. AND requires
+    every component to be approved. Unknown, malformed, and unlisted terms fail
+    closed; this does not approve any new license identifier.
+    """
+    expression = normalize(value)
+    if expression in APPROVED_ALIASES:
+        return True
+
+    # SPDX precedence: AND binds more tightly than OR.
+    alternatives = _split_top_level(expression, "OR")
+    if len(alternatives) > 1:
+        return any(is_approved(part.strip(" ()")) for part in alternatives)
+
+    conjunction = _split_top_level(expression, "AND")
+    if len(conjunction) > 1:
+        return all(is_approved(part.strip(" ()")) for part in conjunction)
+
+    if expression.startswith("(") and expression.endswith(")"):
+        return is_approved(expression[1:-1])
+    return False
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("usage: check_dependency_licenses.py INVENTORY.json")
@@ -44,7 +96,7 @@ def main() -> int:
     for row in rows:
         name = str(row.get("Name") or "<unnamed>")
         license_name = str(row.get("License") or "").strip()
-        if normalize(license_name) not in APPROVED_ALIASES:
+        if not is_approved(license_name):
             offenders.append(f"{name}: {license_name or 'UNKNOWN / UNDECLARED'}")
 
     if offenders:
