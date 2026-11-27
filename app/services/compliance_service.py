@@ -1340,6 +1340,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
             flags_snapshot.append({
                 "scope_version": RJSC_SCOPE_VERSION,
                 "rule_id": flag.rule_id,
+                # This is the engine rule-definition version, not proof of an
+                # approved effective-dated statutory revision. Keep that
+                # distinction explicit until LegalRuleRevision rows are bound.
+                "rule_version": str(getattr(flag, "rule_version", None) or engine_version),
+                "legal_source_revision_id": None,
+                "legal_revision_binding_status": "NOT_BOUND_TO_EFFECTIVE_DATED_LEGAL_REVISION",
                 "severity": severity_value,
                 "rescue_disposition": rescue_disposition.get("disposition"),
                 "rescue_reason": rescue_disposition.get("reason"),

@@ -389,6 +389,11 @@ class TestComplianceService:
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        assert persisted_run.flags_snapshot[0]["rule_version"]
+        assert persisted_run.flags_snapshot[0]["legal_source_revision_id"] is None
+        assert persisted_run.flags_snapshot[0]["legal_revision_binding_status"] == (
+            "NOT_BOUND_TO_EFFECTIVE_DATED_LEGAL_REVISION"
+        )
         assert persisted_run.score is None
         assert persisted_run.risk_band == "NOT_EVALUATED"
         assert len(persisted_run.flags_snapshot) == 1
