@@ -160,6 +160,7 @@ jobs:
         if: steps.freshness.outputs.current == 'true'
         env:
           MIGRATION_DATABASE_URL: ${{ secrets.NLC_MIGRATION_DATABASE_URL }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -170,11 +171,11 @@ jobs:
           docker build --target api --tag nlc-api:migration .
           # Re-check after the image build and immediately before the DB mutation.
           CURRENT_MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]]; then
-            echo "::error::main advanced before production migration (release=$GITHUB_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to migrate a stale release."
+          if [[ -z "$CURRENT_MAIN_SHA" || "$CURRENT_MAIN_SHA" != "$TARGET_SHA" ]]; then
+            echo "::error::main advanced before production migration (release=$TARGET_SHA current-main=${CURRENT_MAIN_SHA:-unresolved}). Refusing to migrate a stale release."
             exit 1
           fi
-          echo "Freshness revalidated immediately before Alembic mutation: $GITHUB_SHA"
+          echo "Freshness revalidated immediately before Alembic mutation: $TARGET_SHA"
           docker run --rm \
             --entrypoint /bin/sh \
             --env ENVIRONMENT=production \
