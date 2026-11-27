@@ -212,8 +212,10 @@ Finance/subscription routes do not establish an automated payment-gateway integr
      Frontend: https://nlc-frontend.vercel.app
      Database: Neon PostgreSQL (confirm PITR/snapshot schedule in Neon console; do not assume retention)
      Redis: Render Redis
-     Native Render autoDeploy is disabled; the controlled GitHub Actions workflow runs after successful CI on current main
-     The workflow requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets
+     Native Render autoDeploy is disabled; GitHub Actions listens for completed CI runs on current main
+     Automatic production releases require repository Actions variable NLC_AUTO_DEPLOY=true (exact lowercase string)
+     Set it under Settings -> Secrets and variables -> Actions -> Variables; unset/non-true means the deploy job is skipped, even after successful CI
+     The workflow also requires NLC_MIGRATION_DATABASE_URL and RENDER_DEPLOY_HOOK_URL GitHub Actions secrets
      Missing migration credentials abort before the Render deploy hook; API startup does not migrate or seed
      Apply reviewed Alembic migrations before application release
 Docker (Local/On-Premise)
