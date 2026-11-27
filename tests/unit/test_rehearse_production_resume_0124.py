@@ -32,8 +32,19 @@ def test_rehearsal_revision_constants_are_pinned_to_the_full_path():
 
 
 class FakeConn:
+    """Minimal asyncpg-like connection for early-reject main() paths."""
+
     def __init__(self):
-        self.closed = False
+        self._closed = False
+
+    @property
+    def is_closed(self) -> bool:
+        return self._closed
+
+    @property
+    def closed(self) -> bool:
+        # Alias used by assertions in these contract tests.
+        return self._closed
 
     async def fetchrow(self, _sql):
         return {
@@ -45,7 +56,7 @@ class FakeConn:
         }
 
     async def close(self):
-        self.closed = True
+        self._closed = True
 
 
 @pytest.mark.parametrize(
@@ -76,6 +87,7 @@ def test_main_rejects_any_non_0112_baseline_before_migration(
         asyncio.run(rehearsal.main())
 
     assert conn.closed
+    assert conn.is_closed
     assert not (tmp_path / "rehearsal.json").exists()
 
 

@@ -2,6 +2,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+RENDER_DEPLOY_STEP = "Trigger Render deployment for the exact CI-tested commit"
+
+
 def test_render_web_service_starts_api_without_running_alembic():
     render_config = (ROOT / "render.yaml").read_text(encoding="utf-8")
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
@@ -29,10 +32,11 @@ def test_render_web_service_starts_api_without_running_alembic():
     assert "alembic upgrade head" not in render_config
     assert "alembic upgrade head" not in dockerfile
 
-    # Migrations are a separate CI-gated release operation.
+    # Migrations are a separate CI-gated release operation before the
+    # exact-SHA Render API deploy step.
     migration_step = deploy_workflow.index(
         "- name: Apply production migrations before Render deploy"
     )
-    deploy_step = deploy_workflow.index("- name: Trigger Render Deploy Hook")
+    deploy_step = deploy_workflow.index(f"- name: {RENDER_DEPLOY_STEP}")
     assert migration_step < deploy_step
     assert "NLC_MIGRATION_DATABASE_URL" in deploy_workflow
