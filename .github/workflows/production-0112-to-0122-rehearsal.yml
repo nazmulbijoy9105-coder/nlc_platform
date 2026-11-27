@@ -169,13 +169,7 @@ jobs:
 
           get_uri() {
             local role="$1"
-            local query
-            query=$(curl --silent --show-error --get --data-urlencode "branch_id=$BRANCH_ID" \
-              --data-urlencode "endpoint_id=$ENDPOINT_ID" \
-              --data-urlencode "database_name=neondb" \
-              --data-urlencode "role_name=$role" \
-              --data-urlencode "pooled=false" --output /dev/null --write-out '%{url_effective}' \
-              "$API/connection_uri")
+            local query="$API/connection_uri?branch_id=$BRANCH_ID&endpoint_id=$ENDPOINT_ID&database_name=neondb&role_name=$role&pooled=false"
             neon_request GET "$query" | jq -er '.uri | select(type == "string" and length > 0)'
           }
 
