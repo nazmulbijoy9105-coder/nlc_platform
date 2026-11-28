@@ -207,6 +207,7 @@ def agm_court_order_scoring_guard(
     lawyer_decision_payload: Mapping[str, Any] | None = None,
     *,
     as_of: date,
+    qualified_counsel_ids: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Return a safe routing disposition; never clear or score an AGM by itself.
 
@@ -270,6 +271,10 @@ def agm_court_order_scoring_guard(
             decision.effective_until is None
             or decision.decided_at.date() <= decision.effective_until
         )
+        # Qualification claims in the payload are assertions, not authority.
+        # Only a trusted registry supplied by the caller can establish reviewer status.
+        and qualified_counsel_ids is not None
+        and decision.reviewer_id in qualified_counsel_ids
         and decision.reviewer_qualification_verified
         and decision.reviewer_qualification_evidence_ref
         and decision.reviewer_qualification_verified_by != decision.reviewer_id
