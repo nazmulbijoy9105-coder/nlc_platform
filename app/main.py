@@ -455,7 +455,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix=API_PREFIX, tags=["Health"])
 
     # MCP — authenticated, stateless, read-only legal-rule catalogue tools.
-    app.include_router(mcp.router, prefix=API_PREFIX, tags=["MCP"])\n\n    # MCP — authenticated, stateless, read-only legal-rule catalogue tools.\n    app.include_router(mcp.router, prefix=API_PREFIX, tags=["MCP"])
+    app.include_router(mcp.router, prefix=API_PREFIX, tags=["MCP"])
 
     # Auth — no auth on login endpoints, 2FA endpoints are semi-protected
     app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["Authentication"])
