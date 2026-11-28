@@ -31,6 +31,16 @@ def _decision(**overrides):
         "reasoning": "The operative order applies only to this event.",
         "affected_event": "FIRST_AGM_2026",
         "outcome": "DEADLINE_MODIFIED",
+        "court_name": "High Court Division",
+        "case_number": "Company Matter 12 of 2026",
+        "order_date": "2026-10-01",
+        "evidence_ref": "document:verified-order-001",
+        "effective_from": "2026-10-01",
+        "effective_until": None,
+        "reviewer_qualification_verified": True,
+        "reviewer_qualification_evidence_ref": "counsel-register:verified-001",
+        "reviewer_qualification_verified_by": "independent-credential-reviewer",
+        "reviewer_qualification_verified_at": "2026-10-02T09:00:00+06:00",
     }
     value.update(overrides)
     return value
@@ -116,3 +126,24 @@ def test_order_status_with_pending_or_superseding_process_requires_reference(sta
 
     with pytest.raises(ValueError, match="appeal_or_stay_reference"):
         AgmCourtOrderEvidence.from_mapping(_evidence(order_status=status))
+
+
+def test_decision_without_independent_qualification_evidence_does_not_close_review():
+    result = agm_court_order_scoring_guard(
+        _evidence(),
+        _decision(
+            reviewer_qualification_verified=False,
+            reviewer_qualification_evidence_ref="",
+        ),
+    )
+    assert result["requires_lawyer_judgment"] is True
+    assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
+
+
+def test_decision_for_another_order_cannot_close_this_order_review():
+    result = agm_court_order_scoring_guard(
+        _evidence(),
+        _decision(case_number="Different Company Matter"),
+    )
+    assert result["requires_lawyer_judgment"] is True
+    assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
