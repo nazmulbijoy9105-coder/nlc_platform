@@ -405,6 +405,10 @@ class TestCompanies:
             "score": None,
             "risk_band": "NOT_EVALUATED",
             "scoring_data": "WITHHELD",
+            "engine_version": run.engine_version,
+            "rjsc_scope_version": "RJSC_SCOPE_2026-11-24.1",
+            "scoring_spec_version": "2.0.0",
+            "ilrmf_version": run.engine_version,
         }
 
         # A legacy completed snapshot must not make the customer API appear
