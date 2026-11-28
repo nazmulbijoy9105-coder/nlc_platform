@@ -45,6 +45,7 @@ from app.api import (
     health,
     legal_provenance,
     notifications,
+    mcp,
     portfolio_compliance,
     rescue,
     rjsc_forms,
@@ -451,7 +452,7 @@ def create_app() -> FastAPI:
     API_PREFIX = "/api/v1"
 
     # Health — no auth required
-    app.include_router(health.router, prefix=API_PREFIX, tags=["Health"])
+    app.include_router(health.router, prefix=API_PREFIX, tags=["Health"])\n\n    # MCP — authenticated, stateless, read-only legal-rule catalogue tools.\n    app.include_router(mcp.router, prefix=API_PREFIX, tags=["MCP"])
 
     # Auth — no auth on login endpoints, 2FA endpoints are semi-protected
     app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["Authentication"])
