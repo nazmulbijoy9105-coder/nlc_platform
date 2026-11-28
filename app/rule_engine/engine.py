@@ -48,7 +48,7 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.3"
+RULE_ENGINE_VERSION = "2.4"
 ILRMF_VERSION = "2.3"
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -904,6 +904,9 @@ def _rjsc_score_profile_inputs(company: CompanyProfile) -> dict[str, Any]:
         "company_type": company.company_type,
         "incorporation_date": company.incorporation_date,
         "financial_year_end": company.financial_year_end,
+        # AGM first-event date changes statutory deadline calculations and must
+        # participate in evaluation identity even when the resulting score is unchanged.
+        "first_agm_date": getattr(company, "first_agm_date", None),
         "coverage_inputs": {
             field_name: getattr(company, field_name, None)
             for field_name in _COVERAGE_FIELDS
