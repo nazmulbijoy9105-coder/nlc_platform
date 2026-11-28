@@ -63,3 +63,17 @@ The prior CI run on `ca1d292c0217500b889399e240f562a4bbebf596` passed legal engi
 The next full CI and legal-assurance runs must pass on the final branch head after these changes. Do not treat a queued run or a pass on an earlier SHA as validation of a later commit.
 
 **No production migration, deployment, legal approval, scoring allowlist promotion, or score-release gate change is authorized by this document.** Keep PR #448 and consolidated PR #449 in draft until exact-head checks and independent legal review are complete.
+
+
+## Exact-head CI follow-up — 28 November 2026
+
+Latest reviewed branch head: `2db774108a3058d1ccb82ae13c7c6cd2d2435fcb`.
+
+GitHub created these pull-request workflow runs for that exact head:
+- CI: `46129625976` and `46129624876`
+- Legal engine assurance: `46129625970` and `46129624885`
+- Security closure structure: `46129626042` and `46129624907`
+
+At the time of this update, every job in these runs remains **QUEUED**. No result is claimed for unit tests, integration tests, lint, Docker runtime smoke, catalogue parity, scope isolation, withheld publication, provenance integrity, or closure structure. The combined commit-status endpoint returned no status entries. A queued run is not a pass.
+
+The exact-head checks must finish before this branch can be considered technically validated. If GitHub Actions remains queued, investigate runner availability/queue health; do not bypass required checks or infer success from the earlier SHA.
