@@ -176,11 +176,9 @@ class TestComplianceService:
 
     @pytest.mark.asyncio
     async def test_get_flag_summary_returns_dict(self, db, db_company):
-        from app.services.compliance_service import (
-            ComplianceService,
-            RJSC_SCOPE_VERSION,
-            SCORING_SPEC_VERSION,
-        )
+        from app.services.compliance_service import ComplianceService
+        from app.services.compliance_service import SCORING_SPEC_VERSION
+        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
 
         svc = ComplianceService(db)
         summary = await svc.get_flag_summary(db_company.id)
