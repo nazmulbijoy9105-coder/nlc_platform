@@ -173,6 +173,8 @@ class AgmLawyerDecision:
         order_date = parse_date("order_date")
         effective_from = parse_date("effective_from")
         effective_until = parse_date("effective_until", optional=True)
+        if order_date is None or effective_from is None:
+            raise ValueError("order_date and effective_from are required")
         qualification_verified_at = value.get("reviewer_qualification_verified_at")
         if isinstance(qualification_verified_at, str):
             try:
