@@ -100,13 +100,26 @@ def test_lawyer_decision_must_match_affected_agm_event():
 
 
 def test_scoped_lawyer_decision_is_recorded_but_not_automatically_scored():
-    result = agm_court_order_scoring_guard(_evidence(), _decision(), as_of=date(2026, 11, 28))
+    result = agm_court_order_scoring_guard(
+        _evidence(), _decision(), as_of=date(2026, 11, 28),
+        qualified_counsel_ids=frozenset({"counsel-uuid"}),
+    )
     assert result["requires_lawyer_judgment"] is False
     assert result["state"] == "LAWYER_DECISION_RECORDED"
     assert result["lawyer_decision"]["outcome"] == "DEADLINE_MODIFIED"
     assert result["score_impact"] == 0
     assert result["score_uplift"] == 0
     assert result["is_black_override"] is False
+    assert result["automatic_clearance"] is False
+
+
+def test_asserted_qualification_without_trusted_registry_keeps_review_open():
+    result = agm_court_order_scoring_guard(
+        _evidence(), _decision(), as_of=date(2026, 11, 28),
+    )
+    assert result["requires_lawyer_judgment"] is True
+    assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
+    assert result["score_impact"] == 0
     assert result["automatic_clearance"] is False
 
 
