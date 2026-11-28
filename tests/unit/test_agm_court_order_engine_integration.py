@@ -127,7 +127,9 @@ def test_scoped_lawyer_decision_still_withholds_scoring_until_rule_logic_is_impl
     assert flag.severity is Severity.NOT_EVALUATED
     assert flag.score_impact == 0
     assert flag.is_black_override is False
-    assert flag.detail["court_order_review"]["state"] == "LAWYER_DECISION_RECORDED"
+    # Production evaluation has no trusted counsel registry wired yet; asserted
+    # qualification fields must therefore leave the matter routed for review.
+    assert flag.detail["court_order_review"]["state"] == "REQUIRES_LAWYER_JUDGMENT"
     assert flag.detail["court_order_review"]["automatic_clearance"] is False
 
 
