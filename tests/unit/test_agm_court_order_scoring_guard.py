@@ -47,7 +47,7 @@ def _decision(**overrides):
 
 
 def test_absent_order_evidence_does_not_change_score():
-    result = agm_court_order_scoring_guard(None)
+    result = agm_court_order_scoring_guard(None, as_of=date(2026, 11, 28))
     assert result["state"] == "NO_ORDER_EVIDENCE"
     assert result["score_impact"] == 0
     assert result["score_uplift"] == 0
@@ -66,7 +66,7 @@ def test_absent_order_evidence_does_not_change_score():
     ],
 )
 def test_incomplete_or_unverified_order_routes_to_lawyer_without_score_change(override):
-    result = agm_court_order_scoring_guard(_evidence(**override))
+    result = agm_court_order_scoring_guard(_evidence(**override), as_of=date(2026, 11, 28))
     assert result["requires_lawyer_judgment"] is True
     assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
     assert result["eval_state"] == "UNKNOWN"
@@ -78,7 +78,7 @@ def test_incomplete_or_unverified_order_routes_to_lawyer_without_score_change(ov
 
 
 def test_verified_order_without_lawyer_decision_never_clears_default():
-    result = agm_court_order_scoring_guard(_evidence())
+    result = agm_court_order_scoring_guard(_evidence(), as_of=date(2026, 11, 28))
     assert result["evidence_verified"] is True
     assert result["requires_lawyer_judgment"] is True
     assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
@@ -89,7 +89,8 @@ def test_verified_order_without_lawyer_decision_never_clears_default():
 
 def test_lawyer_decision_must_match_affected_agm_event():
     result = agm_court_order_scoring_guard(
-        _evidence(), _decision(affected_event="ANOTHER_AGM")
+        _evidence(), _decision(affected_event="ANOTHER_AGM"),
+        as_of=date(2026, 11, 28),
     )
     assert result["requires_lawyer_judgment"] is True
     assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
@@ -135,6 +136,7 @@ def test_decision_without_independent_qualification_evidence_does_not_close_revi
             reviewer_qualification_verified=False,
             reviewer_qualification_evidence_ref="",
         ),
+        as_of=date(2026, 11, 28),
     )
     assert result["requires_lawyer_judgment"] is True
     assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
@@ -144,6 +146,31 @@ def test_decision_for_another_order_cannot_close_this_order_review():
     result = agm_court_order_scoring_guard(
         _evidence(),
         _decision(case_number="Different Company Matter"),
+        as_of=date(2026, 11, 28),
     )
     assert result["requires_lawyer_judgment"] is True
     assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
+
+
+def test_expired_lawyer_decision_does_not_close_review():
+    result = agm_court_order_scoring_guard(
+        _evidence(),
+        _decision(effective_until="2026-10-31"),
+        as_of=date(2026, 11, 1),
+    )
+    assert result["requires_lawyer_judgment"] is True
+    assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
+    assert result["score_impact"] == 0
+    assert result["automatic_clearance"] is False
+
+
+def test_not_yet_effective_lawyer_decision_does_not_close_review():
+    result = agm_court_order_scoring_guard(
+        _evidence(),
+        _decision(effective_from="2026-11-02"),
+        as_of=date(2026, 11, 1),
+    )
+    assert result["requires_lawyer_judgment"] is True
+    assert result["state"] == "REQUIRES_LAWYER_JUDGMENT"
+    assert result["score_impact"] == 0
+    assert result["automatic_clearance"] is False
