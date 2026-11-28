@@ -203,7 +203,15 @@ def _agm_history_summary(active_agms, history_marker_verified: bool) -> dict:
         row for row in active_agms
         if getattr(row, "agm_type", "ANNUAL") in {"ANNUAL", "FIRST"}
     ]
-    financial_years = [row.financial_year for row in annual_agms]
+    # Legacy/in-memory callers may not expose the persisted financial_year
+    # attribute. Compare every available cycle key without raising; ORM rows
+    # always carry the non-null database field, while duplicate persisted
+    # years still invalidate the history.
+    financial_years = [
+        getattr(row, "financial_year", None)
+        for row in annual_agms
+        if getattr(row, "financial_year", None) is not None
+    ]
     has_duplicate_annual_cycles = len(financial_years) != len(set(financial_years))
     all_cycle_statuses_verified = all(
         getattr(row, "agm_held_verified", False) is True
