@@ -100,7 +100,7 @@ def test_lawyer_decision_must_match_affected_agm_event():
 
 
 def test_scoped_lawyer_decision_is_recorded_but_not_automatically_scored():
-    result = agm_court_order_scoring_guard(_evidence(), _decision())
+    result = agm_court_order_scoring_guard(_evidence(), _decision(), as_of=date(2026, 11, 28))
     assert result["requires_lawyer_judgment"] is False
     assert result["state"] == "LAWYER_DECISION_RECORDED"
     assert result["lawyer_decision"]["outcome"] == "DEADLINE_MODIFIED"
