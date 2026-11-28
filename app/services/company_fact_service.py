@@ -133,11 +133,27 @@ class CompanyFactService:
                 status_code=422,
                 detail="The source document has no recorded uploader/timestamp and cannot establish document provenance.",
             )
-        normalized_key = self._normalize_fact_key(fact_key)
-        try:
-            fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        normalized_key = fact_key.strip()
+        if normalized_key in {"agm_court_order_evidence", "agm_court_order_lawyer_decision"}:
+            if not isinstance(fact_value, dict):
+                raise HTTPException(status_code=422, detail="AGM court-order facts must be structured objects.")
+            try:
+                if normalized_key == "agm_court_order_evidence":
+                    from app.compliance.agm_court_order import AgmCourtOrderEvidence
+                    parsed_order = AgmCourtOrderEvidence.from_mapping(fact_value)
+                    if parsed_order.authenticated or parsed_order.verified_by or parsed_order.verified_at:
+                        raise ValueError("Court-order authentication metadata is assigned only by the independent fact-verification step.")
+                else:
+                    from app.compliance.agm_court_order import AgmLawyerDecision
+                    AgmLawyerDecision.from_mapping(fact_value)
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+        else:
+            normalized_key = self._normalize_fact_key(normalized_key)
+            try:
+                fact_value = coerce_company_profile_fact_value(normalized_key, fact_value)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
         fact_value = jsonable_encoder(fact_value)
         await self.db.execute(
             select(Company.id).where(Company.id == document.company_id).with_for_update()
@@ -224,8 +240,46 @@ class CompanyFactService:
                     status_code=409,
                     detail="Source document uploader or upload timestamp no longer matches the recorded fact provenance.",
                 )
+            verified_at = datetime.now(timezone.utc)
+            if fact.fact_key == "agm_court_order_evidence":
+                from app.compliance.agm_court_order import AgmCourtOrderEvidence
+                order_payload = dict(fact.fact_value or {})
+                order = AgmCourtOrderEvidence.from_mapping(order_payload)
+                if order.order_status == "UNKNOWN":
+                    raise HTTPException(
+                        status_code=422,
+                        detail="A current court-order status must be checked and recorded before verification.",
+                    )
+                if reviewer_id == fact.authorized_uploader_id:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="The document uploader cannot independently verify the court-order fact.",
+                    )
+                order_payload.update({
+                    "authenticated": True,
+                    "verified_by": str(reviewer_id),
+                    "verified_at": verified_at.isoformat(),
+                })
+                fact.fact_value = jsonable_encoder(order_payload)
+                # The 30-day freshness window measures the independent
+                # operative-status check, not the historical order date or
+                # the uploader's self-reported observation date.
+                fact.observed_on = business_date_today()
+            elif fact.fact_key == "agm_court_order_lawyer_decision":
+                from app.compliance.agm_court_order import AgmLawyerDecision
+                decision_payload = dict(fact.fact_value or {})
+                lawyer_decision = AgmLawyerDecision.from_mapping(decision_payload)
+                if (
+                    str(reviewer_id) == lawyer_decision.reviewer_id
+                    or str(reviewer_id) != lawyer_decision.reviewer_qualification_verified_by
+                    or lawyer_decision.reviewer_qualification_verified_at > verified_at
+                ):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="The decision's counsel qualification must be verified by a separate reviewer recorded as its qualification verifier.",
+                    )
             fact.verified_by = reviewer_id
-            fact.verified_at = datetime.now(timezone.utc)
+            fact.verified_at = verified_at
         else:
             fact.verified_by = None
             fact.verified_at = None

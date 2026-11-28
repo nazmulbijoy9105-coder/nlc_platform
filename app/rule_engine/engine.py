@@ -48,7 +48,7 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.3"
+RULE_ENGINE_VERSION = "2.4"
 ILRMF_VERSION = "2.3"
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -904,6 +904,9 @@ def _rjsc_score_profile_inputs(company: CompanyProfile) -> dict[str, Any]:
         "company_type": company.company_type,
         "incorporation_date": company.incorporation_date,
         "financial_year_end": company.financial_year_end,
+        # AGM first-event date changes statutory deadline calculations and must
+        # participate in evaluation identity even when the resulting score is unchanged.
+        "first_agm_date": getattr(company, "first_agm_date", None),
         "coverage_inputs": {
             field_name: getattr(company, field_name, None)
             for field_name in _COVERAGE_FIELDS
@@ -1597,36 +1600,27 @@ class NLCRuleEngine:
         )
 
     def _first_agm_date_is_verified(self, c: CompanyProfile) -> bool:
-        explicit_event_provenance = (
+        return (
             c.first_agm_date is not None
             and c.first_agm_date_verified is True
             and bool(c.first_agm_date_evidence_ref)
             and c.first_agm_date_verified_at is not None
             and bool(c.first_agm_date_verified_by)
         )
-        # With exactly one AGM, the verified complete AGM-history record is
-        # itself the first-AGM event. This preserves older profiles whose
-        # verified history predates the dedicated first_agm_date fields,
-        # without accepting an unverified date or inferring from agm_count.
-        history_proves_single_first_event = (
-            c.agm_count == 1
-            and c.last_agm_date is not None
-            and self._agm_history_is_verified(c)
-        )
-        return explicit_event_provenance or history_proves_single_first_event
 
     def _subsequent_agm_deadline_components(
         self, c: CompanyProfile
     ) -> tuple[date, date, date, str] | None:
-        if not self._agm_history_is_verified(c):
-            return None
-        if c.agm_count == 1:
-            if not self._first_agm_date_is_verified(c):
-                return None
-            preceding_agm_date = c.first_agm_date or c.last_agm_date
-        else:
+        # A complete, independently verified AGM-history record makes its
+        # last_agm_date the controlling (latest known) statutory event.
+        # Otherwise, a separately provenance-verified first AGM may be used
+        # as the latest known verified event. A bare/unverified date is never
+        # promoted to an AGM event.
+        if self._agm_history_is_verified(c) and c.last_agm_date is not None:
             preceding_agm_date = c.last_agm_date
-        if preceding_agm_date is None:
+        elif self._first_agm_date_is_verified(c) and c.first_agm_date is not None:
+            preceding_agm_date = c.first_agm_date
+        else:
             return None
 
         interval_deadline = self._add_months(preceding_agm_date, 15)
@@ -1723,7 +1717,7 @@ class NLCRuleEngine:
             if "agm_court_order_lawyer_decision" not in verified_keys:
                 lawyer_decision = None
             review = agm_court_order_scoring_guard(
-                order_evidence, lawyer_decision
+                order_evidence, lawyer_decision, as_of=self.today
             )
             affected_event = str(
                 order_details.get("affected_event") or ""
@@ -1775,10 +1769,9 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=(
-                            "Section 81(1), Companies Act 1994 (Bangladesh); "
-                            "order-specific authority requires review"
-                        ),
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
@@ -1791,10 +1784,9 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=(
-                            "Section 81(1), Companies Act 1994 (Bangladesh); "
-                            "order-specific authority requires review"
-                        ),
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
@@ -1860,7 +1852,14 @@ class NLCRuleEngine:
                             },
                         ))
             elif c.agm_count > 0:
-                if c.agm_count == 1 and not self._first_agm_date_is_verified(c):
+                if (
+                    c.agm_count == 1
+                    and not self._first_agm_date_is_verified(c)
+                    and not (
+                        self._agm_history_is_verified(c)
+                        and c.last_agm_date is not None
+                    )
+                ):
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-002",
                         flag_code="FIRST_AGM_DATE_REQUIRES_VERIFICATION",

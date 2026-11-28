@@ -1368,6 +1368,12 @@ class ComplianceService(BaseService[ComplianceFlag]):
         score_breakdown_snapshot = (
             {
                 "snapshot_schema_version": 1,
+                # Version identity remains auditable even when all score data
+                # is withheld. Never make a NOT_RELEASED run look unversioned.
+                "engine_version": engine_version,
+                "rjsc_scope_version": RJSC_SCOPE_VERSION,
+                "scoring_spec_version": SCORING_SPEC_VERSION,
+                "ilrmf_version": str(getattr(output, "ilrmf_version", "") or ""),
                 "status": "NOT_RELEASED",
                 "reason": (
                     UNRELEASED_REASON_GATE_CLOSED
