@@ -261,6 +261,10 @@ class CompanyFactService:
                     "verified_at": verified_at.isoformat(),
                 })
                 fact.fact_value = jsonable_encoder(order_payload)
+                # The 30-day freshness window measures the independent
+                # operative-status check, not the historical order date or
+                # the uploader's self-reported observation date.
+                fact.observed_on = business_date_today()
             elif fact.fact_key == "agm_court_order_lawyer_decision":
                 from app.compliance.agm_court_order import AgmLawyerDecision
                 decision_payload = dict(fact.fact_value or {})
