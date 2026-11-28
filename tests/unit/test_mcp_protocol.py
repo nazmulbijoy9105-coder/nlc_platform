@@ -155,7 +155,13 @@ def test_get_transport_is_not_supported():
 
 
 def test_mcp_requires_existing_nlc_bearer_authentication():
-    client = TestClient(create_app())
+    app = create_app()
+
+    async def fake_catalog_db():
+        yield object()
+
+    app.dependency_overrides[get_catalog_db] = fake_catalog_db
+    client = TestClient(app)
     response = client.post(
         "/api/v1/mcp",
         headers={
