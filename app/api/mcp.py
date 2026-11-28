@@ -266,6 +266,8 @@ async def mcp_streamable_http(
 
 
 @router.get("/mcp", include_in_schema=False)
-async def mcp_get_not_supported():
+async def mcp_get_not_supported(
+    _: User = Depends(get_current_user),
+):
     # This stateless server does not provide server-initiated event streams.
     return Response(status_code=405, headers={"Allow": "POST"})
