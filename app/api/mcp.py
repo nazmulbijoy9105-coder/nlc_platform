@@ -90,7 +90,6 @@ def _rule_payload(rule: Any) -> dict[str, Any]:
         ),
         "is_active": bool(rule.is_active),
         "rule_version": rule.rule_version,
-        "score_impact": int(rule.score_impact or 0),
         "disclaimer": (
             "Stored catalogue metadata is not independent legal verification, "
             "company-specific applicability analysis, or authority to release a score."
@@ -175,10 +174,6 @@ async def mcp_streamable_http(
     if not isinstance(method, str) or not isinstance(params, dict):
         return _rpc_error(request_id, -32600, "Invalid Request.")
 
-    # MCP notifications have no JSON-RPC id and must not receive a response body.
-    if method == "notifications/initialized" and request_id is None:
-        return Response(status_code=202, headers={"Cache-Control": "no-store"})
-
     if method != "initialize":
         protocol_version = request.headers.get("MCP-Protocol-Version")
         if protocol_version not in SUPPORTED_PROTOCOL_VERSIONS:
@@ -195,6 +190,10 @@ async def mcp_streamable_http(
             request_id, -32600,
             "Accept must allow both application/json and text/event-stream.",
         )
+
+    # MCP notifications have no JSON-RPC id and must not receive a response body.
+    if method.startswith("notifications/") and request_id is None:
+        return Response(status_code=202, headers={"Cache-Control": "no-store"})
 
     if method == "initialize":
         requested = params.get("protocolVersion", DEFAULT_PROTOCOL_VERSION)
