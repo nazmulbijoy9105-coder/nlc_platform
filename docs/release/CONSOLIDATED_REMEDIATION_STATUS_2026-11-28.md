@@ -55,3 +55,23 @@ These are historical run results for the stated SHAs, not fresh results for this
 - [ ] Independent legal review remains separately documented.
 
 **Current conclusion:** this branch contributes a concrete workflow-YAML hardening patch and regression tests. It does not claim to close the AGM/court-order, migration, dependency, G2, legal-source or production-release blockers. No production release is authorized by this report.
+
+
+## Execution update — 28 November 2026
+
+The following branch-level changes were made after the historical observations above. These are not merged or release approvals.
+
+- **#449 exact head** `38e37732a0b87e97c03f8dc25edc3296840c3208`: the #442 workflow repair was reconciled selectively. The existing `.github/workflows/production-0112-to-0122-rehearsal.yml` is retained; the malformed duplicated tail was removed. The strict duplicate-key / jobs-mapping validator passed. Main CI and legal-engine assurance passed on this exact head. The Neon migration rehearsal failed closed because the Neon API returned HTTP 423 through the bounded retry window; no migration was applied to production.
+- **#448 AGM work branch** `ca1d292c0217500b889399e240f562a4bbebf596`: the mypy nullable-date narrowing, canonical statutory-basis preservation, duplicate/unknown AGM-history fail-closed handling, and order-specific qualified-counsel decision validation were added with regression tests. CI and legal assurance were queued at the last check; no passing result is claimed yet. The branch remains draft and is based on #441, so it must be reconciled against current main before integration.
+- **#436 dependency branch** `b2a87ce4879b852a0d5ecb8a90cfa2327466b0f6`: exact pins for the resolved `pypdfium2==5.5.0` and `tqdm==4.67.3` packages were added to both requirement inventories, and the policy table was corrected to describe their actual presence as unresolved blockers. Dependency and licence workflows were queued at the last check. No licence exception or owner approval was made.
+- **#444 G2**: the dedicated isolated-PostgreSQL G2 migration/legal-engine rehearsal passed on inspected head `7e8e6f96ac9a9a5ac527179099877036c40e3190`. Its separate general CI run failed in unit tests; the G2 pass does not clear that failure or prove deployed Neon/Render role parity.
+
+### Remaining release blockers
+
+1. Complete the rest of the #441 review remediation: CompanyFact endpoint normalization for structured objects, non-expiring operative-order status lifecycle, shared rescue/compliance fact loading, numeric-score withholding through persistence, first-event date/provenance binding, and evaluator/catalogue version separation.
+2. Add transactional company/financial-year uniqueness and enforce allowed AGM types at the write boundary; run the complete AGM, court-order, rescue, and persistence test suites.
+3. Resolve the outstanding dependency-license decisions through an authorized project-owner/legal record. The present policy intentionally does not approve MPL, LGPL, GPL, or unverified bundled PDFium notices. Do not weaken the checker to force a pass.
+4. Rerun all workflows on the exact updated branch heads, then synchronize #448/#436 changes into #449 without importing stale mainline history.
+5. Obtain independent Bangladesh-qualified legal review and record its scope, reviewer identity, date, authorities checked, and unresolved interpretations.
+
+**Disposition remains DRAFT / NOT RELEASE-AUTHORIZED.** No production database migration, Render deployment, legal approval, `VERIFIED_RULE_IDS` change, or `LEGAL_SCORE_RELEASED` change was made.
