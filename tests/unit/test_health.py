@@ -87,6 +87,8 @@ async def test_full_health_degrades_when_optional_component_fails(monkeypatch):
 
     assert response.status_code == status.HTTP_200_OK
     assert b'"status":"degraded"' in response.body
+    assert b"S3 unavailable" not in response.body
+    assert b'"detail"' not in response.body
 
 
 @pytest.mark.asyncio
