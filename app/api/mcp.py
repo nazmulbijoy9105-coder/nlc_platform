@@ -60,7 +60,15 @@ TOOLS = [
 ]
 
 
-def _rpc_error(request_id: Any, code: int, message: str) -> JSONResponse:
+def _rpc_error(
+    request_id: Any,
+    code: int,
+    message: str,
+    protocol_version: str | None = None,
+) -> JSONResponse:
+    headers = {"Cache-Control": "no-store"}
+    if protocol_version in SUPPORTED_PROTOCOL_VERSIONS:
+        headers["MCP-Protocol-Version"] = protocol_version
     return JSONResponse(
         status_code=200,
         content={
@@ -68,7 +76,7 @@ def _rpc_error(request_id: Any, code: int, message: str) -> JSONResponse:
             "id": request_id,
             "error": {"code": code, "message": message},
         },
-        headers={"Cache-Control": "no-store"},
+        headers=headers,
     )
 
 
@@ -170,9 +178,15 @@ async def mcp_streamable_http(
 
     request_id = payload.get("id")
     method = payload.get("method")
-    params = payload.get("params") or {}
+    params = payload.get("params", {})
+    if params is None:
+        params = {}
     if not isinstance(method, str) or not isinstance(params, dict):
         return _rpc_error(request_id, -32600, "Invalid Request.")
+    if not method.startswith("notifications/") and (
+        "id" not in payload or request_id is None
+    ):
+        return _rpc_error(None, -32600, "Request methods require a non-null JSON-RPC id.")
 
     if method != "initialize":
         protocol_version = request.headers.get("MCP-Protocol-Version")
@@ -180,7 +194,10 @@ async def mcp_streamable_http(
             return _rpc_error(request_id, -32600, "Missing or unsupported MCP-Protocol-Version.")
 
     if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
-        return _rpc_error(request_id, -32600, "Content-Type must be application/json.")
+        return _rpc_error(
+            request_id, -32600, "Content-Type must be application/json.",
+            request.headers.get("MCP-Protocol-Version"),
+        )
     accept = request.headers.get("accept", "")
     if not (
         ("application/json" in accept or "*/*" in accept)
@@ -189,6 +206,7 @@ async def mcp_streamable_http(
         return _rpc_error(
             request_id, -32600,
             "Accept must allow both application/json and text/event-stream.",
+            request.headers.get("MCP-Protocol-Version"),
         )
 
     # MCP notifications have no JSON-RPC id and must not receive a response body.
@@ -219,20 +237,29 @@ async def mcp_streamable_http(
     if method == "ping":
         return JSONResponse(
             {"jsonrpc": "2.0", "id": request_id, "result": {}},
-            headers={"Cache-Control": "no-store"},
+            headers={
+                "Cache-Control": "no-store",
+                "MCP-Protocol-Version": request.headers["MCP-Protocol-Version"],
+            },
         )
 
     if method == "tools/list":
         return JSONResponse(
             {"jsonrpc": "2.0", "id": request_id, "result": {"tools": TOOLS}},
-            headers={"Cache-Control": "no-store"},
+            headers={
+                "Cache-Control": "no-store",
+                "MCP-Protocol-Version": request.headers["MCP-Protocol-Version"],
+            },
         )
 
     if method == "tools/call":
         name = params.get("name")
         arguments = params.get("arguments", {})
         if not isinstance(name, str):
-            return _rpc_error(request_id, -32602, "Tool name is required.")
+            return _rpc_error(
+                request_id, -32602, "Tool name is required.",
+                request.headers.get("MCP-Protocol-Version"),
+            )
         try:
             result = await _call_tool(name, arguments, db)
         except Exception as exc:
@@ -256,13 +283,19 @@ async def mcp_streamable_http(
         )
         return JSONResponse(
             {"jsonrpc": "2.0", "id": request_id, "result": result},
-            headers={"Cache-Control": "no-store"},
+            headers={
+                "Cache-Control": "no-store",
+                "MCP-Protocol-Version": request.headers["MCP-Protocol-Version"],
+            },
         )
 
     if method.startswith("notifications/") or method == "notifications/cancelled":
         return Response(status_code=202, headers={"Cache-Control": "no-store"})
 
-    return _rpc_error(request_id, -32601, "Method not found.")
+    return _rpc_error(
+        request_id, -32601, "Method not found.",
+        request.headers.get("MCP-Protocol-Version"),
+    )
 
 
 @router.get("/mcp", include_in_schema=False)
