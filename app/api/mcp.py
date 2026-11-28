@@ -164,6 +164,10 @@ async def mcp_streamable_http(
 
     if not isinstance(payload, dict) or payload.get("jsonrpc") != "2.0":
         return _rpc_error(None, -32600, "Invalid Request.")
+    if "id" in payload and payload["id"] is not None and (
+        isinstance(payload["id"], bool) or not isinstance(payload["id"], (str, int))
+    ):
+        return _rpc_error(None, -32600, "Invalid Request.")
 
     request_id = payload.get("id")
     method = payload.get("method")
@@ -180,9 +184,25 @@ async def mcp_streamable_http(
         if protocol_version not in SUPPORTED_PROTOCOL_VERSIONS:
             return _rpc_error(request_id, -32600, "Missing or unsupported MCP-Protocol-Version.")
 
+    if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
+        return _rpc_error(request_id, -32600, "Content-Type must be application/json.")
+    accept = request.headers.get("accept", "")
+    if not (
+        ("application/json" in accept or "*/*" in accept)
+        and ("text/event-stream" in accept or "*/*" in accept)
+    ):
+        return _rpc_error(
+            request_id, -32600,
+            "Accept must allow both application/json and text/event-stream.",
+        )
+
     if method == "initialize":
         requested = params.get("protocolVersion", DEFAULT_PROTOCOL_VERSION)
-        negotiated = requested if requested in SUPPORTED_PROTOCOL_VERSIONS else DEFAULT_PROTOCOL_VERSION
+        negotiated = (
+            requested
+            if isinstance(requested, str) and requested in SUPPORTED_PROTOCOL_VERSIONS
+            else DEFAULT_PROTOCOL_VERSION
+        )
         result = {
             "protocolVersion": negotiated,
             "capabilities": {"tools": {"listChanged": False}},
