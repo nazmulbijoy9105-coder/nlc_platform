@@ -19,8 +19,8 @@ This matrix is a technical inventory of candidate legal anchors and internal rul
 | ACC-001 | Financial Statements Not Presented at AGM | Section 183, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ACC-002 | Financial Statements Not Filed with Registrar | Section 190, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | ACC-003 | Books of Account Not Kept | Section 181, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-001 | First AGM Default | Section 81, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
-| AGM-002 | Subsequent AGM Default | Section 81, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-001 | First AGM Default | Section 81(1), Companies Act 1994 (Bangladesh) — candidate subsection; not counsel-approved | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
+| AGM-002 | Subsequent AGM Default | Section 81(1), Companies Act 1994 (Bangladesh) — candidate subsection; not counsel-approved | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-003 | AGM Notice Defective — Insufficient Days | Section 85, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-004 | AGM Notice Missing | Section 85, Companies Act 1994 (Bangladesh) | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — NOT COUNSEL APPROVED |
 | AGM-005 | AGM Quorum Not Met | Section 85(2)(b), Companies Act 1994 (Bangladesh), subject to the company’s Articles | NOT_EVALUATED | 0 | no | INTERNAL TRIAGE — verify Articles, member count and attendance evidence |
