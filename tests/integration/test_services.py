@@ -248,6 +248,8 @@ class TestComplianceService:
     @pytest.mark.asyncio
     async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
+        from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
+        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
         import app.rule_engine.engine as engine_module
         from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
         from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
