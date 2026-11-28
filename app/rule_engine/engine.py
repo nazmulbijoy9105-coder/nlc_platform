@@ -1714,7 +1714,7 @@ class NLCRuleEngine:
             if "agm_court_order_lawyer_decision" not in verified_keys:
                 lawyer_decision = None
             review = agm_court_order_scoring_guard(
-                order_evidence, lawyer_decision
+                order_evidence, lawyer_decision, as_of=self.today
             )
             affected_event = str(
                 order_details.get("affected_event") or ""
