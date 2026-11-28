@@ -1766,10 +1766,9 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=(
-                            "Section 81(1), Companies Act 1994 (Bangladesh); "
-                            "order-specific authority requires review"
-                        ),
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
@@ -1782,10 +1781,9 @@ class NLCRuleEngine:
                         score_impact=0,
                         revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
                         description=review_description,
-                        statutory_basis=(
-                            "Section 81(1), Companies Act 1994 (Bangladesh); "
-                            "order-specific authority requires review"
-                        ),
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
                         detail=review_detail,
                         state=review_state,
                         eval_state="UNKNOWN",
