@@ -185,11 +185,14 @@ async def full_health_check():
     s3_health = await _check_s3()
     logger.info("health_checks_done", db=db_health.status, redis=redis_health.status, s3=s3_health.status)
 
+    # This endpoint is public. Never expose raw provider/exception details,
+    # connection diagnostics, or internal infrastructure metadata to callers.
+    # Keep detailed diagnostics in restricted provider logs instead.
     components = {
-        "database": db_health.model_dump(),
-        "redis": redis_health.model_dump(),
-        "celery_workers": celery_health.model_dump(),
-        "s3": s3_health.model_dump(),
+        "database": db_health.model_dump(exclude={"detail"}),
+        "redis": redis_health.model_dump(exclude={"detail"}),
+        "celery_workers": celery_health.model_dump(exclude={"detail"}),
+        "s3": s3_health.model_dump(exclude={"detail"}),
     }
 
     # Determine overall status
