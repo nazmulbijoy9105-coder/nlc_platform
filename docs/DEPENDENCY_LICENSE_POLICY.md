@@ -1,134 +1,97 @@
-# Dependency license policy
-
-**Owner decision recorded:** 2026-11-27
-
-## Accepted open-source families
-
-NLC may depend on packages under the following license families without further
-per-package legal review, provided the dependency is required for the product
-and is inventoried in the release `pip-audit` / license report:
-
-- MIT, BSD (2/3-clause), Apache-2.0, ISC, Unlicense, CC0
-- **PSFL** (Python Software Foundation License), including `defusedxml` and other
-  packages that declare `License: PSFL` / OSI Python Software Foundation License
-- MPL-2.0 for non-copyleft-viral use as shipped upstream
-
-## Explicit acceptance: Defusedxml / PSFL
-
-Finding 4 (Defusedxml license classifier) is **accepted**:
-
-- Package: `defusedxml==0.7.1` (or the pin in `requirements.txt`)
-- Declared license: PSFL (verified via wheel metadata)
-- Project policy: PSFL is an accepted dependency license for NLC
-- Root project license: MIT (`LICENSE`)
-
-No additional commercial license is required for PSFL packages under this policy.
-
-## Disallowed without written exception
-
-- AGPL, SSPL, BUSL, and other strongly reciprocal / source-available commercial
-  licenses that would force product source disclosure or incompatible terms
-
-Exceptions require a dated note in this file and security-closure evidence.
-
-## Release gate
-
-Production release continues to require:
-
-1. Live `pip-audit` with zero known vulnerabilities
-2. Structural security-closure document with all items `Status: CLOSED`
-3. This policy file present for PSFL/Defusedxml closure evidence
 # Dependency License Policy
 
 **Project:** NLC Platform  
 **Project license:** Proprietary — All rights reserved  
-**Policy status:** Project-owner decision recorded  
-**Scope:** Third-party packages and other dependencies incorporated into, distributed with, or used to build or operate NLC Platform.
+**Owner decision recorded:** 2026-11-27
 
 ## 1. Separate project and dependency licensing
 
-NLC Platform is proprietary software. The project's proprietary status does not
-change the license terms of third-party dependencies, and acceptance of a
+NLC Platform is proprietary software. The project's proprietary status does
+not change the license terms of third-party dependencies, and acceptance of a
 dependency license does not grant a license to NLC Platform.
 
 Each dependency must be assessed under its own applicable license and any
 relevant notice, attribution, source-disclosure, offer, or redistribution
 obligations.
 
-## 2. Explicit acceptance of PSFL
+## 2. Explicitly approved dependency licenses
 
-The project owner explicitly accepts dependencies distributed under the
-**Python Software Foundation License (PSFL)**, subject to the terms of the
-specific PSFL version applicable to each dependency.
+The following license families are approved for use, subject to retaining and
+providing applicable license texts, copyright notices, attribution, and
+NOTICE materials when required:
 
-PSFL acceptance is intentional and is not an unresolved or unknown-license
-exception. Before redistributing a PSFL-licensed dependency, the project must
-retain and provide the applicable license text, copyright notices, and other
-required notices in the manner required by that license.
-
-## 3. License categories
-
-The following categories guide dependency review. Classification must be
-verified against the actual license text and the way the dependency is used;
-an SPDX identifier or scanner label alone is not a legal determination.
-
-### Generally acceptable, subject to notice compliance
-
-- Python Software Foundation License (PSFL), explicitly accepted above.
 - MIT.
 - BSD-2-Clause and BSD-3-Clause.
 - Apache-2.0.
 - ISC.
-- Other permissive licenses approved in writing by the project owner or
-  designated legal reviewer.
+- Unlicense.
+- Python Software Foundation License (PSFL), including Defusedxml and the Python License, Version 2 (SPDX Python-2.0).
+- CMU License (SPDX MIT-CMU).
+- Tcl/Tk License (TCL).
 
-Required copyright, attribution, license, and NOTICE materials must be
-preserved where applicable.
+The project owner expressly accepts PSFL-licensed dependencies, the permissive CMU License, and the Tcl/Tk License. This approval
+is intentional and is not an unresolved or unknown-license exception. The
+specific PSFL version and its notice obligations must still be observed.
 
-### Requires case-by-case written review before release
+The CI allowlist is intentionally narrower than this explanatory list where
+metadata is ambiguous or compound. A package whose metadata cannot be
+unambiguously mapped to an approved license expression remains blocked until
+the expression is reviewed and represented exactly in the checker.
+
+## 3. Requires case-by-case written review
+
+The following categories are not approved by default and block release until
+the exact license, use, distribution model, and obligations have been reviewed
+and the decision is recorded:
 
 - LGPL.
 - MPL.
 - EPL.
-- Other weak-copyleft, reciprocal, source-available, dual-licensed, or
-  non-standard licenses.
-
-Review must consider the exact license version, linking and modification
-model, distribution method, source and notice obligations, and compatibility
-with the proprietary product. Approval and any conditions must be recorded.
-
-### Not accepted without express project-owner and legal approval
-
 - GPL.
 - AGPL.
 - SSPL.
-- Unknown, missing, conflicting, or unverified licenses.
-- Any license whose terms or restrictions have not been reviewed sufficiently
-  to determine whether use and distribution are compatible with the product.
+- BUSL.
+- Dual-licensed, custom, source-available, or other non-standard terms.
+- Public-domain or compound expressions that the checker cannot safely
+  interpret.
+- Unknown, missing, conflicting, or unverified license metadata.
 
-A dependency in this category blocks release until the issue is resolved,
-replaced, excluded, or expressly approved in a documented decision.
+A dependency in this category must be replaced, excluded, or expressly approved
+in a dated project-owner/legal-review record before it can be allowlisted.
+Scanner labels alone are not a legal determination.
 
 ## 4. Evidence and release controls
 
 For each release dependency audit, retain:
 
-1. The dependency-audit output, including package name and version.
-2. The detected license identifier and the source used to verify it.
-3. Relevant license and NOTICE texts for distributed dependencies.
+1. The dependency inventory, including package name and version.
+2. The detected license identifier and source used to verify it.
+3. Applicable license and NOTICE texts for distributed dependencies.
 4. Written approvals and conditions for dependencies requiring case-by-case
    review.
 5. A record of unresolved, unknown, or disallowed findings and their disposition.
 
-A scanner's classification is evidence for review, not project-owner approval.
-A passing scanner result does not waive notice or attribution obligations.
+Unknown or unapproved licenses are release blockers. A passing scanner result
+does not waive notice or attribution obligations.
 
-Unknown or unapproved licenses are release blockers. PSFL findings are
-acceptable under this policy when the applicable PSFL terms and notice
-obligations are met. This document is the project's written record of that
-PSFL acceptance for dependency-license review and security-closure evidence.
+## 5. Current dependency dispositions (2026-11-27)
 
-## 5. Changes to this policy
+| Package / version | Detected license | Decision | Release treatment |
+|---|---|---|---|
+| PyMuPDF 1.27.1 | AGPL-3.0 or Artifex commercial | Removed from runtime and development requirement sets after repository search found no application import or use. No AGPL/commercial acceptance is granted. | Not installed by the application; reintroduction requires a new review. |
+| pypdfium2 5.5.0 | BSD-3-Clause / Apache-2.0 plus PDFium bundled dependency licenses | Present in the resolved inventory and now explicitly version-pinned; no package/bundle approval is recorded. | Release blocker until the exact wheel's bundled PDFium notices and all included licenses are reviewed and approved, or the dependency is removed from the resolved install. |
+| greenlet 3.3.1 | MIT AND Python-2.0 | Approved under the existing MIT and PSFL approvals; retain both sets of applicable notices. | Allowlisted as an explicitly reviewed compound expression. |
+| certifi 2026.11.20 | MPL-2.0 | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
+| Pillow 13.0.0 | MIT-CMU | Approved as the distinct CMU License under the owner decision above; preserve notices and the no-endorsement condition. | Allowed when the license text and notices are retained. |
+| chardet 6.0.0.post1 | LGPL-2.1-or-later | Direct pin removed after repository search found no application import. No LGPL approval is granted. | If installed transitively, remains a release blocker pending replacement or written review. |
+| pyphen 0.17.2 | GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1 | Not approved; its tri-license alternatives require an explicit choice and review of the selected terms and included dictionaries. | Release blocker while present in the installed runtime inventory. |
+| python-bidi 0.6.7 | LGPL | Not approved; no package-specific written approval is recorded. | Release blocker while present in the installed runtime inventory. |
+| tqdm 4.67.3 | MPL-2.0 AND MIT | Present in the resolved inventory and now explicitly version-pinned. The distribution contains MPL-covered files as well as MIT-covered files; no MPL approval is granted. | Release blocker pending replacement or written project-owner/legal approval of the MPL obligations. |
+| ujson 6.0.0 | BSD-3-Clause AND TCL | Direct pin removed after repository search found no application import. BSD-3-Clause and Tcl/Tk License are explicitly approved; retain both notices and verify bundled double-conversion notices in the installed distribution. | Allowed only if the actual inventory and bundled notices match this reviewed expression; unknown bundled licenses still block. |
+
+Removal decisions above are based on the absence of repository references, not on a licence exception. Transitive packages remain in scope: removing a direct pin does not resolve a package that is still installed through another dependency. Re-run the inventory after every dependency change and review the actual resolved package set.
+
+## 6. Change control
 
 Changes to accepted license categories, or exceptions for a particular
 dependency, require a documented decision by the project owner or an expressly

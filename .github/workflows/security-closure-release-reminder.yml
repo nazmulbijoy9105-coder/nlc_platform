@@ -1,0 +1,36 @@
+name: Security closure release readiness
+
+# P0 companion: on main, report whether the *full* (non structure-only) closure
+# gate would pass. Does not deploy. Fails the job if the document is not ready
+# so release operators see a red check before workflow_dispatch release.
+#
+# Live pip-audit is included; this is heavier than structure-only and is limited
+# to main + manual dispatch to avoid slowing every PR.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-closure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies for live audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-audit
+
+      - name: Run full security closure gate
+        run: python scripts/check_security_closure.py

@@ -1,0 +1,166 @@
+"""Fail closed when any installed dependency license lacks explicit approval."""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+
+# Explicitly approved by docs/DEPENDENCY_LICENSE_POLICY.md: permissive
+# families plus PSFL. GPL/AGPL, LGPL, MPL, SSPL, BUSL, unknown and
+# unclassified licenses remain blocked unless separately approved in writing.
+APPROVED_ALIASES = {
+    "MIT",
+    "MIT LICENSE",
+    "MIT CMU",
+    "CMU LICENSE",
+    "BSD LICENSE",
+    "BSD 2 CLAUSE LICENSE",
+    "BSD 2 CLAUSE SIMPLIFIED LICENSE",
+    "BSD 3 CLAUSE LICENSE",
+    "BSD 3 CLAUSE CLEAR LICENSE",
+    "BSD 3 CLAUSE REVISED LICENSE",
+    "BSD 3 CLAUSE NEW OR REVISED LICENSE",
+    "BSD 2 CLAUSE",
+    "BSD 3 CLAUSE",
+    "APACHE SOFTWARE LICENSE",
+    "APACHE LICENSE 2 0",
+    "APACHE 2 0",
+    "ISC LICENSE",
+    "ISC",
+    "TCL",
+    "TCL LICENSE",
+    "TCL TK LICENSE",
+    "PYTHON SOFTWARE FOUNDATION LICENSE",
+    "PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2",
+    "PYTHON LICENSE VERSION 2",
+    "PYTHON 2 0",
+    "PYTHON SOFTWARE FOUNDATION LICENSE 2 0",
+    "PSF 2 0",
+    "PSFL",
+    "UNLICENSE",
+    "THE UNLICENSE UNLICENSE",
+    "3 CLAUSE BSD LICENSE",
+}
+
+
+def normalize(value: object) -> str:
+    return re.sub(r"[^A-Z0-9]+", " ", str(value or "").upper()).strip()
+
+
+def _normalize_expression(value: object) -> str:
+    """Normalize SPDX expressions and pip-licenses' semicolon alternatives."""
+    expression = str(value or "").upper()
+    # pip-licenses emits semicolon-separated license labels for distributions
+    # that declare multiple license texts. Treat these as conjunctive obligations:
+    # every listed license must independently be approved.
+    expression = expression.replace(";", " AND ")
+    expression = re.sub(r"\b(AND|OR)\b", r" \1 ", expression)
+    expression = re.sub(r"[^A-Z0-9()]+", " ", expression)
+    return re.sub(r"\s+", " ", expression).strip()
+
+
+def _split_top_level(expression: str, operator: str) -> list[str]:
+    """Split an SPDX-style expression without splitting parenthesized terms."""
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    index = 0
+    token = f" {operator} "
+    while index < len(expression):
+        char = expression[index]
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return []
+        if depth == 0 and expression.startswith(token, index):
+            parts.append(expression[start:index].strip())
+            index += len(token)
+            start = index
+            continue
+        index += 1
+    if depth != 0:
+        return []
+    parts.append(expression[start:].strip())
+    return parts if all(parts) else []
+
+
+def _has_balanced_outer_parentheses(expression: str) -> bool:
+    if not (expression.startswith("(") and expression.endswith(")")):
+        return False
+    depth = 0
+    for index, char in enumerate(expression):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0 and index != len(expression) - 1:
+                return False
+            if depth < 0:
+                return False
+    return depth == 0
+
+
+def is_approved(value: object) -> bool:
+    """Accept only expressions whose chosen license path is explicitly approved.
+
+    Every declared alternative and every conjunction component must be approved.
+    In particular, an expression containing a prohibited OR alternative is
+    rejected rather than assuming the distributor will select the permissive
+    option. Unknown, malformed, and unlisted terms fail closed.
+    """
+    raw = str(value or "").strip()
+    # pip-licenses appends parenthetical classifier aliases to these exact
+    # license names; accept only the recognized redundant forms.
+    if re.fullmatch(r"(?i)the unlicense\s*\(\s*unlicense\s*\)", raw):
+        return True
+    if re.fullmatch(r"(?i)isc license\s*\(\s*iscl\s*\)", raw):
+        return True
+    expression = _normalize_expression(value)
+    if not expression:
+        return False
+    if _has_balanced_outer_parentheses(expression):
+        return is_approved(expression[1:-1])
+
+    # SPDX precedence: AND binds more tightly than OR.
+    alternatives = _split_top_level(expression, "OR")
+    if len(alternatives) > 1:
+        return all(is_approved(part) for part in alternatives)
+
+    conjunction = _split_top_level(expression, "AND")
+    if len(conjunction) > 1:
+        return all(is_approved(part) for part in conjunction)
+
+    if "(" in expression or ")" in expression:
+        return False
+    return normalize(expression) in APPROVED_ALIASES
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: check_dependency_licenses.py INVENTORY.json")
+    rows = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    if not isinstance(rows, list) or not rows:
+        raise SystemExit("Dependency license inventory is empty or malformed")
+
+    offenders = []
+    for row in rows:
+        name = str(row.get("Name") or "<unnamed>")
+        license_name = str(row.get("License") or "").strip()
+        if not is_approved(license_name):
+            offenders.append(f"{name}: {license_name or 'UNKNOWN / UNDECLARED'}")
+
+    if offenders:
+        raise SystemExit(
+            "Unapproved or unknown dependency licenses (fail-closed):\n"
+            + "\n".join(sorted(offenders))
+        )
+    print(f"License policy passed for {len(rows)} installed application dependencies")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

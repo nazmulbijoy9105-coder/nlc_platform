@@ -13,12 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
-# requirements.txt is the complete, exactly pinned set verified by the dependency
-# audit. Install binary wheels only: do not execute source-build backends or resolve
-# unpinned build-system dependencies. pip is a pinned, temporary builder tool only.
+COPY requirements-runtime.txt .
+# requirements-runtime.txt contains only the pinned production dependency graph.
+# Developer, test, migration-operator, and security-inventory tools stay out of
+# the customer-facing image. Install binary wheels only; pip is temporary.
 RUN pip install --upgrade "pip==24.0" && \
-    pip install --no-cache-dir --no-deps --only-binary=:all: -r requirements.txt && \
+    pip install --no-cache-dir --no-deps --only-binary=:all: -r requirements-runtime.txt && \
     pip uninstall -y pip
 
 # STAGE 2: runtime-base

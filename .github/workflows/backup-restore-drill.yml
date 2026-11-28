@@ -1,0 +1,142 @@
+name: Backup restore drill
+
+on:
+  schedule:
+    - cron: "15 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore-drill:
+    # Never expose recovery credentials to a user-selected branch. The
+    # production environment must additionally restrict deployments to main
+    # and require an authorised reviewer before releasing its secrets.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nlc_restore
+          POSTGRES_PASSWORD: nlc_restore_ci_only
+          POSTGRES_DB: nlc_restore
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nlc_restore -d nlc_restore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install backup tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate restore tooling
+        run: |
+          set -euo pipefail
+          test -f scripts/rehearse_restored_neon_branch.py
+          test -f scripts/verify_backup.py
+          python -m py_compile scripts/rehearse_restored_neon_branch.py scripts/verify_backup.py
+          bash -n scripts/backup_to_s3.sh
+
+      - name: Create, verify and restore this run's database backup
+        env:
+          NLC_BACKUP_DATABASE_URL: ${{ secrets.NLC_BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NLC_BACKUP_DATABASE_URL:-}" ]]; then
+            echo "NLC_BACKUP_DATABASE_URL is required by the protected production restore drill." >&2
+            exit 1
+          fi
+          mkdir -p artifacts
+          ARCHIVE="artifacts/nlc-restore-drill.dump"
+          pg_dump --format=custom --no-owner --no-acl --file="$ARCHIVE" --dbname="$NLC_BACKUP_DATABASE_URL"
+          test -s "$ARCHIVE"
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+          python scripts/verify_backup.py "$ARCHIVE"
+          RESTORE_URL="postgresql://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore"
+          pg_restore --exit-on-error --no-owner --no-acl --dbname="$RESTORE_URL" "$ARCHIVE"
+          psql "$RESTORE_URL" -v ON_ERROR_STOP=1 -Atc "
+            SELECT CASE WHEN count(*) = 3 THEN 'PASS' ELSE
+              (SELECT string_agg(name, ', ') FROM (
+                SELECT required.name
+                FROM unnest(ARRAY['webhook_endpoints','webhook_deliveries','rescue_audit_log']) AS required(name)
+                WHERE to_regclass('public.' || required.name) IS NULL
+              ) missing)
+            END
+            FROM unnest(ARRAY['webhook_endpoints','webhook_deliveries','rescue_audit_log']) AS expected(name)
+            WHERE to_regclass('public.' || expected.name) IS NOT NULL
+          " | grep -qx PASS
+          echo "Backup created, TOC/checksum verified, and restored into the disposable PostgreSQL service."
+          echo "This proves restoreability of this backup; it does not certify production migration readiness."
+
+      - name: Migrate the backup restored in this run to the repository Alembic head
+        env:
+          MIGRATION_DATABASE_URL: postgresql+asyncpg://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore
+          DATABASE_URL: postgresql+asyncpg://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore
+          ENVIRONMENT: test
+        run: |
+          set -euo pipefail
+          # Exercise the actual archive restored above, not a separately seeded
+          # fixture. This is an isolated migration rehearsal, never production.
+          alembic upgrade head
+          CURRENT="$(alembic current | awk 'NR == 1 { print $1 }')"
+          HEAD="$(alembic heads | awk 'NR == 1 { print $1 }')"
+          echo "Restored backup Alembic revision: ${CURRENT}"
+          echo "Repository Alembic head: ${HEAD}"
+          test -n "$CURRENT"
+          test -n "$HEAD"
+          test "$CURRENT" = "$HEAD"
+          psql "postgresql://nlc_restore:nlc_restore_ci_only@localhost:5432/nlc_restore" \
+            -v ON_ERROR_STOP=1 -Atc "
+              SELECT CASE WHEN count(*) = 3 THEN 'PASS' ELSE 'FAIL' END
+              FROM information_schema.tables
+              WHERE table_schema='public'
+                AND table_name IN ('webhook_endpoints','webhook_deliveries','rescue_audit_log')
+            " | grep -qx PASS
+
+      - name: Run pinned isolated Neon migration rehearsal when configured
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+          NLC_RESTORED_REHEARSAL_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_DATABASE_URL }}
+          NLC_RESTORED_REHEARSAL_APP_DATABASE_URL: ${{ secrets.NLC_RESTORED_REHEARSAL_APP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NEON_API_KEY:-}" && -z "${NEON_PROJECT_ID:-}" ]]; then
+            echo "Neon branch migration rehearsal not configured; isolated PostgreSQL backup restore completed."
+            exit 0
+          fi
+          if [[ -z "${NEON_API_KEY:-}" || -z "${NEON_PROJECT_ID:-}" ||
+                -z "${NLC_RESTORED_REHEARSAL_DATABASE_URL:-}" ||
+                -z "${NLC_RESTORED_REHEARSAL_APP_DATABASE_URL:-}" ]]; then
+            echo "All four Neon rehearsal secrets are required when the Neon path is enabled." >&2
+            exit 1
+          fi
+          python scripts/rehearse_restored_neon_branch.py
+
+      - name: Upload restore evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-restore-drill-evidence
+          path: artifacts/
+          if-no-files-found: warn

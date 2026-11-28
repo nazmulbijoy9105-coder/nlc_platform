@@ -1,0 +1,49 @@
+name: Alembic single head
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  single-head:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Alembic tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Require exactly one Alembic head
+        run: |
+          set -euo pipefail
+          HEADS="$(alembic heads)"
+          printf '%s\n' "$HEADS"
+          HEAD_COUNT="$(printf '%s\n' "$HEADS" | grep -c '(head)' || true)"
+          echo "Alembic head count: ${HEAD_COUNT}"
+          test "$HEAD_COUNT" -eq 1
+
+      - name: Audit revision DAG
+        run: |
+          mkdir -p artifacts
+          python scripts/audit_alembic_graph.py --json-output artifacts/alembic-migration-inventory.json
+
+      - name: Upload Alembic inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alembic-single-head-inventory
+          path: artifacts/alembic-migration-inventory.json
+          if-no-files-found: warn

@@ -1,0 +1,53 @@
+name: Dependency license policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "50 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install application and inventory-tool environments separately
+        run: |
+          set -euo pipefail
+          python -m venv .venv-app
+          python -m venv .venv-license-tools
+          .venv-app/bin/python -m pip install --upgrade pip
+          .venv-app/bin/python -m pip install -r requirements-runtime.txt
+          .venv-license-tools/bin/python -m pip install pip-licenses
+
+      - name: Enforce explicit approved-license allowlist
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          .venv-license-tools/bin/pip-licenses --python .venv-app/bin/python \
+            --format=json --with-urls --with-description > artifacts/python-licenses.json
+          .venv-license-tools/bin/pip-licenses --python .venv-app/bin/python \
+            --format=markdown --with-urls > artifacts/python-licenses.md
+          python scripts/check_dependency_licenses.py artifacts/python-licenses.json
+
+      - name: Upload license inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-license-inventory
+          path: |
+            artifacts/python-licenses.json
+            artifacts/python-licenses.md
+          if-no-files-found: warn

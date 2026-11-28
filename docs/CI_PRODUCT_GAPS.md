@@ -1,0 +1,94 @@
+# CI product-gap map (NLC Platform)
+
+This document maps the CI controls introduced by
+`ci/product-gap-workflows-20261127` to the product risks they are intended
+to detect. A workflow passing is evidence only for the checks it actually runs.
+
+## P0 — release / trust
+
+| Gap | Workflow / mechanism |
+|-----|----------------------|
+| Green migration rehearsal 0112→head | Existing production Neon rehearsal workflows; these remain a separate release gate and must pass on the exact release SHA |
+| Live security closure | `security-closure-release-reminder.yml` on `main` + controlled production-release gate |
+| Single Alembic head and DAG audit | `alembic-single-head.yml` on every PR and push to `main` |
+| Frontend / API compatibility | `api-contract.yml` exports OpenAPI and validates exact client operations, successful JSON response schemas and path-segment prefixes |
+| Database tenant isolation | `tenant-isolation.yml` provisions isolated PostgreSQL roles and runs database-backed cross-tenant, RLS and privilege-boundary integration tests |
+
+## P1 — production maturity
+
+| Gap | Workflow / mechanism |
+|-----|----------------------|
+| Backup recovery | `backup-restore-drill.yml` creates a backup from the configured direct source URL, verifies its archive/checksum, restores that same archive into an ephemeral PostgreSQL service, and runs Alembic to the repository head against that restored database; optional pinned Neon rehearsal remains a separate provider-specific check |
+| Secret scanning | `secret-scan.yml` (Gitleaks) |
+| SAST | `codeql.yml` |
+| SBOM | `sbom.yml` generates CycloneDX from the declared application requirements file, not the CI environment |
+| Dependency updates | `.github/dependabot.yml` |
+| Worker / Celery health | `worker-health.yml` asserts the named critical beat tasks and their task targets |
+| License policy | `license-policy.yml` uses an explicit allowlist; unknown/unapproved metadata fails closed. PSFL remains unapproved until the project owner records a decision |
+
+## Protected recovery credentials
+
+The backup workflow is restricted in YAML to `refs/heads/main`, checks out
+`main` explicitly, and uses the `production` environment. Configure that
+GitHub environment outside this repository to allow deployments from `main`
+only and require an authorised reviewer. Do not store Neon or backup database
+credentials as unrestricted repository secrets. The backup source URL must be
+a direct TLS PostgreSQL connection suitable for `pg_dump`; the disposable
+restore target is created by the workflow and is not production.
+
+## P2 — still manual / follow-up
+
+| Gap | Notes |
+|-----|--------|
+| Cross-repo release train | Coordinate `nlc_frontend` deploy with the exact backend OpenAPI artifact SHA |
+| Synthetic user journeys | Add Playwright against staging in `nlc_frontend` or a dedicated e2e repo |
+| Uptime monitor | Re-enable/tune `uptime-monitor.yml` when Render probe targets are stable |
+| Load / soak tests | Not automated here; add k6/locust against staging when capacity allows |
+| Full backup health UI | `disabled/backup-health-check.yml` remains disabled until owners and secrets are assigned |
+| Production restore/migration equivalence | An ephemeral PostgreSQL restore proves the archive is restorable; it does not replace the separate isolated Neon 0112→current-head rehearsal or production release approvals |
+
+
+## Active production infrastructure blocker (observed 2026-11-27)
+
+The live Render API is repeatedly failing during startup because Neon rejects
+PostgreSQL connections with an account/project quota-exceeded error. The
+connected Neon organization is on the Free plan. The NLC project's reported
+November usage was approximately 5.55 GB public network transfer against the
+Free-plan allowance of 5 GB/project/month; compute was approximately 57.2
+CU-hours against 100 CU-hours, and logical size approximately 70.5 MB against
+1 GB. Network-transfer exhaustion is therefore the likely cause; re-check
+Neon's live usage and quota state before incident closure.
+
+**Release status: BLOCKED.** The application startup database check is
+intentionally fail-closed and must not be bypassed. Restore production
+database entitlement (paid plan for commercial operation, or an explicitly
+accepted emergency wait for the monthly reset), then verify read-only DB
+connectivity, runtime-role identity, Render readiness, authenticated paths,
+and tenant isolation. Do not migrate, seed, redeploy, switch branches, or
+delete data as a quota workaround.
+
+Operational recovery steps and prohibited shortcuts are documented in
+`docs/NEON_QUOTA_INCIDENT_RUNBOOK.md`. This incident is external to CI; green
+workflow checks do not mean the customer-facing API is available.
+
+
+## Production hosting entitlement blocker (observed 2026-11-27)
+
+The Render `nlc_platform` web service is configured on the **Free** compute plan. Render's own documentation says Free web services are not for production applications, spin down after 15 minutes without inbound traffic, and can be restarted or suspended under Free-plan limits. Upgrade the service's compute plan to a paid always-on tier before customer launch. A workspace-plan upgrade alone does not remove Free compute limitations. This requires an owner-approved billing change; no Render plan or billing change was made during this remediation.
+
+Reference: https://render.com/docs/free
+
+## Recommended required GitHub checks
+
+Mark these as required on `main` after the baseline is green:
+
+1. `CI` / unit-tests + integration-tests
+2. `Security closure structure`
+3. `Alembic single head`
+4. `Tenant isolation (PostgreSQL RLS)`
+5. `API contract smoke`
+6. `Secret scan`
+7. `Dependency license policy`
+
+CodeQL and SBOM can begin as non-required checks until their baselines and
+artifact consumers are confirmed.

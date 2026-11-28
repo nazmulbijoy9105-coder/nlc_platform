@@ -1,0 +1,62 @@
+name: Worker health
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  celery-smoke:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://dummy:dummy@localhost:5432/dummy
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET_KEY: ci-only-jwt-secret-not-for-production-2026
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Import Celery app and assert required beat jobs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from app.worker.celery_app import celery_app
+          from app.worker.beat_schedule import BEAT_SCHEDULE
+
+          required = {
+              "daily-compliance-evaluation": "app.worker.tasks.evaluate_all_companies",
+              "daily-deadline-warnings": "app.worker.tasks.queue_deadline_warning_notifications",
+              "process-pending-notifications": "app.worker.tasks.send_pending_notifications",
+              "dispatch-domain-event-outbox": "app.worker.tasks.dispatch_domain_event_outbox",
+              "monthly-score-snapshot": "app.worker.tasks.monthly_score_snapshot_all",
+              "sro-registry-check": "app.worker.tasks.sync_sro_registry",
+              "cleanup-expired-notifications": "app.worker.tasks.cleanup_expired_notifications",
+              "weekly-log-cleanup": "app.worker.tasks.cleanup_old_activity_logs",
+              "daily-subscription-lifecycle": "app.worker.tasks.process_due_subscriptions",
+              "db-health-check": "app.worker.tasks.database_health_check",
+          }
+          configured = celery_app.conf.beat_schedule or {}
+          if not configured:
+              raise SystemExit("Celery beat_schedule is empty")
+          missing = {
+              key: task for key, task in required.items()
+              if key not in configured or configured[key].get("task") != task
+          }
+          if missing:
+              raise SystemExit(f"Required Celery beat entries missing or changed: {missing!r}")
+          print(f"Celery beat schedule OK: {len(configured)} entries; required jobs={len(required)}")
+          PY
