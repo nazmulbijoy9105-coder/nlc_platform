@@ -107,6 +107,16 @@ def test_scoped_lawyer_decision_still_withholds_scoring_until_rule_logic_is_impl
         "reasoning": "The operative order applies only to this event.",
         "affected_event": "FIRST_AGM_2026",
         "outcome": "DEADLINE_MODIFIED",
+        "court_name": "High Court Division",
+        "case_number": "Company Matter 12 of 2026",
+        "order_date": "2026-10-01",
+        "evidence_ref": "document:verified-order-001",
+        "effective_from": "2026-10-01",
+        "effective_until": None,
+        "reviewer_qualification_verified": True,
+        "reviewer_qualification_evidence_ref": "counsel-register:verified-001",
+        "reviewer_qualification_verified_by": "independent-credential-reviewer",
+        "reviewer_qualification_verified_at": "2026-10-02T09:00:00+06:00",
     }
     profile = _profile_with_order(decision=decision)
     engine = _run_agm(profile)
@@ -167,6 +177,16 @@ def test_court_order_and_lawyer_decision_are_supported_company_fact_payloads():
         "reasoning": "Scoped interpretation recorded.",
         "affected_event": "FIRST_AGM_2026",
         "outcome": "NO_EFFECT",
+        "court_name": "High Court Division",
+        "case_number": "Company Matter 12 of 2026",
+        "order_date": "2026-10-01",
+        "evidence_ref": "document:order-001",
+        "effective_from": "2026-10-01",
+        "effective_until": None,
+        "reviewer_qualification_verified": True,
+        "reviewer_qualification_evidence_ref": "counsel-register:verified-001",
+        "reviewer_qualification_verified_by": "independent-credential-reviewer",
+        "reviewer_qualification_verified_at": "2026-10-02T09:00:00+06:00",
     }
 
     assert coerce_company_profile_fact_value("agm_court_order_evidence", order) == order
