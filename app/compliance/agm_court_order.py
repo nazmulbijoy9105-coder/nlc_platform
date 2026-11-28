@@ -117,6 +117,16 @@ class AgmLawyerDecision:
     reasoning: str
     affected_event: str
     outcome: str
+    court_name: str
+    case_number: str
+    order_date: date
+    evidence_ref: str
+    effective_from: date
+    effective_until: date | None
+    reviewer_qualification_verified: bool
+    reviewer_qualification_evidence_ref: str
+    reviewer_qualification_verified_by: str
+    reviewer_qualification_verified_at: datetime
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "AgmLawyerDecision":
@@ -124,7 +134,9 @@ class AgmLawyerDecision:
             raise ValueError("lawyer decision must be an object")
         text_fields = (
             "reviewer_id", "decision_reference", "reasoning",
-            "affected_event", "outcome",
+            "affected_event", "outcome", "court_name", "case_number",
+            "evidence_ref", "reviewer_qualification_evidence_ref",
+            "reviewer_qualification_verified_by",
         )
         parsed: dict[str, str] = {}
         for key in text_fields:
@@ -142,7 +154,50 @@ class AgmLawyerDecision:
             raise ValueError("decided_at is required")
         if parsed["outcome"] not in LAWYER_OUTCOMES:
             raise ValueError("outcome is not recognized")
-        return cls(decided_at=decided_at, **parsed)
+
+        def parse_date(key: str, *, optional: bool = False) -> date | None:
+            raw = value.get(key)
+            if raw is None and optional:
+                return None
+            if isinstance(raw, datetime):
+                raw = raw.date()
+            if isinstance(raw, str):
+                try:
+                    raw = date.fromisoformat(raw)
+                except ValueError as exc:
+                    raise ValueError(f"{key} must be an ISO date") from exc
+            if not isinstance(raw, date):
+                raise ValueError(f"{key} is required")
+            return raw
+
+        order_date = parse_date("order_date")
+        effective_from = parse_date("effective_from")
+        effective_until = parse_date("effective_until", optional=True)
+        qualification_verified_at = value.get("reviewer_qualification_verified_at")
+        if isinstance(qualification_verified_at, str):
+            try:
+                qualification_verified_at = datetime.fromisoformat(
+                    qualification_verified_at
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    "reviewer_qualification_verified_at must be an ISO datetime"
+                ) from exc
+        if not isinstance(qualification_verified_at, datetime):
+            raise ValueError("reviewer_qualification_verified_at is required")
+        if value.get("reviewer_qualification_verified") is not True:
+            raise ValueError("qualified counsel verification is required")
+        if effective_until is not None and effective_until < effective_from:
+            raise ValueError("effective_until cannot precede effective_from")
+        return cls(
+            decided_at=decided_at,
+            order_date=order_date,
+            effective_from=effective_from,
+            effective_until=effective_until,
+            reviewer_qualification_verified=True,
+            reviewer_qualification_verified_at=qualification_verified_at,
+            **parsed,
+        )
 
 
 def agm_court_order_scoring_guard(
@@ -194,10 +249,26 @@ def agm_court_order_scoring_guard(
         except (TypeError, ValueError) as exc:
             decision_error = str(exc)
 
+    decision_matches_order = bool(
+        decision is not None
+        and decision.affected_event == evidence.affected_event
+        and decision.court_name == evidence.court_name
+        and decision.case_number == evidence.case_number
+        and decision.order_date == evidence.order_date
+        and decision.evidence_ref == evidence.evidence_ref
+        and decision.effective_from <= decision.decided_at.date()
+        and (
+            decision.effective_until is None
+            or decision.decided_at.date() <= decision.effective_until
+        )
+        and decision.reviewer_qualification_verified
+        and decision.reviewer_qualification_evidence_ref
+        and decision.reviewer_qualification_verified_by != decision.reviewer_id
+    )
     if (
         not evidence.evidence_verified
         or decision is None
-        or decision.affected_event != evidence.affected_event
+        or not decision_matches_order
     ):
         reason = (
             "ORDER_EVIDENCE_NOT_VERIFIED"
@@ -238,6 +309,19 @@ def agm_court_order_scoring_guard(
             "reasoning": decision.reasoning,
             "affected_event": decision.affected_event,
             "outcome": decision.outcome,
+            "court_name": decision.court_name,
+            "case_number": decision.case_number,
+            "order_date": decision.order_date.isoformat(),
+            "evidence_ref": decision.evidence_ref,
+            "effective_from": decision.effective_from.isoformat(),
+            "effective_until": (
+                decision.effective_until.isoformat()
+                if decision.effective_until else None
+            ),
+            "reviewer_qualification_verified": decision.reviewer_qualification_verified,
+            "reviewer_qualification_evidence_ref": decision.reviewer_qualification_evidence_ref,
+            "reviewer_qualification_verified_by": decision.reviewer_qualification_verified_by,
+            "reviewer_qualification_verified_at": decision.reviewer_qualification_verified_at.isoformat(),
         },
         "reason": "DECISION_RECORDED_REQUIRES_RULE_SPECIFIC_IMPLEMENTATION",
     }
