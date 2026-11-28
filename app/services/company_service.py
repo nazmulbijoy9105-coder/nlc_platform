@@ -194,10 +194,17 @@ def _agm_profile_evidence(latest_agm) -> dict:
 
 def _agm_history_summary(active_agms, history_marker_verified: bool) -> dict:
     """Summarize verified annual AGM history; extraordinary meetings are excluded."""
+    recognized_types = {"ANNUAL", "FIRST", "EXTRAORDINARY"}
+    all_types_recognized = all(
+        getattr(row, "agm_type", "ANNUAL") in recognized_types
+        for row in active_agms
+    )
     annual_agms = [
         row for row in active_agms
         if getattr(row, "agm_type", "ANNUAL") in {"ANNUAL", "FIRST"}
     ]
+    financial_years = [row.financial_year for row in annual_agms]
+    has_duplicate_annual_cycles = len(financial_years) != len(set(financial_years))
     all_cycle_statuses_verified = all(
         getattr(row, "agm_held_verified", False) is True
         and bool(getattr(row, "agm_held_evidence_ref", None))
@@ -209,7 +216,15 @@ def _agm_history_summary(active_agms, history_marker_verified: bool) -> dict:
         )
         for row in annual_agms
     )
-    history_verified = history_marker_verified and all_cycle_statuses_verified
+    # Unknown types and duplicate annual financial-year rows make the
+    # history ambiguous. Do not silently discard them or count duplicates as
+    # separate meetings.
+    history_verified = (
+        history_marker_verified
+        and all_cycle_statuses_verified
+        and all_types_recognized
+        and not has_duplicate_annual_cycles
+    )
     verified_held_agms = [
         row for row in annual_agms
         if row.agm_held is True
