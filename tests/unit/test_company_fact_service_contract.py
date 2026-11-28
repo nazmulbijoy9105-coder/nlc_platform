@@ -36,3 +36,13 @@ def test_agm_court_order_status_requires_thirty_day_refresh() -> None:
     assert fact_freshness_status(
         "agm_court_order_evidence", today - timedelta(days=31), today
     ) == "STALE"
+
+
+def test_agm_structured_facts_are_not_accepted_by_user_asserted_scalar_path() -> None:
+    for fact_key in (
+        "agm_court_order_evidence",
+        "agm_court_order_lawyer_decision",
+    ):
+        with pytest.raises(HTTPException) as exc:
+            CompanyFactService._normalize_fact_key(fact_key)
+        assert exc.value.status_code == 422
