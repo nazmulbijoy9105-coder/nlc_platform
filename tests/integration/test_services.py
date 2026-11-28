@@ -176,7 +176,11 @@ class TestComplianceService:
 
     @pytest.mark.asyncio
     async def test_get_flag_summary_returns_dict(self, db, db_company):
-        from app.services.compliance_service import ComplianceService
+        from app.services.compliance_service import (
+            ComplianceService,
+            RJSC_SCOPE_VERSION,
+            SCORING_SPEC_VERSION,
+        )
 
         svc = ComplianceService(db)
         summary = await svc.get_flag_summary(db_company.id)
@@ -385,6 +389,10 @@ class TestComplianceService:
             "score": None,
             "risk_band": "NOT_EVALUATED",
             "scoring_data": "WITHHELD",
+            "engine_version": "test-engine-v1",
+            "rjsc_scope_version": RJSC_SCOPE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "ilrmf_version": "test-ilrmf-v1",
         }
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
