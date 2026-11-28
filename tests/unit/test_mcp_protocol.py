@@ -34,7 +34,7 @@ def test_initialize_negotiates_supported_protocol_version():
     client = _client()
     response = client.post(
         "/api/v1/mcp",
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
         json={
             "jsonrpc": "2.0",
             "id": 1,
