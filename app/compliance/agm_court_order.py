@@ -205,6 +205,8 @@ class AgmLawyerDecision:
 def agm_court_order_scoring_guard(
     evidence_payload: Mapping[str, Any] | None,
     lawyer_decision_payload: Mapping[str, Any] | None = None,
+    *,
+    as_of: date,
 ) -> dict[str, Any]:
     """Return a safe routing disposition; never clear or score an AGM by itself.
 
@@ -258,6 +260,11 @@ def agm_court_order_scoring_guard(
         and decision.case_number == evidence.case_number
         and decision.order_date == evidence.order_date
         and decision.evidence_ref == evidence.evidence_ref
+        and decision.effective_from <= as_of
+        and (
+            decision.effective_until is None
+            or as_of <= decision.effective_until
+        )
         and decision.effective_from <= decision.decided_at.date()
         and (
             decision.effective_until is None
