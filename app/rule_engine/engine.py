@@ -1849,7 +1849,14 @@ class NLCRuleEngine:
                             },
                         ))
             elif c.agm_count > 0:
-                if c.agm_count == 1 and not self._first_agm_date_is_verified(c):
+                if (
+                    c.agm_count == 1
+                    and not self._first_agm_date_is_verified(c)
+                    and not (
+                        self._agm_history_is_verified(c)
+                        and c.last_agm_date is not None
+                    )
+                ):
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-002",
                         flag_code="FIRST_AGM_DATE_REQUIRES_VERIFICATION",
