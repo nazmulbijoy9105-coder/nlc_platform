@@ -177,8 +177,6 @@ class TestComplianceService:
     @pytest.mark.asyncio
     async def test_get_flag_summary_returns_dict(self, db, db_company):
         from app.services.compliance_service import ComplianceService
-        from app.services.compliance_service import SCORING_SPEC_VERSION
-        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
 
         svc = ComplianceService(db)
         summary = await svc.get_flag_summary(db_company.id)
@@ -251,7 +249,8 @@ class TestComplianceService:
     async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
         import app.rule_engine.engine as engine_module
-        from app.services.compliance_service import ComplianceService
+        from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
+        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
         from sqlalchemy import select
         from app.models.rules import LegalRule
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
