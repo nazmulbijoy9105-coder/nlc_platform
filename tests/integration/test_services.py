@@ -251,8 +251,6 @@ class TestComplianceService:
         from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
         from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
         import app.rule_engine.engine as engine_module
-        from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
-        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
         from sqlalchemy import select
         from app.models.rules import LegalRule
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
