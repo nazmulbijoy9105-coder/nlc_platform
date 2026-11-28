@@ -61,6 +61,7 @@ def test_tools_list_returns_only_read_only_catalogue_tools():
         json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
     )
     assert response.status_code == 200
+    assert response.headers["mcp-protocol-version"] == "2025-11-25"
     tools = response.json()["result"]["tools"]
     assert {tool["name"] for tool in tools} == {"nlc.list_rules", "nlc.get_rule"}
     assert all(tool["inputSchema"]["additionalProperties"] is False for tool in tools)
@@ -127,6 +128,7 @@ def test_tools_call_returns_rule_metadata_with_explicit_legal_limitations(monkey
             },
         },
     )
+    assert response.headers["mcp-protocol-version"] == "2025-11-25"
     result = response.json()["result"]
     assert result["isError"] is False
     payload = json.loads(result["content"][0]["text"])
