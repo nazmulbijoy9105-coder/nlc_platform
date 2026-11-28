@@ -48,7 +48,7 @@ logger = logging.getLogger("nlc.rule_engine")
 # ───────────────────────────────────────────────────────────────────────
 # RULE ENGINE VERSION — Immutable in production
 # ───────────────────────────────────────────────────────────────────────
-RULE_ENGINE_VERSION = "2.3"
+RULE_ENGINE_VERSION = "2.4"
 ILRMF_VERSION = "2.3"
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -240,6 +240,14 @@ class CompanyProfile:
     agm_history_evidence_ref: str | None = None
     agm_history_verified_at: date | None = None
     agm_history_verified_by: str | None = None
+    first_agm_date: date | None = None
+    first_agm_date_verified: bool = False
+    first_agm_date_evidence_ref: str | None = None
+    first_agm_date_verified_at: date | None = None
+    first_agm_date_verified_by: str | None = None
+    # Structured CompanyFact payloads; unverified assertions are review-only.
+    agm_court_order_evidence: dict[str, Any] | None = None
+    agm_court_order_lawyer_decision: dict[str, Any] | None = None
     last_agm_date: Optional[date] = None
     agm_extension_granted_until: date | None = None
     agm_extension_application_date: date | None = None
@@ -896,6 +904,9 @@ def _rjsc_score_profile_inputs(company: CompanyProfile) -> dict[str, Any]:
         "company_type": company.company_type,
         "incorporation_date": company.incorporation_date,
         "financial_year_end": company.financial_year_end,
+        # AGM first-event date changes statutory deadline calculations and must
+        # participate in evaluation identity even when the resulting score is unchanged.
+        "first_agm_date": getattr(company, "first_agm_date", None),
         "coverage_inputs": {
             field_name: getattr(company, field_name, None)
             for field_name in _COVERAGE_FIELDS
@@ -1588,18 +1599,36 @@ class NLCRuleEngine:
             and bool(c.agm_history_verified_by)
         )
 
+    def _first_agm_date_is_verified(self, c: CompanyProfile) -> bool:
+        return (
+            c.first_agm_date is not None
+            and c.first_agm_date_verified is True
+            and bool(c.first_agm_date_evidence_ref)
+            and c.first_agm_date_verified_at is not None
+            and bool(c.first_agm_date_verified_by)
+        )
+
     def _subsequent_agm_deadline_components(
         self, c: CompanyProfile
     ) -> tuple[date, date, date, str] | None:
-        if not self._agm_history_is_verified(c) or c.last_agm_date is None:
+        # A complete, independently verified AGM-history record makes its
+        # last_agm_date the controlling (latest known) statutory event.
+        # Otherwise, a separately provenance-verified first AGM may be used
+        # as the latest known verified event. A bare/unverified date is never
+        # promoted to an AGM event.
+        if self._agm_history_is_verified(c) and c.last_agm_date is not None:
+            preceding_agm_date = c.last_agm_date
+        elif self._first_agm_date_is_verified(c) and c.first_agm_date is not None:
+            preceding_agm_date = c.first_agm_date
+        else:
             return None
 
-        interval_deadline = self._add_months(c.last_agm_date, 15)
+        interval_deadline = self._add_months(preceding_agm_date, 15)
         first_agm_in_incorporation_year = (
             c.agm_count == 1
             and c.incorporation_date is not None
-            and c.last_agm_date.year == c.incorporation_date.year
-            and c.last_agm_date <= self._add_months(c.incorporation_date, 18)
+            and preceding_agm_date.year == c.incorporation_date.year
+            and preceding_agm_date <= self._add_months(c.incorporation_date, 18)
         )
         if first_agm_in_incorporation_year and c.incorporation_date is not None:
             calendar_year_deadline = date(c.incorporation_date.year + 2, 12, 31)
@@ -1619,7 +1648,7 @@ class NLCRuleEngine:
                     else "CALENDAR_YEAR"
                 )
         else:
-            calendar_year_deadline = date(c.last_agm_date.year + 1, 12, 31)
+            calendar_year_deadline = date(preceding_agm_date.year + 1, 12, 31)
             base_deadline = min(interval_deadline, calendar_year_deadline)
             basis = (
                 "15_MONTH_INTERVAL"
@@ -1663,6 +1692,112 @@ class NLCRuleEngine:
         # Section 81 deadlines depend on a complete, verified AGM history.
         # Missing history is an explicit UNKNOWN review state, not an assumed
         # absence of meetings and not a deadline breach.
+        # A potentially relevant court order is evidence, never an automatic
+        # extension, waiver, compliance result, or score uplift. The two
+        # structured payloads arrive through the normal CompanyFact pipeline.
+        if c.agm_court_order_evidence is not None:
+            from app.compliance.agm_court_order import agm_court_order_scoring_guard
+
+            raw_order_evidence = c.agm_court_order_evidence
+            order_evidence = (
+                dict(raw_order_evidence)
+                if isinstance(raw_order_evidence, dict)
+                else raw_order_evidence
+            )
+            order_details = (
+                order_evidence if isinstance(order_evidence, dict) else {}
+            )
+            verified_keys = set(getattr(c, "verified_fact_keys", ()) or ())
+            if "agm_court_order_evidence" not in verified_keys:
+                if isinstance(order_evidence, dict):
+                    order_evidence["authenticated"] = False
+                    order_evidence["verified_by"] = None
+                    order_evidence["verified_at"] = None
+            lawyer_decision = c.agm_court_order_lawyer_decision
+            if "agm_court_order_lawyer_decision" not in verified_keys:
+                lawyer_decision = None
+            review = agm_court_order_scoring_guard(
+                order_evidence, lawyer_decision, as_of=self.today
+            )
+            affected_event = str(
+                order_details.get("affected_event") or ""
+            ).upper()
+            if affected_event.startswith("FIRST_AGM"):
+                target_rules = ["AGM-001"] if c.agm_count in (None, 0) else []
+            elif affected_event.startswith("SUBSEQUENT_AGM"):
+                target_rules = ["AGM-002"] if c.agm_count is None or c.agm_count > 0 else []
+            else:
+                # Scope an ambiguous order only to the currently relevant AGM
+                # track; unknown AGM history must hold both tracks for review.
+                if c.agm_count == 0:
+                    target_rules = ["AGM-001"]
+                elif c.agm_count is not None and c.agm_count > 0:
+                    target_rules = ["AGM-002"]
+                else:
+                    target_rules = ["AGM-001", "AGM-002"]
+            if target_rules:
+                review_state = (
+                    RuleState.REQUIRES_LAWYER_JUDGMENT
+                    if (
+                        review["evidence_verified"]
+                        and review["requires_lawyer_judgment"]
+                    )
+                    else RuleState.UNKNOWN
+                )
+                review_detail = {
+                    "court_order_review": review,
+                    "court_name": order_details.get("court_name"),
+                    "case_number": order_details.get("case_number"),
+                    "order_date": order_details.get("order_date"),
+                    "affected_event": affected_event or None,
+                    "evidence_ref": order_details.get("evidence_ref"),
+                    "order_status": order_details.get("order_status", "UNKNOWN"),
+                    "automatic_clearance": False,
+                    "score_uplift": 0,
+                }
+                review_description = (
+                    "Potentially relevant court-order evidence is recorded. "
+                    "Its legal effect has not been translated into this rule's "
+                    "deadline logic; no compliance, breach clearance, or score "
+                    "adjustment is inferred."
+                )
+                if "AGM-001" in target_rules:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-001",
+                        flag_code="AGM_COURT_ORDER_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=review_description,
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        detail=review_detail,
+                        state=review_state,
+                        eval_state="UNKNOWN",
+                    ))
+                if "AGM-002" in target_rules:
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="AGM_COURT_ORDER_REQUIRES_REVIEW",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=review_description,
+                        # Preserve the canonical catalogue basis exactly;
+                        # review routing belongs in the description/detail.
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        detail=review_detail,
+                        state=review_state,
+                        eval_state="UNKNOWN",
+                    ))
+                # An unverified or malformed order assertion is retained as
+                # an UNKNOWN audit annotation but cannot suppress an otherwise
+                # evidenced default. A verified order blocks publication below
+                # until counsel review is translated into rule-specific logic.
+                if review["evidence_verified"]:
+                    return
+
         if not self._agm_history_is_verified(c):
             self._add_flag(ComplianceFlag(
                 rule_id="AGM-001",
@@ -1717,7 +1852,37 @@ class NLCRuleEngine:
                             },
                         ))
             elif c.agm_count > 0:
-                if c.last_agm_date is None:
+                if (
+                    c.agm_count == 1
+                    and not self._first_agm_date_is_verified(c)
+                    and not (
+                        self._agm_history_is_verified(c)
+                        and c.last_agm_date is not None
+                    )
+                ):
+                    self._add_flag(ComplianceFlag(
+                        rule_id="AGM-002",
+                        flag_code="FIRST_AGM_DATE_REQUIRES_VERIFICATION",
+                        severity=Severity.NOT_EVALUATED,
+                        score_impact=0,
+                        revenue_tier=RevenueTier.COMPLIANCE_PACKAGE,
+                        description=(
+                            "The first AGM date lacks complete, verified event "
+                            "provenance; no subsequent-AGM deadline or score is inferred."
+                        ),
+                        statutory_basis="Section 81(1), Companies Act 1994 (Bangladesh)",
+                        detail={
+                            "first_agm_date": (
+                                c.first_agm_date.isoformat()
+                                if c.first_agm_date is not None else None
+                            ),
+                            "evidence_ref": c.first_agm_date_evidence_ref,
+                            "verified": c.first_agm_date_verified,
+                        },
+                        state=RuleState.UNKNOWN,
+                        eval_state="UNKNOWN",
+                    ))
+                elif c.agm_count != 1 and c.last_agm_date is None:
                     self._add_flag(ComplianceFlag(
                         rule_id="AGM-002", flag_code="LAST_AGM_DATE_UNVERIFIED",
                         severity=Severity.NOT_EVALUATED, score_impact=0,
@@ -4289,6 +4454,17 @@ class NLCRuleEngine:
             else Severity.NOT_EVALUATED
         )
 
+        court_order_review_pending = any(
+            f.rule_id in {"AGM-001", "AGM-002"}
+            and f.flag_code == "AGM_COURT_ORDER_REQUIRES_REVIEW"
+            and bool(
+                (f.detail or {})
+                .get("court_order_review", {})
+                .get("evidence_verified")
+            )
+            for f in active
+        )
+
         # Band = worst of (score-based band, highest active flag severity)
         # Prevents false GREEN when a RED-severity rule fires (BLACK handled above)'t override
         if legal_score_is_released() and not critical:
@@ -4315,6 +4491,11 @@ class NLCRuleEngine:
             band = max_flag_severity if flag_rank > band_rank else score_band
         else:
             band = score_band
+
+        # A verified order with unresolved legal effect blocks publication of
+        # the overall score. Do not turn an UNKNOWN rule into an apparent GREEN.
+        if court_order_review_pending:
+            band = Severity.NOT_EVALUATED
 
         if band == Severity.NOT_EVALUATED or band in (Severity.GREEN, Severity.YELLOW):
             exposure = ExposureBand.LOW

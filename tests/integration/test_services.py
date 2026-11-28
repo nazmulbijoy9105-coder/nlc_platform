@@ -248,8 +248,9 @@ class TestComplianceService:
     @pytest.mark.asyncio
     async def test_evaluate_company_full_pipeline(self, db, db_company, monkeypatch):
         """Integration: build profile → run engine → persist → verify."""
+        from app.services.compliance_service import ComplianceService, SCORING_SPEC_VERSION
+        from canonical_architecture.rjsc_scope import RJSC_SCOPE_VERSION
         import app.rule_engine.engine as engine_module
-        from app.services.compliance_service import ComplianceService
         from sqlalchemy import select
         from app.models.rules import LegalRule
         from canonical_architecture.statutory_rules import STATUTORY_RULE_REGISTRY
@@ -385,10 +386,19 @@ class TestComplianceService:
             "score": None,
             "risk_band": "NOT_EVALUATED",
             "scoring_data": "WITHHELD",
+            "engine_version": "test-engine-v1",
+            "rjsc_scope_version": RJSC_SCOPE_VERSION,
+            "scoring_spec_version": SCORING_SPEC_VERSION,
+            "ilrmf_version": "test-ilrmf-v1",
         }
         assert len(persisted_run.flags_snapshot) == 1
         assert persisted_run.flags_snapshot[0]["scoring_status"] == "LEGAL_SCORE_NOT_RELEASED"
         assert persisted_run.flags_snapshot[0]["score_impact_applied"] == 0
+        assert persisted_run.flags_snapshot[0]["rule_version"]
+        assert persisted_run.flags_snapshot[0]["legal_source_revision_id"] is None
+        assert persisted_run.flags_snapshot[0]["legal_revision_binding_status"] == (
+            "NOT_BOUND_TO_EFFECTIVE_DATED_LEGAL_REVISION"
+        )
         assert persisted_run.score is None
         assert persisted_run.risk_band == "NOT_EVALUATED"
         assert len(persisted_run.flags_snapshot) == 1

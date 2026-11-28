@@ -39,6 +39,13 @@ from app.core.dependencies import (
 )
 from app.models.user import User
 from app.models.company import Company
+from app.models.company_fact import CompanyFact
+from app.compliance.fact_provenance import (
+    business_date_today,
+    coerce_company_profile_fact_value,
+    is_internal_profile_fact_key,
+    verified_document_fact_keys,
+)
 from app.services.company_service import CompanyService
 from app.services.notification_service import ActivityService
 from app.services.rescue_service import ActiveRescuePlanExistsError, RescueService
@@ -239,10 +246,53 @@ async def create_rescue_plan(
         _reconcile_engine_output_identity_conflicts,
     )
 
-    profile_data = await company_svc.build_company_profile(body.company_id)
+    profile_data = await company_svc.build_company_profile(body.company_id, refresh=True)
     if not profile_data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company profile data not found")
+
+    # Match the ordinary compliance-evaluation fact overlay exactly: latest
+    # non-rejected version per key wins, and only fresh, independently
+    # verified document-backed facts authorize rule-engine evidence gates.
+    fact_result = await db.execute(
+        select(CompanyFact)
+        .where(CompanyFact.company_id == body.company_id)
+        .order_by(
+            CompanyFact.fact_key.asc(),
+            CompanyFact.created_at.desc(),
+            CompanyFact.id.desc(),
+        )
+    )
+    latest_facts: dict[str, CompanyFact] = {}
+    for fact in fact_result.scalars().all():
+        latest_facts.setdefault(fact.fact_key, fact)
+    current_facts = [
+        fact for fact in latest_facts.values()
+        if fact.verification_status not in {"REJECTED", "SUPERSEDED"}
+    ]
+    profile_field_names = {
+        name for name in CompanyProfile.__dataclass_fields__
+        if not is_internal_profile_fact_key(name)
+    } - {"company_id", "company_name"}
+    used_facts = []
+    for fact in current_facts:
+        if fact.fact_key in profile_field_names:
+            profile_data[fact.fact_key] = coerce_company_profile_fact_value(
+                fact.fact_key, fact.fact_value
+            )
+            used_facts.append(fact)
+
     profile = CompanyProfile(**_company_profile_kwargs(profile_data, CompanyProfile))
+    profile.verified_fact_keys = verified_document_fact_keys(
+        used_facts, as_of=business_date_today()
+    )
+    profile.verified_fact_context = {
+        fact.fact_key: {
+            "document_id": str(fact.document_id) if fact.document_id else None,
+            "source_reference": fact.source_reference,
+        }
+        for fact in used_facts
+        if fact.fact_key in profile.verified_fact_keys
+    }
 
     # Rescue-plan evaluation must use the same complete catalogue binding as
     # ordinary compliance evaluation. Never run an unbound rescue profile.

@@ -114,6 +114,8 @@ FACT_MAX_AGE_DAYS: dict[str, int] = {
     "trade_license_expiry": 365,
     "annual_return_filed": 365,
     "annual_return_content_complete": 365,
+    # Court orders remain operative until changed; refresh their status check every 30 days.
+    "agm_court_order_evidence": 30,
 }
 
 
