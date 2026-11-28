@@ -67,7 +67,10 @@ def _rpc_error(
     protocol_version: str | None = None,
 ) -> JSONResponse:
     headers = {"Cache-Control": "no-store"}
-    if protocol_version in SUPPORTED_PROTOCOL_VERSIONS:
+    if (
+        isinstance(protocol_version, str)
+        and protocol_version in SUPPORTED_PROTOCOL_VERSIONS
+    ):
         headers["MCP-Protocol-Version"] = protocol_version
     return JSONResponse(
         status_code=200,
