@@ -150,3 +150,16 @@ def test_get_transport_is_not_supported():
     client = _client()
     response = client.get("/api/v1/mcp")
     assert response.status_code == 405
+
+
+def test_mcp_requires_existing_nlc_bearer_authentication():
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/mcp",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        },
+        json={"jsonrpc": "2.0", "id": 9, "method": "initialize", "params": {}},
+    )
+    assert response.status_code == 401
