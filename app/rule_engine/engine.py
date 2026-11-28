@@ -1615,7 +1615,7 @@ class NLCRuleEngine:
         # promoted to an AGM event.
         if self._agm_history_is_verified(c) and c.last_agm_date is not None:
             preceding_agm_date = c.last_agm_date
-        elif self._first_agm_date_is_verified(c):
+        elif self._first_agm_date_is_verified(c) and c.first_agm_date is not None:
             preceding_agm_date = c.first_agm_date
         else:
             return None
