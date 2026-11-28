@@ -77,3 +77,14 @@ GitHub created these pull-request workflow runs for that exact head:
 At the time of this update, every job in these runs remains **QUEUED**. No result is claimed for unit tests, integration tests, lint, Docker runtime smoke, catalogue parity, scope isolation, withheld publication, provenance integrity, or closure structure. The combined commit-status endpoint returned no status entries. A queued run is not a pass.
 
 The exact-head checks must finish before this branch can be considered technically validated. If GitHub Actions remains queued, investigate runner availability/queue health; do not bypass required checks or infer success from the earlier SHA.
+
+## Integration-test failure and targeted correction — 28 November 2026
+
+The queued CI run later completed on code head `2db774108a3058d1ccb82ae13c7c6cd2d2435fcb`. Its integration suite had one failure: `TestCompanies.test_manual_evaluation_and_customer_views_withhold_unreleased_score` still asserted the pre-versioned withheld-snapshot shape. The implementation now correctly includes `engine_version`, `rjsc_scope_version`, `scoring_spec_version` and `ilrmf_version`; the stale test assertion has been updated to require those fields.
+
+- Test-only correction commit: `b09af2494241fc8a66014700be6d2c73e38a0318`.
+- The other completed checks on the prior code head passed: lint, unit tests, Docker runtime smoke, RJSC scope isolation, legal-rule catalogue parity, fail-closed publication, score-provenance integrity and security-closure structure.
+- The `legal-engine-p0` job remained queued at last inspection.
+- No workflow run or combined status was yet returned for `b09af2494241fc8a66014700be6d2c73e38a0318`. The correction is therefore **not yet re-tested** and must not be described as passing.
+
+The expected versioned withheld-snapshot metadata is now part of the integration contract. Keep the release gate closed; do not change the legal allowlist or production state to make this test pass.
