@@ -88,3 +88,11 @@ The queued CI run later completed on code head `2db774108a3058d1ccb82ae13c7c6cd2
 - No workflow run or combined status was yet returned for `b09af2494241fc8a66014700be6d2c73e38a0318`. The correction is therefore **not yet re-tested** and must not be described as passing.
 
 The expected versioned withheld-snapshot metadata is now part of the integration contract. Keep the release gate closed; do not change the legal allowlist or production state to make this test pass.
+
+## Second withheld-snapshot assertion correction — 28 November 2026
+
+A subsequent integration run exposed the same stale six-field expectation in `tests/integration/test_services.py::TestComplianceService::test_evaluate_company_full_pipeline`. The test fixture supplies `test-engine-v1` and `test-ilrmf-v1`; the assertion now checks those fixture values plus the canonical RJSC scope and scoring-spec versions.
+
+- Test correction commit: `858a5f0cd57d26b356a9f1189d2e41e18d8442f9`.
+- Follow-up import correction: `199534f99f41e960c909d0f630f9b5f59d83ecdb`; the RJSC scope version is imported from its canonical registry module, not from the service module's function-local namespace.
+- Exact-head CI for the latest correction has not yet reported a run at the time of this update. This is a test expectation update only; no score-release setting or production control was changed.
